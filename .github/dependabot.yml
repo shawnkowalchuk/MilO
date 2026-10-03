@@ -1,0 +1,36 @@
+# Dependabot keeps versions current in small weekly steps so an update never becomes a migration.
+#
+# How to read the pull requests it opens:
+#   - Minor and patch updates arrive together as ONE pull request per ecosystem. If CI is green,
+#     merge it.
+#   - A major update always arrives as its OWN pull request, one per dependency. Read its
+#     breaking changes, and test on the phone before merging. Never combine two majors.
+#   - Dependabot only proposes stable releases while the pinned version is itself stable, which
+#     is how the "no alpha, beta or rc" rule is kept without any ignore rules here.
+version: 2
+
+updates:
+  # Libraries and plugins in gradle/libs.versions.toml, and the Gradle wrapper
+  # (gradle/wrapper/gradle-wrapper.properties, including its checksum).
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      gradle-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # The actions used by the workflows in .github/workflows. Each one is pinned to a commit SHA
+  # with its release in a trailing comment (for example "# v7.0.1"). Dependabot reads that
+  # comment to tell a patch from a major, and rewrites the SHA and the comment together.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

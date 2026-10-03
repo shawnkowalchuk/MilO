@@ -1,0 +1,44 @@
+name: Dependency graph
+
+# Sends the full list of libraries the build resolves, including the ones pulled in indirectly,
+# to GitHub. GitHub compares it with its vulnerability database and raises a Dependabot alert
+# when a library the app ships has a known security problem. Without this, GitHub only sees the
+# versions written in gradle/libs.versions.toml and misses everything they bring with them.
+#
+# It only has an effect once "Dependency graph" and "Dependabot alerts" are switched on in the
+# repository's settings on GitHub. Recorded in docs/adr/ADR-001-stack-selection.md (Tooling).
+#
+# The actions are pinned to full commit SHAs for the reason given at the top of ci.yml. It
+# matters most here, because this is the one job that is allowed to write.
+on:
+  push:
+    branches: [main]
+
+# Nothing by default; the one job below asks for the single permission it needs.
+permissions: {}
+
+jobs:
+  submit:
+    name: Submit dependency graph
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      # Required by GitHub's dependency submission API. It is the only write access in this
+      # repository's workflows, which is why this runs on main only and never on pull requests.
+      contents: write
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Resolve and submit dependencies
+        uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic

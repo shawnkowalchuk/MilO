@@ -1,0 +1,78 @@
+name: CI
+
+# Runs on every pull request, and again on main after a merge so main itself is known to be green.
+# This is also what makes Dependabot's update pull requests safe to merge.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Every action below is pinned to a full commit SHA, with the release it belongs to in the trailing
+# comment. A tag such as v7 can be moved to different code by whoever owns the action; a SHA
+# cannot. Dependabot reads the comment and updates the SHA and the comment together.
+
+# Least privilege: the job only reads the code, plus the commit list of a pull request so the
+# secret scan knows which commits to look at. Nothing here can write to the repository.
+permissions:
+  contents: read
+  pull-requests: read
+
+# A newer push to the same branch makes the older run pointless; stop it and save the minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Check, test and build
+    # Pinned rather than "latest" so a runner image upgrade is a visible change in this file.
+    # The image already contains the Android SDK, so there is no SDK setup step.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: gitleaks scans every commit in the push or pull request, not just the tip.
+          fetch-depth: 0
+          # The job never pushes, so do not leave the token in the checkout's git config.
+          persist-credentials: false
+
+      # First, so a leaked secret fails the run before any build step can echo it into a log.
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Commenting on the pull request would need write access. The failed check is enough.
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # Must match gradle/gradle-daemon-jvm.properties.
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # The default "enhanced" cache is a proprietary service that is only a free preview on
+          # private repositories. "basic" is the open-source one built on GitHub's own cache.
+          cache-provider: basic
+
+      # The same four gates, in the same order, that are run locally before a change is called
+      # done: formatting, Android Lint, unit tests, then a debug build.
+      - name: Check, test and build
+        run: ./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug
+
+      # The console only prints the first lint error and a one-line test summary. The full lint
+      # and test reports are kept, for failed runs only, so a red build can be diagnosed without
+      # reproducing it locally.
+      - name: Keep reports from a failed run
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-reports
+          path: app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Runs before every commit. Two checks, both fast:
+#   1. gitleaks scans the staged changes for secrets (a keystore password, a token).
+#   2. Spotless checks formatting.
+# Lint, unit tests and the build are left to CI because they are too slow to run on each commit.
+#
+# One-time setup per clone:
+#   git config core.hooksPath .githooks
+#   brew install gitleaks
+#
+# A plain script is used instead of a hook manager so there is nothing extra to install or
+# keep up to date.
+
+set -eu
+
+# git runs hooks from the top of the working tree, but be explicit so the script also works
+# when it is run by hand from another folder.
+cd "$(dirname "$0")/.."
+
+fail() {
+    printf '\n%s\n' "pre-commit: $1" >&2
+    exit 1
+}
+
+# A missing scanner must stop the commit. Skipping silently would mean the one check that
+# guards against committing a secret is off without anyone knowing.
+if ! command -v gitleaks >/dev/null 2>&1; then
+    printf '\n%s\n' "pre-commit: gitleaks is not installed, so the commit was stopped." >&2
+    printf '%s\n' "  It scans staged changes for secrets before they reach git history." >&2
+    printf '%s\n' "  Install it once with:" >&2
+    printf '\n%s\n\n' "      brew install gitleaks" >&2
+    printf '%s\n' "  then commit again." >&2
+    exit 1
+fi
+
+# --verbose names the file and line of each finding; --redact masks the secret itself so it
+# does not end up in the terminal scrollback.
+gitleaks git --pre-commit --staged --redact --verbose --no-banner ||
+    fail "gitleaks found a possible secret in the staged changes (details above). Remove it, then commit again."
+
+./gradlew --quiet spotlessCheck ||
+    fail "formatting check failed. Run ./gradlew spotlessApply, stage the result, then commit again."
