@@ -1,0 +1,42 @@
+# Formatting rules read by Android Studio and by ktlint (run through Spotless).
+# Keeping them here means the IDE's "Reformat Code" and ./gradlew spotlessCheck agree.
+#
+# After changing anything in this file, check formatting with a fresh JVM:
+#   ./gradlew spotlessCheck --no-daemon --rerun-tasks --no-configuration-cache --no-build-cache
+# A Gradle daemon that is already running keeps applying the old rules, so a plain spotlessCheck
+# (and the pre-commit hook, which runs one) can pass when it should fail. CI starts a fresh JVM
+# every time, so CI is the authority for a change to this file.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+# The Android Kotlin style guide: 4-space indent, 100-column limit. It matches Android Studio's
+# built-in formatter, which ktlint's own default style does not.
+ktlint_code_style = android_studio
+max_line_length = 100
+
+# Composable functions that emit UI are named like classes (HomeScreen, PrimaryButton) by Compose
+# convention. Without this, ktlint rejects every one of them as a badly named function.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Trailing commas keep a one-parameter change to a one-line diff, which matters in Compose where
+# calls are written one argument per line. The android_studio style would otherwise strip them.
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a Markdown line break.
+trim_trailing_whitespace = false
+
+[*.bat]
+end_of_line = crlf

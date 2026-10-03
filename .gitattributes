@@ -1,0 +1,15 @@
+# Normalise text files to LF in the repository, whatever the editor saved.
+* text=auto eol=lf
+
+# The wrapper script is run by macOS and by the Linux CI runner; with CRLF endings it fails with
+# "bad interpreter". The Windows script is the opposite and must keep CRLF.
+gradlew text eol=lf
+*.bat text eol=crlf
+
+# Never let git rewrite line endings inside binaries.
+*.jar binary
+*.png binary
+*.webp binary
+*.ogg binary
+*.wav binary
+*.mp3 binary

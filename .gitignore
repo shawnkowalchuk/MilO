@@ -1,0 +1,38 @@
+# --- Build output ---------------------------------------------------------------------------
+build/
+.gradle/
+# Kotlin compiler session files
+.kotlin/
+# Native build caches (none today; listed so a future NDK step cannot leak them)
+.cxx/
+.externalNativeBuild/
+
+# --- This machine only ----------------------------------------------------------------------
+# Path to the Android SDK on this Mac. Android Studio recreates it.
+local.properties
+# Screenshots and recordings taken from Android Studio
+captures/
+
+# --- Secrets: never commit ------------------------------------------------------------------
+# A signing keystore and its passwords are the only secrets this app will ever have.
+# They live outside the repository; these lines are the backstop if one is copied in.
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*
+
+# --- Android Studio --------------------------------------------------------------------------
+# Everything under .idea is per-machine state, except the folders below. Those hold settings
+# that change how code is written or run, so they are shared.
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+*.iml
+
+# --- macOS -----------------------------------------------------------------------------------
+.DS_Store
+
+# Claude Code's per-machine settings. Never shared.
+.claude/settings.local.json
