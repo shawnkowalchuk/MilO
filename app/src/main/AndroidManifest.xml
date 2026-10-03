@@ -15,6 +15,7 @@
         Android 12 and later, which is why data_extraction_rules.xml excludes that as well.
     -->
     <application
+        android:name=".app.MiloApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"

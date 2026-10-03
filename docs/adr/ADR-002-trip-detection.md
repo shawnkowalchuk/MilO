@@ -1,7 +1,7 @@
 # ADR-002: Trip detection and background start
 
 Date: 2026-10-03
-Status: Accepted (design). Nothing here is confirmed on the phone yet; the device test checklist in phase 1 is what proves or changes it.
+Status: Accepted (design). Amended 2026-10-03 after the review of the phase 1 foundation; the changes are listed under "Amendments" at the end. Nothing here is confirmed on the phone yet; the device test checklist in phase 1 is what proves or changes it.
 
 ## Context
 
@@ -42,6 +42,7 @@ The driving alert (phase 2) only notifies. `CarConnection` only holds a trip ope
 - A companion "appeared" callback also starts the service at once. The service then confirms within 15 seconds that the truck really is connected (profile state, or an ACL connect seen for the address). If not, it stops quietly and logs a false start.
 - Reconcile has no event to trust, so it reads the profile state.
 - A disconnect event starts the grace timer. When the timer ends, the profile state is read again before the trip is closed.
+- Only something that brings a fresh reading of the truck closes a trip whose time has run out: that reading, a connect or disconnect event, or a press of Start or End (each press reads the connection first). A GPS fix or an Android Auto change that arrives after the deadline knows nothing new about the truck, so it closes nothing. The trip waits for the reading.
 
 ### Trip rules
 
@@ -51,15 +52,22 @@ The rules are a pure Kotlin state machine in `core/trip/`, with unit tests and n
 - **Recording, truck disconnects:** if Android Auto is still connected the trip carries on; otherwise the grace period starts (default 2 minutes).
 - **Grace, truck reconnects:** the same trip carries on.
 - **Grace ends:** the trip is closed at the time of the last recorded point, not at the end of the grace period.
+- **A reconnect seen after the grace period has ended does not revive the trip.** The trip is closed as above and the truck starts a new one. The reading taken when the timer fires always arrives a little after the deadline, so a "connected" reading up to 30 seconds late still carries the same trip on. Later than that, the timer was lost (the process was frozen or killed) and the trip ended when its grace ran out.
 - **Connect while recording, or disconnect while idle:** nothing happens. Events are never assumed to come in pairs.
 - **Manual start:** starts a trip when idle. If the truck connects during it, it then behaves like an automatic trip.
+- **Manual start during the grace period, truck still gone:** the waiting trip ends where the truck was found gone, and a manual trip starts. Otherwise the press would be swallowed and nothing would be recording once the grace period ran out.
 - **Manual end while the truck is still connected:** the trip ends and automatic start is held off until the truck next disconnects. Without this, the next reconcile would start a new trip straight away.
 - **A manual trip with no truck connected** ends on End Trip, or after 30 minutes without movement, so a forgotten one cannot run all night. This guard applies only to manual trips. Bluetooth trips are never split on stops, as Shawn decided.
 - **A finished trip under the minimum distance** (default 0.3 km) is discarded, and the discard is written to the event log.
 
 ### State survives the process
 
-The open trip is a row in the database with its status. On any restart the controller reads it: truck connected means carry on recording the same trip; truck gone and the grace period already over means close it at the last point; otherwise resume the grace timer.
+The open trip is a row in the database with its status. On any restart the controller reads it, together with a fresh reading of the connection. A trip is carried on only if it can still be the same drive:
+
+- **The trip was in its grace period.** It is judged by its stored deadline, exactly as above: over means closed at the last point, whatever is connected now; otherwise truck connected carries the same trip on, and truck gone resumes the grace timer.
+- **The trip was recording.** If its newest stored point is more than 30 minutes old, nobody watched the truck in between, and the trip is closed at that point. Otherwise truck connected means carry on recording the same trip, and truck gone starts the grace period now.
+
+In every case where the old trip is closed and the truck is connected, a new trip starts in the same step. Without these two limits, a process killed in the afternoon and woken by the truck the next morning would join both days into one trip.
 
 ### The service
 
@@ -119,3 +127,12 @@ Phone screens reach the controller through their ViewModels.
 **Open, and assumed for now**
 - A trip that begins before the first unlock after a reboot starts recording at unlock.
 - Reverse geocoding of start and finish addresses arrives in phase 2 with the day view. Phase 1 stores coordinates.
+
+## Amendments
+
+**2026-10-03, review of the phase 1 foundation.** Four points, each written into the text above. The reasons and the numbers are in FINDINGS_LOG under the same date. The two limits are judgements made without Shawn, and his to change.
+
+1. **Only a fresh reading of the truck closes a trip on a timeout.** The first code closed an overdue grace period on any event, including a GPS fix. A fix handled a moment before the timer's reading then cut one drive in two. This is what "read again before the trip is closed" always meant; it is now a rule of the state machine.
+2. **A late reconnect does not revive a trip.** "Grace ends: the trip is closed" and "truck connected means carry on" contradicted each other when the timer was lost. The first now wins, with a 30-second tolerance for a timer that fires late.
+3. **A restart long after the last recorded point closes the trip.** "Truck connected means carry on" had no time limit. The limit is 30 minutes.
+4. **Start during the grace period is not swallowed.**

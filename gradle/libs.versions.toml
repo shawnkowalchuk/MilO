@@ -13,13 +13,22 @@ agp = "9.4.1"
 # Kotlin, the Compose compiler plugin and (later) the serialization plugin share this one version
 # because the compiler plugins are released with, and only work with, the matching compiler.
 kotlin = "2.4.20"
+# KSP runs Room's code generator. Since KSP 2.3 its version is no longer tied to the Kotlin version.
+ksp = "2.3.12"
 spotless = "8.10.3"
 ktlint = "1.8.0"
 
 # Libraries.
 activityCompose = "1.13.0"
 composeBom = "2026.09.00"
+coroutines = "1.11.0"
+datastore = "1.2.1"
 junit = "4.13.2"
+# Room's runtime, its KSP compiler and its Gradle plugin are released together under one version.
+room = "3.0.3"
+# The SQLite build Room 3 runs on. It is compiled into the app, so the database engine is the
+# same on every Android version and does not change under the stored trips after a system update.
+sqlite = "2.7.1"
 
 [libraries]
 # AGP 9 compiles Kotlin itself and bundles an older Kotlin Gradle plugin. The root build script
@@ -41,9 +50,23 @@ androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+# Room 3 lives in the androidx.room3 group. WorkManager will later bring the old androidx.room
+# group in as well, so imports must always come from androidx.room3.
+androidx-room3-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
+androidx-room3-runtime = { module = "androidx.room3:room3-runtime", version.ref = "room" }
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+# Writes each database's schema to app/schemas as JSON, so a later version can be migrated to and
+# the change to the tables shows up in the diff.
+androidx-room3 = { id = "androidx.room3", version.ref = "room" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

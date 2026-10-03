@@ -1,6 +1,15 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.androidx.room3)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+}
+
+room3 {
+    // Room writes the tables of each database version to app/schemas as JSON. The folder is
+    // committed: the phone holds real trips from phase 1 on, so every later change to a table
+    // needs a migration, and a migration is written against (and checked with) these files.
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -79,6 +88,17 @@ dependencies {
 
     // Renders @Preview functions inside Android Studio. Debug only, so it never ships.
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Storage (data/). Room generates its code with KSP; the bundled driver is the SQLite it
+    // runs on.
+    implementation(libs.androidx.room3.runtime)
+    implementation(libs.androidx.sqlite.bundled)
+    ksp(libs.androidx.room3.compiler)
+    implementation(libs.androidx.datastore.preferences)
+
+    // Room and DataStore are coroutine-only, and the app's own code uses coroutines directly
+    // (the application scope, Flow), so the library is declared rather than borrowed from them.
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
 }
