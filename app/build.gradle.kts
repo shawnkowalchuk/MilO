@@ -206,6 +206,10 @@ dependencies {
     ksp(libs.androidx.room3.compiler)
     implementation(libs.androidx.datastore.preferences)
 
+    // The report for the accountant (platform/report/): FileProvider lets the email app read
+    // the one PDF it is handed, and nothing else of MilO's files.
+    implementation(libs.androidx.core)
+
     // Room and DataStore are coroutine-only, and the app's own code uses coroutines directly
     // (the application scope, Flow), so the library is declared rather than borrowed from them.
     implementation(libs.kotlinx.coroutines.core)

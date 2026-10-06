@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.app
 
+import androidx.navigation3.runtime.NavKey
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -154,5 +155,41 @@ class MiloNavigationTest {
             TopLevelDestination.HOME,
             topLevelOf(listOf(HomeKey, SettingsKey, PairingKey)),
         )
+    }
+
+    @Test
+    fun `the Report screen opens on top of Trips, once, for the month it is handed`() {
+        val backStack = mutableListOf<NavKey>(HomeKey, TripsKey)
+
+        repeat(2) { backStack.openOnTop(ReportKey(year = 2026, month = 9)) }
+        assertEquals(listOf(HomeKey, TripsKey, ReportKey(2026, 9)), backStack)
+        assertEquals(TopLevelDestination.TRIPS, topLevelOf(backStack))
+
+        // Its own Back arrow, and again while the screen slides away.
+        repeat(2) { backStack.closeIfOnTop(ReportKey(2026, 9)) }
+        assertEquals(listOf<NavKey>(HomeKey, TripsKey), backStack)
+    }
+
+    @Test
+    fun `Settings opened from the Report screen leads back to the report, with Trips marked`() {
+        val backStack = mutableListOf<NavKey>(HomeKey, TripsKey, ReportKey(2026, 9))
+
+        backStack.openOnTop(SettingsKey)
+        assertEquals(listOf(HomeKey, TripsKey, ReportKey(2026, 9), SettingsKey), backStack)
+        // The nearest screen of the bar underneath is Trips, not Home as when Settings is
+        // opened with Home's cog.
+        assertEquals(TopLevelDestination.TRIPS, topLevelOf(backStack))
+
+        backStack.closeIfOnTop(SettingsKey)
+        assertEquals(listOf<NavKey>(HomeKey, TripsKey, ReportKey(2026, 9)), backStack)
+    }
+
+    @Test
+    fun `the bar's button closes the Report screen on its way to its own screen`() {
+        val backStack = mutableListOf<Any>(HomeKey, TripsKey, ReportKey(2026, 9), SettingsKey)
+
+        backStack.showTopLevel(HomeKey, home = HomeKey)
+
+        assertEquals(listOf<Any>(HomeKey), backStack)
     }
 }

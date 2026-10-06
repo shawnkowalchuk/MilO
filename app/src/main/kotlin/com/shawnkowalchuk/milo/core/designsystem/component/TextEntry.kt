@@ -28,6 +28,8 @@ import androidx.compose.ui.text.input.KeyboardType
  * is stored of it.
  * @param decimalNumber true brings up the keyboard with digits and a decimal separator, false
  * the one with letters, starting each word with a capital as addresses are written.
+ * @param email true brings up the keyboard for an email address: with "@" on it, and without
+ * the capitals and the corrections that would spoil one. Not together with [decimalNumber].
  * @param lastField true if no field follows on the screen: the keyboard's action key then puts
  * the keyboard away where it otherwise moves on to the next field.
  * @param error what is wrong with what the field holds, or null while nothing is. It is said
@@ -42,6 +44,7 @@ fun TextEntry(
     maxLength: Int,
     modifier: Modifier = Modifier,
     decimalNumber: Boolean = false,
+    email: Boolean = false,
     lastField: Boolean = false,
     error: String? = null,
 ) {
@@ -62,12 +65,21 @@ fun TextEntry(
         keyboardOptions =
             KeyboardOptions(
                 capitalization =
-                    if (decimalNumber) {
+                    if (decimalNumber || email) {
                         KeyboardCapitalization.None
                     } else {
                         KeyboardCapitalization.Words
                     },
-                keyboardType = if (decimalNumber) KeyboardType.Decimal else KeyboardType.Text,
+                // An address is typed letter for letter: a keyboard that "corrects" it to a
+                // word it knows stores an address that does not exist. Every other field
+                // leaves the choice to the keyboard, as before.
+                autoCorrectEnabled = if (email) false else null,
+                keyboardType =
+                    when {
+                        decimalNumber -> KeyboardType.Decimal
+                        email -> KeyboardType.Email
+                        else -> KeyboardType.Text
+                    },
                 imeAction = if (lastField) ImeAction.Done else ImeAction.Next,
             ),
     )

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What MilO's file provider (AndroidManifest.xml) may hand to another app: the files in the
+    folder "reports" of the app's cache, and nothing else. That folder holds the PDF and CSV
+    reports for the accountant (data/report/ReportFileStore, which names the same folder).
+
+    cache-path is the app's cache folder. Android never backs it up, and may empty it when the
+    phone runs out of room; a report can be made again at any time.
+
+    Never widen this to path="." or add another entry without reading the manifest's comment:
+    whatever is listed here can leave the phone.
+-->
+<paths>
+    <cache-path
+        name="reports"
+        path="reports/" />
+</paths>

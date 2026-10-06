@@ -108,6 +108,8 @@ fun MiloNavigation(
                                                 ),
                                             tripActivity = container.tripController.activity,
                                             openTripStart = container.tripAddresses.openTripStart,
+                                            sentReports =
+                                                container.sentReportRepository.observeSent(),
                                             lookUpAddresses = container.tripAddresses::catchUp,
                                             clock = System::currentTimeMillis,
                                             zone = ZoneId::systemDefault,
@@ -119,8 +121,12 @@ fun MiloNavigation(
                         onSavedTripShown = { savedTripStartMs = null },
                         onEditTrip = { tripId -> backStack.openOnTop(TripEditKey(tripId)) },
                         onAddTrip = { backStack.openOnTop(TripEditKey(tripId = null)) },
+                        onOpenReport = { month ->
+                            backStack.openOnTop(ReportKey(month.year, month.monthValue))
+                        },
                     )
                 }
+                entry<ReportKey> { key -> ReportEntry(container, backStack, key) }
                 entry<TripEditKey> { key ->
                     TripEditScreen(
                         viewModel =

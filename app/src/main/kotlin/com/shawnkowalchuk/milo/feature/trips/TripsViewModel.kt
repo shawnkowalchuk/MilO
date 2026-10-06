@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
+import com.shawnkowalchuk.milo.data.report.MonthSubmission
+import com.shawnkowalchuk.milo.data.report.SentReport
+import com.shawnkowalchuk.milo.data.report.monthSubmission
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import com.shawnkowalchuk.milo.data.trip.TripRepository
@@ -43,6 +46,8 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  * "count this trip", or a marking as Business or Personal. The list shows what is stored either
  * way; this only says that the press did nothing.
  * @param summary the month's trips, or null while they are being read.
+ * @param submission that the month's report has been sent to the accountant, and when, or null
+ * while it has not been.
  */
 data class TripsUiState(
     val month: YearMonth,
@@ -51,6 +56,7 @@ data class TripsUiState(
     val showLeftOut: Boolean,
     val changeFailed: Boolean,
     val summary: MonthSummary?,
+    val submission: MonthSubmission? = null,
 )
 
 /**
@@ -62,6 +68,8 @@ data class TripsUiState(
  * @param tripActivity the trip controller's state, for the running distance of a trip in
  * progress.
  * @param openTripStart where the trip in progress started, from the address lookup.
+ * @param sentReports every report sent to the accountant. Whether the month on screen is
+ * submitted is worked out from it (`monthSubmission`), the rule the Report screen goes by.
  * @param lookUpAddresses asks for the addresses that finished trips still lack, with the reason
  * in words for the event log. Called each time the screen comes to the front, and when a trip
  * becomes a finished one again; a plain function, like the ones for navigation.
@@ -73,6 +81,7 @@ class TripsViewModel(
     private val corrections: TripCorrections,
     tripActivity: StateFlow<TripActivity>,
     openTripStart: StateFlow<OpenTripStart?>,
+    sentReports: Flow<List<SentReport>>,
     private val lookUpAddresses: (reason: String) -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -106,8 +115,15 @@ class TripsViewModel(
             }
 
     val state: StateFlow<TripsUiState> =
-        combine(choice, monthTrips, tripActivity, openTripStart) { chosen, read, activity, start ->
+        combine(choice, monthTrips, tripActivity, openTripStart, sentReports) {
+                chosen,
+                read,
+                activity,
+                start,
+                sent,
+            ->
             chosen.toUiState(
+                submission = monthSubmission(chosen.shown, sent),
                 // Right after a step the trips in hand are still the previous month's. They are
                 // not shown under the new month's name: the screen says it is reading.
                 summary =
@@ -127,7 +143,7 @@ class TripsViewModel(
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(KEEP_WATCHING_MS),
-            choice.value.toUiState(summary = null),
+            choice.value.toUiState(summary = null, submission = null),
         )
 
     fun onPreviousMonth() {
@@ -193,12 +209,14 @@ class TripsViewModel(
         return Choice(shown = current, current = current, zone = zoneNow)
     }
 
-    private fun Choice.toUiState(summary: MonthSummary?) = TripsUiState(
-        month = shown,
-        zone = zone,
-        canStepForward = canStepForward(shown, current),
-        showLeftOut = showLeftOut,
-        changeFailed = changeFailed,
-        summary = summary,
-    )
+    private fun Choice.toUiState(summary: MonthSummary?, submission: MonthSubmission?) =
+        TripsUiState(
+            month = shown,
+            zone = zone,
+            canStepForward = canStepForward(shown, current),
+            showLeftOut = showLeftOut,
+            changeFailed = changeFailed,
+            summary = summary,
+            submission = submission,
+        )
 }

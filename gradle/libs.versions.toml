@@ -28,6 +28,11 @@ activityCompose = "1.13.0"
 # stable, without waiting for the weekly round of updates (FINDINGS_LOG, 2026-10-05).
 carApp = "1.7.0"
 composeBom = "2026.09.00"
+# androidx.core, for one class: FileProvider, which hands the report for the accountant to the
+# email app (platform/report/ReportHandOff.kt, and the provider in the manifest). Other
+# libraries already bring an older androidx.core along; it is declared because MilO's own code
+# and manifest name the class.
+core = "1.19.1"
 coroutines = "1.11.0"
 datastore = "1.2.1"
 junit = "4.13.2"
@@ -68,6 +73,8 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+
+androidx-core = { module = "androidx.core:core", version.ref = "core" }
 
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 

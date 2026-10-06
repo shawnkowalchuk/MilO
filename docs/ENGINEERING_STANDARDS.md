@@ -84,6 +84,8 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
   core/trip/              # the trip rules (ADR-002): pure Kotlin with unit tests
   core/schedule/          # the work schedule and Business or Personal: pure Kotlin with unit
                           #   tests. It sorts a trip that has closed; it never starts one
+  core/report/            # the report for the accountant: its rules, its layout and its CSV.
+                          #   Pure Kotlin with unit tests; the drawing is in platform/
   core/util/              # pure Kotlin helpers with unit tests (time, formatting)
   data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
                           #   touches storage

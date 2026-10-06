@@ -141,6 +141,30 @@
         </activity>
 
         <!--
+            Hands the report for the accountant to another app: the PDF to the email app or a
+            viewer, the CSV to whatever Shawn shares it with. That app cannot read MilO's files
+            by itself, so MilO gives it the address of one file through this provider, with a
+            permission to read that file and nothing else.
+
+            Not exported, and grantUriPermissions: nothing can ask the provider for a file on
+            its own; only an app MilO has handed an address to can read it, for as long as its
+            screen is open. The paths file names the one folder that can be handed out, the
+            reports in the cache. The databases, the settings and the crash files are outside
+            it and cannot be reached this way.
+
+            This sends nothing anywhere. MilO still has no INTERNET permission.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/report_file_paths" />
+        </provider>
+
+        <!--
             Records a trip (ADR-002). Not exported: only MilO starts it.
             stopWithTask="false": swiping MilO out of the recent apps must not end a trip.
         -->

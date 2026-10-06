@@ -37,7 +37,8 @@ internal fun TripLine.leftOutNoteRes(): Int? = when (kind) {
 /**
  * The words that say a trip's figures are Shawn's own, or null for a trip that is as MilO
  * recorded it. The trip in progress has none. Both lines start with the asterisk the row puts
- * after the trip's times, which is the mark the monthly report will use for the same trips.
+ * after the trip's times, which is the mark the report for the accountant puts on the same
+ * trips.
  */
 internal fun TripLine.byHandNoteRes(): Int? = when (mark.takeIf { kind != TripKind.IN_PROGRESS }) {
     ByHandMark.ADDED -> R.string.trips_mark_added

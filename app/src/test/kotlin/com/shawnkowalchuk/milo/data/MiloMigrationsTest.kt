@@ -27,8 +27,15 @@ import org.junit.Test
 class MiloMigrationsTest {
     private val schemas = File("schemas/com.shawnkowalchuk.milo.data.MiloDatabase")
 
-    /** One table of an exported schema: the SQL that adds each column, and that makes each index. */
-    private class Table(val columns: Map<String, String>, val indices: Set<String>)
+    /**
+     * One table of an exported schema: the SQL that adds each column, that makes each index,
+     * and that makes the whole table new.
+     */
+    private class Table(
+        val columns: Map<String, String>,
+        val indices: Set<String>,
+        val createSql: String,
+    )
 
     private fun tables(version: Int): Map<String, Table> {
         val file = File(schemas, "$version.json")
@@ -47,6 +54,9 @@ class MiloMigrationsTest {
                             .map { it.text("createSql").replace("\${TABLE_NAME}", name) }
                             .map(::normalised)
                             .toSet(),
+                    createSql = normalised(
+                        entity.text("createSql").replace("\${TABLE_NAME}", name),
+                    ),
                 )
         }
     }
@@ -77,7 +87,7 @@ class MiloMigrationsTest {
     fun `there is one step for every version the database has had`() {
         val current = schemas.listFiles { file -> file.extension == "json" }.orEmpty().size
 
-        assertEquals("One schema file per version, and no gaps", current, 4)
+        assertEquals("One schema file per version, and no gaps", current, 5)
         // In order and without a gap, so a database that is two versions behind is taken
         // through both steps, one after the other.
         assertEquals(
@@ -92,10 +102,12 @@ class MiloMigrationsTest {
             val name = "The step from ${step.startVersion} to ${step.endVersion}"
             val before = tables(step.startVersion)
             val after = tables(step.endVersion)
-            assertEquals("$name adds or drops a table", before.keys, after.keys)
+            assertTrue("$name drops a table", after.keys.containsAll(before.keys))
             val expected =
                 after.flatMap { (table, now) ->
-                    val old = before.getValue(table)
+                    // A table the older version does not have is made whole, by the statement
+                    // Room itself would make it with, and then given its indices.
+                    val old = before[table] ?: return@flatMap listOf(now.createSql) + now.indices
                     assertTrue(
                         "$name: a column of $table is gone or was changed",
                         now.columns.entries.containsAll(old.columns.entries),
@@ -118,16 +130,18 @@ class MiloMigrationsTest {
             // No UPDATE, no DELETE, no DROP: a step never rewrites or removes a stored value.
             val adds =
                 statement.startsWith("ALTER TABLE trips ADD COLUMN ") ||
-                    statement.startsWith("CREATE INDEX IF NOT EXISTS ")
+                    statement.startsWith("CREATE INDEX IF NOT EXISTS ") ||
+                    statement.startsWith("CREATE TABLE IF NOT EXISTS ")
             assertTrue("Not an addition: $statement", adds)
         }
     }
 
     @Test
     fun `a new column that may not be empty has a default for the rows already stored`() {
-        // How many columns each step adds: the addresses, Business or Personal, and the marks
-        // and kept figures of a trip that was added or edited by hand.
-        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7)
+        // How many columns each step adds to a table that has rows: the addresses, Business or
+        // Personal, and the marks and kept figures of a trip that was added or edited by hand.
+        // The step to version 5 adds none: it makes a table of its own.
+        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7, 4 to 0)
         for (step in MILO_MIGRATIONS) {
             val added = statementsOf(step).filter { it.contains(" ADD COLUMN ") }
 
@@ -179,6 +193,34 @@ class MiloMigrationsTest {
         assertTrue("ALTER TABLE trips ADD COLUMN recordedEndedAtMs INTEGER" in statements)
         assertTrue("ALTER TABLE trips ADD COLUMN recordedDistanceMetres REAL" in statements)
         assertEquals(7, statements.size)
+    }
+
+    @Test
+    fun `the step from 4 to 5 makes the table of sent reports, and touches no other table`() {
+        val statements = statementsOf(MIGRATION_4_5)
+
+        // One statement, and it names neither the trips nor the event log: nothing in it can
+        // reach a stored trip. The table starts empty, so no month is submitted after it.
+        assertEquals(1, statements.size)
+        val statement = statements.single()
+        assertTrue(statement, statement.startsWith("CREATE TABLE IF NOT EXISTS sent_reports ("))
+        assertTrue(statement, "trips" !in statement && "event_log" !in statement)
+        // Exactly the table the code declares: the statement Room would make it new with.
+        assertEquals(tables(5).getValue("sent_reports").createSql, statement)
+        assertEquals(setOf("trips", "event_log", "sent_reports"), tables(5).keys)
+        assertEquals(setOf("trips", "event_log"), tables(4).keys)
+    }
+
+    @Test
+    fun `the step from 4 to 5 leaves the trips and the event log exactly as version 4 has them`() {
+        for (table in listOf("trips", "event_log")) {
+            val before = tables(4).getValue(table)
+            val after = tables(5).getValue(table)
+
+            assertEquals(table, before.columns, after.columns)
+            assertEquals(table, before.indices, after.indices)
+            assertEquals(table, before.createSql, after.createSql)
+        }
     }
 }
 

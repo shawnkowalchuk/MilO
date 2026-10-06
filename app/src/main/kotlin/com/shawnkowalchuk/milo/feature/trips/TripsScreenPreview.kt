@@ -81,7 +81,7 @@ private fun TripsPreview() {
         Surface {
             TripsContent(
                 state = state,
-                actions = TripsActions({}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}),
+                actions = TripsActions({}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}),
             )
         }
     }

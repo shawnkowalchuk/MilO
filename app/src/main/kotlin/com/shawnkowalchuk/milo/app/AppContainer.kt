@@ -8,6 +8,7 @@ import com.shawnkowalchuk.milo.data.crash.buildCrashFileStore
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
+import com.shawnkowalchuk.milo.data.report.SentReportRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
 import com.shawnkowalchuk.milo.data.sound.buildOwnSoundStore
@@ -26,6 +27,10 @@ import com.shawnkowalchuk.milo.platform.diagnostics.ProcessExitReader
 import com.shawnkowalchuk.milo.platform.diagnostics.StartupDiagnostics
 import com.shawnkowalchuk.milo.platform.driving.DrivingAlert
 import com.shawnkowalchuk.milo.platform.driving.PlayServicesDrivingDetection
+import com.shawnkowalchuk.milo.platform.report.ReportDocuments
+import com.shawnkowalchuk.milo.platform.report.ReportHandOff
+import com.shawnkowalchuk.milo.platform.report.ReportTexts
+import com.shawnkowalchuk.milo.platform.report.buildReportDocuments
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.SetupReader
 import com.shawnkowalchuk.milo.platform.system.SystemScreens
@@ -77,6 +82,11 @@ class AppContainer(context: Context) {
     }
     val eventLogRepository: EventLogRepository by lazy {
         EventLogRepository(miloDatabase.eventLogDao())
+    }
+
+    /** The reports Shawn has said he sent. A month is "submitted" because of a row in it. */
+    val sentReportRepository: SentReportRepository by lazy {
+        SentReportRepository(miloDatabase.sentReportDao())
     }
 
     val settingsStore: SettingsStore by lazy { buildSettingsStore(appContext) }
@@ -241,6 +251,18 @@ class AppContainer(context: Context) {
             scope = applicationScope,
         )
     }
+
+    /** The words of the report for the accountant, and how this phone writes dates and times. */
+    val reportTexts: ReportTexts by lazy { ReportTexts(appContext) }
+
+    /**
+     * Makes the PDF and the CSV of a report, in the app's cache. Nothing here sends anything:
+     * the files are handed to another app by [reportHandOff], when Shawn asks for it.
+     */
+    val reportDocuments: ReportDocuments by lazy { buildReportDocuments(appContext, reportTexts) }
+
+    /** Builds the requests that hand a report file to the email app, a viewer or a share. */
+    val reportHandOff: ReportHandOff by lazy { ReportHandOff(appContext) }
 
     /**
      * Makes an audio file Shawn picked the trip-start sound, by copying it into MilO's own

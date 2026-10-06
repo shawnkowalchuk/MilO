@@ -34,12 +34,14 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
+import java.time.YearMonth
 
 /**
  * What the Trips screen can ask for.
  *
  * @param onEdit opens the edit screen for a finished trip, and [onAdd] opens it empty, for a
  * trip MilO missed. Both lead to another screen, so both are the app's to carry out.
+ * @param onReport opens the Report screen for a month, on the same terms.
  */
 internal class TripsActions(
     val onPreviousMonth: () -> Unit,
@@ -49,6 +51,7 @@ internal class TripsActions(
     val onMark: (Long, TripCategory) -> Unit,
     val onEdit: (Long) -> Unit,
     val onAdd: () -> Unit,
+    val onReport: (YearMonth) -> Unit,
 )
 
 /**
@@ -70,6 +73,8 @@ internal class TripsActions(
  * month it is in is then shown, and [onSavedTripShown] says that this has been done.
  * @param onEditTrip opens that screen for the trip with this id, and [onAddTrip] opens it
  * empty. Navigation belongs to the app, not the feature.
+ * @param onOpenReport opens the Report screen, where the month's report for the accountant is
+ * made and sent, for the month it is handed.
  */
 @Composable
 fun TripsScreen(
@@ -78,6 +83,7 @@ fun TripsScreen(
     onSavedTripShown: () -> Unit,
     onEditTrip: (Long) -> Unit,
     onAddTrip: () -> Unit,
+    onOpenReport: (YearMonth) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
@@ -105,6 +111,7 @@ fun TripsScreen(
                 onMark = viewModel::onMark,
                 onEdit = onEditTrip,
                 onAdd = onAddTrip,
+                onReport = onOpenReport,
             ),
         modifier = modifier,
     )
@@ -179,9 +186,12 @@ internal fun TripsContent(
             MonthCard(
                 monthName = monthName,
                 summary = summary,
+                submission = state.submission,
+                zone = state.zone,
                 canStepForward = state.canStepForward,
                 onPreviousMonth = actions.onPreviousMonth,
                 onNextMonth = actions.onNextMonth,
+                onOpenReport = { actions.onReport(state.month) },
             )
         }
         item { AddTripButton(actions.onAdd) }

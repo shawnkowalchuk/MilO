@@ -25,8 +25,9 @@ const val SETTINGS_FILE_NAME = "settings"
  *
  * A value that was never written reads as its default from [MiloSettings]. Every setter refuses
  * a value that cannot be right (a negative duration, distance or time; a blank address, name or
- * URI), because this is the last point before a bad value would be stored. The work schedule
- * needs no such check here: its type cannot hold a day that ends before it starts.
+ * URI; an accountant's address that is not an email address), because this is the last point
+ * before a bad value would be stored. The work schedule needs no such check here: its type
+ * cannot hold a day that ends before it starts.
  *
  * @param dataStore created once by the `AppContainer`. DataStore allows only one instance per
  * file in a process.
@@ -126,6 +127,53 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[LAST_DRIVING_ALERT_AT_MS] = atMs }
     }
 
+    /**
+     * Stores who the report for the accountant is from: Shawn's name, his company and a
+     * description of the vehicle. Each is stored as it is passed, or forgotten when null.
+     *
+     * A blank text is refused (pass null for "not set"), and so is one with spaces at its ends
+     * or longer than the report has room for: `reportTextOrNull` makes a typed text fit.
+     */
+    suspend fun setReportName(name: String?) = setReportText(REPORT_NAME, name)
+
+    suspend fun setReportCompany(company: String?) = setReportText(REPORT_COMPANY, company)
+
+    suspend fun setReportVehicle(vehicle: String?) = setReportText(REPORT_VEHICLE, vehicle)
+
+    private suspend fun setReportText(key: Preferences.Key<String>, text: String?) {
+        require(text == null || isReportText(text)) {
+            "A report detail is trimmed text of at most $MAX_REPORT_TEXT_LENGTH characters, " +
+                "or null for none"
+        }
+        dataStore.edit { it.setOrRemove(key, text) }
+    }
+
+    /**
+     * Stores the address the report is sent to, or forgets it when null. Anything that is not
+     * one email address ([isEmailAddress]) is refused: the email app would be opened with it.
+     */
+    suspend fun setAccountantEmail(address: String?) {
+        require(address == null || isEmailAddress(address)) {
+            "The accountant's address must be one email address, or null for none"
+        }
+        dataStore.edit { it.setOrRemove(ACCOUNTANT_EMAIL, address) }
+    }
+
+    /**
+     * Stores the report that has just been handed to the email app, so that the question
+     * whether it was sent outlives the process. Pass null once the question is answered, or
+     * when the email app did not open after all.
+     */
+    suspend fun setReportHandOver(handOver: ReportHandOver?) {
+        require(handOver == null || (handOver.tripCount >= 0 && handOver.tenths >= 0)) {
+            "A report cannot hold a negative number of trips or kilometres: $handOver"
+        }
+        require(handOver == null || handOver.atMs >= 0) {
+            "A timestamp cannot be negative: ${handOver?.atMs} ms"
+        }
+        dataStore.edit { it.writeReportHandOver(handOver) }
+    }
+
     /** Pass the time End was pressed to hold automatic start off, null to release it. */
     suspend fun setAutoStartHeldOffSinceMs(sinceMs: Long?) {
         require(sinceMs == null || sinceMs >= 0) { "A timestamp cannot be negative: $sinceMs ms" }
@@ -164,6 +212,11 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             drivingAlertEnabled =
                 preferences[DRIVING_ALERT_ENABLED] ?: defaults.drivingAlertEnabled,
             lastDrivingAlertAtMs = preferences[LAST_DRIVING_ALERT_AT_MS],
+            reportName = preferences[REPORT_NAME],
+            reportCompany = preferences[REPORT_COMPANY],
+            reportVehicle = preferences[REPORT_VEHICLE],
+            accountantEmail = preferences[ACCOUNTANT_EMAIL],
+            reportHandOver = preferences.readReportHandOver(),
             autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
@@ -178,8 +231,9 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     }
 
     // The key names are what is written to the file. Renaming one silently resets that setting.
-    // The keys of the confirmed setup steps are on ConfirmedStep itself, and the keys of the
-    // work schedule, three for each day, are in ScheduleStorage.kt.
+    // The keys of the confirmed setup steps are on ConfirmedStep itself, the keys of the work
+    // schedule, three for each day, are in ScheduleStorage.kt, and the six of a report that
+    // waits for its answer are in ReportHandOver.kt.
     private companion object {
         val TRUCK_ADDRESS = stringPreferencesKey("truck_address")
         val TRUCK_NAME = stringPreferencesKey("truck_name")
@@ -193,6 +247,10 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             booleanPreferencesKey("ignore_trips_outside_schedule")
         val DRIVING_ALERT_ENABLED = booleanPreferencesKey("driving_alert_enabled")
         val LAST_DRIVING_ALERT_AT_MS = longPreferencesKey("last_driving_alert_at_ms")
+        val REPORT_NAME = stringPreferencesKey("report_name")
+        val REPORT_COMPANY = stringPreferencesKey("report_company")
+        val REPORT_VEHICLE = stringPreferencesKey("report_vehicle")
+        val ACCOUNTANT_EMAIL = stringPreferencesKey("accountant_email")
         val AUTO_START_HELD_OFF_SINCE_MS = longPreferencesKey("auto_start_held_off_since_ms")
         val LAST_PROCESS_EXIT_IMPORTED_AT_MS =
             longPreferencesKey("last_process_exit_imported_at_ms")

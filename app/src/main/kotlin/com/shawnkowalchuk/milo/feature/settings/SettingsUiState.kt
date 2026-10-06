@@ -52,6 +52,24 @@ data class ScheduleDay(
     val hoursRefused: Boolean,
 )
 
+/**
+ * The four settings of the report for the accountant as the screen shows them: each as it is
+ * stored, or empty while it is not set.
+ *
+ * @param accountantEmail what the address field starts with when it is built: the stored
+ * address, or, while [emailRefused], the text that was typed and not stored.
+ * @param emailRefused true while what stands in the address field is not an email address, and
+ * so is not what is stored. The field says so, because every other field is saved as typed.
+ * It is never true beside the stored address: the two come from the one refused text.
+ */
+data class ReportFields(
+    val name: String,
+    val company: String,
+    val vehicle: String,
+    val accountantEmail: String,
+    val emailRefused: Boolean,
+)
+
 /** What the Settings screen shows. */
 sealed interface SettingsUiState {
     /** The settings have not been read yet. */
@@ -77,6 +95,7 @@ sealed interface SettingsUiState {
      * outside the schedule, false for "Save as Personal".
      * @param drivingAlertEnabled whether MilO notifies when the phone reports driving during
      * the work hours with no trip being recorded.
+     * @param report who the report for the accountant is from, and where it goes.
      * @param problem the last press that did not work, until the next one.
      */
     data class Ready(
@@ -95,6 +114,7 @@ sealed interface SettingsUiState {
         val schedule: List<ScheduleDay>,
         val ignoreOutsideSchedule: Boolean,
         val drivingAlertEnabled: Boolean,
+        val report: ReportFields,
         val problem: SettingsProblem?,
     ) : SettingsUiState
 }
@@ -105,12 +125,15 @@ sealed interface SettingsUiState {
  *
  * @param problemDay the day of the schedule the press that did not work was about, or null
  * if it was about none. It places refused hours under their day.
+ * @param refusedEmail what stands in the address field while that is not an email address and
+ * so was not stored, or null while the field holds what is stored.
  */
 fun settingsUiState(
     settings: MiloSettings,
     copyingSound: Boolean,
     problem: SettingsProblem?,
     problemDay: DayOfWeek?,
+    refusedEmail: String? = null,
 ): SettingsUiState.Ready = SettingsUiState.Ready(
     truckPaired = settings.truckAddress != null,
     truckName = settings.truckName,
@@ -139,6 +162,14 @@ fun settingsUiState(
         },
     ignoreOutsideSchedule = settings.ignoreTripsOutsideSchedule,
     drivingAlertEnabled = settings.drivingAlertEnabled,
+    report =
+        ReportFields(
+            name = settings.reportName.orEmpty(),
+            company = settings.reportCompany.orEmpty(),
+            vehicle = settings.reportVehicle.orEmpty(),
+            accountantEmail = refusedEmail ?: settings.accountantEmail.orEmpty(),
+            emailRefused = refusedEmail != null,
+        ),
     problem = problem,
 )
 

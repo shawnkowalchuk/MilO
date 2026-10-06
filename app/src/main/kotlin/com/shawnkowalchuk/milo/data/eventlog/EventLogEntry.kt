@@ -68,4 +68,11 @@ enum class EventCategory {
      * entering or leaving a vehicle, and whether the alert was shown and why.
      */
     DRIVING,
+
+    /**
+     * A report for the accountant: made, handed to the email app, and what Shawn answered when
+     * asked whether he sent it. Added with database version 5, which no earlier build can open,
+     * so no earlier build can meet a row that holds it.
+     */
+    REPORT,
 }
