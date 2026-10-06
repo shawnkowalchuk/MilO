@@ -4,6 +4,8 @@ import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 // What the Settings screen shows, and the function that decides it from the stored settings.
 // Pure, so it is tested without a phone.
@@ -24,7 +26,31 @@ enum class SettingsProblem {
 
     /** The settings file could not be written or read: the change was not made. */
     COULD_NOT_SAVE,
+
+    /** A day's hours would have ended no later than they start: the time was not stored. */
+    HOURS_END_NOT_AFTER_START,
 }
+
+/**
+ * One day of the work schedule as the screen shows it.
+ *
+ * @param tracked whether the day's switch is on. The two times are shown only then.
+ * @param canCopy whether the day offers "Use these hours on every tracked day": it is tracked,
+ * and another tracked day has other hours. A schedule whose days all agree shows no such
+ * button.
+ * @param hoursRefused whether the last press was a time for this day that would have ended
+ * its hours no later than they start. The refusal is said under this day's two times, where
+ * the press was made: said once at the top of the card it is off the screen for every day
+ * but the first few, and the press looks as if it did nothing.
+ */
+data class ScheduleDay(
+    val day: DayOfWeek,
+    val tracked: Boolean,
+    val start: LocalTime,
+    val end: LocalTime,
+    val canCopy: Boolean,
+    val hoursRefused: Boolean,
+)
 
 /** What the Settings screen shows. */
 sealed interface SettingsUiState {
@@ -46,6 +72,9 @@ sealed interface SettingsUiState {
      * @param ownSoundName what that file was called, or null if the phone gave no name.
      * @param copyingSound true while a picked file is being copied and checked. The sound
      * buttons wait.
+     * @param schedule the seven days, Monday first.
+     * @param ignoreOutsideSchedule true if "Ignore them" is chosen for the trips that start
+     * outside the schedule, false for "Save as Personal".
      * @param problem the last press that did not work, until the next one.
      */
     data class Ready(
@@ -61,6 +90,8 @@ sealed interface SettingsUiState {
         val usesOwnSound: Boolean,
         val ownSoundName: String?,
         val copyingSound: Boolean,
+        val schedule: List<ScheduleDay>,
+        val ignoreOutsideSchedule: Boolean,
         val problem: SettingsProblem?,
     ) : SettingsUiState
 }
@@ -68,11 +99,15 @@ sealed interface SettingsUiState {
 /**
  * The screen for the settings as they are stored. The two figures are shown as stored, even if
  * a value is outside what the screen offers; the first press of a button brings it inside.
+ *
+ * @param problemDay the day of the schedule the press that did not work was about, or null
+ * if it was about none. It places refused hours under their day.
  */
 fun settingsUiState(
     settings: MiloSettings,
     copyingSound: Boolean,
     problem: SettingsProblem?,
+    problemDay: DayOfWeek?,
 ): SettingsUiState.Ready = SettingsUiState.Ready(
     truckPaired = settings.truckAddress != null,
     truckName = settings.truckName,
@@ -86,6 +121,20 @@ fun settingsUiState(
     usesOwnSound = settings.customSoundUri != null,
     ownSoundName = settings.customSoundName,
     copyingSound = copyingSound,
+    schedule =
+        DayOfWeek.entries.map { day ->
+            val hours = settings.schedule.on(day)
+            ScheduleDay(
+                day = day,
+                tracked = hours.tracked,
+                start = hours.start,
+                end = hours.end,
+                canCopy = settings.schedule.canCopyHoursOf(day),
+                hoursRefused =
+                    problem == SettingsProblem.HOURS_END_NOT_AFTER_START && day == problemDay,
+            )
+        },
+    ignoreOutsideSchedule = settings.ignoreTripsOutsideSchedule,
     problem = problem,
 )
 

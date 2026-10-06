@@ -1,11 +1,16 @@
 package com.shawnkowalchuk.milo.feature.trips
 
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.localDateOf
+import com.shawnkowalchuk.milo.data.trip.CategoryTotals
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
+import com.shawnkowalchuk.milo.data.trip.categoriesOffered
+import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.data.trip.correctionOffered
 import com.shawnkowalchuk.milo.data.trip.isCounted
+import com.shawnkowalchuk.milo.data.trip.ranPastScheduleShown
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.address.TripPlace
 import com.shawnkowalchuk.milo.platform.address.endPlace
@@ -64,6 +69,13 @@ enum class TripKind(val status: TripStatus) {
  * deleted trip that had no start address stored when it was deleted.
  * @param to where it ended. Null for a trip in progress and a discarded one, and for a deleted
  * trip without a stored end address.
+ * @param category Business or Personal. Null for a trip in progress, and for a closed trip
+ * that has not been sorted yet.
+ * @param ranPastSchedule true for a Business trip that ended after its day's hours.
+ * @param ignored true for a discarded trip that was discarded only because it started outside
+ * the work schedule while such trips were set to be ignored.
+ * @param markableAs what Shawn can mark the trip as: for a counted trip, the categories it does
+ * not have; for every other trip, nothing.
  */
 data class TripLine(
     val id: Long,
@@ -73,29 +85,45 @@ data class TripLine(
     val kind: TripKind,
     val from: TripPlace? = null,
     val to: TripPlace? = null,
+    val category: TripCategory? = null,
+    val ranPastSchedule: Boolean = false,
+    val ignored: Boolean = false,
+    val markableAs: List<TripCategory> = emptyList(),
 )
 
-/** The trips that started on one calendar day, newest first. */
-data class TripDay(val date: LocalDate, val trips: List<TripLine>)
+/**
+ * The trips that started on one calendar day, newest first.
+ *
+ * @param sessionCount how many counted trips the day has, Business and Personal together.
+ * Deleted and discarded trips are not among them, listed or not.
+ * @param businessMetres what the day's Business trips add up to.
+ */
+data class TripDay(
+    val date: LocalDate,
+    val trips: List<TripLine>,
+    val sessionCount: Int,
+    val businessMetres: Double,
+)
 
 /**
  * One month, ready to show.
  *
- * @param totalMetres the distance of the finished trips. Added up in metres and rounded once,
- * when it is shown, so the rounding of single trips never accumulates.
- * @param tripCount how many finished trips that is.
+ * @param totals the finished trips, added up by what they are saved as. Added up in metres and
+ * rounded once, when it is shown, so the rounding of single trips never accumulates.
  * @param inProgress the trip being recorded, if it started in this month.
  * @param days newest day first. Holds deleted and discarded trips only if they were asked for.
  * @param hiddenLeftOut how many deleted and discarded trips the month has that [days] leaves
  * out.
  */
 data class MonthSummary(
-    val totalMetres: Double,
-    val tripCount: Int,
+    val totals: CategoryTotals,
     val inProgress: TripLine?,
     val days: List<TripDay>,
     val hiddenLeftOut: Int,
 ) {
+    /** How many finished trips the month has, whatever they are saved as. */
+    val tripCount: Int get() = totals.count
+
     /** True if the month has nothing at all to list. */
     val isEmpty: Boolean get() = inProgress == null && days.isEmpty()
 }
@@ -118,7 +146,8 @@ fun canStepForward(shown: YearMonth, current: YearMonth): Boolean = shown < curr
  * month, so the same rule decides the month.
  *
  * What is counted is decided by `isCounted` (`data/trip/TripTotals.kt`), the rule the home
- * screen and the Android Auto screen use for today's totals.
+ * screen and the Android Auto screen use for today's totals, and what is Business and what
+ * Personal by `categoryTotals` in the same file.
  *
  * @param trips every trip that started in the month, whatever its status, in any order.
  * @param showLeftOut whether the deleted and the discarded trips are listed. The totals are the
@@ -149,9 +178,9 @@ fun monthSummary(
     val listed =
         finished.map { it.toLine(TripKind.COUNTED) } + if (showLeftOut) leftOut else emptyList()
     val newestFirst = compareByDescending<TripLine> { it.startedAtMs }.thenByDescending { it.id }
+    val finishedByDay = finished.groupBy { localDateOf(it.startedAtMs, zone) }
     return MonthSummary(
-        totalMetres = finished.sumOf { it.distanceMetres },
-        tripCount = finished.size,
+        totals = categoryTotals(finished),
         inProgress =
             trips.firstOrNull { it.status == TripStatus.OPEN }?.let { open ->
                 TripLine(
@@ -166,8 +195,15 @@ fun monthSummary(
         days =
             listed
                 .groupBy { localDateOf(it.startedAtMs, zone) }
-                .map { (date, lines) -> TripDay(date, lines.sortedWith(newestFirst)) }
-                .sortedByDescending { it.date },
+                .map { (date, lines) ->
+                    val dayTotals = categoryTotals(finishedByDay[date].orEmpty())
+                    TripDay(
+                        date = date,
+                        trips = lines.sortedWith(newestFirst),
+                        sessionCount = dayTotals.count,
+                        businessMetres = dayTotals.business.metres,
+                    )
+                }.sortedByDescending { it.date },
         hiddenLeftOut = if (showLeftOut) 0 else leftOut.size,
     )
 }
@@ -180,6 +216,10 @@ private fun Trip.toLine(kind: TripKind): TripLine = TripLine(
     kind = kind,
     from = placeShown(kind, startPlace()),
     to = placeShown(kind, endPlace()),
+    category = category,
+    ranPastSchedule = ranPastScheduleShown,
+    ignored = kind == TripKind.DISCARDED && ignoredOutsideSchedule,
+    markableAs = categoriesOffered(status, category),
 )
 
 /**

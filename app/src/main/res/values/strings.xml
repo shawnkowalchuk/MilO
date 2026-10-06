@@ -9,6 +9,18 @@
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
     <!-- Shared: the button of a question that does not do the thing asked about. -->
     <string name="action_cancel">Cancel</string>
+    <!-- Shared: the button that takes what a dialog shows, such as a time of day. -->
+    <string name="action_ok">OK</string>
+
+    <!--
+        Shared: what a finished trip is saved as, under its times on Home and on Trips. The
+        choice between them is made by categoryWordsRes(). "Business" is also the heading
+        over the Business figures of a day and of a month, which come first.
+    -->
+    <string name="trip_business">Business</string>
+    <string name="trip_business_ran_past">Business · ran past schedule</string>
+    <string name="trip_personal">Personal</string>
+    <string name="trip_unsorted">Not marked Business or Personal yet</string>
 
     <!-- Design system: spoken by the screen reader in place of a row's indicator. -->
     <string name="status_ok">OK</string>
@@ -197,6 +209,26 @@
         <item quantity="one">%d trip</item>
         <item quantity="other">%d trips</item>
     </plurals>
+    <!--
+        Trips and Home: what is not Business, kept apart from it. The arguments are the
+        number of trips and their distance, such as 22.0 km.
+    -->
+    <plurals name="trips_personal_total">
+        <item quantity="one">Personal: %2$s · %1$d trip</item>
+        <item quantity="other">Personal: %2$s · %1$d trips</item>
+    </plurals>
+    <plurals name="trips_unsorted_total">
+        <item quantity="one">Not marked Business or Personal yet: %2$s · %1$d trip</item>
+        <item quantity="other">Not marked Business or Personal yet: %2$s · %1$d trips</item>
+    </plurals>
+    <!--
+        Trips: under a day's date. The arguments are the number of counted trips that day and
+        the distance of the Business ones, such as 42.1 km.
+    -->
+    <plurals name="trips_day_summary">
+        <item quantity="one">%1$d trip · %2$s business</item>
+        <item quantity="other">%1$d trips · %2$s business</item>
+    </plurals>
     <string name="trips_previous_month">Previous month</string>
     <string name="trips_next_month">Next month</string>
     <string name="trips_show_left_out">Show deleted and discarded trips</string>
@@ -206,16 +238,20 @@
         <item quantity="one">%d deleted or discarded trip is not shown.</item>
         <item quantity="other">%d deleted or discarded trips are not shown.</item>
     </plurals>
-    <string name="trips_press_hint">Tap a trip to delete it.</string>
+    <string name="trips_press_hint">Tap a trip to mark it Business or Personal, or to delete it.</string>
     <!-- Trips: spoken by the screen reader for what a tap on a finished trip does. -->
-    <string name="trips_row_press">show or hide the Delete button</string>
+    <string name="trips_row_press">show or hide what can be done with this trip</string>
     <string name="trips_in_progress_title">In progress</string>
     <string name="trips_in_progress_note">Still recording. Not in the month\'s total until it ends. It cannot be deleted while it is recording.</string>
     <!-- The arguments are two times of day from formatTimeOfDay(): the start and the end. -->
     <string name="trips_time_range">%1$s – %2$s</string>
     <string name="trips_discarded_note">Discarded: too short, or a start that was never confirmed. Not counted.</string>
     <string name="trips_deleted_note">Deleted by you. Not counted.</string>
-    <!-- Trips: the one thing that can be done with a trip. -->
+    <!-- Trips: a trip left out because Settings says to ignore trips outside the work hours. -->
+    <string name="trips_ignored_note">Left out: it started outside your work hours, and Settings says to ignore such trips. Not counted.</string>
+    <!-- Trips: what can be done with a trip. -->
+    <string name="trips_action_mark_business">Mark as Business</string>
+    <string name="trips_action_mark_personal">Mark as Personal</string>
     <string name="trips_action_delete">Delete trip</string>
     <string name="trips_action_restore">Restore</string>
     <string name="trips_action_count">Count this trip</string>
@@ -283,6 +319,26 @@
     <string name="settings_sound_refused_large">That file is too large for a trip-start sound (more than %1$d MB). The sound was not changed.</string>
     <string name="settings_sound_refused_playable">That file cannot be played as a sound. The sound was not changed.</string>
     <string name="settings_sound_no_picker">This phone has no app to pick a file with. The sound was not changed.</string>
+
+    <!-- Settings: the work schedule. -->
+    <string name="settings_schedule_title">Work schedule</string>
+    <string name="settings_schedule_intro">A trip that starts on a tracked day, between that day\'s start and end, is saved as Business. Any other trip is Personal. A trip that is still running at the end time is recorded to its end and marked \"ran past schedule\".</string>
+    <string name="settings_schedule_applies">A change applies to trips that end after it. Trips already saved keep what they are; you can change any of them on the Trips screen.</string>
+    <!-- The argument is a time of day from formatClockTime(), such as 08:00. -->
+    <string name="settings_schedule_start">Start: %1$s</string>
+    <string name="settings_schedule_end">End: %1$s</string>
+    <!-- Settings: the titles of the time picker. The argument is a day, such as Monday. -->
+    <string name="settings_schedule_pick_start">%1$s: start</string>
+    <string name="settings_schedule_pick_end">%1$s: end</string>
+    <string name="settings_schedule_copy">Use these hours on every tracked day</string>
+    <string name="settings_schedule_hours_refused">A day\'s end must be later than its start. Nothing was changed. To move a whole day later, change its end first.</string>
+    <!-- Settings: what becomes of a trip that starts outside the work schedule. -->
+    <string name="settings_outside_title">Trips outside the work hours</string>
+    <string name="settings_outside_personal">Save as Personal</string>
+    <string name="settings_outside_personal_detail">They are listed on the Trips screen and added up apart from Business.</string>
+    <string name="settings_outside_ignore">Ignore them</string>
+    <!-- The argument is the label of the switch on the Trips screen that shows such trips. -->
+    <string name="settings_outside_ignore_detail">They are still recorded, then left out of the list and the totals. Nothing is destroyed: on the Trips screen, switch on \"%1$s\" to see one and count it.</string>
 
     <!--
         The Android Auto screen. Its header is app_name, its button uses home_start_trip and

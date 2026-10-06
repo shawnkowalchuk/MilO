@@ -25,8 +25,12 @@ import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SwitchRow
+import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
+import com.shawnkowalchuk.milo.data.trip.CategoryTotals
+import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import com.shawnkowalchuk.milo.platform.address.TripPlace
 import java.time.LocalDate
@@ -39,12 +43,16 @@ private class TripsActions(
     val onNextMonth: () -> Unit,
     val onShowLeftOut: (Boolean) -> Unit,
     val onCorrect: (Long, TripCorrection) -> Unit,
+    val onMark: (Long, TripCategory) -> Unit,
 )
 
 /**
- * One month of trips: the month's name, its total and its number of trips at the top, then the
- * trips grouped by day, newest first. It opens on the current month and steps back and forth
- * one month at a time, never past the current one.
+ * One month of trips: the month's name, its Business total and, apart from it, its Personal
+ * total at the top, then the trips grouped by day, newest first. It opens on the current month
+ * and steps back and forth one month at a time, never past the current one.
+ *
+ * A finished trip can be marked Business or Personal here, whatever the work schedule made of
+ * it.
  *
  * A finished trip can be deleted here, after a question. It is not destroyed: with the switch
  * on it is listed again, beside the trips MilO discarded, and can be restored; a discarded trip
@@ -65,6 +73,7 @@ fun TripsScreen(viewModel: TripsViewModel, modifier: Modifier = Modifier) {
                 onNextMonth = viewModel::onNextMonth,
                 onShowLeftOut = viewModel::onShowLeftOut,
                 onCorrect = viewModel::onCorrect,
+                onMark = viewModel::onMark,
             ),
         modifier = modifier,
     )
@@ -77,17 +86,19 @@ private fun TripsContent(
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val twentyFourHour = rememberTwentyFourHourClock()
     val monthName = formatMonthAndYear(state.month, locale)
     val summary = state.summary
 
-    // Which finished trip shows its Delete button, and which one the question is being asked
-    // about. Both belong to the screen, not to the trips, so they are kept here; saved, so a
-    // rotation does not close the question.
+    // Which finished trip shows its buttons, and which one the question is being asked about.
+    // Both belong to the screen, not to the trips, so they are kept here; saved, so a rotation
+    // does not close the question.
     var openTripId by rememberSaveable { mutableStateOf<Long?>(null) }
     var askedAboutId by rememberSaveable { mutableStateOf<Long?>(null) }
     val rows =
         TripRowContext(
             zone = state.zone,
+            twentyFourHour = twentyFourHour,
             openTripId = openTripId,
             onToggle = { id -> openTripId = if (openTripId == id) null else id },
             onAsk = { trip, correction ->
@@ -98,6 +109,12 @@ private fun TripsContent(
                 } else {
                     actions.onCorrect(trip.id, correction)
                 }
+            },
+            onMark = { trip, category ->
+                // The buttons are put away with the press. Left open, the same spot would at
+                // once hold the opposite button, and a double tap would undo the first.
+                openTripId = null
+                actions.onMark(trip.id, category)
             },
         )
 
@@ -136,7 +153,9 @@ private fun TripsContent(
             item { Note(stringResource(R.string.trips_reading)) }
             return@LazyColumn
         }
-        summary.inProgress?.let { trip -> item { InProgressCard(trip, state.zone) } }
+        summary.inProgress?.let { trip ->
+            item { InProgressCard(trip, state.zone, twentyFourHour) }
+        }
         if (summary.isEmpty) {
             item { Note(stringResource(R.string.trips_empty, monthName)) }
         }
@@ -164,6 +183,7 @@ private fun TripsContent(
         DeleteQuestion(
             trip = askedAbout,
             zone = state.zone,
+            twentyFourHour = twentyFourHour,
             onDelete = {
                 askedAboutId = null
                 openTripId = null
@@ -192,60 +212,49 @@ private fun Note(text: String) {
 @Composable
 private fun TripsPreview() {
     val morning = 1_791_028_800_000
+    val shop = TripPlace.Known("12 Shop Rd, Edmonton")
+    val site = TripPlace.Known("48 Main St, Leduc")
+    val trips =
+        listOf(
+            TripLine(
+                id = 3,
+                startedAtMs = morning + 3_600_000,
+                endedAtMs = morning + 5_400_000,
+                distanceMetres = 24_900.0,
+                kind = TripKind.COUNTED,
+                from = site,
+                to = TripPlace.LookingUp,
+                category = TripCategory.BUSINESS,
+                ranPastSchedule = true,
+                markableAs = listOf(TripCategory.PERSONAL),
+            ),
+            TripLine(
+                id = 2,
+                startedAtMs = morning + 1_800_000,
+                endedAtMs = morning + 1_860_000,
+                distanceMetres = 9_120.0,
+                kind = TripKind.DISCARDED,
+                category = TripCategory.PERSONAL,
+                ignored = true,
+            ),
+            TripLine(
+                id = 1,
+                startedAtMs = morning,
+                endedAtMs = morning + 1_500_000,
+                distanceMetres = 23_400.0,
+                kind = TripKind.COUNTED,
+                from = shop,
+                to = site,
+                category = TripCategory.PERSONAL,
+                markableAs = listOf(TripCategory.BUSINESS),
+            ),
+        )
     val summary =
         MonthSummary(
-            totalMetres = 48_300.0,
-            tripCount = 2,
+            totals = CategoryTotals(Tally(1, 24_900.0), Tally(1, 23_400.0), Tally(0, 0.0)),
             inProgress =
-                TripLine(
-                    4,
-                    morning + 9_000_000,
-                    null,
-                    3_200.0,
-                    TripKind.IN_PROGRESS,
-                    from = TripPlace.Known("12 Shop Rd, Edmonton"),
-                ),
-            days =
-                listOf(
-                    TripDay(
-                        LocalDate.of(2026, 10, 3),
-                        listOf(
-                            TripLine(
-                                3,
-                                morning + 3_600_000,
-                                morning + 5_400_000,
-                                24_900.0,
-                                TripKind.COUNTED,
-                                from = TripPlace.Known("48 Main St, Leduc"),
-                                to = TripPlace.LookingUp,
-                            ),
-                            TripLine(
-                                2,
-                                morning + 1_800_000,
-                                morning + 1_860_000,
-                                120.0,
-                                TripKind.DISCARDED,
-                            ),
-                            TripLine(
-                                5,
-                                morning + 1_000_000,
-                                morning + 1_400_000,
-                                4_100.0,
-                                TripKind.DELETED,
-                                from = TripPlace.Known("12 Shop Rd, Edmonton"),
-                            ),
-                            TripLine(
-                                1,
-                                morning,
-                                morning + 1_500_000,
-                                23_400.0,
-                                TripKind.COUNTED,
-                                from = TripPlace.Known("12 Shop Rd, Edmonton"),
-                                to = TripPlace.Known("48 Main St, Leduc"),
-                            ),
-                        ),
-                    ),
-                ),
+                TripLine(4, morning + 9_000_000, null, 3_200.0, TripKind.IN_PROGRESS, from = shop),
+            days = listOf(TripDay(LocalDate.of(2026, 10, 3), trips, 2, 24_900.0)),
             hiddenLeftOut = 0,
         )
     val state =
@@ -259,7 +268,10 @@ private fun TripsPreview() {
         )
     MiloTheme {
         Surface {
-            TripsContent(state = state, actions = TripsActions({}, {}, {}, { _, _ -> }))
+            TripsContent(
+                state = state,
+                actions = TripsActions({}, {}, {}, { _, _ -> }, { _, _ -> }),
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.trips
 
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -42,6 +43,8 @@ class TripMonthTest {
             startedBy = TripStartCause.TRUCK,
             truckSeen = true,
             distanceMetres = if (status == TripStatus.OPEN) 0.0 else metres,
+            // All Business: mixed months are in TripMonthCategoryTest.
+            category = TripCategory.BUSINESS.takeIf { status != TripStatus.OPEN },
         )
     }
 
@@ -69,7 +72,7 @@ class TripMonthTest {
 
         val month = summary(trips)
 
-        assertEquals(20_500.0, month.totalMetres, 0.0)
+        assertEquals(20_500.0, month.totals.business.metres, 0.0)
         assertEquals(2, month.tripCount)
     }
 
@@ -92,7 +95,7 @@ class TripMonthTest {
         assertEquals(0, shown.hiddenLeftOut)
 
         for (month in listOf(hidden, shown)) {
-            assertEquals(12_300.0, month.totalMetres, 0.0)
+            assertEquals(12_300.0, month.totals.business.metres, 0.0)
             assertEquals(1, month.tripCount)
         }
     }
@@ -116,7 +119,7 @@ class TripMonthTest {
         val month = summary(emptyList())
 
         assertTrue(month.isEmpty)
-        assertEquals(0.0, month.totalMetres, 0.0)
+        assertEquals(0.0, month.totals.business.metres, 0.0)
         assertEquals(0, month.tripCount)
         assertEquals(0, month.hiddenLeftOut)
     }
@@ -161,7 +164,7 @@ class TripMonthTest {
         val month = summary(listOf(overMidnight))
 
         assertEquals(listOf(LocalDate.of(2026, 10, 5)), month.days.map { it.date })
-        assertEquals(30_000.0, month.totalMetres, 0.0)
+        assertEquals(30_000.0, month.totals.business.metres, 0.0)
     }
 
     @Test
@@ -195,7 +198,7 @@ class TripMonthTest {
         assertNull(inProgress.endedAtMs)
         // Not among the day's trips, and not in the total until it ends.
         assertEquals(listOf(finished.id), month.days.single().trips.map { it.id })
-        assertEquals(12_300.0, month.totalMetres, 0.0)
+        assertEquals(12_300.0, month.totals.business.metres, 0.0)
         assertEquals(1, month.tripCount)
         assertFalse(month.isEmpty)
     }

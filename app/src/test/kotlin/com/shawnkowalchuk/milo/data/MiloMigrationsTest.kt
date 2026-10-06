@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.data
 
+import androidx.room3.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
 import java.io.File
@@ -65,10 +66,10 @@ class MiloMigrationsTest {
     private fun normalised(sql: String): String =
         sql.replace("`", "").replace(Regex("\\s+"), " ").trim()
 
-    /** The statements [MIGRATION_1_2] runs, in order. */
-    private fun statementsOfStepOneToTwo(): List<String> {
+    /** The statements [step] runs, in order. */
+    private fun statementsOf(step: Migration): List<String> {
         val recorder = RecordingConnection()
-        runTest { MIGRATION_1_2.migrate(recorder) }
+        runTest { step.migrate(recorder) }
         return recorder.statements.map(::normalised)
     }
 
@@ -76,7 +77,9 @@ class MiloMigrationsTest {
     fun `there is one step for every version the database has had`() {
         val current = schemas.listFiles { file -> file.extension == "json" }.orEmpty().size
 
-        assertEquals("One schema file per version, and no gaps", current, 2)
+        assertEquals("One schema file per version, and no gaps", current, 3)
+        // In order and without a gap, so a database that is two versions behind is taken
+        // through both steps, one after the other.
         assertEquals(
             (1 until current).map { it to it + 1 },
             MILO_MIGRATIONS.map { it.startVersion to it.endVersion },
@@ -84,28 +87,35 @@ class MiloMigrationsTest {
     }
 
     @Test
-    fun `the step from 1 to 2 makes exactly what version 2 has more than version 1`() {
-        val before = tables(1)
-        val after = tables(2)
-        assertEquals("No table is added or dropped by this step", before.keys, after.keys)
-        val expected =
-            after.flatMap { (name, table) ->
-                val old = before.getValue(name)
-                assertTrue(
-                    "A column of $name is gone or was changed",
-                    table.columns.entries.containsAll(old.columns.entries),
-                )
-                assertTrue("An index of $name is gone", table.indices.containsAll(old.indices))
-                (table.columns.values - old.columns.values.toSet()) + (table.indices - old.indices)
-            }
+    fun `every step makes exactly what its version has more than the one before`() {
+        for (step in MILO_MIGRATIONS) {
+            val name = "The step from ${step.startVersion} to ${step.endVersion}"
+            val before = tables(step.startVersion)
+            val after = tables(step.endVersion)
+            assertEquals("$name adds or drops a table", before.keys, after.keys)
+            val expected =
+                after.flatMap { (table, now) ->
+                    val old = before.getValue(table)
+                    assertTrue(
+                        "$name: a column of $table is gone or was changed",
+                        now.columns.entries.containsAll(old.columns.entries),
+                    )
+                    assertTrue(
+                        "$name: an index of $table is gone",
+                        now.indices.containsAll(old.indices),
+                    )
+                    (now.columns.values - old.columns.values.toSet()) + (now.indices - old.indices)
+                }
 
-        assertEquals(expected.toSet(), statementsOfStepOneToTwo().toSet())
-        assertEquals("No statement runs twice", expected.size, statementsOfStepOneToTwo().size)
+            assertEquals(name, expected.toSet(), statementsOf(step).toSet())
+            assertEquals("$name runs a statement twice", expected.size, statementsOf(step).size)
+        }
     }
 
     @Test
-    fun `the step from 1 to 2 only adds`() {
-        for (statement in statementsOfStepOneToTwo()) {
+    fun `every step only adds`() {
+        for (statement in MILO_MIGRATIONS.flatMap(::statementsOf)) {
+            // No UPDATE, no DELETE, no DROP: a step never rewrites or removes a stored value.
             val adds =
                 statement.startsWith("ALTER TABLE trips ADD COLUMN ") ||
                     statement.startsWith("CREATE INDEX IF NOT EXISTS ")
@@ -115,13 +125,32 @@ class MiloMigrationsTest {
 
     @Test
     fun `a new column that may not be empty has a default for the rows already stored`() {
-        val added = statementsOfStepOneToTwo().filter { it.contains(" ADD COLUMN ") }
+        for (step in MILO_MIGRATIONS) {
+            val added = statementsOf(step).filter { it.contains(" ADD COLUMN ") }
 
-        assertEquals(4, added.size)
-        for (statement in added.filter { it.contains("NOT NULL") }) {
-            // Without a default SQLite refuses the statement on a table that has rows.
-            assertTrue(statement, statement.contains(" DEFAULT "))
+            assertEquals("Columns added from version ${step.startVersion}", 4, added.size)
+            for (statement in added.filter { it.contains("NOT NULL") }) {
+                // Without a default SQLite refuses the statement on a table that has rows.
+                assertTrue(statement, statement.contains(" DEFAULT "))
+            }
         }
+    }
+
+    @Test
+    fun `the step from 2 to 3 leaves every stored trip unsorted, and sorts none itself`() {
+        val statements = statementsOf(MIGRATION_2_3)
+
+        // Empty on every stored row, which is how "not sorted yet" is stored. The catch-up at
+        // the same process start sorts them; the step itself cannot read the schedule.
+        assertTrue("ALTER TABLE trips ADD COLUMN category TEXT" in statements)
+        // And no stored trip is set by hand, past the schedule or ignored.
+        for (flag in listOf("categorySetByHand", "ranPastSchedule", "ignoredOutsideSchedule")) {
+            assertTrue(
+                flag,
+                "ALTER TABLE trips ADD COLUMN $flag INTEGER NOT NULL DEFAULT 0" in statements,
+            )
+        }
+        assertEquals(4, statements.size)
     }
 }
 

@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.trips
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -38,8 +39,9 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  * @param zone the time zone the month and its days are worked out in.
  * @param canStepForward false on the current month: there is nothing later to show.
  * @param showLeftOut whether the deleted and the discarded trips are listed.
- * @param changeFailed true after a delete, a restore or a "count this trip" that was not made.
- * The list shows what is stored either way; this only says that the press did nothing.
+ * @param changeFailed true after a change to a trip that was not made: a delete, a restore, a
+ * "count this trip", or a marking as Business or Personal. The list shows what is stored either
+ * way; this only says that the press did nothing.
  * @param summary the month's trips, or null while they are being read.
  */
 data class TripsUiState(
@@ -150,6 +152,17 @@ class TripsViewModel(
             val made = corrections.apply(tripId, correction)
             choice.update { it.copy(changeFailed = !made) }
             if (made && correction != TripCorrection.DELETE) lookUpAddresses(TRIP_COUNTED_AGAIN)
+        }
+    }
+
+    /**
+     * Marks a finished trip as Business or as Personal by Shawn's own choice. The row, the
+     * day's heading and the month's totals follow storage.
+     */
+    fun onMark(tripId: Long, category: TripCategory) {
+        viewModelScope.launch {
+            val made = corrections.mark(tripId, category)
+            choice.update { it.copy(changeFailed = !made) }
         }
     }
 

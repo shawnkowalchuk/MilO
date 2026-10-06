@@ -1,11 +1,15 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.schedule.TripFiling
+import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripEndReason
 import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.data.trip.classificationText
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 // How the trip controller words its event-log lines. Plain functions, kept apart from the
@@ -52,16 +56,26 @@ internal fun TripEvent.describe(): String = when (this) {
 private fun connectedText(truckConnected: Boolean): String =
     if (truckConnected) "truck connected" else "truck not connected"
 
-/** The line that records a closed trip: what became of it, why, and what it was measured from. */
+/**
+ * The line that records a closed trip: what became of it, why, and what it was measured from.
+ *
+ * @param ignored true if the trip rules kept the trip and it is stored as discarded all the
+ * same, because it started outside the work schedule and such trips are set to be ignored.
+ */
 internal fun closedText(
     closed: ClosedTrip,
     reason: TripEndReason,
     storedFixes: Int,
     minimumTripDistanceMetres: Int,
+    ignored: Boolean,
 ): String {
     val metres = closed.distance.metres.roundToInt()
     val outcome =
         when {
+            ignored ->
+                "discarded: it started outside the work schedule, and trips outside it are " +
+                    "set to be ignored ($metres m). It can be counted on the Trips screen"
+
             closed.status != TripStatus.DISCARDED -> "finished, $metres m"
 
             reason == TripEndReason.FALSE_START ->
@@ -74,6 +88,31 @@ internal fun closedText(
         "$storedFixes fixes stored, ${distance.acceptedCount} used, " +
             "${distance.rejectedForAccuracy} too inaccurate, ${distance.rejectedAsJump} jumps"
     return "$outcome; ended by $reason; $fixes"
+}
+
+/**
+ * What the work schedule made of a trip that has just been closed, to follow [closedText] in
+ * the same line: Business or Personal, and the day, the time and the hours it was judged by.
+ *
+ * @param kept false for a trip that is stored as discarded, by the trip rules or because it is
+ * ignored. It is sorted all the same, for the day it is counted after all, but the line does
+ * not say "saved".
+ * @param schedule the schedule it was judged by, or null if the settings could not be read.
+ */
+internal fun filedText(
+    filing: TripFiling,
+    kept: Boolean,
+    startedAtMs: Long,
+    schedule: WorkSchedule?,
+    zone: ZoneId,
+): String {
+    val classification = filing.classification
+    if (classification == null || schedule == null) {
+        return "not sorted into Business or Personal: the settings cannot be read. " +
+            "It is sorted at a later start of MilO"
+    }
+    val verb = if (kept) "saved as" else "if it is counted, it is"
+    return "$verb ${classificationText(classification, startedAtMs, schedule, zone)}"
 }
 
 /** The line for a start of the trip service that failed, at the preflight or in Android. */

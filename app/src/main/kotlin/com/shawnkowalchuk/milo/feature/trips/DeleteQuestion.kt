@@ -12,11 +12,12 @@ import java.time.ZoneId
 internal fun DeleteQuestion(
     trip: TripLine,
     zone: ZoneId,
+    twentyFourHour: Boolean,
     onDelete: () -> Unit,
     onKeep: () -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val times = trip.timesText(zone, locale)
+    val times = trip.timesText(zone, locale, twentyFourHour)
     val kilometres = trip.kilometres(locale)
     ConfirmDialog(
         title = stringResource(R.string.trips_delete_title),

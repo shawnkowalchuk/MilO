@@ -279,7 +279,7 @@ internal class TripWorker(
             eventLog.add(clock(), category, what, "Before: $before\nAfter: ${after.describe()}")
         }
         for (effect in transition.effects) {
-            val line = ledger.carryOut(effect, ruleSettings.minimumTripDistanceMetres)
+            val line = ledger.carryOut(effect, ruleSettings)
             eventLog.add(clock(), line.category, line.message)
         }
         if (transition.tripReallyBegan(before = known)) service.tripJustStarted = true

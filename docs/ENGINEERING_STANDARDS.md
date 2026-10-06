@@ -78,8 +78,12 @@ Use a **feature-first** layout, not a type-first one. Group by *what it does*, n
 com.shawnkowalchuk.milo   # one Gradle module, ':app'
   app/                    # MiloApplication, the AppContainer, MainActivity, navigation host
   feature/<name>/         # one package per feature: its screens, its ViewModel, its own logic
-  core/designsystem/      # theme tokens and the shared base components
+  core/designsystem/      # theme tokens, the shared base components, and the words two
+                          #   features must say alike. The only core package that may use
+                          #   Android's resources
   core/trip/              # the trip rules (ADR-002): pure Kotlin with unit tests
+  core/schedule/          # the work schedule and Business or Personal: pure Kotlin with unit
+                          #   tests. It sorts a trip that has closed; it never starts one
   core/util/              # pure Kotlin helpers with unit tests (time, formatting)
   data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
                           #   touches storage

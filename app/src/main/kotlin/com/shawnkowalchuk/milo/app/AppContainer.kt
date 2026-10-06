@@ -11,6 +11,7 @@ import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
 import com.shawnkowalchuk.milo.data.sound.buildOwnSoundStore
+import com.shawnkowalchuk.milo.data.trip.TripCategoryCatchUp
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.address.GeocoderAddressLookup
 import com.shawnkowalchuk.milo.platform.address.NetworkStatus
@@ -35,6 +36,7 @@ import com.shawnkowalchuk.milo.platform.trip.TripServiceStarter
 import com.shawnkowalchuk.milo.platform.trip.TripStartSound
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import com.shawnkowalchuk.milo.platform.trip.playbackProblem
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -169,6 +171,24 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             truck = truckConnection,
             starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
+            clock = System::currentTimeMillis,
+            zone = ZoneId::systemDefault,
+            scope = applicationScope,
+        )
+    }
+
+    /**
+     * Sorts the trips that were recorded before MilO had a work schedule into Business and
+     * Personal. A trip recorded since is sorted by the trip controller when it closes, so after
+     * its first pass this finds nothing to do.
+     */
+    val tripCategoryCatchUp: TripCategoryCatchUp by lazy {
+        TripCategoryCatchUp(
+            trips = tripRepository,
+            settings = settingsStore,
+            eventLog = eventLogRepository,
+            crashFileStore = crashFileStore,
+            zone = ZoneId::systemDefault,
             clock = System::currentTimeMillis,
             scope = applicationScope,
         )

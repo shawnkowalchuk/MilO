@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
@@ -11,6 +12,8 @@ import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
 import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import java.io.IOException
+import java.time.DayOfWeek
+import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,7 +36,9 @@ private const val KEEP_WATCHING_MS = 5_000L
  *
  * Nothing here tells the trip engine about a change. The trip controller reads the grace period
  * and the minimum distance at every trigger, and the trip service reads the sound at every trip
- * start, so a stored value is simply the one in force from the next event on.
+ * start, so a stored value is simply the one in force from the next event on. The work schedule
+ * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
+ * sorted again because the schedule changed.
  *
  * @param ownSound copies and checks a picked audio file, and goes back to the built-in sound.
  * @param playSound plays the trip-start sound the way a trip start does, given the stored
@@ -47,10 +52,16 @@ class SettingsViewModel(
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
 ) : ViewModel() {
-    /** What the screen shows that is not a stored setting. */
+    /**
+     * What the screen shows that is not a stored setting.
+     *
+     * @param problemDay the day of the schedule the press that did not work was about, if it
+     * was about one: the screen says under that day what went wrong.
+     */
     private data class Passing(
         val copyingSound: Boolean = false,
         val problem: SettingsProblem? = null,
+        val problemDay: DayOfWeek? = null,
     )
 
     private val passing = MutableStateFlow(Passing())
@@ -66,7 +77,7 @@ class SettingsViewModel(
             if (stored == null) {
                 SettingsUiState.Unreadable
             } else {
-                settingsUiState(stored, now.copyingSound, now.problem)
+                settingsUiState(stored, now.copyingSound, now.problem, now.problemDay)
             }
         }.stateIn(
             viewModelScope,
@@ -87,6 +98,29 @@ class SettingsViewModel(
 
     fun onUseBuiltInSound() = change { ownSound.useBuiltIn() }
 
+    fun onDayTracked(day: DayOfWeek, tracked: Boolean) = change {
+        settings.setSchedule(it.schedule.withTracked(day, tracked))
+    }
+
+    /** The time picker's answer for the start of [day]'s hours. */
+    fun onDayStart(day: DayOfWeek, hour: Int, minute: Int) = changeHours(day) {
+        it.withStart(day, LocalTime.of(hour, minute))
+    }
+
+    /** The time picker's answer for the end of [day]'s hours. */
+    fun onDayEnd(day: DayOfWeek, hour: Int, minute: Int) = changeHours(day) {
+        it.withEnd(day, LocalTime.of(hour, minute))
+    }
+
+    /** Gives every tracked day the hours [day] has. */
+    fun onCopyHours(day: DayOfWeek) = change {
+        settings.setSchedule(it.schedule.withHoursOfOnTrackedDays(day))
+    }
+
+    fun onIgnoreOutsideSchedule(ignore: Boolean) = change {
+        settings.setIgnoreTripsOutsideSchedule(ignore)
+    }
+
     /** Plays the sound a trip start would play now, whether or not the sound is switched on. */
     fun onPlaySound() = change { playSound(it.customSoundUri) }
 
@@ -104,7 +138,7 @@ class SettingsViewModel(
 
     /** The phone could not show a file picker at all. */
     fun onNoFilePicker() {
-        passing.update { it.copy(problem = SettingsProblem.NO_FILE_PICKER) }
+        passing.update { it.copy(problem = SettingsProblem.NO_FILE_PICKER, problemDay = null) }
     }
 
     /**
@@ -112,19 +146,51 @@ class SettingsViewModel(
      * that cannot be read or written is said on the screen and written to the event log; left
      * alone, the exception would end the process, and the trip service runs in it.
      */
-    private fun change(write: suspend (stored: MiloSettings) -> Unit) {
+    private fun change(write: suspend (stored: MiloSettings) -> Unit) = changeUnlessRefused {
+        write(it)
+        null
+    }
+
+    /**
+     * A change to one of [day]'s two times. [next] works the new schedule out from the stored
+     * one, or answers null for hours that would not end after they start; nothing is stored
+     * then, and the screen says why, under that day.
+     */
+    private fun changeHours(day: DayOfWeek, next: (WorkSchedule) -> WorkSchedule?) =
+        changeUnlessRefused(day) {
+            val schedule = next(it.schedule)
+            if (schedule == null) {
+                SettingsProblem.HOURS_END_NOT_AFTER_START
+            } else {
+                settings.setSchedule(schedule)
+                null
+            }
+        }
+
+    /**
+     * @param day the day of the schedule the press is about, if it is about one.
+     * @param write makes the change, or returns why it was not made. Whatever it returns is
+     * shown until the next press.
+     */
+    private fun changeUnlessRefused(
+        day: DayOfWeek? = null,
+        write: suspend (stored: MiloSettings) -> SettingsProblem?,
+    ) {
         viewModelScope.launch {
-            val failure =
+            var failure: IOException? = null
+            val problem =
                 try {
                     oneChangeAtATime.withLock { write(settings.current()) }
-                    null
                 } catch (notStored: IOException) {
-                    notStored
+                    failure = notStored
+                    SettingsProblem.COULD_NOT_SAVE
                 }
-            passing.update { it.copy(problem = failure?.let { SettingsProblem.COULD_NOT_SAVE }) }
-            if (failure != null) {
+            passing.update {
+                it.copy(problem = problem, problemDay = day.takeIf { problem != null })
+            }
+            failure?.let {
                 val what = "The Settings screen could not store a change"
-                eventLog.add(clock(), EventCategory.ERROR, what, failure.stackTraceToString())
+                eventLog.add(clock(), EventCategory.ERROR, what, it.stackTraceToString())
             }
         }
     }

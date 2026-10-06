@@ -1,7 +1,11 @@
 package com.shawnkowalchuk.milo.data.settings
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.schedule.DayHours
 import java.io.File
+import java.time.DayOfWeek
+import java.time.LocalTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,7 +54,45 @@ class SettingsStoreTest {
         assertEquals(300, settings.minimumTripDistanceMetres)
         assertEquals(true, settings.soundEnabled)
         assertEquals(null, settings.autoStartHeldOffSinceMs)
+        // Monday to Friday, 08:00 to 16:30, and a trip outside it is saved as Personal.
+        assertEquals(DEFAULT_WORK_SCHEDULE, settings.schedule)
+        assertEquals(false, settings.ignoreTripsOutsideSchedule)
     }
+
+    @Test
+    fun `the work schedule and the choice for trips outside it survive the process`() {
+        val schedule =
+            DEFAULT_WORK_SCHEDULE
+                .withTracked(DayOfWeek.SATURDAY, true)
+                .with(DayOfWeek.MONDAY, DayHours(true, LocalTime.of(7, 0), LocalTime.of(17, 15)))
+        withStore { store ->
+            store.setSchedule(schedule)
+            store.setIgnoreTripsOutsideSchedule(true)
+        }
+
+        withStore { reopened ->
+            val settings = reopened.current()
+            assertEquals(schedule, settings.schedule)
+            assertEquals(true, settings.ignoreTripsOutsideSchedule)
+        }
+    }
+
+    @Test
+    fun `storing the schedule changes no other setting, and the other way round`() =
+        withStore { store ->
+            store.setGracePeriodSeconds(300)
+            store.setSchedule(DEFAULT_WORK_SCHEDULE.withTracked(DayOfWeek.FRIDAY, false))
+            store.setMinimumTripDistanceMetres(500)
+
+            assertEquals(
+                MiloSettings(
+                    gracePeriodSeconds = 300,
+                    minimumTripDistanceMetres = 500,
+                    schedule = DEFAULT_WORK_SCHEDULE.withTracked(DayOfWeek.FRIDAY, false),
+                ),
+                store.current(),
+            )
+        }
 
     @Test
     fun `every setting is read back as it was written`() = withStore { store ->

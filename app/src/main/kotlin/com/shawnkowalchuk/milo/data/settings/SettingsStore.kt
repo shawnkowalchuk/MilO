@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -24,7 +25,8 @@ const val SETTINGS_FILE_NAME = "settings"
  *
  * A value that was never written reads as its default from [MiloSettings]. Every setter refuses
  * a value that cannot be right (a negative duration, distance or time; a blank address, name or
- * URI), because this is the last point before a bad value would be stored.
+ * URI), because this is the last point before a bad value would be stored. The work schedule
+ * needs no such check here: its type cannot hold a day that ends before it starts.
  *
  * @param dataStore created once by the `AppContainer`. DataStore allows only one instance per
  * file in a process.
@@ -99,6 +101,20 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /**
+     * Stores the work schedule, all seven days in one write. A schedule cannot hold a day whose
+     * hours end before they start (`DayHours` refuses to be built), so there is nothing left to
+     * refuse here.
+     */
+    suspend fun setSchedule(schedule: WorkSchedule) {
+        dataStore.edit { it.writeSchedule(schedule) }
+    }
+
+    /** True has a trip that started outside the schedule discarded; false saves it as Personal. */
+    suspend fun setIgnoreTripsOutsideSchedule(ignore: Boolean) {
+        dataStore.edit { it[IGNORE_TRIPS_OUTSIDE_SCHEDULE] = ignore }
+    }
+
     /** Pass the time End was pressed to hold automatic start off, null to release it. */
     suspend fun setAutoStartHeldOffSinceMs(sinceMs: Long?) {
         require(sinceMs == null || sinceMs >= 0) { "A timestamp cannot be negative: $sinceMs ms" }
@@ -131,6 +147,9 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
             customSoundName = preferences[CUSTOM_SOUND_NAME],
+            schedule = preferences.readSchedule(),
+            ignoreTripsOutsideSchedule =
+                preferences[IGNORE_TRIPS_OUTSIDE_SCHEDULE] ?: defaults.ignoreTripsOutsideSchedule,
             autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
@@ -145,7 +164,8 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     }
 
     // The key names are what is written to the file. Renaming one silently resets that setting.
-    // The keys of the confirmed setup steps are on ConfirmedStep itself.
+    // The keys of the confirmed setup steps are on ConfirmedStep itself, and the keys of the
+    // work schedule, three for each day, are in ScheduleStorage.kt.
     private companion object {
         val TRUCK_ADDRESS = stringPreferencesKey("truck_address")
         val TRUCK_NAME = stringPreferencesKey("truck_name")
@@ -155,6 +175,8 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
         val CUSTOM_SOUND_NAME = stringPreferencesKey("custom_sound_name")
+        val IGNORE_TRIPS_OUTSIDE_SCHEDULE =
+            booleanPreferencesKey("ignore_trips_outside_schedule")
         val AUTO_START_HELD_OFF_SINCE_MS = longPreferencesKey("auto_start_held_off_since_ms")
         val LAST_PROCESS_EXIT_IMPORTED_AT_MS =
             longPreferencesKey("last_process_exit_imported_at_ms")

@@ -23,7 +23,7 @@ import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatMinutes
 import com.shawnkowalchuk.milo.data.sound.MAX_OWN_SOUND_BYTES
 
-// The three cards of the Settings screen.
+// Three of the cards of the Settings screen. The work schedule's two are in ScheduleCards.kt.
 
 private const val BYTES_PER_MEGABYTE = 1024 * 1024
 
@@ -175,11 +175,14 @@ private fun SettingsProblem.soundText(): String? = when (this) {
 
     // Said at the top of the screen: it can be about any of the cards.
     SettingsProblem.COULD_NOT_SAVE -> null
+
+    // Said in the work schedule's card, under the day whose time was refused.
+    SettingsProblem.HOURS_END_NOT_AFTER_START -> null
 }
 
 /** A quieter line under a setting: what it is for. */
 @Composable
-private fun Quiet(text: String) {
+internal fun Quiet(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
@@ -193,7 +196,7 @@ private fun Quiet(text: String) {
  * short lines above it the button would otherwise sit in the middle.
  */
 @Composable
-private fun EndButton(text: String, onClick: () -> Unit) {
+internal fun EndButton(text: String, onClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(onClick = onClick) {
             Text(text = text)
