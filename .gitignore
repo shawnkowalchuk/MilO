@@ -36,3 +36,10 @@ keystore.properties
 
 # Claude Code's per-machine settings. Never shared.
 .claude/settings.local.json
+
+# --- A personal trip-start sound --------------------------------------------------------------
+# An audio file placed in this folder as trip_start_chirp.<ext> replaces the bundled chirp in
+# debug builds made on this machine (see README, "Your own trip-start sound"). It stays out of
+# git on purpose: the owner's own clip may be someone else's copyright.
+app/src/debug/res/raw/
+/r2d2.mp3

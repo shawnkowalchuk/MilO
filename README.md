@@ -41,6 +41,8 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 
 **Signing.** Builds for the phone are signed with one dedicated key: `~/keys/milo.jks`, with its password in the macOS Keychain under the name `milo-keystore`. Neither is in this repo, and the build finds both by itself. If the keystore or the Keychain entry is missing, the build stops and says what to do; it does not quietly use another key, because an app signed with another key cannot update the one on the phone. GitHub's CI has no key and builds with the throwaway debug key instead. To do the same on another machine, add `-Pmilo.signing.debugKey=true`, and never install that build on the phone. Keep a backup of the keystore and its password off the Mac.
 
+**Your own trip-start sound.** The repo ships an original synthesized chirp. To use your own clip instead, save it as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`). Debug builds made on this machine then play it. That folder is git-ignored on purpose: a personal clip may be someone else's copyright, so it must stay off GitHub. Delete the file to go back to the bundled chirp.
+
 **Install on the phone.** Connect the POCO X5 with USB debugging on. HyperOS also needs "Install via USB" and "USB debugging (Security settings)" switched on in Developer options, and asks for a confirmation on the phone at each install. Then press Run in Android Studio or run:
 
 ```bash

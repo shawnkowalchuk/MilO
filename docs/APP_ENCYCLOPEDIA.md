@@ -237,7 +237,9 @@ Plays a short R2-D2 style droid chirp once, when the app has connected to the tr
 - Plays once per trip start, at the moment recording has really begun. No sound on trip end.
 - Comes from the phone speaker and behaves like a notification sound: silent when the phone is on vibrate or Do Not Disturb.
 - Played by the trip service itself, not attached to a notification channel, because MIUI is reported to switch channel sounds off by default.
-- The bundled sound is an original synthesized droid-style chirp. The film recording itself is copyrighted, so it is not shipped in the app. A setting lets Shawn choose any audio file on the phone instead.
+- The sound committed to the repository is an original synthesized droid-style chirp. The film recording is copyrighted, so it is never committed.
+- **Shawn's own clip replaces it in builds made on his Mac.** A file placed at `app/src/debug/res/raw/trip_start_chirp.<ext>` overrides the bundled chirp in debug builds, which are the builds installed on the phone. That folder is git-ignored, so the clip stays on his Mac and his phone and never reaches GitHub. Since 2026-10-05 it holds his R2-D2 clip (4.5 seconds). CI and any other machine build with the synthesized chirp. The event log says "playing the bundled chirp" either way, because it is the sound built into that build.
+- A setting to choose any audio file on the phone, without rebuilding, is still planned with the settings screen.
 
 **How it works today**
 1. When the controller has opened a trip row, with the service already in the foreground, it tells the service that a trip has just started. That happens once per trip: not when a trip is picked up after a restart, and not when the grace period is cancelled. One exception: a trip opened by the companion "appeared" callback alone is not yet known to be a trip. Its sound plays when the truck's connection is confirmed, and a false start makes no sound at all (`TripTransition.tripReallyBegan`).
