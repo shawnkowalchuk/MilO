@@ -39,7 +39,7 @@ A terminal build has to be told where the Android SDK is. That path lives in `lo
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 ```
 
-**Signing.** Builds for the phone are signed with one dedicated key: `~/keys/milo.jks`, with its password in the macOS Keychain under the name `milo-keystore`. Neither is in this repo. The build finds both by itself and stops with instructions if the keystore is there but the password is not. With no keystore (CI, a fresh clone) it falls back to the throwaway debug key; never install such a build over the real one. Keep a backup of the keystore and its password off the Mac.
+**Signing.** Builds for the phone are signed with one dedicated key: `~/keys/milo.jks`, with its password in the macOS Keychain under the name `milo-keystore`. Neither is in this repo, and the build finds both by itself. If the keystore or the Keychain entry is missing, the build stops and says what to do; it does not quietly use another key, because an app signed with another key cannot update the one on the phone. GitHub's CI has no key and builds with the throwaway debug key instead. To do the same on another machine, add `-Pmilo.signing.debugKey=true`, and never install that build on the phone. Keep a backup of the keystore and its password off the Mac.
 
 **Install on the phone.** Connect the POCO X5 with USB debugging on. HyperOS also needs "Install via USB" and "USB debugging (Security settings)" switched on in Developer options, and asks for a confirmation on the phone at each install. Then press Run in Android Studio or run:
 

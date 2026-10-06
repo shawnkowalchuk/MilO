@@ -11,8 +11,10 @@ plugins {
 // restore its backup too, so losing or changing the key means wiping every trip.
 // (docs/ENGINEERING_STANDARDS.md section 12.)
 //
-// Where the key is absent (GitHub's CI, a fresh clone) the build falls back to the throwaway
-// debug key. Those builds are never installed over the real one.
+// A build without the key is allowed only where one is expected: on GitHub's CI, or when asked
+// for by name. Anywhere else a missing keystore stops the build. A quiet fallback to the debug
+// key would produce an app the phone refuses to update, and Android Studio would then offer to
+// uninstall the installed one, which deletes every trip.
 val miloKeystore: File =
     file(
         providers
@@ -22,6 +24,18 @@ val miloKeystore: File =
 
 // The name of the macOS Keychain entry that holds the keystore's password.
 val miloKeychainEntry = "milo-keystore"
+
+// GitHub Actions sets CI=true. The property is the by-name opt-in for any other machine.
+val debugKeyAllowed: Boolean =
+    providers.environmentVariable("CI").isPresent ||
+        providers.gradleProperty("milo.signing.debugKey").orNull == "true"
+
+// True while Android Studio is only reading the project's shape (a sync), not building it.
+val isIdeSync: Boolean = providers.systemProperty("idea.sync.active").orNull == "true"
+
+// What a sync is given in place of the password. Android Studio keeps everything a sync returns
+// in a cache file on disk, so the real password must never be handed to one.
+val syncPlaceholderPassword = "not-read-during-an-ide-sync"
 
 // Reads the keystore password from the macOS Keychain. It is asked for only when the keystore
 // exists, so this never runs on CI, where there is no `security` command.
@@ -80,20 +94,36 @@ android {
     }
 
     signingConfigs {
-        if (miloKeystore.exists()) {
-            create("milo") {
-                val password = readKeystorePassword()
-                storeFile = miloKeystore
-                storePassword = password
-                keyAlias = "milo"
-                // A PKCS12 keystore has one password for the store and the key inside it.
-                keyPassword = password
-            }
-        } else {
-            logger.lifecycle(
-                "MilO: no signing keystore at $miloKeystore, so this build is signed with the " +
-                    "throwaway debug key. Do not install it over a build signed with the real key.",
-            )
+        when {
+            miloKeystore.exists() ->
+                create("milo") {
+                    val password =
+                        if (isIdeSync) syncPlaceholderPassword else readKeystorePassword()
+                    storeFile = miloKeystore
+                    storePassword = password
+                    keyAlias = "milo"
+                    // A PKCS12 keystore has one password for the store and the key inside it.
+                    keyPassword = password
+                }
+
+            debugKeyAllowed ->
+                logger.lifecycle(
+                    "MilO: no signing keystore at $miloKeystore. The debug build is signed with " +
+                        "the throwaway debug key and the release build is left unsigned. Never " +
+                        "install either over a build signed with the real key.",
+                )
+
+            else ->
+                throw GradleException(
+                    "MilO's signing keystore was not found at $miloKeystore.\n" +
+                        "Restore it from your backup to that path, or point the Gradle property " +
+                        "milo.keystore.file at it.\n" +
+                        "The build stops here on purpose: an app signed with any other key " +
+                        "cannot update the one on the phone, and replacing that one deletes " +
+                        "every trip.\n" +
+                        "To build with the throwaway debug key anyway (never for the phone), " +
+                        "add -Pmilo.signing.debugKey=true.",
+                )
         }
     }
 
