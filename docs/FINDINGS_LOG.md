@@ -24,6 +24,29 @@
 
 ### 2026-10-05
 
+**`[CHANGE]` First install on the phone**
+The placeholder build (the foundation, no trip engine yet) was installed on the phone over USB with adb, signed with the dedicated key, and opened without a crash. HyperOS accepted the install first time. Every later build can now update it in place, as long as it is signed with the same key. Not yet tried: a sync and Run from Android Studio.
+
+**`[FINDING]` The phone is a POCO X5 Pro 5G on HyperOS 2.0, not a POCO X5 on HyperOS 1**
+Read over adb: model 22101320G (`redwood_global`), Android 14 (API 34), HyperOS OS2.0.17.0.UMSMIXM, security patch 2025-11-01. That is the last build for this model, so the OS will not change under MilO. The companion device feature is present, Google Play services and Android Auto are installed, and "Install via USB" and "USB debugging (Security settings)" are both on. The design does not change, but the research notes' HyperOS 1 menu names may differ on this phone.
+
+**`[CHANGE]` Builds for the phone are signed with a dedicated key**
+Shawn created `~/keys/milo.jks` (PKCS12, alias `milo`) and stored its password in the macOS Keychain as `milo-keystore`. `app/build.gradle.kts` signs the debug and release builds with it, reading the password from the Keychain each time. Debug is signed too because Android Studio's Run button installs the debug build, and that is the build that holds the real trips. Checked on this Mac: the APK's signer is the new key; a missing Keychain entry stops the build with instructions; so does a missing keystore; with `CI=true` or `-Pmilo.signing.debugKey=true` the debug build gets the debug key instead.
+
+**`[FIX]` What the review of the signing change found**
+Two independent reviewers checked it before it merged. Three findings changed the code:
+- **The configuration cache was keeping the password.** The first version said the password was "in no file". A plain-text search agreed, and was wrong: with Gradle's configuration cache on, every Gradle command saved an encrypted copy under the project's `.gradle` folder, and the key that decrypts it sits in `~/.gradle` behind a constant built into Gradle. A reviewer decrypted an entry to prove it. Anyone holding a backup of the home folder would have had the keystore, the copy and the key. The configuration cache is now off (`gradle.properties`). Measured cost: `spotlessCheck` takes about 1.2 to 1.6 seconds. The old cache entries were deleted.
+- **An Android Studio sync would have been handed the password,** and Studio saves what a sync returns in its own cache file. The build now gives a sync a placeholder. Shown with a sync-style run that succeeds without touching the Keychain; not yet confirmed in Studio itself, so after the first real sync check that Run still installs a build signed by the dedicated key.
+- **A missing keystore fell back to the debug key without stopping.** After a Mac migration that would build happily, fail to install, and leave Android Studio offering to uninstall the app, which deletes every trip. A missing keystore now stops the build everywhere except CI and the by-name opt-in.
+
+What stays true and worth knowing:
+- **The Keychain does not hide the password from other software on the Mac.** The entry was created with the `security` tool, so any program running as Shawn can read it the same way without a prompt. It keeps the password out of files, backups and git.
+- **The password is in the Gradle daemon's memory while it runs.** That is unavoidable with Android's signing config, which takes the password as plain text.
+- **To check that a re-entered password is right, build:** `./gradlew assembleDebug` fails with "keystore password was incorrect" on a mismatch. Do not use `keytool -list` by hand for this: it never looks at the Keychain, and for this kind of keystore it accepts an empty password.
+- **The key was made twice.** The first keystore and Keychain entry never matched, because the hidden password prompts in the app's terminal pane did not receive what was typed.
+
+---
+
 **`[FIX]` Review of the recording core and the triggers (work package 2): what changed, and why**
 Four reviewers read parts A and B before the first commit of either. Twenty findings, some of them the same defect seen twice. Every defect below has a unit test that fails on the old code, except where the fix is a document.
 - **A truck that no reading can see lost every trip after four minutes** (major). The minute reading counted "not connected" against a trip that a link event had started, although no reading had ever shown that truck connected. On this phone a reading sees the hands-free and audio profiles only. Now such a reading is logged and changes nothing until a reading has shown the truck connected on its present link (`TripEvidence`). The same rule covers the reading a reconcile takes seconds after the link is made, which put a trip into its grace period at the start of a drive.

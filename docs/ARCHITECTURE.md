@@ -10,7 +10,7 @@ Built so far: the Gradle build with its quality gates, the design system in `cor
 
 ## 1. System overview
 
-MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi POCO X5 (Android 14, HyperOS). It notices when the phone connects to the work truck over Bluetooth, records the drive with GPS in a foreground service, stores the trip on the phone, and produces a monthly PDF that Shawn sends to accounts through Gmail. There is no backend, no account and no server: every piece of data lives in on-device storage. The app is installed from Android Studio on a Mac mini and is never published to the Play Store. It has two UI surfaces, the phone UI and an Android Auto screen, over one shared set of logic.
+MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It notices when the phone connects to the work truck over Bluetooth, records the drive with GPS in a foreground service, stores the trip on the phone, and produces a monthly PDF that Shawn sends to accounts through Gmail. There is no backend, no account and no server: every piece of data lives in on-device storage. The app is installed from Android Studio on a Mac mini and is never published to the Play Store. It has two UI surfaces, the phone UI and an Android Auto screen, over one shared set of logic.
 
 Reliable automatic trip start is the number one requirement. Most of section 10 exists because of it.
 
@@ -277,7 +277,7 @@ No Sentry, no analytics, no API keys.
 
 | Environment | Backend project | Used for | URL / build channel |
 |---|---|---|---|
-| The phone | None | Everything: development, testing and Shawn's real trips | Debug build, standard debug keystore, installed from Android Studio or with `./gradlew installDebug` |
+| The phone | None | Everything: development, testing and Shawn's real trips | Debug build signed with the dedicated key in `~/keys/milo.jks`, installed from Android Studio or with `./gradlew installDebug` |
 
 There is one environment because there is no backend to separate (STANDARDS §13). The build on the phone holds real trip data, so an uninstall is data loss.
 
@@ -311,7 +311,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 
 **Data safety**
 - Auto Backup cap: 25 MB per app, all-or-nothing, silent when exceeded. This is why raw GPS points live in a separate database file (section 6). (`2026-10-03-pdf-email-backup.md`)
-- Signing-key risk: the debug keystore is generated per Mac. A build signed with a different key cannot update the installed app. The only way forward is an uninstall, which deletes every trip, and Auto Backup then refuses to restore. A manual export is the only copy that does not depend on the key. (`2026-10-03-pdf-email-backup.md`)
+- Signing-key risk: every build for the phone is signed with one dedicated key (`~/keys/milo.jks`, password in the macOS Keychain). A build signed with any other key cannot update the installed app. The only way forward would be an uninstall, which deletes every trip, and Auto Backup then refuses to restore. So the keystore and its password must be backed up off the Mac, and a manual export is the only copy of the trips that does not depend on the key. (`2026-10-03-pdf-email-backup.md`)
 
 **Recording**
 - A fused location request combines interval and distance as AND, so "every 5 seconds or 10 m" cannot be asked for. The request is a fix every 5 seconds, and the 10 m rule is applied in MilO's own distance calculation. (`2026-10-03-location-and-car.md`)

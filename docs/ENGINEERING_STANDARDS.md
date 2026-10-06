@@ -28,7 +28,7 @@ That five-minute habit is the entire game. Ad-hoc development is just this loop 
 |---|---|
 | App name | MilO (`com.shawnkowalchuk.milo`) |
 | One-line purpose | Logs business mileage in Shawn's work truck automatically and produces a monthly PDF. |
-| Platforms | Android only, native Kotlin. One phone: Xiaomi POCO X5, Android 14 (HyperOS). Phone UI plus an Android Auto screen. Never on the Play Store. |
+| Platforms | Android only, native Kotlin. One phone: Xiaomi POCO X5 Pro 5G, Android 14 (HyperOS 2.0). Phone UI plus an Android Auto screen. Never on the Play Store. |
 | Primary user | Shawn only. No accounts. |
 | Target launch milestone | Phase 1: a trip starts by itself every time the truck connects. |
 | Repo URL | https://github.com/shawnkowalchuk/MilO (private) |
@@ -215,7 +215,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 **No password, API key, token, or secret is ever written into source code, a script, or anything committed to git.** Absolute. A secret committed once lives in git history forever, even after you delete it.
 
 - **This app has no secrets.** No backend, no accounts, no API keys, so no `.env` and nothing to inject.
-- **The one future secret is a signing keystore.** Today the build uses the standard debug keystore and the repo has no signing config. A dedicated keystore and its passwords stay outside git.
+- **The one secret is the signing keystore and its password.** The keystore is `~/keys/milo.jks`, outside the repo. Its password is kept in the macOS Keychain under the name `milo-keystore`, and the build reads it from there each time (`app/build.gradle.kts`); it is in no file in the repo and is never typed into a script. Three things keep it from spreading: Gradle's configuration cache is switched off, because it would save a copy in the project's `.gradle` folder; an Android Studio sync is given a placeholder, because Studio saves what a sync returns; and nothing prints it. What the Keychain does not do is hide it from other programs running as Shawn, which can read the entry without a prompt. Both the keystore and the password must be backed up off the Mac: without them MilO can only be reinstalled by wiping its trips. **A missing keystore or a missing Keychain entry stops the build**, with instructions. The only places a build without the key is allowed are GitHub's CI and a run with `-Pmilo.signing.debugKey=true`; there the debug build gets the throwaway debug key, the release build is left unsigned, and neither may ever be installed over the real one.
 - **If a secret is ever added,** it is prompted for or injected at runtime, never written into a script, and a missing one fails loudly at startup.
 - **Secret-scanning (gitleaks)** in the pre-commit hook and in CI.
 
@@ -306,7 +306,7 @@ Do these *before* writing a single product feature. Left out on purpose (reasons
 - [x] Package structure (§3) scaffolded; `AppContainer` created by the `Application` class
 - [x] Design tokens + base component library started in `core/designsystem/` (§8)
 - [x] CI pipeline on PRs (gitleaks, then `spotlessCheck lintDebug testDebugUnitTest assembleDebug`)
-- [ ] Android Studio updated, SDK platform 37 installed, debug build installs on the POCO X5 — *Android Studio is on 2026.2 and platform 37 is installed; the phone install is still to do*
+- [x] Android Studio updated, SDK platform 37 installed, debug build installs on the POCO X5 — *installed over USB with adb on 2026-10-05; a sync and Run from Android Studio itself are still untried*
 - [x] All four docs created in the repo: STANDARDS, ARCHITECTURE, APP_ENCYCLOPEDIA, FINDINGS_LOG
 - [x] First ADR written: "ADR-001: Stack selection"
 
