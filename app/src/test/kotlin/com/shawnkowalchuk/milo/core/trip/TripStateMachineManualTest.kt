@@ -2,8 +2,9 @@ package com.shawnkowalchuk.milo.core.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripEffect.CancelGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.EndTrip
+import com.shawnkowalchuk.milo.core.trip.TripEffect.HoldOffAutoStart
 import com.shawnkowalchuk.milo.core.trip.TripEffect.MarkTruckSeen
-import com.shawnkowalchuk.milo.core.trip.TripEffect.SetAutoStartHeldOff
+import com.shawnkowalchuk.milo.core.trip.TripEffect.ReleaseHoldOff
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartTrip
 import com.shawnkowalchuk.milo.core.trip.TripEvent.AndroidAutoConnection
@@ -66,10 +67,10 @@ class TripStateMachineManualTest {
     fun `manual start with the truck connected starts a trip that ends like an automatic one`() {
         // Only reachable while automatic start is held off; otherwise the truck would have
         // started the trip itself.
-        val result = HELD_OFF.on(ManualStart(truckConnected = true, T0 + HOUR))
+        val result = HELD_OFF.on(ManualStart(truckConnected = true, T0 + 2 * HOUR))
 
         assertEquals(
-            listOf(StartTrip(TripStartCause.MANUAL, truckSeen = true, T0 + HOUR)),
+            listOf(StartTrip(TripStartCause.MANUAL, truckSeen = true, T0 + 2 * HOUR)),
             result.effects,
         )
         assertNull(TripStateMachine.nextCheckAtMs(result.state, RULES))
@@ -82,7 +83,7 @@ class TripStateMachineManualTest {
         val result = RECORDING.on(ManualEnd(truckConnected = true, T0 + HOUR))
 
         assertEquals(
-            listOf(EndTrip(TripEndReason.MANUAL, T0 + HOUR), SetAutoStartHeldOff(true)),
+            listOf(EndTrip(TripEndReason.MANUAL, T0 + HOUR), HoldOffAutoStart(T0 + HOUR)),
             result.effects,
         )
         assertEquals(HELD_OFF, result.state)
@@ -100,7 +101,10 @@ class TripStateMachineManualTest {
     @Test
     fun `the hold-off is released when the truck is seen gone, and the next connect starts`() {
         val released = HELD_OFF.on(TruckConnection(false, T0 + 2 * HOUR))
-        assertEquals(listOf(SetAutoStartHeldOff(false)), released.effects)
+        assertEquals(
+            listOf(ReleaseHoldOff(HoldOffRelease.TRUCK_SEEN_DISCONNECTED)),
+            released.effects,
+        )
         assertEquals(IDLE, released.state)
 
         val next = released.state.on(TruckConnection(true, T0 + 3 * HOUR))
@@ -153,7 +157,7 @@ class TripStateMachineManualTest {
             listOf(
                 CancelGrace,
                 EndTrip(TripEndReason.MANUAL, GRACE_START + MINUTE),
-                SetAutoStartHeldOff(true),
+                HoldOffAutoStart(GRACE_START + MINUTE),
             ),
             result.effects,
         )
@@ -179,9 +183,9 @@ class TripStateMachineManualTest {
     fun `manual end while idle with the truck connected holds off and never starts a trip`() {
         // The connect was missed, so no trip is open, and the reading taken at the button press
         // is the first the rules hear of the truck. End must not be the press that starts a trip.
-        val result = IDLE.on(ManualEnd(truckConnected = true, T0))
+        val result = IDLE.on(ManualEnd(truckConnected = true, HELD_OFF_SINCE))
 
-        assertEquals(listOf(SetAutoStartHeldOff(true)), result.effects)
+        assertEquals(listOf(HoldOffAutoStart(HELD_OFF_SINCE)), result.effects)
         assertEquals(HELD_OFF, result.state)
     }
 

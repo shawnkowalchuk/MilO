@@ -26,7 +26,8 @@ data class ClosedTrip(
  *   moment the truck was found gone). Fixes recorded after that, while the grace period ran,
  *   are Shawn walking away with the phone. They count for nothing: not for the end time, not
  *   for the distance, not for the end position.
- * - **A trip under the minimum distance is discarded.**
+ * - **A trip under the minimum distance is discarded.** So is a false start, whatever distance
+ *   the phone covered in its few seconds.
  */
 object TripClosing {
     /**
@@ -34,12 +35,16 @@ object TripClosing {
      * @param lastPointNotAfterMs wall-clock cut-off from the state machine. The trip ends at the
      * last point that is followed only by points later than this.
      * @param minimumDistanceMetres the setting; a trip shorter than this is discarded.
+     * @param falseStart true when the trip ended as [TripEndReason.FALSE_START]. It was opened
+     * on the word of the companion callback alone and never confirmed, so it is discarded even
+     * if the phone happened to be moving fast enough to cover the minimum distance.
      */
     fun close(
         points: List<TrackPoint>,
         lastPointNotAfterMs: Long,
         minimumDistanceMetres: Double,
         limits: DistanceLimits = DistanceLimits(),
+        falseStart: Boolean = false,
     ): ClosedTrip {
         // Cut by stored order: only the fixes at the end of the list that are later than the
         // cut-off are dropped. Filtering every fix by its time would also throw out the start
@@ -48,7 +53,7 @@ object TripClosing {
         val distance = DistanceCalculator.measure(counted, limits)
         return ClosedTrip(
             status =
-                if (distance.metres < minimumDistanceMetres) {
+                if (falseStart || distance.metres < minimumDistanceMetres) {
                     TripStatus.DISCARDED
                 } else {
                     TripStatus.FINISHED

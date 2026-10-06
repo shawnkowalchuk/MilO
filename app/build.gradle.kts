@@ -100,5 +100,14 @@ dependencies {
     // (the application scope, Flow), so the library is declared rather than borrowed from them.
     implementation(libs.kotlinx.coroutines.core)
 
+    // Screens get their ViewModel through viewModel().
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Trip recording (platform/): GPS fixes from the fused location provider, and CarConnection,
+    // which says whether Android Auto is connected.
+    implementation(libs.play.services.location)
+    implementation(libs.androidx.car.app)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

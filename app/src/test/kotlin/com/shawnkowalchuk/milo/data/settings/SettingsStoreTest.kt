@@ -49,7 +49,7 @@ class SettingsStoreTest {
         assertEquals(120, settings.gracePeriodSeconds)
         assertEquals(300, settings.minimumTripDistanceMetres)
         assertEquals(true, settings.soundEnabled)
-        assertEquals(false, settings.autoStartHeldOff)
+        assertEquals(null, settings.autoStartHeldOffSinceMs)
     }
 
     @Test
@@ -59,7 +59,7 @@ class SettingsStoreTest {
         store.setMinimumTripDistanceMetres(500)
         store.setSoundEnabled(false)
         store.setCustomSoundUri("content://media/external/audio/media/42")
-        store.setAutoStartHeldOff(true)
+        store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
         store.setLastProcessExitImportedAtMs(1_791_028_800_000)
 
         assertEquals(
@@ -71,7 +71,7 @@ class SettingsStoreTest {
                 minimumTripDistanceMetres = 500,
                 soundEnabled = false,
                 customSoundUri = "content://media/external/audio/media/42",
-                autoStartHeldOff = true,
+                autoStartHeldOffSinceMs = 1_791_028_700_000,
                 lastProcessExitImportedAtMs = 1_791_028_800_000,
             ),
             store.current(),
@@ -82,13 +82,13 @@ class SettingsStoreTest {
     fun `settings survive the process`() {
         withStore { store ->
             store.setTruck("AA:BB:CC:DD:EE:FF", name = "Work truck", associationId = 12)
-            store.setAutoStartHeldOff(true)
+            store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
         }
 
         withStore { reopened ->
             val settings = reopened.current()
             assertEquals("AA:BB:CC:DD:EE:FF", settings.truckAddress)
-            assertEquals(true, settings.autoStartHeldOff)
+            assertEquals(1_791_028_700_000, settings.autoStartHeldOffSinceMs)
         }
     }
 
@@ -131,6 +131,15 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun `the hold-off is released by storing no time`() = withStore { store ->
+        store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
+
+        store.setAutoStartHeldOffSinceMs(null)
+
+        assertEquals(null, store.current().autoStartHeldOffSinceMs)
+    }
+
+    @Test
     fun `a grace period of zero is allowed`() = withStore { store ->
         store.setGracePeriodSeconds(0)
 
@@ -144,6 +153,7 @@ class SettingsStoreTest {
         assertRefused { store.setTruck(" ", name = null, associationId = null) }
         assertRefused { store.setTruck("AA:BB:CC:DD:EE:FF", name = " ", associationId = null) }
         assertRefused { store.setCustomSoundUri("") }
+        assertRefused { store.setAutoStartHeldOffSinceMs(-1) }
         assertRefused { store.setLastProcessExitImportedAtMs(-1) }
 
         assertEquals(MiloSettings(), store.current())

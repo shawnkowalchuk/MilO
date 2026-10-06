@@ -20,10 +20,16 @@ ktlint = "1.8.0"
 
 # Libraries.
 activityCompose = "1.13.0"
+# The Car App Library. Only CarConnection is used so far: it tells the trip service whether
+# Android Auto is connected. The in-truck screen will use the same artifact.
+carApp = "1.7.0"
 composeBom = "2026.09.00"
 coroutines = "1.11.0"
 datastore = "1.2.1"
 junit = "4.13.2"
+lifecycle = "2.11.0"
+# Google Play services' fused location provider: the GPS fixes of a trip.
+playServicesLocation = "21.4.0"
 # Room's runtime, its KSP compiler and its Gradle plugin are released together under one version.
 room = "3.0.3"
 # The SQLite build Room 3 runs on. It is compiled into the app, so the database engine is the
@@ -40,6 +46,7 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 ktlint-cli = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlint" }
 
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-car-app = { module = "androidx.car.app:app", version.ref = "carApp" }
 
 # The BOM pins every androidx.compose artifact below to versions tested together, which is why
 # those entries carry no version of their own.
@@ -52,6 +59,9 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
+# viewModel() for Compose: how a screen gets its ViewModel.
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
 # Room 3 lives in the androidx.room3 group. WorkManager will later bring the old androidx.room
 # group in as well, so imports must always come from androidx.room3.
 androidx-room3-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
@@ -59,6 +69,10 @@ androidx-room3-runtime = { module = "androidx.room3:room3-runtime", version.ref 
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+# Tests only: a clock and a scheduler the test controls, for code that runs in coroutines.
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 

@@ -19,8 +19,9 @@ const val DEFAULT_MINIMUM_TRIP_DISTANCE_METRES = 300
  * @param minimumTripDistanceMetres trips shorter than this are discarded.
  * @param soundEnabled whether the trip-start sound plays.
  * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp.
- * @param autoStartHeldOff the hold-off latch of ADR-002: true after a trip was ended by hand
- * with the truck still connected, until the truck is next seen disconnected.
+ * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
+ * the truck still connected, or null when automatic start is not held off. The time is kept
+ * because two of the three things that release the hold-off are measured from it.
  * @param lastProcessExitImportedAtMs the time of the newest process-exit record already copied
  * into the event log, so the same record is not copied again at the next start.
  */
@@ -32,6 +33,6 @@ data class MiloSettings(
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
-    val autoStartHeldOff: Boolean = false,
+    val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
 )

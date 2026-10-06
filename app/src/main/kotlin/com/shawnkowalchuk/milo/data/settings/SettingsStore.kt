@@ -81,8 +81,10 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it.setOrRemove(CUSTOM_SOUND_URI, uri) }
     }
 
-    suspend fun setAutoStartHeldOff(heldOff: Boolean) {
-        dataStore.edit { it[AUTO_START_HELD_OFF] = heldOff }
+    /** Pass the time End was pressed to hold automatic start off, null to release it. */
+    suspend fun setAutoStartHeldOffSinceMs(sinceMs: Long?) {
+        require(sinceMs == null || sinceMs >= 0) { "A timestamp cannot be negative: $sinceMs ms" }
+        dataStore.edit { it.setOrRemove(AUTO_START_HELD_OFF_SINCE_MS, sinceMs) }
     }
 
     suspend fun setLastProcessExitImportedAtMs(timestampMs: Long) {
@@ -101,7 +103,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
                 preferences[MINIMUM_TRIP_DISTANCE_METRES] ?: defaults.minimumTripDistanceMetres,
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
-            autoStartHeldOff = preferences[AUTO_START_HELD_OFF] ?: defaults.autoStartHeldOff,
+            autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
                     ?: defaults.lastProcessExitImportedAtMs,
@@ -117,7 +119,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         val MINIMUM_TRIP_DISTANCE_METRES = intPreferencesKey("minimum_trip_distance_metres")
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
-        val AUTO_START_HELD_OFF = booleanPreferencesKey("auto_start_held_off")
+        val AUTO_START_HELD_OFF_SINCE_MS = longPreferencesKey("auto_start_held_off_since_ms")
         val LAST_PROCESS_EXIT_IMPORTED_AT_MS =
             longPreferencesKey("last_process_exit_imported_at_ms")
     }

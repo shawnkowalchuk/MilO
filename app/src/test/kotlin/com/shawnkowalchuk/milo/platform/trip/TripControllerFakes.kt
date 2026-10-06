@@ -1,0 +1,293 @@
+package com.shawnkowalchuk.milo.platform.trip
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
+import com.shawnkowalchuk.milo.core.trip.TrackPoint
+import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.trip.driveNorth
+import com.shawnkowalchuk.milo.data.eventlog.EventCategory
+import com.shawnkowalchuk.milo.data.eventlog.EventLogDao
+import com.shawnkowalchuk.milo.data.eventlog.EventLogEntry
+import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
+import com.shawnkowalchuk.milo.data.point.RawPoint
+import com.shawnkowalchuk.milo.data.point.RawPointDao
+import com.shawnkowalchuk.milo.data.point.RawPointRepository
+import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.data.trip.TripDao
+import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
+import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
+
+/**
+ * Everything the trip controller touches, replaced by stand-ins held in memory: the two
+ * databases, the settings file, the truck, the clock and the trip service. The storage outlives
+ * a controller, so a test can "kill the process" by building a second controller on the same
+ * world.
+ */
+class FakeWorld {
+    val trips = FakeTripDao()
+    val points = FakeRawPointDao()
+    val log = FakeEventLogDao()
+    val settings = SettingsStore(FakeSettingsFile())
+    val truck = FakeTruck()
+
+    /** The phone's clock. Tests move it by hand. */
+    var nowMs = 1_791_028_800_000L
+
+    /** A controller as a fresh process would build it, and the service that goes with it. */
+    fun newProcess(scope: CoroutineScope): Pair<TripController, FakeService> {
+        val service = FakeService()
+        val controller =
+            TripController(
+                trips = TripRepository(trips),
+                points = RawPointRepository(points),
+                eventLog = EventLogRepository(log),
+                settings = settings,
+                truck = truck,
+                starter = service,
+                clock = { nowMs },
+                scope = scope,
+            )
+        service.controller = controller
+        return controller to service
+    }
+
+    val openTrips get() = trips.rows.filter { it.status == TripStatus.OPEN }
+
+    fun logged(category: EventCategory): List<String> =
+        log.entries.filter { it.category == category }.map { it.message }
+}
+
+/** The answer to "is the truck connected right now?". Tests set it. */
+class FakeTruck : TruckConnectionSource {
+    var connected = false
+
+    /** Set to make the phone unable to say, as it is without the Bluetooth permission. */
+    var unreadable = false
+
+    override suspend fun read(): TruckReading = when {
+        unreadable -> TruckReading.unknown("the test took Bluetooth away")
+        connected -> TruckReading.connected("the test says so")
+        else -> TruckReading.notConnected("the test says so")
+    }
+}
+
+/**
+ * Stands in for Android and the trip service together. A request to start is remembered; the
+ * test decides when (and whether) the service reaches the foreground with [comeUp].
+ *
+ * Its functions are synchronized because the real ones are called from any thread, and one test
+ * does exactly that.
+ */
+class FakeService :
+    RecordingStarter,
+    TripRecorder {
+    lateinit var controller: TripController
+
+    /** Set to make every start fail, as the preflight or Android would. */
+    var refuseWith: StartFailure? = null
+
+    /** When true the service reaches the foreground the moment it is asked for. */
+    var comesUpAtOnce = false
+
+    val startRequests = mutableListOf<StartRequest>()
+    private val waiting = mutableListOf<StartRequest>()
+
+    /** What the controller last asked for: true while it wants recording, false after a stop. */
+    var recording = false
+    var stops = 0
+    var tripStartsAnnounced = 0
+    var checkAtMs: Long? = null
+
+    @Synchronized
+    override fun start(request: StartRequest): StartFailure? {
+        startRequests += request
+        refuseWith?.let { return it }
+        waiting += request
+        if (comesUpAtOnce) comeUp()
+        return null
+    }
+
+    /** The service enters the foreground and hands over the triggers it was started with. */
+    @Synchronized
+    fun comeUp() {
+        val handOver = waiting.toList()
+        waiting.clear()
+        handOver.forEach { controller.onServiceStarted(this, it) }
+    }
+
+    @Synchronized
+    override fun record(checkAtMs: Long?, tripJustStarted: Boolean) {
+        recording = true
+        this.checkAtMs = checkAtMs
+        if (tripJustStarted) tripStartsAnnounced++
+    }
+
+    @Synchronized
+    override fun stop() {
+        recording = false
+        stops++
+    }
+}
+
+/** A fix as the location recorder hands it over: no trip id yet. */
+fun TrackPoint.asFix(): RawPoint = RawPoint(
+    tripId = 0,
+    wallClockMs = wallClockMs,
+    elapsedRealtimeMs = elapsedRealtimeMs,
+    latitude = latitude,
+    longitude = longitude,
+    accuracyMetres = accuracyMetres,
+    speedMetresPerSecond = null,
+)
+
+class FakeTripDao : TripDao {
+    val rows = mutableListOf<Trip>()
+
+    /** Set to make the next insert fail once, as a full disk would. */
+    var failNextInsert: Exception? = null
+
+    override suspend fun insert(trip: Trip): Long {
+        failNextInsert?.let { failure ->
+            failNextInsert = null
+            throw failure
+        }
+        val id = rows.size + 1L
+        rows += trip.copy(id = id)
+        return id
+    }
+
+    override suspend fun findNewestWithStatus(status: TripStatus): Trip? =
+        rows.lastOrNull { it.status == status }
+
+    override fun observeWithStatus(status: TripStatus): Flow<List<Trip>> =
+        flowOf(rows.filter { it.status == status })
+
+    override suspend fun markTruckSeen(tripId: Long, open: TripStatus): Int =
+        change(tripId, open) { it.copy(truckSeen = true) }
+
+    override suspend fun setGrace(
+        tripId: Long,
+        startedAtMs: Long?,
+        deadlineMs: Long?,
+        open: TripStatus,
+    ): Int = change(tripId, open) {
+        it.copy(graceStartedAtMs = startedAtMs, graceDeadlineMs = deadlineMs)
+    }
+
+    override suspend fun close(
+        tripId: Long,
+        closedStatus: TripStatus,
+        endedAtMs: Long,
+        distanceMetres: Double,
+        startLatitude: Double?,
+        startLongitude: Double?,
+        endLatitude: Double?,
+        endLongitude: Double?,
+        open: TripStatus,
+    ): Int = change(tripId, open) {
+        it.copy(
+            status = closedStatus,
+            endedAtMs = endedAtMs,
+            distanceMetres = distanceMetres,
+            startLatitude = startLatitude,
+            startLongitude = startLongitude,
+            endLatitude = endLatitude,
+            endLongitude = endLongitude,
+            graceStartedAtMs = null,
+            graceDeadlineMs = null,
+        )
+    }
+
+    /** Like the real queries: only a row with the expected status is changed. */
+    private fun change(tripId: Long, status: TripStatus, update: (Trip) -> Trip): Int {
+        val index = rows.indexOfFirst { it.id == tripId && it.status == status }
+        if (index < 0) return 0
+        rows[index] = update(rows[index])
+        return 1
+    }
+}
+
+class FakeRawPointDao : RawPointDao {
+    val rows = mutableListOf<RawPoint>()
+
+    /** Set to make the next insert fail once, as a full disk would. */
+    var failNextInsert: Exception? = null
+
+    override suspend fun insert(point: RawPoint): Long {
+        failNextInsert?.let { failure ->
+            failNextInsert = null
+            throw failure
+        }
+        val id = rows.size + 1L
+        rows += point.copy(id = id)
+        return id
+    }
+
+    override suspend fun findForTrip(tripId: Long): List<RawPoint> =
+        rows.filter { it.tripId == tripId }
+}
+
+class FakeEventLogDao : EventLogDao {
+    /** Safe to read from a test thread while the controller's worker is still writing. */
+    val entries = CopyOnWriteArrayList<EventLogEntry>()
+
+    override suspend fun insert(entry: EventLogEntry): Long {
+        entries += entry
+        return entries.size.toLong()
+    }
+
+    override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> =
+        flowOf(entries.sortedByDescending { it.atMs }.take(limit))
+}
+
+class FakeSettingsFile : DataStore<Preferences> {
+    private val stored = MutableStateFlow(emptyPreferences())
+
+    override val data: Flow<Preferences> = stored
+
+    override suspend fun updateData(
+        transform: suspend (t: Preferences) -> Preferences,
+    ): Preferences = transform(stored.value).also { stored.value = it }
+}
+
+/** A controller as a fresh process would build it, its worker running in the test's scheduler. */
+// runCurrent() is how a test lets the controller's worker run. The API is marked experimental
+// by the coroutines library; there is no stable equivalent.
+@OptIn(ExperimentalCoroutinesApi::class)
+fun TestScope.process(world: FakeWorld): Pair<TripController, FakeService> =
+    world.newProcess(backgroundScope).also { runCurrent() }
+
+/** A manual trip that is being recorded: Start pressed, service up. */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun TestScope.recordingManualTrip(world: FakeWorld): Pair<TripController, FakeService> {
+    val (controller, service) = process(world)
+    service.comesUpAtOnce = true
+    controller.onTrigger(TripTrigger.MANUAL_START, "Start button")
+    runCurrent()
+    return controller to service
+}
+
+/** Feeds a drive due north, one fix every five seconds, and moves the clock along with it. */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun TestScope.drive(
+    world: FakeWorld,
+    controller: TripController,
+    fixCount: Int,
+    metresPerFix: Double,
+) {
+    val fixes = driveNorth(fixCount, metresPerFix)
+    fixes.forEach { controller.onFix(it.asFix()) }
+    world.nowMs = fixes.last().wallClockMs
+    runCurrent()
+}

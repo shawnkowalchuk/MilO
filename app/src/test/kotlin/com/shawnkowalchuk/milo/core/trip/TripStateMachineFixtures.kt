@@ -30,6 +30,8 @@ fun TripState.onAll(vararg events: TripEvent): List<TripEffect> {
 fun everyEventAt(atMs: Long): List<TripEvent> = listOf(
     TripEvent.TruckConnection(true, atMs),
     TripEvent.TruckConnection(false, atMs),
+    TripEvent.TruckLinkConnected(atMs),
+    TripEvent.TruckAppeared(atMs),
     TripEvent.AndroidAutoConnection(true, atMs),
     TripEvent.AndroidAutoConnection(false, atMs),
     TripEvent.ManualStart(truckConnected = true, atMs),
@@ -70,5 +72,8 @@ val MANUAL_NO_TRUCK =
         trip = ActiveTrip(TripStartCause.MANUAL, truckSeen = false, lastMovementAtMs = T0),
     )
 
+/** When End was pressed in [HELD_OFF]. */
+const val HELD_OFF_SINCE = T0 + HOUR
+
 /** Shawn ended a trip by hand; the truck is still connected, so automatic start is held off. */
-val HELD_OFF = TripState(truckConnected = true, autoStartHeldOff = true)
+val HELD_OFF = TripState(truckConnected = true, autoStartHeldOffSinceMs = HELD_OFF_SINCE)

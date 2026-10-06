@@ -4,11 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 
 /**
- * The only activity. It hosts the Compose UI and nothing else: no logic, no system calls.
- * Anything that talks to Android (Bluetooth, location, notifications) belongs in `platform/`
- * and is reached through a ViewModel.
+ * The only activity. It hosts the Compose UI and says when MilO has been opened, and nothing
+ * else: no logic, no system calls. Anything that talks to Android (Bluetooth, location,
+ * notifications) belongs in `platform/` and is reached through a ViewModel.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,8 +20,27 @@ class MainActivity : ComponentActivity() {
         // the phone today does not shift after a system update.
         enableEdgeToEdge()
 
+        val container = (application as MiloApplication).container
         setContent {
-            MiloApp()
+            MiloApp(container)
         }
+    }
+
+    /**
+     * ADR-002's reconcile at app launch, and the check that Android still watches for the
+     * truck. Both run every time MilO comes to the front, not only when the activity is first
+     * created: Android keeps an activity for days, and opening MilO is what Shawn does when a
+     * trip did not start by itself. Each call only queues work; nothing here waits.
+     */
+    override fun onStart() {
+        super.onStart()
+        val container = (application as MiloApplication).container
+        container.tripController.onTrigger(TripTrigger.RECONCILE, APP_OPENED)
+        container.truckPairing.check(APP_OPENED)
+    }
+
+    private companion object {
+        /** What the event log calls the reconcile and the pairing check at app launch. */
+        const val APP_OPENED = "app opened"
     }
 }

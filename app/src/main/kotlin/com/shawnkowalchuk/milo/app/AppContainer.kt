@@ -10,8 +10,18 @@ import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.platform.bluetooth.BluetoothTruckConnection
+import com.shawnkowalchuk.milo.platform.bluetooth.PairedTruck
+import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
+import com.shawnkowalchuk.milo.platform.bluetooth.TruckPairing
+import com.shawnkowalchuk.milo.platform.bluetooth.buildTruckPairing
 import com.shawnkowalchuk.milo.platform.diagnostics.ProcessExitReader
 import com.shawnkowalchuk.milo.platform.diagnostics.StartupDiagnostics
+import com.shawnkowalchuk.milo.platform.system.TripPreflight
+import com.shawnkowalchuk.milo.platform.trip.TripController
+import com.shawnkowalchuk.milo.platform.trip.TripNotifications
+import com.shawnkowalchuk.milo.platform.trip.TripServiceStarter
+import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,6 +72,53 @@ class AppContainer(context: Context) {
             eventLog = eventLogRepository,
             settings = settingsStore,
             clock = System::currentTimeMillis,
+        )
+    }
+
+    /** Answers "is the truck connected right now?" from the phone's Bluetooth (ADR-002). */
+    val truckConnection: TruckConnectionSource by lazy {
+        BluetoothTruckConnection(appContext, settingsStore)
+    }
+
+    /** Tells the Bluetooth receiver and the companion service which device is the truck. */
+    val pairedTruck: PairedTruck by lazy { PairedTruck(settingsStore) }
+
+    /**
+     * Pairing with the truck, and the check that Android still watches for it. A truck that
+     * has just been paired may already be connected, and nothing reports that, so the trip
+     * controller is asked to look.
+     */
+    val truckPairing: TruckPairing by lazy {
+        buildTruckPairing(
+            context = appContext,
+            settings = settingsStore,
+            eventLog = eventLogRepository,
+            onTruckChanged = {
+                tripController.onTrigger(TripTrigger.RECONCILE, "the truck was paired")
+            },
+            clock = System::currentTimeMillis,
+            scope = applicationScope,
+        )
+    }
+
+    /** Shared by the trip service and its starter, so the two notification channels exist once. */
+    val tripNotifications: TripNotifications by lazy { TripNotifications(appContext) }
+
+    /**
+     * The one owner of trip recording (ADR-002). Every trigger, screen and service reaches it
+     * here. Creating it opens no file: its worker does, on its own thread, when the first
+     * trigger arrives.
+     */
+    val tripController: TripController by lazy {
+        TripController(
+            trips = tripRepository,
+            points = rawPointRepository,
+            eventLog = eventLogRepository,
+            settings = settingsStore,
+            truck = truckConnection,
+            starter = TripServiceStarter(appContext, TripPreflight(appContext), tripNotifications),
+            clock = System::currentTimeMillis,
+            scope = applicationScope,
         )
     }
 }

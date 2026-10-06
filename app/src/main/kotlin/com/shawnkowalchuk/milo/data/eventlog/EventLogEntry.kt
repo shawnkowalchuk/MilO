@@ -23,9 +23,7 @@ data class EventLogEntry(
 )
 
 /**
- * What an event is about. These are the kinds of evidence ADR-002 asks for from day one. Only
- * [PROCESS], [CRASH] and [ERROR] are written so far; the others are written by the trigger,
- * service and Android Auto code as it is built.
+ * What an event is about. These are the kinds of evidence ADR-002 asks for from day one.
  *
  * Stored by name, so a constant can be added freely but never renamed without a migration.
  */
@@ -51,6 +49,12 @@ enum class EventCategory {
     /** Android Auto connecting or disconnecting. */
     ANDROID_AUTO,
 
-    /** A trip starting, finishing or being discarded. */
+    /** A trip starting, finishing or being discarded, and the hold-off being set or released. */
     TRIP,
+
+    /** GPS: fixes being requested and stopped, the time to the first fix, availability changes. */
+    LOCATION,
+
+    /** The truck being paired, and each check that Android still watches for it. */
+    PAIRING,
 }

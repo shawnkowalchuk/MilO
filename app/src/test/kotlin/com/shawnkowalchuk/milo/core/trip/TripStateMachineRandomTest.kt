@@ -2,15 +2,18 @@ package com.shawnkowalchuk.milo.core.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripEffect.CancelGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.EndTrip
+import com.shawnkowalchuk.milo.core.trip.TripEffect.HoldOffAutoStart
 import com.shawnkowalchuk.milo.core.trip.TripEffect.MarkTruckSeen
-import com.shawnkowalchuk.milo.core.trip.TripEffect.SetAutoStartHeldOff
+import com.shawnkowalchuk.milo.core.trip.TripEffect.ReleaseHoldOff
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartTrip
 import com.shawnkowalchuk.milo.core.trip.TripEvent.AndroidAutoConnection
 import com.shawnkowalchuk.milo.core.trip.TripEvent.Moved
+import com.shawnkowalchuk.milo.core.trip.TripEvent.TruckAppeared
 import com.shawnkowalchuk.milo.core.trip.TripEvent.TruckConnection
 import java.util.Random
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -40,7 +43,11 @@ class TripStateMachineRandomTest {
                 stored.carryOut(result.effects)
                 assertConsistent(result.state, now, "after $event from $state")
                 assertEquals("stored trip after $event", stored.trip, result.state.trip?.stored())
-                assertEquals("stored hold-off", stored.heldOff, result.state.autoStartHeldOff)
+                assertEquals(
+                    "stored hold-off",
+                    stored.heldOffSinceMs,
+                    result.state.autoStartHeldOffSinceMs,
+                )
 
                 // Being killed and restored at this very moment, with the same readings, must
                 // do exactly what a fresh look at the truck does: one set of rules, two doors.
@@ -49,7 +56,7 @@ class TripStateMachineRandomTest {
                     TripStateMachine.restore(
                         storedTrip = result.state.trip,
                         lastRecordedAtMs = now,
-                        autoStartHeldOff = result.state.autoStartHeldOff,
+                        autoStartHeldOffSinceMs = result.state.autoStartHeldOffSinceMs,
                         truckConnected = result.state.truckConnected,
                         androidAutoConnected = result.state.androidAutoConnected,
                         atMs = now,
@@ -59,7 +66,9 @@ class TripStateMachineRandomTest {
                 assertEquals("restore after $event", look.effects, restored.effects)
 
                 // And if the event itself had just read the truck, nothing is left to be done.
-                if (event !is Moved && event !is AndroidAutoConnection) {
+                val readTheTruck =
+                    event !is Moved && event !is AndroidAutoConnection && event !is TruckAppeared
+                if (readTheTruck) {
                     assertEquals("restore after $event", result.state, restored.state)
                     assertEquals("restore after $event", emptyList<TripEffect>(), restored.effects)
                 }
@@ -82,6 +91,10 @@ class TripStateMachineRandomTest {
         } else {
             val heldOpen = state.truckConnected || state.androidAutoConnected
             val shouldBeInGrace = trip.truckSeen && !heldOpen
+            assertTrue(
+                "waiting to be confirmed, yet the truck was seen $context",
+                trip.confirmByMs == null || !trip.truckSeen,
+            )
             // The one exception: a grace period that ran out long ago. That trip is over and
             // only waits for a reading of the truck to be closed, whatever has connected since.
             val grace = trip.grace
@@ -110,7 +123,7 @@ class TripStateMachineRandomTest {
      */
     private class StoredSide {
         var trip: ActiveTrip? = null
-        var heldOff = false
+        var heldOffSinceMs: Long? = null
 
         fun carryOut(effects: List<TripEffect>) {
             for (effect in effects) {
@@ -140,9 +153,18 @@ class TripStateMachineRandomTest {
                         trip = null
                     }
 
-                    is SetAutoStartHeldOff -> {
-                        assertTrue("hold-off set to what it already was", heldOff != effect.heldOff)
-                        heldOff = effect.heldOff
+                    is HoldOffAutoStart -> {
+                        assertNotEquals(
+                            "hold-off set again to the same time",
+                            heldOffSinceMs,
+                            effect.sinceMs,
+                        )
+                        heldOffSinceMs = effect.sinceMs
+                    }
+
+                    is ReleaseHoldOff -> {
+                        assertNotNull("hold-off released but not set", heldOffSinceMs)
+                        heldOffSinceMs = null
                     }
                 }
             }
@@ -151,8 +173,11 @@ class TripStateMachineRandomTest {
         private fun openTrip(): ActiveTrip = checkNotNull(trip) { "an effect needed an open trip" }
     }
 
-    /** The stored columns of a trip: everything but the movement time, which is not stored. */
-    private fun ActiveTrip.stored(): ActiveTrip = copy(lastMovementAtMs = 0)
+    /**
+     * The stored columns of a trip: everything but the movement time and the confirmation
+     * deadline, which are not stored.
+     */
+    private fun ActiveTrip.stored(): ActiveTrip = copy(lastMovementAtMs = 0, confirmByMs = null)
 
     /** Mostly seconds, sometimes longer than every timeout, now and then a clock set back. */
     private fun randomTimeStep(random: Random): Long = when (random.nextInt(10)) {
