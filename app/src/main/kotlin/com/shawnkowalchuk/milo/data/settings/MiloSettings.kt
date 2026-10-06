@@ -7,9 +7,30 @@ const val DEFAULT_GRACE_PERIOD_SECONDS = 120
 const val DEFAULT_MINIMUM_TRIP_DISTANCE_METRES = 300
 
 /**
+ * A step of the setup checklist that MilO cannot read from the phone, so Shawn confirms it by
+ * hand. The checklist stores the time of each confirmation.
+ *
+ * @param key what the confirmation is stored under. It is written to the settings file, so it
+ * must never change, even if the constant is renamed.
+ */
+enum class ConfirmedStep(val key: String) {
+    /** HyperOS "Background autostart". Asked for only when the unofficial reading fails. */
+    XIAOMI_AUTOSTART("confirmed_xiaomi_autostart_at_ms"),
+
+    /** HyperOS per-app Battery saver set to "No restrictions". */
+    XIAOMI_BATTERY_SAVER("confirmed_xiaomi_battery_saver_at_ms"),
+
+    /** HyperOS "Other permissions": lock screen, background windows, permanent notification. */
+    XIAOMI_OTHER_PERMISSIONS("confirmed_xiaomi_other_permissions_at_ms"),
+
+    /** MilO locked in the recent apps, so the cleaners leave it alone. */
+    XIAOMI_RECENTS_LOCK("confirmed_xiaomi_recents_lock_at_ms"),
+}
+
+/**
  * Everything the settings store holds, read in one piece.
  *
- * The last two fields are not settings Shawn chooses. They are small pieces of state that must
+ * The last three fields are not settings Shawn chooses. They are small pieces of state that must
  * outlive the process, and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
@@ -24,6 +45,8 @@ const val DEFAULT_MINIMUM_TRIP_DISTANCE_METRES = 300
  * because two of the three things that release the hold-off are measured from it.
  * @param lastProcessExitImportedAtMs the time of the newest process-exit record already copied
  * into the event log, so the same record is not copied again at the next start.
+ * @param confirmedAtMs when Shawn confirmed each setup step that MilO cannot read. A step that
+ * is not in the map is not confirmed.
  */
 data class MiloSettings(
     val truckAddress: String? = null,
@@ -35,4 +58,5 @@ data class MiloSettings(
     val customSoundUri: String? = null,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
+    val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),
 )

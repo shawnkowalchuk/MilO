@@ -16,13 +16,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
+import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
+import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
+import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.util.formatKilometres
@@ -34,15 +36,24 @@ import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.ZoneId
 
 /**
- * The home screen as far as trip recording needs it: the trip in progress, why the last start
- * failed if it did, and one button that starts or ends a trip by hand. Today's sessions and the
- * rest of the home screen arrive with the trip list.
+ * The home screen as far as trip recording needs it: a warning while the setup checklist needs
+ * attention, the trip in progress, why the last start failed if it did, and one button that
+ * starts or ends a trip by hand. Today's sessions arrive in a later package.
+ *
+ * @param onOpenSetup the warning's button. Navigation belongs to the app, not the feature.
  */
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
+fun HomeScreen(viewModel: HomeViewModel, onOpenSetup: () -> Unit, modifier: Modifier = Modifier) {
     val activity by viewModel.activity.collectAsState()
+    val setupNeedsAttention by viewModel.setupNeedsAttention.collectAsState()
+
+    // The warning follows the phone's settings, which change outside MilO without a word.
+    CameToFrontEffect(viewModel::onCameToFront)
+
     HomeContent(
         activity = activity,
+        setupNeedsAttention = setupNeedsAttention,
+        onOpenSetup = onOpenSetup,
         onStart = viewModel::onStartPressed,
         onEnd = viewModel::onEndPressed,
         modifier = modifier,
@@ -52,6 +63,8 @@ fun HomeScreen(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun HomeContent(
     activity: TripActivity,
+    setupNeedsAttention: Boolean,
+    onOpenSetup: () -> Unit,
     onStart: () -> Unit,
     onEnd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -66,11 +79,9 @@ private fun HomeContent(
                 .padding(MiloTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
     ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { heading() },
-        )
+        ScreenTitle(text = stringResource(R.string.app_name))
+
+        if (setupNeedsAttention) SetupWarningCard(onOpenSetup)
 
         SectionCard(title = stringResource(R.string.home_trip_title)) {
             if (trip == null) IdleTrip() else TripInProgress(trip)
@@ -138,6 +149,25 @@ private fun TripInProgress(trip: CurrentTrip) {
 }
 
 /**
+ * Shown while a required row of the setup checklist is not in order, or no truck is paired: in
+ * that state a trip may not start by itself. The checklist says what, so this card only points
+ * to it.
+ */
+@Composable
+private fun SetupWarningCard(onOpenSetup: () -> Unit) {
+    SectionCard(title = stringResource(R.string.home_setup_warning_title)) {
+        StatusRow(
+            label = stringResource(R.string.home_setup_warning_text),
+            status = RowStatus.PROBLEM,
+            action = StatusRowAction(
+                stringResource(R.string.home_setup_warning_action),
+                onOpenSetup,
+            ),
+        )
+    }
+}
+
+/**
  * Why recording could not start, one row per thing the preflight found. The same failure is
  * posted as a notification, but notifications may be switched off.
  */
@@ -145,10 +175,13 @@ private fun TripInProgress(trip: CurrentTrip) {
 private fun StartFailureCard(failure: StartFailure) {
     SectionCard(title = stringResource(R.string.start_problem_title)) {
         if (failure.problems.isEmpty()) {
-            StatusRow(label = stringResource(R.string.start_problem_refused), isOk = false)
+            StatusRow(
+                label = stringResource(R.string.start_problem_refused),
+                status = RowStatus.PROBLEM,
+            )
         }
         for (problem in failure.problems) {
-            StatusRow(label = stringResource(problem.textRes()), isOk = false)
+            StatusRow(label = stringResource(problem.textRes()), status = RowStatus.PROBLEM)
         }
     }
 }
@@ -174,6 +207,8 @@ private fun HomeIdlePreview() {
                             listOf(PreflightProblem.BACKGROUND_LOCATION_MISSING),
                         ),
                     ),
+                setupNeedsAttention = true,
+                onOpenSetup = {},
                 onStart = {},
                 onEnd = {},
             )
@@ -198,6 +233,8 @@ private fun HomeRecordingPreview() {
                                 waitingForTruck = false,
                             ),
                     ),
+                setupNeedsAttention = false,
+                onOpenSetup = {},
                 onStart = {},
                 onEnd = {},
             )

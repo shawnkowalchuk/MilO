@@ -4,7 +4,7 @@
 >
 > **How it grows.** A change that adds behaviour only the phone can prove adds its checks here, in the same change. A check is removed only when the behaviour it covers is removed.
 >
-> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG.
+> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG. The screens of work package 3 (checks 52 to 79) have run nowhere at all.
 
 ---
 
@@ -12,7 +12,7 @@
 
 - The debug build is installed from the Mac (`./gradlew installDebug`, or Android Studio). HyperOS needs "Install via USB" and "USB debugging (Security settings)" switched on first (FINDINGS_LOG, 2026-10-03).
 - **Never uninstall to fix a problem.** From phase 1 on the build holds real trips (STANDARDS §13).
-- **Grant the permissions by hand.** MilO does not ask for them until the permission checklist is built. In the phone's settings: Apps, MilO, Permissions: Location set to "Allow all the time" with "Use precise location" on, Nearby devices allowed, and Notifications allowed. Or from the Mac:
+- **Set the phone up on MilO's Setup screen** (the bottom bar, third button). It asks for each permission and opens each setting; checks 54 to 66 go through it row by row, and they are the first time that screen runs anywhere. Should the screen fail, the permissions can still be granted by hand. In the phone's settings: Apps, MilO, Permissions: Location set to "Allow all the time" with "Use precise location" on, Nearby devices allowed, and Notifications allowed. Or from the Mac:
 
 ```
 adb shell pm grant com.shawnkowalchuk.milo android.permission.ACCESS_FINE_LOCATION
@@ -24,9 +24,21 @@ adb shell pm grant com.shawnkowalchuk.milo android.permission.BLUETOOTH_CONNECT
 
 Without Nearby devices no trip starts at all, not even with the Start trip button: the home screen then says "Bluetooth permission is missing".
 
-## Reading the event log before it has a screen
+**The order on a phone that has never been set up.** The sections below are grouped by what they prove, not by the order to run them the first time: checks 10 onward need the permissions, and checks 31 onward need the HyperOS settings and the paired truck as well, and all of that is set in checks further down. So the first time through:
 
-The event log screen is not built yet. Until it is, the log is read on the Mac from a copy of the database. This is how it was read on the emulator; on the phone it is itself untested.
+1. Checks 1 to 8, at any point: they need no permission. Check 9 follows check 10.
+2. Checks 52 and 53: getting around.
+3. Checks 54 to 66: the Setup screen, row by row. They end with one thing still not set: the truck.
+4. Checks 67 and 68: pair the truck. Only now does Setup say "Everything MilO needs is set".
+5. Checks 10 to 30: a trip started by hand. Keep the truck switched off or out of range, except in the checks that name it (17 and 29): now that it is paired, connecting to it starts a trip by itself.
+6. Checks 31 to 51: the truck starts and ends a trip. Checks 36 to 43 switch Autostart off on purpose; switch it back on afterwards.
+7. Checks 69 to 79, in any order.
+
+## Reading the event log
+
+**On the phone:** the Log screen (the bottom bar, last button) shows the log newest first, with each line's time to the second. A line that says "Tap for details" opens when pressed: that is where the state before and after each trigger is. The screen itself is new and untested (checks 73 to 75).
+
+**On the Mac,** for searching, for the trips and the GPS fixes, or if the screen fails: the log is read from a copy of the database. This is how it was read on the emulator; on the phone it is itself untested.
 
 ```
 adb exec-out run-as com.shawnkowalchuk.milo cat databases/milo.db     > milo.db
@@ -136,13 +148,17 @@ Every trip here starts with the Start trip button, away from the truck (or befor
 
 **Nothing in this section has run anywhere but in unit tests and on an emulator without a truck.** The emulator (Android 16) showed the companion service, the boot and update reconcile and the pairing check working on stock Android. It could not show a single Bluetooth broadcast, and it does not use the way of reading the truck's connection that this phone uses (FINDINGS_LOG, 2026-10-05). So these checks are the first time most of this code meets a real connection, and the first time any of it meets HyperOS.
 
-### Pairing MilO with the truck, until the pairing screen is built
+### Pairing MilO with the truck
 
 The truck must already be paired with the phone in the phone's Bluetooth settings.
 
+**The way to pair is the pairing screen:** Setup, the row "Truck paired and watched", Pair truck. Checks 67 to 72 go through it. Write down the association number N from the `PAIRING` line "… ARMED: association N for … is observed" in the Log: check 44 needs it.
+
+**Over adb,** if the pairing screen fails. This skips Android's consent dialog. MilO adopts an association made this way when it has no truck stored, or when the stored truck's own association is gone.
+
 1. Grant Nearby devices (above) and open MilO once.
 2. Read the event log. The newest `PAIRING` line ends with the phone's paired devices and their addresses: `… NO_TRUCK: no truck is paired. Android lists no association at all. Paired with the phone: <name> (AA:BB:CC:DD:EE:FF), …`. Take the truck's address from it. Stop and write it down if:
-   - the line says `this phone has no companion device support`. HyperOS does not report the feature, MilO can adopt nothing, and no truck can be stored until the pairing screen exists. Automatic start cannot be tried before then;
+   - the line says `this phone has no companion device support`. HyperOS does not report the feature and MilO can adopt nothing over adb. Use the pairing screen, which stores the truck without companion support; the Bluetooth receiver is then the only automatic trigger;
    - the list is `PERMISSION_MISSING` or `BLUETOOTH_OFF`. Grant Nearby devices or switch Bluetooth on, open MilO again, and read the new line.
 3. Make the association from the Mac, with that address:
 
@@ -155,20 +171,18 @@ adb shell cmd companiondevice list 0
 4. Send MilO to the background, wait a few seconds, and open it again. Expect two `PAIRING` lines: "No truck was stored and Android lists one association. Adopted it: Truck(address=…, name=…, associationId=N)" and "Truck pairing checked (app opened): ARMED: association N for … is observed". **Write down N**: check 44 needs it.
 5. `adb shell dumpsys companiondevice | grep milo` shows `mNotifyOnDeviceNearby=true`.
 
-This skips Android's consent dialog, which only the pairing screen can show.
-
-**The way back from a wrong association, and the way to pair another truck.** Remove the association and make the right one, then send MilO to the background and open it again:
+**The way back from a wrong association, and the way to pair another truck.** The pairing screen can change the truck (check 71). Over adb, remove the association and make the right one, then send MilO to the background and open it again:
 
 ```
 adb shell cmd companiondevice disassociate 0 com.shawnkowalchuk.milo <wrong or old address>
 adb shell cmd companiondevice associate 0 com.shawnkowalchuk.milo <the truck's address>
 ```
 
-If a truck was already stored, expect `PAIRING` "Android lists no association for the stored truck (…) and one for another paired device. Adopted it in its place: Truck(…)", then "… ARMED". A stored truck that still has its association is never replaced. **Never clear MilO's data to change the truck: that deletes the trips.**
+If a truck was already stored, expect `PAIRING` "Android lists no association for the stored truck (…) and one for another paired device. Adopted it in its place: Truck(…)", then "… ARMED". A stored truck that still has its association is never replaced. **Never clear MilO's data to change the truck or to get round a pairing problem: that deletes the trips.**
 
 ### A first drive
 
-Set up as HyperOS should be: Autostart on for MilO, battery saver "No restrictions", MilO locked in recents. Open MilO once, then press Home.
+Set up as HyperOS should be: Autostart on for MilO, battery saver "No restrictions", MilO locked in recents. The Setup screen says "Everything MilO needs is set" when that is so and the truck is paired (checks 54 to 68). Open MilO once, then press Home.
 
 | # | Do this | Expect in the event log | Result |
 |---|---|---|---|
@@ -221,9 +235,85 @@ These can be done at the desk, and they answer the Autostart question for the co
 - **A minute timer that is late** shows only when a reading is logged at all: its source then reads "minute check (prompted by a GPS fix: the timer was late)". Check 27 is the direct measure of whether timers stall on this phone.
 - **A trip service that Android destroys in mid-trip and refuses to restart** is covered by unit tests only. Should it happen, the log shows `SERVICE` "The trip service stopped while a trip is open…", "Could not start recording for trip service stopped…" and "The open trip is not being recorded. The next trigger picks it up".
 - **The 12-hour end of the hold-off** is covered by unit tests only.
-- **Android's consent dialog** and the pairing through an Activity wait for the pairing screen.
+- **Android's consent dialog** and the pairing through an Activity are checks 67 to 72, below.
 - **Android 12, 13, 15 and 16 behave differently** in the companion service (three shapes of callback) and in how the truck is read. This phone runs Android 14 only. The other branches are compiled and reviewed, and one of them (Android 16) ran on the emulator.
+
+## Phase 1 screens: navigation, Setup, pairing, the log and the trips
+
+**Nothing in this section has run anywhere.** Work package 3 was built while the phone and the emulators were in use by another change, so it was proven with the build and unit tests only (FINDINGS_LOG, 2026-10-05). These checks are the first time any of these screens is drawn. For every check, a crash or a screen that cannot be read is itself the result: write it down, with the newest `CRASH` line of the Log.
+
+### Getting around
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 52 | Open MilO. Press each button of the bottom bar in turn. | Four buttons: Home, Trips, Setup, Log, each with an icon and its name, the one showing highlighted. Each opens its screen. **Look at the four icons** (a house, a calendar page, a ticked list, a bulleted list) and the four states of the Setup rows (tick, warning, question mark, empty ring): they were drawn from numbers and never seen. | not run |
+| 53 | From Trips press Back. From Setup open the truck row, then press Back twice. Open the truck row again and tap the arrow beside the title twice, as fast as you can. From Home press Back. Then open Log, press Home on the phone, wait a minute and open MilO from the recent apps. | Back from Trips, Setup or Log leads to Home. Back from the pairing screen leads to Setup, and the bar shows Setup the whole time. The arrow tapped twice also ends on Setup, not on Home, and MilO does not crash. Back from Home leaves MilO. MilO comes back on the Log screen. Rotating the phone on any screen keeps the screen. | not run |
+
+### The Setup screen
+
+Start with the permissions taken away: Settings, Apps, MilO, Permissions, each set to "Don't allow". Or from the Mac, one line per permission, each naming MilO:
+
+```
+adb shell pm revoke com.shawnkowalchuk.milo android.permission.ACCESS_BACKGROUND_LOCATION
+adb shell pm revoke com.shawnkowalchuk.milo android.permission.ACCESS_FINE_LOCATION
+adb shell pm revoke com.shawnkowalchuk.milo android.permission.ACCESS_COARSE_LOCATION
+adb shell pm revoke com.shawnkowalchuk.milo android.permission.POST_NOTIFICATIONS
+adb shell pm revoke com.shawnkowalchuk.milo android.permission.BLUETOOTH_CONNECT
+```
+
+Android closes MilO when a permission is taken away, so do this with no trip open. **Never use `adb shell pm reset-permissions`.** That command takes no app name: it takes the permissions away from every app on the phone.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 54 | Open Setup. | "Reading the phone's settings…" for a moment at most, then a line saying how many things are not set, the card "Permissions and phone settings" with nine rows, and the card "This Xiaomi phone (HyperOS)" with four. Home shows the card "Setup needs attention". | not run |
+| 55 | Precise location: press Allow. Choose "While using the app" with Precise on. | Android's own dialog. The row turns green without leaving the screen. The row below, "Allow all the time", now has an Allow button; before, it said to allow precise location first. **If you choose Approximate, the row stays red, and Allow asks again.** | not run |
+| 56 | Location, Allow all the time: press Allow. | Android (or HyperOS) opens its own location page for MilO, as the row says. Choose "Allow all the time" and press Back: the row is green. **Write down what the page looks like on HyperOS.** | not run |
+| 57 | Notifications and Nearby devices: press Allow on each. | A dialog each; both rows turn green. | not run |
+| 58 | Take Nearby devices away again, press Allow and refuse, twice. Press Allow a third time. | The third press opens MilO's page in the phone's settings in place of a dialog, because Android no longer shows one. Allow it there and come back: green. | not run |
+| 59 | With Setup open, pull down the quick settings and switch Location off. Close them. Then press the row's button. | The row "Location switched on" is red as soon as the quick settings close: MilO reads the phone again when its window gets the focus back. **That rests on HyperOS's panel taking the focus the way stock Android's does, which nobody has tried. If the row stays green, write that down, then leave MilO and come back: that must turn it red.** The button opens the phone's Location settings. Switch it on and come back: green. | not run |
+| 60 | Battery use: press Open settings. | Android's dialog "Let app always run in background?", or HyperOS's own page in its place. Allow. The row is green on return. **Write down which of the two appeared.** Then, on the Mac, `adb shell dumpsys deviceidle whitelist` lists `com.shawnkowalchuk.milo`. | not run |
+| 61 | In the phone's settings set MilO's battery use to the most restrictive choice. Open Setup. | Unknown, and the same question as check 22: either the row "Battery use: unrestricted" turns red and says that MilO is restricted in the background, naming Battery saver "No restrictions" as the way out, or the HyperOS setting is invisible to it. Write down which, and whether its button (MilO's App info page) leads to that setting. Set it back. | not run |
+| 62 | Not paused when unused: press Open settings. | MilO's page in the phone's settings, with the switch "Pause app activity if unused". Switch it off, come back: green. **Write down whether HyperOS has that switch and whether the row follows it.** This row is recommended: it never raises the home screen's warning. | not run |
+| 63 | Switch the phone's Battery saver on (Settings, Battery). Open Setup, then Home. | The row "Battery Saver off" is red and Home shows the warning. Switch it off: both clear. **Write down whether the row sees HyperOS's Battery saver, and its Ultra battery saver.** | not run |
+
+### The HyperOS rows
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 64 | With Background autostart **off** for MilO, open Setup. Press the row's Open settings. Switch it on. Come back. Then switch it off again and come back. | "Looks off" with a red warning, then "Looks on" with a green tick, then "Looks off" again. **This is the unofficial reading meeting the phone for the first time: write down exactly what the row said each time.** If it says "MilO could not read this setting", write that down too: the row then waits for "I have set this". Write down which screen the button opened: the list of apps allowed to autostart, or MilO's App info page. | not run |
+| 65 | Battery saver: No restrictions. Press Open settings. Choose "No restrictions". Come back and press "I have set this". Press "Not set any more", then confirm again. | The button opens MilO's Battery saver choices, or MilO's App info page (then: Battery saver, No restrictions). The row turns green and says "You confirmed this on (today's date)". "Not set any more" brings the empty ring back. **Write down which screen opened.** | not run |
+| 66 | Other permissions: press Open settings. Locked in recent apps: follow the row and confirm. | Other permissions opens MilO's HyperOS permission page, or App info. **Write down which, and the names of the switches HyperOS 2 has there**: the row names them from the research. With both required rows confirmed, Autostart looking on and everything above green, one thing is still not set, the truck: Setup says "1 thing MilO needs is not set" and Home still shows the warning. Both clear in check 68. | not run |
+
+After checks 60 to 66, read the Log. For every button that could not open its own screen there is an `ERROR` line "Opened another screen in place of XIAOMI_…" (or of another name), with the reason in its detail. **Write each one down:** it says which of the researched HyperOS screens this phone does not have.
+
+### The pairing screen
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 67 | Setup, the truck row, Pair truck. | "No truck is paired", and the card "Paired with this phone" listing the phone's Bluetooth devices by name, each with a Pair button. | not run |
+| 68 | Press Pair on the truck. Choose Allow in Android's dialog. | **Android's consent dialog, shown by MilO for the first time.** Then "Paired with (the truck's name)" and, under the truck's name, "Paired, and Android is watching for it." Log: `PAIRING` "Paired with the truck: …" and "Truck pairing checked (paired with the truck): ARMED: association N for … is observed". On the Mac, `adb shell dumpsys companiondevice \| grep milo` shows `mNotifyOnDeviceNearby=true`. Setup's truck row is green and its button says Change truck. With checks 54 to 66 done, Setup now says "Everything MilO needs is set" and the warning on Home is gone. **Write down N, and the exact words of Android's dialog.** | not run |
+| 69 | Press Pair again on the truck and close Android's dialog without allowing (Back, or Don't allow). | "Not paired. Android's dialog was closed without allowing. Nothing was changed." The truck above is still paired and watched. If no dialog appears and the pairing just succeeds again, write that down: Android then reuses the association. If the screen says "Pairing failed" in place of "Not paired", Android's dialog ended by itself (it gave up looking for the truck, or failed inside): write down the reason shown. | not run |
+| 70 | Take Nearby devices away and open the pairing screen. Allow it. Then switch Bluetooth off and come back. Press the button, switch Bluetooth on and press Back at once. Then switch Location off in the quick settings, with the pairing screen open. | In turn: a card saying MilO is not allowed to use Nearby devices, with an Allow button that brings the list back; "Bluetooth is switched off" with a button to the Bluetooth settings; the list of devices, which appears by itself within a few seconds even if Bluetooth was still switching on when you came back; "Location is switched off", with the devices listed but their buttons greyed out, as soon as the quick settings close. **Write down if the list did not appear by itself.** | not run |
+| 71 | Press "Use this one" on another device (earbuds will do). Allow. Then press "Use this one" on the truck and allow. | After the first: the other device is the truck, and `adb shell cmd companiondevice list 0` shows one association for MilO, the new one. After the second: the truck is the truck again, with a new association number, and still only one association. Log: two "Paired with the truck" lines. **Write down the new N.** | not run |
+| 72 | `adb shell cmd companiondevice disassociate 0 com.shawnkowalchuk.milo <address>`, then open MilO and go to Setup. | The truck row is red: "(name) was paired, but Android no longer watches for it. Pair it again.", and its button says Pair truck. Home shows the warning. On the pairing screen, Pair again brings back "watching for it". | not run |
+
+### The Log screen
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 73 | Open Log after the checks above. | The newest line on top. Every line has a date and a time with seconds (`2026-10-05 08:14:03`) in the phone's own time, a category and a message. **Compare the time of the newest line with the phone's clock.** `CRASH` and `ERROR` are in red. | not run |
+| 74 | Press a `TRIGGER` line that says "Tap for details". Press it again. Rotate the phone with a line open. | The detail (the state before and after) opens under the line, and closes. It stays open through the rotation. A line without "Tap for details" does nothing. | not run |
+| 75 | With Log open, connect a Bluetooth device (earbuds). Then scroll to the very bottom. | A new "Ignored" line appears at the top by itself. With more than 200 lines in the log, the bottom has "Show older entries", and pressing it adds 200 more. Scrolling stays smooth. **After a week of driving, write down how long the screen takes to open.** | not run |
+
+### The Trips screen
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 76 | Open Trips after the trips of checks 10 to 13. | The current month's name and year, the total km and "N trips", then one card per day, newest day first, each trip with its start time, end time and km. The total is the sum of the trips listed. The discarded trip of check 13 is not listed; a line says "1 trip was discarded and is not shown". | not run |
+| 77 | Switch "Show discarded trips" on. | The discarded trip appears in its day, marked "Discarded … Not counted", its km greyed. The total and the number of trips do not change. | not run |
+| 78 | Press Previous month, then Next month. | A month without trips says "No trips in (month and year)". Next month is greyed out on the current month, and works from an earlier one. Leaving Trips and coming back shows the current month again. | not run |
+| 79 | Start a trip by hand, open Trips, walk or drive a little, end the trip. If it can be arranged: start a trip before midnight and end it after. | While recording: a card "In progress" at the top with the start time and a growing km figure, and the total unchanged. After End trip it moves into its day and the total grows. The trip over midnight is listed once, under the day it started. | not run |
 
 ## Later work packages
 
-The Android Auto screen on the truck, the pairing screen and the permission checklist each add their checks here when they are built.
+The Android Auto screen on the truck adds its checks here when it is built.

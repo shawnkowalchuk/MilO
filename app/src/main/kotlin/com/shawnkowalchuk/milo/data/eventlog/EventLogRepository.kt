@@ -13,6 +13,13 @@ class EventLogRepository(private val dao: EventLogDao) {
         )
     }
 
-    /** The newest [limit] entries, newest first. */
-    fun observeNewest(limit: Int): Flow<List<EventLogEntry>> = dao.observeNewest(limit)
+    /**
+     * The newest [limit] entries, newest first, and again each time the log changes. The limit
+     * is what keeps the screen fast when the log holds thousands of lines: the query stops at it
+     * and reads them through the index on the time.
+     */
+    fun observeNewest(limit: Int): Flow<List<EventLogEntry>> {
+        require(limit > 0) { "The number of entries to read must be positive: $limit" }
+        return dao.observeNewest(limit)
+    }
 }

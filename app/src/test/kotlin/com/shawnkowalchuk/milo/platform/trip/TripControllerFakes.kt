@@ -173,6 +173,9 @@ class FakeTripDao : TripDao {
     override fun observeWithStatus(status: TripStatus): Flow<List<Trip>> =
         flowOf(rows.filter { it.status == status })
 
+    override fun observeStartedBetween(fromMs: Long, untilMs: Long): Flow<List<Trip>> =
+        flowOf(rows.filter { it.startedAtMs in fromMs until untilMs }.reversed())
+
     override suspend fun markTruckSeen(tripId: Long, open: TripStatus): Int =
         change(tripId, open) { it.copy(truckSeen = true) }
 

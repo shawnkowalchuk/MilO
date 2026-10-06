@@ -4,7 +4,7 @@
 >
 > **Status:** Living document · **Last updated:** 2026-10-05 · **See also:** ENGINEERING_STANDARDS.md (the rules), APP_ENCYCLOPEDIA.md (how each feature works)
 
-Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing as functions without a screen. The home screen shows the trip in progress and has one Start trip / End trip button. **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. There is no pairing screen and no permission checklist yet, so the truck is paired over adb and the permissions are granted by hand (`docs/DEVICE_TEST_CHECKLIST.md`). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
+Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing (`TruckPairing`, which the pairing screen calls). The phone UI has five screens behind a bottom navigation bar (`app/MiloNavigation.kt`): Home (the trip in progress, one Start trip / End trip button, and a warning while setup is incomplete), Trips (one month at a time), Setup (the permission checklist, in `feature/setup/` with its rules in `platform/system/`), the truck pairing screen opened from Setup, and Log (the event log). **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. **The screens other than Home have never been drawn anywhere:** they were built and proven with the build and unit tests only (`docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
 
 ---
 
@@ -78,6 +78,7 @@ The system also starts the app when no screen is open: a Bluetooth connect, a re
 | Process start | `app/MiloApplication` | "Read the truck" |
 | MilO coming to the front | `app/MainActivity.onStart` | "Read the truck" |
 | Start and End | `feature/home/HomeViewModel` | The press |
+| A truck picked on the pairing screen | `platform/bluetooth/TruckPairing`, called by `feature/pairing/PairingViewModel` | "Read the truck", once the truck is stored |
 
 A broadcast or a callback names a device, and the receiver decides on the spot whether it is the truck (`platform/bluetooth/TruckSignals`, plain functions). That needs the truck's address, which is in the settings file, so `PairedTruck` reads it while `onReceive` waits, for one second at most. "Read the truck" is `TruckConnectionSource.read()`, which answers connected, not connected or unknown, with how it found out.
 
@@ -99,7 +100,26 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 - **A trip that nothing records is not kept in memory.** If the service is lost and Android will not start it again, or storage fails in mid-event, the worker drops what it holds. The open trip row is the truth, and the next look at storage picks it up or closes it.
 - **Every GPS fix goes through the controller's inbox too**, so fixes are stored in arrival order under the trip that is open at that moment.
 
-**How the shared objects are made.** `app/MiloApplication` is the first code to run in the process, however it was started. It creates one `app/AppContainer`, which builds the databases, the repositories, the settings store and the trip controller (each lazily, on first use) and owns the application-wide coroutine scope. A screen's ViewModel is given what it needs from the container in `app/MiloApp`, so a feature never imports the `app` package. The container decides nothing about storage: it calls the `build...` functions in `data/`, which own every file name and folder. Everything else is handed what it needs through its constructor. There is no Hilt and no global singleton: to see what a class depends on, read its constructor; to see what it is given, read `AppContainer`.
+**How the shared objects are made.** `app/MiloApplication` is the first code to run in the process, however it was started. It creates one `app/AppContainer`, which builds the databases, the repositories, the settings store, the trip controller, the setup checklist and the opener of settings screens (each lazily, on first use) and owns the application-wide coroutine scope. A screen's ViewModel is given what it needs from the container in `app/MiloNavigation`, so a feature never imports the `app` package. The container decides nothing about storage: it calls the `build...` functions in `data/`, which own every file name and folder. Everything else is handed what it needs through its constructor. There is no Hilt and no global singleton: to see what a class depends on, read its constructor; to see what it is given, read `AppContainer`.
+
+**How the phone screens are reached.** Navigation 3. `app/MiloApp` holds the back stack and frames every screen with the bottom bar; `app/MiloNavigation` shows the screen on top of the back stack and is the only code that knows more than one feature.
+
+```
+[ MiloNavigationBar ]   Home | Trips | Setup | Log        (core/designsystem)
+        |
+   back stack:   [ Home ]                    Home alone, or
+                 [ Home, Trips | Setup | Log ]   one bar screen on top of it, or
+                 [ Home, Setup, Pairing ]        the pairing screen, opened from Setup
+```
+
+- Each screen is a `@Serializable` key (`HomeKey`, `TripsKey`, `SetupKey`, `LogKey`, `PairingKey`), because Navigation 3 saves the back stack with kotlinx.serialization when Android puts MilO away.
+- Home is always at the bottom. Pressing a button of the bar leaves Home alone, or Home with that screen on top; whatever was open above is closed. So Back from Trips, Setup or Log leads to Home, and Back from Home leaves MilO.
+- A screen that leads to another one (Home to Setup, Setup to pairing) is handed a plain function to call. Features never import each other.
+- A screen's ViewModel lives as long as the screen is on the back stack, and is created with what it needs from the `AppContainer`. Leaving Trips and coming back therefore opens the current month again.
+- Back closes the screen on top and never the last one: Navigation 3 throws on an empty back stack, and the process that would die is the one the trip service runs in (`closeTop`). A screen's own Back arrow closes that screen only while it is on top (`closeIfOnTop`), because a screen that is closing stays on the display, arrow included, for the length of the transition.
+- **A screen that shows something Android does not report changes of** (permissions, settings, the phone's paired devices, which month is the current one) **reads it again every time it comes to the front,** with the shared `CameToFrontEffect` (`core/designsystem/component/`). It acts on two signs. The screen resumes: Navigation 3 gives each screen a lifecycle of its own, so that happens when the screen is entered and whenever MilO returns from a settings screen or a system dialog. Or MilO's window gets the focus back: the quick settings panel and the notification shade cover MilO without pausing it, so nothing resumes when they close. The pairing screen has a third sign of its own, Android's broadcast that Bluetooth has finished switching on or off (`platform/bluetooth/BluetoothSwitch.kt`), because that happens a second or two after Shawn is back.
+
+**The setup checklist is shared, like the trip state.** `platform/system/SetupChecklist` holds the rows of the checklist as one flow. The Setup screen shows the rows; the home screen only asks `needsAttention` of them. What the phone reports is read when a screen asks; Shawn's confirmations (the settings store) and the truck's pairing (`TruckPairing.status`) arrive by themselves. The five facts that stop a trip from being recorded are read by `TripPreflight.facts()`, which the trip service's starter also uses.
 
 One exception, because Android gives no other way. The components Android creates itself have no constructor MilO can call: `TripService`, `TruckCompanionService`, `TruckBluetoothReceiver` and `TruckReconcileReceiver`. Each fetches the container from the application object (`(application as MiloApplication).container`). `TripNotifications` names `MainActivity` as the screen a tap on the trip notification opens. Those are the only places where `platform/` imports `app/`, and no other class may reach for the container this way.
 
@@ -132,12 +152,14 @@ One Gradle module, `:app`. Packages under `com.shawnkowalchuk.milo`:
 ```
 app/                 # MiloApplication, the AppContainer, MainActivity, the navigation host
 feature/<name>/      # one package per feature: its Composable screens, its ViewModel,
-                     #   its feature-only logic
+                     #   its feature-only logic. Today: home/, trips/, setup/, pairing/,
+                     #   eventlog/
 core/designsystem/   # theme tokens (colour, spacing, typography, shape) and the shared
                      #   base components
 core/trip/           # the trip rules: state machine, point filter, distance, trip closing.
                      #   Pure Kotlin, no Android imports, unit tested (ADR-002)
-core/util/           # pure Kotlin helpers with unit tests (time, formatting)
+core/util/           # pure Kotlin helpers with unit tests: formatting of distances and
+                     #   times, and a month as a span of stored time
 data/                # the only layer that touches storage. The two Room databases, and one
                      #   sub-package per kind of data, each with its entity, DAO and repository:
                      #   trip/, point/, eventlog/, settings/ (DataStore), crash/ (crash files)
@@ -147,7 +169,9 @@ platform/trip/       # TripController, TripService, GPS recording, notifications
 platform/bluetooth/  # the triggers: the Bluetooth receiver, the companion service, the boot and
                      #   update receiver; the reading "is the truck connected?"; pairing
 platform/car/        # so far only the watch on Android Auto's connection
-platform/system/     # so far only the preflight check before the service is started
+platform/system/     # what the phone's permissions and settings say: the preflight check
+                     #   before the service is started, the setup checklist's facts, rules
+                     #   and shared rows, and the opening of the phone's settings screens
 platform/diagnostics/  # crash and kill capture into the event log
 ```
 
@@ -180,7 +204,7 @@ Conventions that hold everywhere: times are wall-clock milliseconds since 1970 u
 | `distanceMetres` | real | Written when the trip closes; 0 while open |
 | `startLatitude`, `startLongitude`, `endLatitude`, `endLongitude` | real, null | Written when the trip closes; null if no usable GPS fix was recorded |
 
-At most one trip is `OPEN`. The repository enforces it: starting a trip while one is open returns the open one. Not here yet, and added by the phase that builds each: Business or Personal, addresses, the manual or edited flag.
+At most one trip is `OPEN`. The repository enforces it: starting a trip while one is open returns the open one. The Trips screen reads the trips that started in a span of time (`observeTripsStartedBetween`). There is no index on `startedAtMs`, so that reads the whole table, which at a few thousand rows a year takes milliseconds; the index is to be added with the first migration. Not here yet, and added by the phase that builds each: Business or Personal, addresses, the manual or edited flag.
 
 **`event_log`** (`data/eventlog/EventLogEntry`), indexed on `atMs`.
 
@@ -217,8 +241,9 @@ At most one trip is `OPEN`. The repository enforces it: starting a trip while on
 | `custom_sound_uri` | text | none | The audio file Shawn chose; absent means the bundled chirp |
 | `auto_start_held_off_since_ms` | integer | none | ADR-002's hold-off: the time a trip was ended by hand with the truck still connected. Absent means not held off. The time is kept because two of the three things that release the hold-off are measured from it |
 | `last_process_exit_imported_at_ms` | integer | 0 | The newest process-exit record already copied into the event log |
+| `confirmed_xiaomi_autostart_at_ms`, `confirmed_xiaomi_battery_saver_at_ms`, `confirmed_xiaomi_other_permissions_at_ms`, `confirmed_xiaomi_recents_lock_at_ms` | integer each | none | When Shawn confirmed a step of the setup checklist that MilO cannot read. Absent means not confirmed. The key of each step is fixed on `ConfirmedStep` in `data/settings/MiloSettings.kt` |
 
-The last two are not settings Shawn chooses. They are small pieces of state that must outlive the process.
+The hold-off, the exit-record marker and the four confirmations are not settings Shawn chooses. They are small pieces of state that must outlive the process.
 
 The store is built by `buildSettingsStore` in the same package, with no corruption handler: an unreadable file makes every read throw, and is never replaced by empty settings (that would drop the truck pairing without a trace).
 
@@ -259,13 +284,15 @@ None of these is a service of our own. Each is a system or Google component alre
 
 | Service | Used for | Where it's wired | Notes |
 |---|---|---|---|
-| Bluetooth (system) | Detecting the truck connecting and disconnecting; reading whether it is connected | `platform/bluetooth/` | Built, never run against a real connection. Receivers must be exported (section 10) |
+| Bluetooth (system) | Detecting the truck connecting and disconnecting; reading whether it is connected; hearing Bluetooth itself being switched on or off, for the pairing screen's list | `platform/bluetooth/` | Built, never run against a real connection. Receivers must be exported (section 10) |
 | CompanionDeviceManager (system) | Association with the truck; the system wakes the app on presence | `platform/bluetooth/` | Built; ran on an emulator (Android 16). Behaviour on HyperOS is untested |
 | Fused location (Play services) | GPS fixes during a trip | `platform/trip/LocationRecorder` | Built. A fix every 5 seconds, no cached first position |
 | Geocoder (system) | Start and end addresses | `platform/` | Needs network and has no availability guarantee, so a failed lookup is retried later |
 | Android Auto (Car App Library) | The in-truck screen; `CarConnection` keeps a trip open | `platform/car/` | `CarConnection` is built; the screen is not. Distribution risk (section 10) |
 | Activity recognition (Play services) | The phase 2 driving alert | `platform/` | Alert only. It never starts a trip |
 | Gmail | Sending the monthly PDF | `platform/` | An intent opens the draft and Shawn taps send. The app cannot learn whether it was sent |
+| The phone's settings screens | The buttons of the setup checklist and the pairing screen | `platform/system/SystemScreens` | Android's own screens, and three HyperOS ones known only from other apps' source. Each is tried inside a try/catch and falls back on Android's page for MilO. Never run on the phone |
+| HyperOS Autostart app-op | The "looks on / looks off" reading on the setup checklist | `platform/system/SetupFacts` | A hidden Android method reached by reflection with MIUI's app-op 10008. Advisory only; any failure reads as "unknown" |
 | Android Auto Backup | Off-phone copy of the main database | Manifest backup rules | Off until phase 4. 25 MB cap (section 6) |
 | GitHub | Private repo, CI, Dependabot updates, and Dependabot alerts fed by the dependency graph workflow | `.github/` | Development only |
 
@@ -303,6 +330,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 
 **This phone**
 - HyperOS background limits: starting a dead app is gated by Autostart, which is off by default for a sideloaded app. With it off, decompiled system code shows manifest broadcasts dropped and service starts and binds rejected, which would block both the Bluetooth receiver and the CompanionDeviceManager path. Battery saver "No restrictions" is a second, separate gate. This rests on decompiled code and forum reports, so the with and without Autostart test on the POCO X5 decides it. (`2026-10-03-miui-background-limits.md`, `2026-10-03-cdm-presence.md`)
+- What MilO can know about the HyperOS settings is limited. Autostart can be read only through an unofficial app-op check that is known to say "on" wrongly; the per-app Battery saver profile, the "Other permissions" switches and the lock in recents cannot be read at all, so the setup checklist takes Shawn's word for them, with the date. Whether a HyperOS settings screen exists cannot be asked beforehand either (an app cannot see another app's screens without declaring it), so each is opened inside a try/catch with a fallback. (`2026-10-03-miui-background-limits.md`, findings 27 to 33)
 - Installing from Android Studio needs two Xiaomi-only developer switches ("Install via USB" and "USB debugging (Security settings)") and a confirmation on the phone at each install. (`2026-10-03-miui-dev-bluetooth-audio.md`)
 
 **Android Auto**
@@ -316,7 +344,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 **Recording**
 - A fused location request combines interval and distance as AND, so "every 5 seconds or 10 m" cannot be asked for. The request is a fix every 5 seconds, and the 10 m rule is applied in MilO's own distance calculation. (`2026-10-03-location-and-car.md`)
 - The timers of a trip run as coroutines inside the service, as the research recommends, and no wake lock is held. A coroutine timer does not count time the phone spends asleep, so a timer can fire late when the phone sleeps between GPS fixes. Two things limit the harm: a GPS fix stands in for a late timer (for a deadline once it is 10 seconds overdue, for the minute reading 70 seconds after the last one), and the trip rules judge a late reading by the stored deadline, not by when the timer fired. With no fixes arriving, nothing stands in. Not measured on the phone yet (DEVICE_TEST_CHECKLIST).
-- Recording needs four permissions granted by hand until the permission checklist is built: precise location, "Allow all the time", Nearby devices (Bluetooth) and notifications.
+- Recording needs four permissions: precise location, "Allow all the time", Nearby devices (Bluetooth) and notifications. The Setup screen asks for each; none of its dialogs has been seen on the phone yet.
 
 **Build**
 - AGP 9.4.1 with Gradle 9.8.0 and Kotlin 2.4.20 is one step past what JetBrains documents. The set builds from the terminal on this Mac (2026-10-03) with no fallback. Gradle prints one deprecation notice, caused by AGP's own code (FINDINGS_LOG, 2026-10-03). The fallback and the dev-machine requirements are in ADR-001. (`2026-10-03-versions.md`)

@@ -92,6 +92,15 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[LAST_PROCESS_EXIT_IMPORTED_AT_MS] = timestampMs }
     }
 
+    /**
+     * Stores that Shawn confirmed a setup step MilO cannot read, and when. Pass null to take the
+     * confirmation back.
+     */
+    suspend fun setConfirmedAtMs(step: ConfirmedStep, atMs: Long?) {
+        require(atMs == null || atMs >= 0) { "A timestamp cannot be negative: $atMs ms" }
+        dataStore.edit { it.setOrRemove(longPreferencesKey(step.key), atMs) }
+    }
+
     private fun toSettings(preferences: Preferences): MiloSettings {
         val defaults = MiloSettings()
         return MiloSettings(
@@ -107,10 +116,17 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
                     ?: defaults.lastProcessExitImportedAtMs,
+            confirmedAtMs =
+                buildMap {
+                    for (step in ConfirmedStep.entries) {
+                        preferences[longPreferencesKey(step.key)]?.let { put(step, it) }
+                    }
+                },
         )
     }
 
     // The key names are what is written to the file. Renaming one silently resets that setting.
+    // The keys of the confirmed setup steps are on ConfirmedStep itself.
     private companion object {
         val TRUCK_ADDRESS = stringPreferencesKey("truck_address")
         val TRUCK_NAME = stringPreferencesKey("truck_name")

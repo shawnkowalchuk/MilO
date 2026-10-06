@@ -1,7 +1,7 @@
 # ADR-002: Trip detection and background start
 
 Date: 2026-10-03
-Status: Accepted (design). Amended 2026-10-03, twice (after the review of the phase 1 foundation, and when the recording core was built), and 2026-10-05, twice (when the triggers were built, and after the review of the recording core and the triggers). The changes are listed under "Amendments" at the end. Nothing here is confirmed on the phone yet; the device test checklist in phase 1 is what proves or changes it.
+Status: Accepted (design). Amended 2026-10-03, twice (after the review of the phase 1 foundation, and when the recording core was built), and 2026-10-05, three times (when the triggers were built, after the review of the recording core and the triggers, and when the screens were built). The changes are listed under "Amendments" at the end. Nothing here is confirmed on the phone yet; the device test checklist in phase 1 is what proves or changes it.
 
 ## Context
 
@@ -90,7 +90,7 @@ Step 4 is kept by the controller, not by the service: an event that would leave 
 
 `BLUETOOTH_CONNECT`, fine, coarse and background location, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`, `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`, `REQUEST_COMPANION_RUN_IN_BACKGROUND`, and `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. Not needed: `BLUETOOTH_SCAN`, exact alarms, internet.
 
-All are in the manifest except `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. It only allows MilO to ask for the exemption, and the one place that asks is the permission checklist, which is not built (STANDARDS §12: declare only what built code uses). It is added with that screen.
+All are in the manifest. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` was the last to be added, on 2026-10-05 with the permission checklist (the Setup screen): it only allows MilO to ask for the exemption, and the checklist's battery row is the one place that asks (STANDARDS §12: declare only what built code uses).
 
 Both companion permissions are declared on purpose. On Android 12 to 15, an app with an association but without `REQUEST_COMPANION_RUN_IN_BACKGROUND` is removed from the battery allowlist on every reinstall.
 
@@ -165,7 +165,7 @@ Phone screens reach the controller through their ViewModels.
 14. **The companion "disappeared" callback is trusted as a disconnect,** like the link broadcast. If it is wrong, the next reading inside the grace period cancels it. Android 16's "Bluetooth connected" presence event is still treated as "appeared" and has to be confirmed: Android does not say which transport connected.
 15. **The reconcile at app launch runs every time MilO comes to the front,** not once per Activity. Android keeps an Activity for days, and opening MilO is what Shawn does when a trip did not start.
 16. **A lone association with no truck stored is adopted as the truck.** In ordinary use the two are made together. It is what lets automatic start be tried on the phone before the pairing screen exists, with the association made over adb.
-17. **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` waits for the permission checklist,** the only code that will ask for the exemption.
+17. **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` waits for the permission checklist,** the only code that will ask for the exemption. (Done: see 25.)
 
 **2026-10-05, the review of the recording core and the triggers (work package 2).** Four reviewers read the code. Points 18 to 23 change the text above; point 24 only makes it exact. Point 18 changes a rule the orchestrating session had decided (amendment 6), so it is Shawn's to confirm first. The reasons are in FINDINGS_LOG under the same date.
 
@@ -176,3 +176,7 @@ Phone screens reach the controller through their ViewModels.
 22. **The companion callback with a trip open leaves what is believed about the truck alone.** It released an old hold-off by way of "the truck is no longer known to be connected", which started the open trip's grace period.
 23. **A trip nothing is recording is not kept in memory.** When the trip service is lost and Android refuses to start it again, the controller drops what it holds, and the next trigger picks the stored trip up through the restart rules, which close it if it has gone stale. After a failure in storage the controller reads storage again at once, for the same reason.
 24. **A profile that drops can release the hold-off.** Amendment 12 keeps a profile that reconnects from counting as a new link. It does not stop the release by a reading: when the only connected profile drops, the reading it prompts says "not connected", which releases the hold-off as decided ("any reading that shows the truck disconnected"), and the profile's return then starts a trip. Unchanged, because a missed trip is worse than an unwanted restart; device check 47 shows whether it happens with this truck.
+
+**2026-10-05, the screens (work package 3).** One point, written into the text above.
+
+25. **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is declared.** The permission checklist exists as the Setup screen, and its battery row asks for the exemption with Android's own dialog. This closes point 17.

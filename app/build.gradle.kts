@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.androidx.room3)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
 
@@ -209,8 +210,17 @@ dependencies {
     // (the application scope, Flow), so the library is declared rather than borrowed from them.
     implementation(libs.kotlinx.coroutines.core)
 
-    // Screens get their ViewModel through viewModel().
+    // Screens get their ViewModel through viewModel(), and learn that they have come to the
+    // front again through LifecycleEventEffect.
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Navigation between screens (app/MiloNavigation.kt). Navigation 3 saves its back stack with
+    // kotlinx.serialization, which is why the screen keys are @Serializable.
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.kotlinx.serialization.json)
 
     // Trip recording (platform/): GPS fixes from the fused location provider, and CarConnection,
     // which says whether Android Auto is connected.

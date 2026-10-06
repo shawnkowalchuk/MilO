@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
         Each permission is added in the change that first needs it, so the manifest never asks
-        for more than the code uses. These are the ones trip recording and trip detection need
-        (ADR-002). One permission of ADR-002's list is not here yet: asking to be exempt from
-        battery optimisation arrives with the permission checklist, the only code that asks.
+        for more than the code uses. These are the ones trip recording, trip detection and the
+        setup checklist need (ADR-002).
     -->
 
     <!-- GPS fixes during a trip. Android requires the coarse permission beside the fine one. -->
@@ -50,6 +50,15 @@
     <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
     <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+
+    <!--
+        Lets the setup checklist show Android's own dialog that exempts MilO from battery
+        optimisation (ADR-002). Lint flags the permission because Google Play restricts it;
+        MilO is installed from Android Studio on one phone and is never published there.
+    -->
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        tools:ignore="BatteryLife" />
 
     <!--
         MilO is useless without GPS, but saying so here only matters to app stores, and MilO is

@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 // There are two exceptions, each explained where it is written:
 //   - the launcher icon drawables (res/drawable/ic_launcher_*.xml), which the launcher draws
 //     outside Compose and so cannot read these tokens;
-//   - the placeholder fill in component/StatusIcons.kt, which Icon() always replaces with a tint.
+//   - the placeholder fill in component/MiloIcons.kt, which Icon() always replaces with a tint.
 //
 // Every Material role is set explicitly. Any role left out falls back to Material's purple
 // baseline, which then shows up unannounced the first time a component uses that role.
@@ -125,25 +125,41 @@ internal val DarkColorScheme: ColorScheme =
     )
 
 /**
- * The two colours behind every "is this working?" indicator in the app.
+ * The colours behind every "is this working?" indicator in the app.
  *
- * Material has a role for "error" but none for "all good", so the pair lives here rather than
- * borrowing an unrelated Material role for green. Reach it through `MiloTheme.statusColors`.
+ * Material has a role for "error" but none for "all good" or "your turn", so the set lives here
+ * rather than borrowing unrelated Material roles. Reach it through `MiloTheme.statusColors`.
+ *
+ * @param ok met.
+ * @param problem not met.
+ * @param attention the user has to do or confirm something MilO cannot check: amber, between
+ * the green and the red on purpose.
+ * @param unknown MilO could not find out. Deliberately colourless.
  */
 @Immutable
-data class MiloStatusColors(val ok: Color, val problem: Color)
+data class MiloStatusColors(
+    val ok: Color,
+    val problem: Color,
+    val attention: Color,
+    val unknown: Color,
+)
 
 // Each shade was picked to stay readable against the card surface of its own scheme, which is
 // why light and dark mode do not share one green and one red. The reds match the scheme's
-// error role so "problem" and Material's own error states look the same.
+// error role so "problem" and Material's own error states look the same, and "unknown" matches
+// its onSurfaceVariant role, the colour of secondary text.
 internal val LightStatusColors =
     MiloStatusColors(
         ok = Color(0xFF1E6B34),
         problem = Color(0xFFBA1A1A),
+        attention = Color(0xFF7A5900),
+        unknown = Color(0xFF44474E),
     )
 
 internal val DarkStatusColors =
     MiloStatusColors(
         ok = Color(0xFF8BD89A),
         problem = Color(0xFFFFB4AB),
+        attention = Color(0xFFF2C14E),
+        unknown = Color(0xFFC4C6D0),
     )

@@ -5,9 +5,22 @@
     <!-- Shared: a distance in kilometres. The number is produced by formatKilometres(). -->
     <string name="distance_km">%1$s km</string>
 
-    <!-- Design system: spoken by the screen reader in place of the green or red indicator. -->
+    <!-- Design system: spoken by the screen reader in place of a row's indicator. -->
     <string name="status_ok">OK</string>
     <string name="status_problem">Needs attention</string>
+    <string name="status_unknown">Could not be checked</string>
+    <string name="status_needs_confirmation">Waiting for you to confirm</string>
+    <!-- Design system: the back arrow of a screen that was opened from another one. -->
+    <string name="navigate_back">Back</string>
+
+    <!-- The bottom navigation bar. -->
+    <string name="nav_home">Home</string>
+    <string name="nav_trips">Trips</string>
+    <string name="nav_setup">Setup</string>
+    <string name="nav_log">Log</string>
+
+    <!-- Shared: what a truck is called when the phone knows no name for it. -->
+    <string name="truck_without_a_name">The truck</string>
 
     <!-- Trip status: on the home screen, and as the title of the trip notification. -->
     <string name="trip_status_idle">No trip in progress</string>
@@ -21,6 +34,10 @@
     <string name="home_trip_idle_detail">Press Start trip to record one by hand.</string>
     <string name="home_start_trip">Start trip</string>
     <string name="home_end_trip">End trip</string>
+    <!-- Home: shown while a required row of the Setup checklist is not in order. -->
+    <string name="home_setup_warning_title">Setup needs attention</string>
+    <string name="home_setup_warning_text">Something MilO needs is not set, or no truck is paired. A trip may not start by itself.</string>
+    <string name="home_setup_warning_action">Open Setup</string>
 
     <!-- Why recording could not start: on the home screen, one line per problem found. -->
     <string name="start_problem_title">MilO could not start this trip</string>
@@ -37,4 +54,145 @@
     <string name="notification_trip_starting">Starting a trip</string>
     <string name="notification_could_not_start_title">MilO could not start this trip</string>
     <string name="notification_could_not_start_text">Tap to start</string>
+
+    <!-- Setup: the permission checklist. -->
+    <string name="setup_title">Setup</string>
+    <string name="setup_reading">Reading the phone\'s settings…</string>
+    <string name="setup_summary_all_set">Everything MilO needs is set.</string>
+    <plurals name="setup_summary_open">
+        <item quantity="one">%d thing MilO needs is not set. A trip may not start by itself.</item>
+        <item quantity="other">%d things MilO needs are not set. A trip may not start by itself.</item>
+    </plurals>
+    <string name="setup_section_android">Permissions and phone settings</string>
+    <string name="setup_section_xiaomi">This Xiaomi phone (HyperOS)</string>
+    <string name="setup_section_xiaomi_note">HyperOS has settings of its own that stop a closed app from being started. MilO can read only the first of them, and not with certainty. Set each one, then confirm it here.</string>
+
+    <!-- Setup: the name of each row. -->
+    <string name="setup_item_precise_location">Precise location</string>
+    <string name="setup_item_background_location">Location: Allow all the time</string>
+    <string name="setup_item_notifications">Notifications</string>
+    <string name="setup_item_nearby_devices">Nearby devices (Bluetooth)</string>
+    <string name="setup_item_location_services">Location switched on</string>
+    <string name="setup_item_truck">Truck paired and watched</string>
+    <string name="setup_item_battery_exemption">Battery use: unrestricted</string>
+    <string name="setup_item_unused_app_pause">Not paused when unused</string>
+    <string name="setup_item_battery_saver_off">Battery Saver off</string>
+    <string name="setup_item_xiaomi_autostart">Background autostart</string>
+    <string name="setup_item_xiaomi_battery_saver">Battery saver: No restrictions</string>
+    <string name="setup_item_xiaomi_other_permissions">Other permissions</string>
+    <string name="setup_item_xiaomi_recents_lock">Locked in recent apps</string>
+
+    <!-- Setup: the line under a row that is in order. -->
+    <string name="setup_fine_allowed">Allowed.</string>
+    <string name="setup_fine_background_location">Set to \"Allow all the time\".</string>
+    <string name="setup_fine_location_services">Switched on.</string>
+    <!-- The argument is the truck's name. -->
+    <string name="setup_fine_truck">%1$s is paired, and Android is watching for it.</string>
+    <string name="setup_fine_battery_exemption">MilO is exempt from battery optimisation.</string>
+    <string name="setup_fine_unused_app_pause">\"Pause app activity if unused\" is off for MilO.</string>
+    <string name="setup_fine_battery_saver_off">Battery Saver is off.</string>
+
+    <!-- Setup: the line under a row that is not in order: why it matters and what to do. -->
+    <string name="setup_fix_precise_location">MilO measures a trip from GPS positions. Allow precise location.</string>
+    <string name="setup_fix_background_location">A trip that starts by itself starts while MilO is closed. Android opens its own location screen for this: choose \"Allow all the time\" there.</string>
+    <string name="setup_fix_notifications">The trip notification, and the warning when a trip could not start, need this.</string>
+    <string name="setup_fix_nearby_devices">Without it MilO cannot see the truck connect or disconnect.</string>
+    <string name="setup_fix_location_services">Location is switched off for the whole phone. No trip can be recorded.</string>
+    <string name="setup_fix_battery_exemption">Android may stop MilO to save battery. Allow it to run without battery optimisation.</string>
+    <string name="setup_fix_unused_app_pause">Recommended. Switch off \"Pause app activity if unused\" for MilO, or Android stops it after months without being opened.</string>
+    <string name="setup_fix_battery_saver_off">Battery Saver is on. It limits location and background work, so a trip can be missed or cut short.</string>
+    <string name="setup_fix_xiaomi_battery_saver">MilO cannot read this setting. On MilO\'s app page, set Battery saver to \"No restrictions\", then confirm it here.</string>
+    <string name="setup_fix_xiaomi_other_permissions">Recommended. MilO cannot read these. Under \"Other permissions\", switch on \"Show on Lock screen\", the permission to start or open windows in the background, and \"Permanent notification\". Then confirm it here.</string>
+    <string name="setup_fix_xiaomi_recents_lock">MilO cannot read this. Open the recent apps, press and hold MilO\'s card and tap the padlock, so the cleaners leave MilO alone. Then confirm it here.</string>
+
+    <!-- Setup: lines for a particular state of a row. -->
+    <string name="setup_detail_checking">Checking…</string>
+    <string name="setup_detail_precise_location_first">Allow precise location first, in the row above.</string>
+    <string name="setup_detail_battery_restricted">Battery use for MilO is set to Restricted, which blocks trip recording. Change it to Unrestricted on MilO\'s app page.</string>
+    <!-- The same state on a Xiaomi phone. HyperOS has no "Unrestricted": its setting is Battery saver, with "No restrictions". -->
+    <string name="setup_detail_battery_restricted_hyperos">Android reports that MilO is restricted in the background, which blocks trip recording. On MilO\'s app page, open Battery saver and choose \"No restrictions\".</string>
+    <string name="setup_detail_truck_not_paired">No truck is paired. Pick it from the phone\'s Bluetooth devices.</string>
+    <!-- The argument is the truck's name. -->
+    <string name="setup_detail_truck_association_missing">%1$s was paired, but Android no longer watches for it. Pair it again.</string>
+    <string name="setup_detail_truck_not_watched">%1$s is stored as the truck, but this phone cannot watch for a device in the background. Only the Bluetooth signal itself can start a trip.</string>
+    <string name="setup_detail_truck_check_failed">MilO could not check the pairing. The Log screen says why.</string>
+    <string name="setup_detail_autostart_looks_on">Looks on. MilO reads this through an unofficial check, so it is not a certainty.</string>
+    <string name="setup_detail_autostart_looks_off">Looks off. While it is off, HyperOS does not let the truck wake MilO. Find MilO in the list and switch it on.</string>
+    <string name="setup_detail_autostart_unreadable">MilO could not read this setting. Find MilO in the list and switch it on, then confirm it here.</string>
+    <!-- The argument is a date from formatDate(), such as 5 Oct 2026. -->
+    <string name="setup_detail_confirmed">You confirmed this on %1$s. MilO cannot check it.</string>
+
+    <!-- Setup: the buttons of a row. -->
+    <string name="setup_action_allow">Allow</string>
+    <string name="setup_action_open_settings">Open settings</string>
+    <string name="setup_action_pair_truck">Pair truck</string>
+    <string name="setup_action_change_truck">Change truck</string>
+    <string name="setup_action_confirm">I have set this</string>
+    <string name="setup_action_take_back">Not set any more</string>
+
+    <!-- Truck pairing. -->
+    <string name="pairing_title">Truck</string>
+    <string name="pairing_reading">Reading the phone\'s Bluetooth devices…</string>
+    <string name="pairing_intro">MilO watches for one Bluetooth device: the truck. Pick it from the devices this phone is paired with. Android then asks you to allow it.</string>
+    <string name="pairing_truck_title">Your truck</string>
+    <string name="pairing_no_truck">No truck is paired</string>
+    <string name="pairing_no_truck_detail">Until one is, no trip starts by itself.</string>
+    <string name="pairing_watch_ok">Paired, and Android is watching for it. A trip starts by itself when it connects.</string>
+    <string name="pairing_watch_association_missing">Paired before, but Android no longer watches for it. Pair it again from the list below.</string>
+    <string name="pairing_watch_not_supported">Stored as the truck, but this phone cannot watch for a device in the background. Only the Bluetooth signal itself can start a trip.</string>
+    <string name="pairing_watch_check_failed">MilO could not check whether Android is watching for it. The Log screen says why.</string>
+    <string name="pairing_attempt_asking">Waiting for Android. If its dialog is open, choose Allow.</string>
+    <!-- The argument is the truck's name. -->
+    <string name="pairing_attempt_paired">Paired with %1$s</string>
+    <string name="pairing_attempt_declined_title">Not paired</string>
+    <string name="pairing_attempt_declined">Android\'s dialog was closed without allowing. Nothing was changed. Pick the truck again to retry.</string>
+    <string name="pairing_attempt_failed_title">Pairing failed</string>
+    <!-- The argument is the reason, as MilO's pairing code words it for the event log. -->
+    <string name="pairing_attempt_failed">What went wrong: %1$s. Nothing was changed. Check that the truck is paired with this phone in the Bluetooth settings and that Bluetooth and Location are on, then pick it again.</string>
+    <string name="pairing_blocker_title">Before you can pick the truck</string>
+    <string name="pairing_blocker_permission">MilO is not allowed to use Nearby devices. It needs that to list the phone\'s Bluetooth devices and to see the truck connect.</string>
+    <string name="pairing_blocker_no_bluetooth">This phone has no Bluetooth.</string>
+    <string name="pairing_blocker_bluetooth_off">Bluetooth is switched off. Switch it on to see the paired devices.</string>
+    <string name="pairing_blocker_location_off">Location is switched off. Android needs it on to pair the truck with MilO.</string>
+    <string name="pairing_blocker_nothing_paired">No device is paired with this phone. Pair the truck in the phone\'s Bluetooth settings first, then come back.</string>
+    <string name="pairing_action_allow_nearby_devices">Allow Nearby devices</string>
+    <string name="pairing_action_bluetooth_settings">Bluetooth settings</string>
+    <string name="pairing_action_location_settings">Location settings</string>
+    <string name="pairing_devices_title">Paired with this phone</string>
+    <string name="pairing_change_note">Picking another device replaces the current truck.</string>
+    <string name="pairing_device_no_name">No name</string>
+    <!-- The argument is the device's Bluetooth address. -->
+    <string name="pairing_device_current">Current truck · %1$s</string>
+    <string name="pairing_action_pair">Pair</string>
+    <string name="pairing_action_pair_again">Pair again</string>
+    <string name="pairing_action_switch">Use this one</string>
+
+    <!-- Event log. The entries themselves are stored in English and shown as stored. -->
+    <string name="log_title">Event log</string>
+    <string name="log_reading">Reading the log…</string>
+    <string name="log_empty">The event log is empty.</string>
+    <string name="log_has_detail">Tap for details</string>
+    <string name="log_show_older">Show older entries</string>
+
+    <!-- Trips: one month at a time. -->
+    <string name="trips_title">Trips</string>
+    <string name="trips_reading">Reading the trips…</string>
+    <plurals name="trips_count">
+        <item quantity="one">%d trip</item>
+        <item quantity="other">%d trips</item>
+    </plurals>
+    <string name="trips_previous_month">Previous month</string>
+    <string name="trips_next_month">Next month</string>
+    <string name="trips_show_discarded">Show discarded trips</string>
+    <!-- The argument is a month from formatMonthAndYear(), such as October 2026. -->
+    <string name="trips_empty">No trips in %1$s.</string>
+    <plurals name="trips_hidden_discarded">
+        <item quantity="one">%d trip was discarded and is not shown.</item>
+        <item quantity="other">%d trips were discarded and are not shown.</item>
+    </plurals>
+    <string name="trips_in_progress_title">In progress</string>
+    <string name="trips_in_progress_note">Still recording. Not in the month\'s total until it ends.</string>
+    <!-- The arguments are two times of day from formatTimeOfDay(): the start and the end. -->
+    <string name="trips_time_range">%1$s – %2$s</string>
+    <string name="trips_discarded_note">Discarded: too short, or a start that was never confirmed. Not counted.</string>
 </resources>

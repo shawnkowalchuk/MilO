@@ -4,37 +4,48 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.res.stringResource
+import androidx.navigation3.runtime.rememberNavBackStack
+import com.shawnkowalchuk.milo.core.designsystem.component.MiloNavigationBar
+import com.shawnkowalchuk.milo.core.designsystem.component.NavigationBarEntry
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.feature.home.HomeScreen
-import com.shawnkowalchuk.milo.feature.home.HomeViewModel
 
 /**
- * The root of the phone UI: applies the theme once and decides which screen is showing.
- *
- * There is a single screen today, so it is placed directly. When the second screen arrives this
- * is where the navigation host goes, and it stays the only place that knows about more than one
- * feature: features never navigate to, or import from, each other.
- *
- * It is also where each screen's ViewModel is given what it needs from the [AppContainer]. That
- * is the manual dependency injection for screens: a feature never reaches for the container
- * itself, so it does not depend on the `app` package.
+ * The root of the phone UI: applies the theme once, and frames every screen with the bottom
+ * navigation bar. Which screen is showing is decided by the back stack, which lives here and is
+ * handed to [MiloNavigation].
  */
 @Composable
 fun MiloApp(container: AppContainer) {
     MiloTheme {
+        // Saved and restored by Navigation 3, so the screen that was showing comes back after
+        // Android has put MilO away and brought it back.
+        val backStack = rememberNavBackStack(HomeKey)
+        val showing = topLevelOf(backStack)
+
         // The app draws behind the status and navigation bars (see MainActivity). Scaffold
-        // reports how much room those bars take so the content starts and ends clear of them.
-        Scaffold { innerPadding ->
-            val homeViewModel: HomeViewModel =
-                viewModel(
-                    factory = viewModelFactory {
-                        initializer { HomeViewModel(container.tripController) }
-                    },
+        // reports how much room those bars and the bottom bar take, so the content starts and
+        // ends clear of them.
+        Scaffold(
+            bottomBar = {
+                MiloNavigationBar(
+                    entries =
+                        TopLevelDestination.entries.map { destination ->
+                            NavigationBarEntry(
+                                label = stringResource(destination.labelRes),
+                                icon = destination.icon,
+                                selected = destination == showing,
+                                onClick = { backStack.showTopLevel(destination.key, HomeKey) },
+                            )
+                        },
                 )
-            HomeScreen(viewModel = homeViewModel, modifier = Modifier.padding(innerPadding))
+            },
+        ) { innerPadding ->
+            MiloNavigation(
+                container = container,
+                backStack = backStack,
+                modifier = Modifier.padding(innerPadding),
+            )
         }
     }
 }
