@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MilO</string>
+
+    <!-- Shared: a distance in kilometres. The number is produced by formatKilometres(). -->
+    <string name="distance_km">%1$s km</string>
+
+    <!-- Design system: spoken by the screen reader in place of the green or red indicator. -->
+    <string name="status_ok">OK</string>
+    <string name="status_problem">Needs attention</string>
+
+    <!-- Home (placeholder content until phase 1 supplies real trips). -->
+    <string name="home_today_title">Today</string>
+    <string name="home_today_empty">No trips recorded yet</string>
+    <string name="home_status_title">Status</string>
+    <string name="home_status_installed">App installed</string>
+    <string name="home_status_installed_detail">The project skeleton builds and runs.</string>
+    <string name="home_status_detection">Trip detection</string>
+    <string name="home_status_detection_detail">Not built yet. Arrives in phase 1.</string>
+    <string name="home_start_trip">Start trip</string>
+</resources>

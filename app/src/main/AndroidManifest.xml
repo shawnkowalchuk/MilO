@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        No permissions yet. Each one is added in the change that first needs it, together with
+        its row on the permission checklist, so the manifest never asks for more than the code uses.
+    -->
+
+    <!--
+        Backup is switched off on purpose until phase 4 designs it.
+        Android restores backed-up data whenever the app is installed, including a reinstall from
+        Android Studio. Until there are rules saying what is safe to restore, that would bring
+        back stale trip state and a truck pairing that does not exist on the new install.
+        allowBackup="false" stops cloud backup; it does NOT stop phone-to-phone transfer on
+        Android 12 and later, which is why data_extraction_rules.xml excludes that as well.
+    -->
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MilO">
+
+        <activity
+            android:name=".app.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

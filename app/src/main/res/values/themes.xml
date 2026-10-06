@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Only styles the window before Compose draws its first frame (the system splash screen
+        and the brief moment after it). Everything the user actually sees is themed in Kotlin by
+        MiloTheme, so no colours are set here. A platform theme is used as the parent to avoid
+        pulling in the AppCompat or Material Components libraries just for one style.
+    -->
+    <style name="Theme.MilO" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
