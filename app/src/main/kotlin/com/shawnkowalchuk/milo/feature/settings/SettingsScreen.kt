@@ -40,6 +40,15 @@ internal class SettingsActions(
     val onUseBuiltInSound: () -> Unit,
     val onDrivingAlertEnabled: (Boolean) -> Unit,
     val schedule: ScheduleActions,
+    val report: ReportDetailActions,
+)
+
+/** What the card of the report for the accountant can ask for: each field reports its text. */
+internal class ReportDetailActions(
+    val onName: (String) -> Unit,
+    val onCompany: (String) -> Unit,
+    val onVehicle: (String) -> Unit,
+    val onAccountantEmail: (String) -> Unit,
 )
 
 /**
@@ -57,10 +66,10 @@ internal class ScheduleActions(
 )
 
 /**
- * The settings: which truck, how long a trip waits for it to reconnect, how short a trip may
- * be, the work schedule that makes a trip Business or Personal, what becomes of a trip outside
- * it, the driving alert, and the sound of a trip start. Report and reminder settings arrive
- * with the phases that build them.
+ * The settings: which truck, who the report for the accountant is from and where it goes, how
+ * long a trip waits for the truck to reconnect, how short a trip may be, the work schedule that
+ * makes a trip Business or Personal, what becomes of a trip outside it, the driving alert, and
+ * the sound of a trip start. The reminder's setting arrives with the phase that builds it.
  *
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
@@ -107,6 +116,13 @@ fun SettingsScreen(
                     onCopyHours = viewModel::onCopyHours,
                     onIgnoreOutside = viewModel::onIgnoreOutsideSchedule,
                 ),
+            report =
+                ReportDetailActions(
+                    onName = viewModel::onReportName,
+                    onCompany = viewModel::onReportCompany,
+                    onVehicle = viewModel::onReportVehicle,
+                    onAccountantEmail = viewModel::onAccountantEmail,
+                ),
         )
     SettingsContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 }
@@ -148,6 +164,9 @@ private fun SettingsContent(
                     )
                 }
                 TruckCard(state, actions)
+                // Second, and not last: the Report screen sends Shawn here for his name and
+                // the accountant's address, and the long schedule card would bury them.
+                ReportDetailsCard(state.report, actions.report)
                 TripRulesCard(state, actions)
                 ScheduleCard(state, actions.schedule)
                 OutsideScheduleCard(state, actions.schedule)
@@ -189,14 +208,23 @@ private fun SettingsPreview() {
                 },
             ignoreOutsideSchedule = false,
             drivingAlertEnabled = true,
+            report =
+                ReportFields(
+                    name = "Sam Driver",
+                    company = "",
+                    vehicle = "Ford F-150, plate ABC-123",
+                    accountantEmail = "accounts@example",
+                    emailRefused = true,
+                ),
             problem = SettingsProblem.SOUND_NOT_PLAYABLE,
         )
     val schedule = ScheduleActions({ _, _ -> }, { _, _, _ -> }, { _, _, _ -> }, {}, {})
+    val report = ReportDetailActions({}, {}, {}, {})
     MiloTheme {
         Surface {
             SettingsContent(
                 state = state,
-                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule),
+                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule, report),
                 onBack = {},
             )
         }

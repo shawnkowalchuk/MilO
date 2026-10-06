@@ -261,7 +261,7 @@
     <!--
         Trips: a trip whose times, addresses or distance are typed in and not recorded. The
         asterisk stands after the trip's times (the argument), and one of the two lines under
-        the trip says what it means. The monthly report will mark the same trips with it.
+        the trip says what it means. The report for the accountant marks the same trips with it.
     -->
     <string name="trips_time_marked">%1$s *</string>
     <string name="trips_mark_added">* Added by hand</string>
@@ -302,6 +302,17 @@
     <string name="trips_start_looking_up">Looking up where it started…</string>
     <string name="trips_start_not_found">No address found for where it started.</string>
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
+    <!-- Trips: the way from the month's card to the Report screen, for the month on screen. -->
+    <string name="trips_action_report">Report for the accountant</string>
+
+    <!--
+        Trips and the Report screen: whether the month's report has been sent. Chosen by
+        submissionWordsRes(). The dates are from formatDate(), such as Oct 6, 2026; the number
+        is the newest revision's.
+    -->
+    <string name="report_not_submitted">Not submitted</string>
+    <string name="report_submitted_on">Submitted on %1$s</string>
+    <string name="report_submitted_revised">Submitted on %1$s. Sent again on %3$s (revision %2$d).</string>
 
     <!--
         The edit screen, opened from Trips: a finished trip's times, addresses and distance
@@ -383,6 +394,160 @@
     <string name="leave_unsaved_discard">Discard</string>
     <string name="leave_unsaved_keep">Keep editing</string>
 
+    <!--
+        The Report screen, opened from the Trips screen's month card: the report for the
+        accountant for a month or a date range, as a PDF and as a CSV file.
+    -->
+    <string name="report_title">Mileage report</string>
+    <string name="report_reading">Reading the trips…</string>
+    <string name="report_settings_unreadable">MilO cannot read its settings, so it does not know your name or where the report goes. No report can be made. The Log screen says why.</string>
+    <string name="report_period_title">Period</string>
+    <string name="report_period_month">A whole month</string>
+    <string name="report_period_month_detail">The month is marked as submitted once you have sent its report.</string>
+    <string name="report_period_range">A date range</string>
+    <string name="report_period_range_detail">Any days you choose. Such a report is kept in the list of sent reports, and never marks a month as submitted.</string>
+    <!-- The argument is a day from formatDay(), such as Monday, October 5, 2026. -->
+    <string name="report_range_first">From: %1$s</string>
+    <string name="report_range_last">To: %1$s</string>
+    <!--
+        How the two dates of a range are joined, on the screen, on the PDF and in the email's
+        subject: October 5, 2026 to October 18, 2026.
+    -->
+    <string name="report_period_range_words">%1$s to %2$s</string>
+    <string name="report_summary_title">In this report</string>
+    <!-- The arguments are the number of Business trips and their distance, such as 412.3 km. -->
+    <plurals name="report_summary_trips">
+        <item quantity="one">%1$d Business trip · %2$s</item>
+        <item quantity="other">%1$d Business trips · %2$s</item>
+    </plurals>
+    <string name="report_summary_none">No Business trips in this period. The report would say so, with a total of 0.0 km.</string>
+    <string name="report_summary_rounding">The report adds up the kilometres it prints, trip by trip, so that its columns add up. Its total can therefore differ a little from the month\'s figure on the Trips screen.</string>
+    <plurals name="report_summary_marked">
+        <item quantity="one">%d of them was added or edited by hand. It carries an asterisk (*) on the report.</item>
+        <item quantity="other">%d of them were added or edited by hand. They carry an asterisk (*) on the report.</item>
+    </plurals>
+    <!-- The second argument is the report's own words for a missing address. -->
+    <plurals name="report_summary_no_address">
+        <item quantity="one">%1$d of them has no From or no To address. The report says \"%2$s\" there. To type one in, tap the trip on the Trips screen, then Edit trip.</item>
+        <item quantity="other">%1$d of them have no From or no To address. The report says \"%2$s\" there. To type one in, tap the trip on the Trips screen, then Edit trip.</item>
+    </plurals>
+    <plurals name="report_summary_personal">
+        <item quantity="one">%d Personal trip in this period is not on the report.</item>
+        <item quantity="other">%d Personal trips in this period are not on the report.</item>
+    </plurals>
+    <plurals name="report_summary_unsorted">
+        <item quantity="one">%d trip is not marked Business or Personal yet, so it is left off. Mark it on the Trips screen.</item>
+        <item quantity="other">%d trips are not marked Business or Personal yet, so they are left off. Mark them on the Trips screen.</item>
+    </plurals>
+    <string name="report_summary_in_progress">A trip is being recorded right now. It is not on the report until it has ended.</string>
+    <string name="report_actions_title">Create and send</string>
+    <string name="report_actions_intro">Create the PDF to look at it first, or send it straight away: sending makes a fresh one.</string>
+    <string name="report_create_pdf">Create PDF</string>
+    <string name="report_open_pdf">Open PDF</string>
+    <plurals name="report_pdf_created">
+        <item quantity="one">PDF created: %d page.</item>
+        <item quantity="other">PDF created: %d pages.</item>
+    </plurals>
+    <string name="report_working">Creating the report…</string>
+    <string name="report_send">Send to accountant</string>
+    <!-- The argument is the accountant's email address. -->
+    <string name="report_send_detail">Opens your email app with the PDF attached, addressed to %1$s. Nothing is sent until you press send there.</string>
+    <string name="report_export_csv">Export CSV</string>
+    <string name="report_export_csv_detail">The same trips as a spreadsheet file, to save or share wherever you choose.</string>
+    <!-- What a report needs and does not have. The argument is the title of the Settings card. -->
+    <string name="report_missing_name">Your name is not set, and it is printed on the report. Set it in Settings, under \"%1$s\".</string>
+    <string name="report_missing_email">The accountant\'s email address is not set, so there is nowhere to send the report. Set it in Settings, under \"%1$s\".</string>
+    <string name="report_open_settings">Open Settings</string>
+    <string name="report_problem_create">The report could not be created. The Log screen says why.</string>
+    <string name="report_problem_no_email_app">This phone has no email app to hand the report to. Nothing was sent.</string>
+    <string name="report_problem_no_pdf_viewer">This phone has no app that can show a PDF. The PDF was created all the same.</string>
+    <string name="report_problem_no_share_app">This phone has no app to share the file with.</string>
+    <string name="report_problem_record">That could not be recorded. The Log screen says why.</string>
+    <!--
+        The question before a report is sent for a period that was sent before. The arguments
+        are the period, the day it was last sent, its number of trips and distance as the list
+        of sent reports shows them, and the number the new report gets.
+    -->
+    <string name="report_resend_title">Send this report again?</string>
+    <string name="report_resend_text">You already sent a report for %1$s on %2$s (%3$s, %4$s). You can send it again. The new one is labelled Revision %5$d, on the PDF and in the email\'s subject, so that accounts can tell the two apart.</string>
+    <string name="report_resend_confirm">Send revision</string>
+    <!--
+        The question when MilO is in front again after the email app. The arguments are the
+        period and the day the email app was opened with the report, from formatDate(). For a
+        month that was sent before, also the number the report is listed under and the day the
+        month's first report was sent.
+    -->
+    <string name="report_sent_question_title">Did you send it?</string>
+    <string name="report_sent_question_month">You opened your email app with the report for %1$s on %2$s. Android does not tell MilO whether the email was sent.\n\nIf you sent it, the month is marked as submitted on that day. If you did not, nothing is recorded.</string>
+    <string name="report_sent_question_month_again">You opened your email app with the report for %1$s on %2$s. Android does not tell MilO whether the email was sent.\n\nIf you sent it, it is added to the list of sent reports as Revision %3$d. The month stays marked as submitted on %4$s, the day its first report was sent. If you did not, nothing is recorded.</string>
+    <string name="report_sent_question_range">You opened your email app with the report for %1$s on %2$s. Android does not tell MilO whether the email was sent.\n\nIf you sent it, it is added to the list of sent reports. A report for a date range does not mark a month as submitted. If you did not, nothing is recorded.</string>
+    <string name="report_sent_yes">I sent it</string>
+    <string name="report_sent_no">Not sent</string>
+    <string name="report_sent_title">Sent reports</string>
+    <string name="report_sent_none">No report has been sent yet.</string>
+    <!-- The arguments are the day it was sent, from formatDate(), and its number of trips. -->
+    <plurals name="report_sent_line">
+        <item quantity="one">Sent on %1$s · %2$d trip</item>
+        <item quantity="other">Sent on %1$s · %2$d trips</item>
+    </plurals>
+    <string name="report_sent_revision">Revision %1$d</string>
+
+    <!--
+        The words printed on the PDF. It is read by the accountant, so it says "business" as a
+        plain word and explains its one mark.
+    -->
+    <string name="report_pdf_title">Mileage report</string>
+    <string name="report_pdf_name">Name</string>
+    <string name="report_pdf_company">Company</string>
+    <string name="report_pdf_vehicle">Vehicle</string>
+    <string name="report_pdf_period">Period</string>
+    <string name="report_pdf_generated">Generated</string>
+    <string name="report_pdf_business_only">Business trips only. Distances are in kilometres.</string>
+    <!-- The arguments are the revision's number and the day the report it replaces was sent. -->
+    <string name="report_pdf_revision">Revision %1$d. It replaces the report sent on %2$s.</string>
+    <string name="report_pdf_column_start">Start</string>
+    <string name="report_pdf_column_end">End</string>
+    <string name="report_pdf_column_from">From</string>
+    <string name="report_pdf_column_to">To</string>
+    <string name="report_pdf_column_km">km</string>
+    <!-- A day's heading at the top of a following page. The argument is the day. -->
+    <string name="report_pdf_day_continued">%1$s (continued)</string>
+    <string name="report_pdf_subtotal">Subtotal</string>
+    <!-- The argument is the period, such as October 2026. -->
+    <string name="report_pdf_total">Total kilometres for %1$s</string>
+    <plurals name="report_pdf_trip_count">
+        <item quantity="one">%d business trip</item>
+        <item quantity="other">%d business trips</item>
+    </plurals>
+    <string name="report_pdf_no_trips">No business trips in this period.</string>
+    <string name="report_pdf_no_address">No address recorded</string>
+    <string name="report_pdf_legend">* This trip was added by hand, or changed by hand after it was recorded.</string>
+    <string name="report_pdf_signature">Signature</string>
+    <string name="report_pdf_signature_date">Date</string>
+    <!-- The line at the bottom of every page: the sender's name and the period. -->
+    <string name="report_pdf_footer">%1$s · %2$s</string>
+    <string name="report_pdf_page">Page %1$d of %2$d</string>
+
+    <!-- The CSV file: the two column titles the PDF does not have, and its last column. -->
+    <string name="report_csv_date">Date</string>
+    <string name="report_csv_by_hand">By hand</string>
+    <string name="report_csv_added">added</string>
+    <string name="report_csv_edited">edited</string>
+
+    <!--
+        The email the report is sent with. The subject's arguments are the period and the
+        sender's name; a revision's are that subject and its number. The body's are the
+        period, the kilometres, the number of trips and the sender's name.
+    -->
+    <string name="report_email_subject">Mileage - %1$s - %2$s</string>
+    <string name="report_email_subject_revision">%1$s - Revision %2$d</string>
+    <plurals name="report_email_body">
+        <item quantity="one">Attached is my mileage report for %1$s: %2$s km in %3$d business trip.\n\n%4$s</item>
+        <item quantity="other">Attached is my mileage report for %1$s: %2$s km in %3$d business trips.\n\n%4$s</item>
+    </plurals>
+    <!-- The first word of the report file's name, as in Mileage-2026-10-Name.pdf. -->
+    <string name="report_file_prefix">Mileage</string>
+
     <!-- Settings, opened from Home. -->
     <string name="settings_title">Settings</string>
     <string name="settings_reading">Reading the settings…</string>
@@ -425,6 +590,17 @@
     <string name="settings_sound_refused_large">That file is too large for a trip-start sound (more than %1$d MB). The sound was not changed.</string>
     <string name="settings_sound_refused_playable">That file cannot be played as a sound. The sound was not changed.</string>
     <string name="settings_sound_no_picker">This phone has no app to pick a file with. The sound was not changed.</string>
+
+    <!-- Settings: who the report for the accountant is from, and where it goes. -->
+    <string name="settings_report_title">Report for the accountant</string>
+    <string name="settings_report_intro">Your name, company and vehicle are printed at the top of the mileage report. A report cannot be made without your name, or sent without the accountant\'s address. Company and vehicle can be left empty. Each is saved as you type.</string>
+    <string name="settings_report_name">Your name</string>
+    <string name="settings_report_company">Company</string>
+    <string name="settings_report_vehicle">Vehicle</string>
+    <string name="settings_report_vehicle_detail">The vehicle as accounts know it, such as its make, model and plate.</string>
+    <string name="settings_report_email">Accountant\'s email address</string>
+    <string name="settings_report_email_detail">MilO never sends anything itself. It opens your email app with the report attached and this address filled in, and you press send.</string>
+    <string name="settings_report_email_refused">Not saved: this is not a complete email address. It has to look like name@example.com, with nothing else in the field.</string>
 
     <!-- Settings: the work schedule. -->
     <string name="settings_schedule_title">Work schedule</string>

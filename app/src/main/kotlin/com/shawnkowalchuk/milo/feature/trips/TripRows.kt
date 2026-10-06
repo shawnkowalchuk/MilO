@@ -114,8 +114,8 @@ internal fun DayCard(day: TripDay, context: TripRowContext) {
  * can be done about it.
  *
  * A trip that was added by hand, or edited since it was recorded, carries an asterisk after its
- * times and a line that says which: its figures are Shawn's own, and the monthly report will
- * mark the same trips the same way.
+ * times and a line that says which: its figures are Shawn's own, and the report for the
+ * accountant marks the same trips with the same asterisk.
  *
  * A finished trip is pressed to bring up its buttons (edit, mark as Business or Personal,
  * delete), so that a list of counted trips is not a list of buttons. A deleted or a discarded trip says

@@ -13,7 +13,7 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
  * restored, or a discarded one that Shawn counts after all, is finished again and so counts.
  *
  * Business and Personal trips both count. They are added up apart ([CategoryTotals]), and it
- * is the Business total that the report will be made of.
+ * is the Business trips that the report for the accountant lists (`data/report/`).
  */
 val Trip.isCounted: Boolean get() = status == TripStatus.FINISHED
 

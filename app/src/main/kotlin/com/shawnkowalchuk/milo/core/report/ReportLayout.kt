@@ -1,0 +1,162 @@
+package com.shawnkowalchuk.milo.core.report
+
+import java.util.Locale
+
+// The first of the two passes that make the PDF: where everything goes, and on which page.
+// Android's PdfDocument only records what is drawn and cannot go back to a page it has
+// finished, so "Page 2 of 5", a heading repeated on the next page and a row kept whole all have
+// to be decided before the first page is drawn. Pure Kotlin, so it is tested on its own.
+
+/** The least room between the two halves of the footer. */
+private const val FOOTER_GAP = 16f
+
+private const val ELLIPSIS = "…"
+
+/** The pages being filled, and how far down the present one is. */
+private class Pages {
+    val pages = mutableListOf<MutableList<PageItem>>(mutableListOf())
+    var y = CONTENT_TOP
+        private set
+
+    /** True once a day, or a part of one, stands on the present page. */
+    var holdsADay = false
+
+    val spaceLeft: Float get() = CONTENT_BOTTOM - y
+
+    /** True while nothing at all stands on the present page. */
+    val atTop: Boolean get() = y == CONTENT_TOP
+
+    fun place(block: Block) {
+        pages.last() += block.items.map { it.movedDown(y) }
+        y += block.height
+    }
+
+    fun gap(height: Float) {
+        y += height
+    }
+
+    fun newPage() {
+        pages += mutableListOf<PageItem>()
+        y = CONTENT_TOP
+        holdsADay = false
+    }
+}
+
+/**
+ * Lays the report out on US Letter pages.
+ *
+ * The rules, in the order they are applied:
+ * - **A day that fits on a page is not split.** If it does not fit in what is left of the
+ *   present page, it starts the next one.
+ * - **A day that is longer than a page is split** between two of its trips, and goes on at the
+ *   top of the next page under its heading, repeated with "(continued)", and the column titles.
+ * - **A heading is never left alone:** a day's heading and column titles are always followed
+ *   by at least one of its trips on the same page.
+ * - **A trip is never cut,** however many lines its addresses wrap to, and a day's subtotal
+ *   stands on the same page as the day's last trip.
+ * - **The total, the legend and the signature line stay together.**
+ * - Every page ends with the same line: who and which period on the left, "Page n of N" on
+ *   the right.
+ *
+ * @param measure how wide a text comes out in a style. The drawing pass passes the paint it
+ * draws with.
+ * @return the pages in order, at least one.
+ */
+fun layoutReport(report: PrintedReport, measure: TextMeasure, locale: Locale): List<ReportPage> {
+    val columns = columnsFor(report, measure)
+    val pages = Pages()
+    pages.place(headingBlock(report, measure))
+    report.emptyNote?.let { pages.place(emptyBlock(it)) }
+    for (day in report.days) pages.placeDay(day, report.words, columns, measure)
+
+    val closing = closingBlock(report, columns, measure)
+    if (closing.height > pages.spaceLeft && !pages.atTop) pages.newPage()
+    pages.place(closing)
+
+    val count = pages.pages.size
+    return pages.pages.mapIndexed { index, items ->
+        val number = index + 1
+        ReportPage(number, items + footer(report, number, count, measure, locale))
+    }
+}
+
+private fun Pages.placeDay(
+    day: PrintedDay,
+    words: ReportWords,
+    columns: Columns,
+    measure: TextMeasure,
+) {
+    val heading = dayHeadingBlock(day.heading)
+    val titles = columnTitlesBlock(words, columns)
+    val rows = day.rows.map { rowBlock(it, columns, measure) }
+    val subtotal = subtotalBlock(day, words, columns)
+    val head = heading.height + titles.height
+    val whole = head + rows.sumOf { it.height.toDouble() }.toFloat() + subtotal.height
+
+    // Kept whole on the next page, if a whole page can hold it. A page that holds no day yet
+    // (the first, under the report's heading) is not left empty for that: the day starts there
+    // and is split, which wastes less paper than a page with a heading and nothing else.
+    if (whole > spaceLeft && whole <= CONTENT_BOTTOM - CONTENT_TOP && holdsADay) newPage()
+
+    // What a trip needs to be placed: the day's last trip takes the subtotal along.
+    fun needed(index: Int): Float =
+        rows[index].height + if (index == rows.lastIndex) subtotal.height else 0f
+
+    var next = 0
+    while (next < rows.size) {
+        // Not even the heading and one trip fit here. On a page with nothing on it there is no
+        // better place to go, so the row is placed all the same, never looped over.
+        if (head + needed(next) > spaceLeft && !atTop) newPage()
+        place(if (next == 0) heading else dayHeadingBlock(day.continuedHeading))
+        place(titles)
+        holdsADay = true
+        do {
+            place(rows[next])
+            next++
+        } while (next < rows.size && needed(next) <= spaceLeft)
+    }
+    place(subtotal)
+    gap(DAY_GAP)
+}
+
+/**
+ * The line at the bottom of page [number] of [count]: whose report and which period on the
+ * left, the page on the right. A name and a period too long to stand beside the page number
+ * are cut short, with an ellipsis, so the two never run into each other.
+ */
+private fun footer(
+    report: PrintedReport,
+    number: Int,
+    count: Int,
+    measure: TextMeasure,
+    locale: Locale,
+): List<PageItem> {
+    val style = ReportTextStyle.FOOTER
+    val page = String.format(locale, report.words.page, number, count)
+    val room = CONTENT_RIGHT - CONTENT_LEFT - measure.width(page, style) - FOOTER_GAP
+    return listOf(
+        PageItem.Text(
+            cutToFit(report.footer, room, style, measure),
+            CONTENT_LEFT,
+            FOOTER_BASELINE,
+            style,
+        ),
+        PageItem.Text(page, CONTENT_RIGHT, FOOTER_BASELINE, style, rightAligned = true),
+    )
+}
+
+/** [text] as it is if it is no wider than [maxWidth], and otherwise its start and an ellipsis. */
+internal fun cutToFit(
+    text: String,
+    maxWidth: Float,
+    style: ReportTextStyle,
+    measure: TextMeasure,
+): String {
+    if (measure.width(text, style) <= maxWidth) return text
+    var kept = text
+    while (kept.isNotEmpty() && measure.width(kept + ELLIPSIS, style) > maxWidth) {
+        // Never half of a character that is stored as two.
+        kept = kept.dropLast(if (kept.length > 1 && kept.last().isLowSurrogate()) 2 else 1)
+    }
+    return kept.trimEnd() + ELLIPSIS
+}

@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 private const val HOUR_MS = 60L * 60 * 1000
@@ -100,5 +101,41 @@ class TimeSpanTest {
         // The span agrees with monthOf at its very edge: the end is not part of the month.
         assertEquals(true, lastSecond in december.fromMs until december.untilMs)
         assertEquals(false, firstSecond in december.fromMs until december.untilMs)
+    }
+
+    @Test
+    fun `a run of days goes from the first midnight to the midnight that ends the last day`() {
+        val span = daysSpan(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 18), edmonton)
+
+        assertEquals(utc("2026-10-05T06:00:00Z"), span.fromMs)
+        assertEquals(utc("2026-10-19T06:00:00Z"), span.untilMs)
+        assertEquals(14 * DAY_MS, span.untilMs - span.fromMs)
+    }
+
+    @Test
+    fun `a run of one day is that day, and a whole month's days are the month`() {
+        val monday = LocalDate.of(2026, 10, 5)
+        val october = YearMonth.of(2026, 10)
+
+        assertEquals(daySpan(monday, edmonton), daysSpan(monday, monday, edmonton))
+        assertEquals(
+            monthSpan(october, edmonton),
+            daysSpan(october.atDay(1), october.atEndOfMonth(), edmonton),
+        )
+    }
+
+    @Test
+    fun `a run of days over a clock change is as long as it really was`() {
+        // The clocks go back on Sunday 1 November 2026: that day has 25 hours.
+        val span = daysSpan(LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 2), edmonton)
+
+        assertEquals(3 * DAY_MS + HOUR_MS, span.untilMs - span.fromMs)
+    }
+
+    @Test
+    fun `days that end before they start are refused`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            daysSpan(LocalDate.of(2026, 10, 18), LocalDate.of(2026, 10, 5), edmonton)
+        }
     }
 }

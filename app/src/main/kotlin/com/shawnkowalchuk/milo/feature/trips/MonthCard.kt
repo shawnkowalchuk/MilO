@@ -13,24 +13,36 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
+import com.shawnkowalchuk.milo.core.designsystem.text.submissionWords
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.trip.Tally
+import java.time.ZoneId
 import java.util.Locale
 
 /**
  * The top of the screen: which month, what it adds up to, and the way to the months beside it.
  *
- * Business comes first and in the large figures, because that is what the month's report will
- * be made of. Personal follows in a quieter line of its own, so the two can never be read as
- * one total.
+ * Business comes first and in the large figures, because that is what the month's report is
+ * made of. Personal follows in a quieter line of its own, so the two can never be read as one
+ * total.
+ *
+ * Under the figures, whether the month's report has been sent to the accountant, and the way
+ * to the Report screen for this month.
+ *
+ * @param submission that the month's report was sent, and when; null while it was not.
+ * @param onOpenReport opens the Report screen for the month on this card.
  */
 @Composable
 internal fun MonthCard(
     monthName: String,
     summary: MonthSummary?,
+    submission: MonthSubmission?,
+    zone: ZoneId,
     canStepForward: Boolean,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onOpenReport: () -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     SectionCard(title = monthName) {
@@ -57,6 +69,23 @@ internal fun MonthCard(
             // Only while there is such a trip, which in ordinary use is never.
             if (totals.unsorted.count > 0) {
                 Apart(R.plurals.trips_unsorted_total, totals.unsorted, locale)
+            }
+        }
+        Text(
+            text =
+                submissionWords(
+                    firstSentAtMs = submission?.first?.sentAtMs,
+                    revisions = submission?.revisions ?: 0,
+                    latestSentAtMs = submission?.latest?.sentAtMs,
+                    zone = zone,
+                    locale = locale,
+                ),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        // At the end of a line of its own, like every way to another screen.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onOpenReport) {
+                Text(text = stringResource(R.string.trips_action_report))
             }
         }
         Row(

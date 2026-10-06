@@ -13,6 +13,9 @@ import androidx.compose.runtime.Composable
  *
  * @param text what the action does and, where it can be, how it is undone.
  * @param confirmLabel names the action itself ("Delete"), never "OK" or "Yes".
+ * @param onPutOff what a press outside the dialog, or Back, does, where that is not the same
+ * as the button that does not do it: a question whose "no" is an answer too ("Not sent") is
+ * only put off by a stray tap, and asked again.
  */
 @Composable
 fun ConfirmDialog(
@@ -22,9 +25,10 @@ fun ConfirmDialog(
     dismissLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onPutOff: () -> Unit = onDismiss,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onPutOff,
         title = { Text(text = title) },
         text = { Text(text = text) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(text = confirmLabel) } },

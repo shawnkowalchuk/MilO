@@ -38,6 +38,22 @@ fun daySpan(day: LocalDate, zone: ZoneId): TimeSpan = TimeSpan(
     untilMs = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
 )
 
+/**
+ * The span of time a run of calendar days covers in [zone]: from local midnight of [first] to
+ * the local midnight that ends [last]. Both days are inside the span, which is how a date range
+ * is read on a report: "5 to 18 October" includes the 18th.
+ *
+ * Worked out from the day after [last] and not by counting hours, like [daySpan], so a run of
+ * days in which the clocks change is as long as it really was.
+ */
+fun daysSpan(first: LocalDate, last: LocalDate, zone: ZoneId): TimeSpan {
+    require(!last.isBefore(first)) { "The days end ($last) before they start ($first)" }
+    return TimeSpan(
+        fromMs = first.atStartOfDay(zone).toInstant().toEpochMilli(),
+        untilMs = last.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
+    )
+}
+
 /** The calendar day a stored time falls on in [zone]. */
 fun localDateOf(epochMs: Long, zone: ZoneId): LocalDate =
     Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDate()

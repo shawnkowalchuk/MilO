@@ -33,8 +33,9 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * The last four fields are not settings Shawn chooses. They are small pieces of state that must
- * outlive the process, and the settings store is where such values live.
+ * Five fields are not settings Shawn chooses: [lastDrivingAlertAtMs] and the last four. They are
+ * small pieces of state that must outlive the process, and the settings store is where such
+ * values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -58,6 +59,15 @@ enum class ConfirmedStep(val key: String) {
  * @param lastDrivingAlertAtMs when the driving alert was last posted, or null if it never was.
  * No second alert is posted for a while after it, and that must hold when MilO's process was
  * restarted in between.
+ * @param reportName Shawn's name as the report for the accountant prints it, or null while it
+ * is not set. A report cannot be made without it.
+ * @param reportCompany his company, for the report's heading, or null to leave the line out.
+ * @param reportVehicle a description of the vehicle, for the report's heading, or null to
+ * leave the line out.
+ * @param accountantEmail where the report is sent: the address the email app is opened with,
+ * or null while it is not set. MilO itself sends nothing.
+ * @param reportHandOver the report that was handed to the email app and not answered for
+ * yet, or null when no question is waiting. Not a setting either: see [ReportHandOver].
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -79,6 +89,11 @@ data class MiloSettings(
     val ignoreTripsOutsideSchedule: Boolean = false,
     val drivingAlertEnabled: Boolean = true,
     val lastDrivingAlertAtMs: Long? = null,
+    val reportName: String? = null,
+    val reportCompany: String? = null,
+    val reportVehicle: String? = null,
+    val accountantEmail: String? = null,
+    val reportHandOver: ReportHandOver? = null,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

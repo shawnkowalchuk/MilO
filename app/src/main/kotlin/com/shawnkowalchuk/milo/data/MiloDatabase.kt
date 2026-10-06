@@ -7,6 +7,8 @@ import androidx.room3.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.shawnkowalchuk.milo.data.eventlog.EventLogDao
 import com.shawnkowalchuk.milo.data.eventlog.EventLogEntry
+import com.shawnkowalchuk.milo.data.report.SentReport
+import com.shawnkowalchuk.milo.data.report.SentReportDao
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripDao
 import kotlinx.coroutines.Dispatchers
@@ -18,19 +20,22 @@ import kotlinx.coroutines.Dispatchers
 const val MILO_DATABASE_FILE = "milo.db"
 
 /**
- * The main database: trips and the event log. It is the small, valuable part of the app's data
- * and the part that will be backed up in phase 4, which is why the bulky raw GPS points are kept
- * out of it (see [PointsDatabase]).
+ * The main database: trips, the event log and the list of sent reports. It is the small,
+ * valuable part of the app's data and the part that will be backed up in phase 4, which is why
+ * the bulky raw GPS points are kept out of it (see [PointsDatabase]).
  *
  * Raising [Database.version] needs a migration (`MiloMigrations.kt`) and the schema file Room
  * writes to `app/schemas`. Version 2 added the trips' addresses; version 3, Business or Personal;
- * version 4, the marks of a trip that was added or edited by hand and what was recorded before.
+ * version 4, the marks of a trip that was added or edited by hand and what was recorded before;
+ * version 5, the table of reports sent to the accountant.
  */
-@Database(entities = [Trip::class, EventLogEntry::class], version = 4)
+@Database(entities = [Trip::class, EventLogEntry::class, SentReport::class], version = 5)
 abstract class MiloDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
 
     abstract fun eventLogDao(): EventLogDao
+
+    abstract fun sentReportDao(): SentReportDao
 }
 
 /**

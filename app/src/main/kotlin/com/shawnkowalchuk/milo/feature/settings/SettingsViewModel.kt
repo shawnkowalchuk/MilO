@@ -10,6 +10,8 @@ import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
+import com.shawnkowalchuk.milo.data.settings.isEmailAddress
+import com.shawnkowalchuk.milo.data.settings.reportTextOrNull
 import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import java.io.IOException
 import java.time.DayOfWeek
@@ -67,11 +69,17 @@ class SettingsViewModel(
      *
      * @param problemDay the day of the schedule the press that did not work was about, if it
      * was about one: the screen says under that day what went wrong.
+     * @param refusedEmail what stands in the address field while that is not an email address
+     * and so is not stored, or null. The text is kept with the refusal, and not only that
+     * there was one: the field is built again when the phone is turned or the screen comes
+     * back from under another, and "not saved" must then stand under the text it was said of,
+     * never under the stored address.
      */
     private data class Passing(
         val copyingSound: Boolean = false,
         val problem: SettingsProblem? = null,
         val problemDay: DayOfWeek? = null,
+        val refusedEmail: String? = null,
     )
 
     private val passing = MutableStateFlow(Passing())
@@ -87,7 +95,13 @@ class SettingsViewModel(
             if (stored == null) {
                 SettingsUiState.Unreadable
             } else {
-                settingsUiState(stored, now.copyingSound, now.problem, now.problemDay)
+                settingsUiState(
+                    settings = stored,
+                    copyingSound = now.copyingSound,
+                    problem = now.problem,
+                    problemDay = now.problemDay,
+                    refusedEmail = now.refusedEmail,
+                )
             }
         }.stateIn(
             viewModelScope,
@@ -137,6 +151,32 @@ class SettingsViewModel(
         armDrivingAlert(DRIVING_ALERT_SWITCH)
     }
 
+    /**
+     * What stands in one of the report's three free-text fields. It is stored as it is typed,
+     * like every setting, without the spaces around it; an emptied field forgets the value.
+     */
+    fun onReportName(typed: String) = change { settings.setReportName(reportTextOrNull(typed)) }
+
+    fun onReportCompany(typed: String) = change {
+        settings.setReportCompany(reportTextOrNull(typed))
+    }
+
+    fun onReportVehicle(typed: String) = change {
+        settings.setReportVehicle(reportTextOrNull(typed))
+    }
+
+    /**
+     * What stands in the field for the accountant's address. An email address is stored, and
+     * an emptied field forgets the one that was. Anything else is not stored, and the field
+     * says so: the address stored before stays in force until a whole new one is typed.
+     */
+    fun onAccountantEmail(typed: String) {
+        val address = typed.trim()
+        val storable = address.isEmpty() || isEmailAddress(address)
+        passing.update { it.copy(refusedEmail = typed.takeUnless { storable }) }
+        if (storable) change { settings.setAccountantEmail(address.ifEmpty { null }) }
+    }
+
     /** Plays the sound a trip start would play now, whether or not the sound is switched on. */
     fun onPlaySound() = change { playSound(it.customSoundUri) }
 
@@ -146,9 +186,12 @@ class SettingsViewModel(
      */
     fun onOwnSoundPicked(uri: String) {
         viewModelScope.launch {
-            passing.value = Passing(copyingSound = true)
+            // What the address field says about itself is not about the sound, and stays.
+            passing.update { Passing(copyingSound = true, refusedEmail = it.refusedEmail) }
             val refusal = ownSound.choose(uri)
-            passing.value = Passing(problem = refusal?.asProblem())
+            passing.update {
+                Passing(problem = refusal?.asProblem(), refusedEmail = it.refusedEmail)
+            }
         }
     }
 

@@ -39,6 +39,16 @@ data object SettingsKey : NavKey
 @Serializable
 data class TripEditKey(val tripId: Long?) : NavKey
 
+/**
+ * The Report screen, where the report for the accountant is made and sent. Not in the bottom
+ * bar: it is opened from Trips.
+ *
+ * @param year and [month] (1 to 12) name the month the Trips screen was showing, which is the
+ * period the screen opens with. Two plain numbers, because that is what the back stack saves.
+ */
+@Serializable
+data class ReportKey(val year: Int, val month: Int) : NavKey
+
 /** The four screens of the bottom navigation bar, in the order the bar shows them. */
 enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: ImageVector) {
     HOME(HomeKey, R.string.nav_home, MiloIcons.Home),
@@ -50,8 +60,9 @@ enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: Ima
 /**
  * The bottom-bar screen the back stack is in: the nearest one under whatever is on top. With
  * the pairing screen open from Setup that is Setup, with Settings open (or the pairing screen
- * on top of Settings) it is Home, and with the edit screen open it is Trips, so the bar keeps
- * showing where Shawn came from.
+ * on top of Settings) it is Home, and with the edit screen or the Report screen open (or
+ * Settings opened from the Report screen) it is Trips, so the bar keeps showing where Shawn came
+ * from.
  */
 internal fun topLevelOf(backStack: List<NavKey>): TopLevelDestination = backStack
     .asReversed()

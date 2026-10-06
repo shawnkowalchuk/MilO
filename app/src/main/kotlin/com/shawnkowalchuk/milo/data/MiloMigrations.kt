@@ -5,8 +5,8 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
 // The steps that bring an older main database up to the current version. The phone holds real
-// trips, so a step only ever adds: no table is dropped or rebuilt, and no stored value is
-// rewritten.
+// trips, so a step only ever adds: a column, an index or a whole new table. No table is dropped
+// or rebuilt, and no stored value is rewritten.
 //
 // Room runs a step, checks the result against the tables the code expects, and stores the new
 // version number, all inside one transaction. If the step or the check fails, the transaction
@@ -99,8 +99,37 @@ internal val MIGRATION_3_4: Migration =
     }
 
 /**
+ * Version 4 to 5: the reports sent to the accountant.
+ *
+ * One new table, `sent_reports`, empty. Nothing was sent before this version existed, so there
+ * is nothing to fill it with, and no month is submitted after the step. The `trips` and
+ * `event_log` tables are not named by this step at all: no statement here can reach a stored
+ * trip.
+ *
+ * The statement is the one Room itself would run to make the table new, so a database that was
+ * migrated and one that was created at version 5 are the same. The exported
+ * `app/schemas/.../5.json` is the reference.
+ */
+internal val MIGRATION_4_5: Migration =
+    object : Migration(4, 5) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS sent_reports (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "kind TEXT NOT NULL, " +
+                    "firstDay INTEGER NOT NULL, " +
+                    "lastDay INTEGER NOT NULL, " +
+                    "sentAtMs INTEGER NOT NULL, " +
+                    "tripCount INTEGER NOT NULL, " +
+                    "distanceMetres REAL NOT NULL, " +
+                    "revision INTEGER NOT NULL)",
+            )
+        }
+    }
+
+/**
  * Every step, in order. `buildMiloDatabase` hands them to Room, which runs them one after the
  * other for a database that is more than one version behind.
  */
 internal val MILO_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
