@@ -9,8 +9,12 @@ import androidx.lifecycle.Observer
  *
  * `CarConnection` asks the Android Auto app, and it only reports while something in this process
  * is observing it (docs/research/2026-10-03-location-and-car.md). So it can hold a trip open but
- * never start one: the trip service starts this watcher when recording begins and stops it when
+ * never start one: the trip service starts a watcher when recording begins and stops it when
  * the trip ends.
+ *
+ * A second watcher, started with the process and never stopped, belongs to [AndroidAutoLog]. It
+ * writes Android Auto's changes to the event log while no trip is being recorded, and tells the
+ * trip rules nothing.
  *
  * Only "projection" counts as connected: the phone is driving a car's screen. The "native" value
  * is for an app that runs on the car itself, which MilO never does. No answer, or an answer that
