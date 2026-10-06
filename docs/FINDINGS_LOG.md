@@ -24,6 +24,9 @@
 
 ### 2026-10-05
 
+**`[CHANGE]` Shawn's own R2-D2 clip is the trip-start sound in his builds**
+Shawn dropped `r2d2.mp3` (4.5 seconds, 9 KB) into the project folder. It is copyrighted film audio, so it must not be committed, but it is his to use on his own phone. Android lets a build type override a resource: a file at `app/src/debug/res/raw/trip_start_chirp.mp3` replaces `main`'s `trip_start_chirp.wav` in debug builds, and debug is what gets installed on the phone. Both that folder and `/r2d2.mp3` are git-ignored. Checked: the built APK contains the mp3 and not the wav, and a trip started on the emulator played it with no player error. Not checked: how it sounds on the phone's speaker, and silent mode. This needed no code change, which is why it was done before the in-app sound picker; the picker is still planned with the settings screen. If MilO is ever built on another machine, the clip has to be copied there by hand or the build falls back to the synthesized chirp.
+
 **`[CHANGE]` First install on the phone**
 The placeholder build (the foundation, no trip engine yet) was installed on the phone over USB with adb, signed with the dedicated key, and opened without a crash. HyperOS accepted the install first time. Every later build can now update it in place, as long as it is signed with the same key. Not yet tried: a sync and Run from Android Studio.
 
