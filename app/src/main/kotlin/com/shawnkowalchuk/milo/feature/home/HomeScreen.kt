@@ -19,9 +19,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
+import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
+import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleAction
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
@@ -29,33 +31,56 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
+import com.shawnkowalchuk.milo.data.trip.TodaySession
+import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.ZoneId
 
+/** What the home screen can ask for. */
+private class HomeActions(
+    val onOpenSetup: () -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onStart: () -> Unit,
+    val onEnd: () -> Unit,
+)
+
 /**
- * The home screen as far as trip recording needs it: a warning while the setup checklist needs
- * attention, the trip in progress, why the last start failed if it did, and one button that
- * starts or ends a trip by hand. Today's sessions arrive in a later package.
+ * The home screen: a warning while the setup checklist needs attention, the trip in progress,
+ * why the last start failed if it did, one button that starts or ends a trip by hand, and
+ * today's finished trips. The cog beside the title leads to Settings.
  *
  * @param onOpenSetup the warning's button. Navigation belongs to the app, not the feature.
+ * @param onOpenSettings the cog's.
  */
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onOpenSetup: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onOpenSetup: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val activity by viewModel.activity.collectAsState()
     val setupNeedsAttention by viewModel.setupNeedsAttention.collectAsState()
+    val today by viewModel.today.collectAsState()
 
-    // The warning follows the phone's settings, which change outside MilO without a word.
+    // The warning follows the phone's settings, which change outside MilO without a word, and
+    // "today" becomes another day while MilO sits in the background.
     CameToFrontEffect(viewModel::onCameToFront)
 
     HomeContent(
         activity = activity,
+        today = today,
         setupNeedsAttention = setupNeedsAttention,
-        onOpenSetup = onOpenSetup,
-        onStart = viewModel::onStartPressed,
-        onEnd = viewModel::onEndPressed,
+        actions =
+            HomeActions(
+                onOpenSetup = onOpenSetup,
+                onOpenSettings = onOpenSettings,
+                onStart = viewModel::onStartPressed,
+                onEnd = viewModel::onEndPressed,
+            ),
         modifier = modifier,
     )
 }
@@ -63,10 +88,9 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSetup: () -> Unit, modifier: Modi
 @Composable
 private fun HomeContent(
     activity: TripActivity,
+    today: TodayTrips?,
     setupNeedsAttention: Boolean,
-    onOpenSetup: () -> Unit,
-    onStart: () -> Unit,
-    onEnd: () -> Unit,
+    actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
     val trip = activity.trip
@@ -79,9 +103,17 @@ private fun HomeContent(
                 .padding(MiloTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
     ) {
-        ScreenTitle(text = stringResource(R.string.app_name))
+        ScreenTitle(
+            text = stringResource(R.string.app_name),
+            action =
+                ScreenTitleAction(
+                    icon = MiloIcons.Settings,
+                    description = stringResource(R.string.home_open_settings),
+                    onClick = actions.onOpenSettings,
+                ),
+        )
 
-        if (setupNeedsAttention) SetupWarningCard(onOpenSetup)
+        if (setupNeedsAttention) SetupWarningCard(actions.onOpenSetup)
 
         SectionCard(title = stringResource(R.string.home_trip_title)) {
             if (trip == null) IdleTrip() else TripInProgress(trip)
@@ -89,7 +121,8 @@ private fun HomeContent(
 
         activity.startFailure?.let { StartFailureCard(it) }
 
-        // One button, because exactly one of the two actions makes sense at any moment.
+        // One button, because exactly one of the two actions makes sense at any moment. It
+        // stands above today's trips, so it does not move down the screen as the day fills up.
         PrimaryButton(
             text = stringResource(
                 if (trip ==
@@ -100,9 +133,11 @@ private fun HomeContent(
                     R.string.home_end_trip
                 },
             ),
-            onClick = if (trip == null) onStart else onEnd,
+            onClick = if (trip == null) actions.onStart else actions.onEnd,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        TodayCard(today = today, tripInProgress = trip != null, zone = ZoneId.systemDefault())
     }
 }
 
@@ -207,10 +242,9 @@ private fun HomeIdlePreview() {
                             listOf(PreflightProblem.BACKGROUND_LOCATION_MISSING),
                         ),
                     ),
+                today = TodayTrips(emptyList()),
                 setupNeedsAttention = true,
-                onOpenSetup = {},
-                onStart = {},
-                onEnd = {},
+                actions = HomeActions({}, {}, {}, {}),
             )
         }
     }
@@ -233,10 +267,15 @@ private fun HomeRecordingPreview() {
                                 waitingForTruck = false,
                             ),
                     ),
+                today =
+                    TodayTrips(
+                        listOf(
+                            TodaySession(2, 1_791_020_000_000, 1_791_021_500_000, 24_900.0),
+                            TodaySession(1, 1_791_010_000_000, 1_791_011_200_000, 8_300.0),
+                        ),
+                    ),
                 setupNeedsAttention = false,
-                onOpenSetup = {},
-                onStart = {},
-                onEnd = {},
+                actions = HomeActions({}, {}, {}, {}),
             )
         }
     }

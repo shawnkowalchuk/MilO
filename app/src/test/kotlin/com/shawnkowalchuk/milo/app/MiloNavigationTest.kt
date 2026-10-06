@@ -54,6 +54,39 @@ class MiloNavigationTest {
     }
 
     @Test
+    fun `Settings opens on top of Home, and the pairing screen on top of Settings`() {
+        val backStack = mutableListOf("home")
+
+        backStack.openOnTop("settings")
+        backStack.openOnTop("pairing")
+
+        assertEquals(listOf("home", "settings", "pairing"), backStack)
+
+        // Change truck leads to the pairing screen, and its Back arrow leads back to Settings.
+        backStack.closeIfOnTop("pairing")
+        assertEquals(listOf("home", "settings"), backStack)
+    }
+
+    @Test
+    fun `a button pressed twice before the screen has changed opens its screen once`() {
+        val backStack = mutableListOf("home")
+
+        repeat(2) { backStack.openOnTop("settings") }
+
+        // A back stack may hold a key only once.
+        assertEquals(listOf("home", "settings"), backStack)
+    }
+
+    @Test
+    fun `the bar's Home button closes Settings and whatever is on top of it`() {
+        val backStack = mutableListOf("home", "settings", "pairing")
+
+        backStack.showTopLevel("home", home = "home")
+
+        assertEquals(listOf("home"), backStack)
+    }
+
+    @Test
     fun `Back closes one screen at a time and never the last one`() {
         val backStack = mutableListOf("home", "setup", "pairing")
 
@@ -74,5 +107,11 @@ class MiloNavigationTest {
         assertEquals(TopLevelDestination.TRIPS, topLevelOf(listOf(HomeKey, TripsKey)))
         assertEquals(TopLevelDestination.SETUP, topLevelOf(listOf(HomeKey, SetupKey, PairingKey)))
         assertEquals(TopLevelDestination.LOG, topLevelOf(listOf(HomeKey, LogKey)))
+        // Settings is opened from Home, so Home stays marked, also under the pairing screen.
+        assertEquals(TopLevelDestination.HOME, topLevelOf(listOf(HomeKey, SettingsKey)))
+        assertEquals(
+            TopLevelDestination.HOME,
+            topLevelOf(listOf(HomeKey, SettingsKey, PairingKey)),
+        )
     }
 }

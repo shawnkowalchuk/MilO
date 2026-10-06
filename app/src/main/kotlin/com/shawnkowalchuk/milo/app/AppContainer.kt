@@ -5,10 +5,12 @@ import com.shawnkowalchuk.milo.data.buildMiloDatabase
 import com.shawnkowalchuk.milo.data.buildPointsDatabase
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.crash.buildCrashFileStore
+import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
+import com.shawnkowalchuk.milo.data.sound.buildOwnSoundStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.address.GeocoderAddressLookup
 import com.shawnkowalchuk.milo.platform.address.NetworkStatus
@@ -25,14 +27,19 @@ import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.SetupReader
 import com.shawnkowalchuk.milo.platform.system.SystemScreens
 import com.shawnkowalchuk.milo.platform.system.TripPreflight
+import com.shawnkowalchuk.milo.platform.trip.ContentPickedAudio
+import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import com.shawnkowalchuk.milo.platform.trip.TripController
 import com.shawnkowalchuk.milo.platform.trip.TripNotifications
 import com.shawnkowalchuk.milo.platform.trip.TripServiceStarter
+import com.shawnkowalchuk.milo.platform.trip.TripStartSound
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
+import com.shawnkowalchuk.milo.platform.trip.playbackProblem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * The app's manual dependency injection: the one place where the long-lived objects are created
@@ -182,5 +189,38 @@ class AppContainer(context: Context) {
             clock = System::currentTimeMillis,
             scope = applicationScope,
         )
+    }
+
+    /**
+     * Makes an audio file Shawn picked the trip-start sound, by copying it into MilO's own
+     * storage, and goes back to the bundled one. The trip service reads the result from the
+     * settings at the next trip start.
+     */
+    val ownTripSound: OwnTripSound by lazy {
+        OwnTripSound(
+            picked = ContentPickedAudio(appContext),
+            playbackProblem = ::playbackProblem,
+            store = buildOwnSoundStore(appContext),
+            settings = settingsStore,
+            eventLog = eventLogRepository,
+            clock = System::currentTimeMillis,
+        )
+    }
+
+    /**
+     * Plays the trip-start sound for the Settings screen's Play button, with the same player a
+     * trip start uses, so what is heard there is what a trip start plays. The trip service has
+     * a player of its own; this one marks its log lines as coming from Settings.
+     */
+    val soundPreview: TripStartSound by lazy {
+        TripStartSound(appContext) { note ->
+            applicationScope.launch {
+                eventLogRepository.add(
+                    System.currentTimeMillis(),
+                    EventCategory.SERVICE,
+                    "Settings screen, Play pressed. $note",
+                )
+            }
+        }
     }
 }

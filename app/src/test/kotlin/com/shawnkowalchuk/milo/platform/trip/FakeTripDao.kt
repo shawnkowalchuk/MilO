@@ -20,6 +20,9 @@ class FakeTripDao : TripDao {
     /** Set to make the next write of an address lookup fail once, the same way. */
     var failNextAddressWrite: Exception? = null
 
+    /** Set to make the next change of a trip's status fail once, the same way. */
+    var failNextStatusChange: Exception? = null
+
     override suspend fun insert(trip: Trip): Long {
         failNextInsert?.let { failure ->
             failNextInsert = null
@@ -32,6 +35,8 @@ class FakeTripDao : TripDao {
 
     override suspend fun findNewestWithStatus(status: TripStatus): Trip? =
         rows.lastOrNull { it.status == status }
+
+    override suspend fun findById(tripId: Long): Trip? = rows.firstOrNull { it.id == tripId }
 
     override fun observeWithStatus(status: TripStatus): Flow<List<Trip>> =
         flowOf(rows.filter { it.status == status })
@@ -101,6 +106,14 @@ class FakeTripDao : TripDao {
                 addressLastAttemptAtMs = atMs,
             )
         }
+    }
+
+    override suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int {
+        failNextStatusChange?.let { failure ->
+            failNextStatusChange = null
+            throw failure
+        }
+        return change(tripId, from) { it.copy(status = to) }
     }
 
     /** Like the real queries: only a row with the expected status is changed. */

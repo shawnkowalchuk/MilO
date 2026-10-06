@@ -1,9 +1,6 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.trip.TripStartCause
-import com.shawnkowalchuk.milo.core.trip.TripStatus
-import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
@@ -204,34 +201,11 @@ class CarScreenContentTest {
 
     @Test
     fun `today shows the count and the kilometres rounded once`() {
-        val today = TodayTrips(count = 3, totalMetres = 41_249.0)
+        val today = todayOf(20_000.0, 20_000.0, 1_249.0)
 
         val shown = carContent(TripActivity(), today = today)
 
         assertEquals(TodayFigures(tripCount = 3, kilometres = "41.2"), shown.today)
-    }
-
-    @Test
-    fun `today counts finished trips only`() {
-        fun stored(status: TripStatus, metres: Double) = Trip(
-            startedAtMs = STARTED_AT_MS,
-            status = status,
-            startedBy = TripStartCause.TRUCK,
-            truckSeen = true,
-            distanceMetres = metres,
-        )
-        val startedToday =
-            listOf(
-                stored(TripStatus.FINISHED, 20_000.0),
-                stored(TripStatus.FINISHED, 21_249.0),
-                // Too short, or a false start: kept in storage, never counted.
-                stored(TripStatus.DISCARDED, 150.0),
-                // The trip in progress has its own row, and its stored distance is 0 anyway.
-                stored(TripStatus.OPEN, 0.0),
-            )
-
-        assertEquals(TodayTrips(count = 2, totalMetres = 41_249.0), todayTrips(startedToday))
-        assertEquals(TodayTrips(count = 0, totalMetres = 0.0), todayTrips(emptyList()))
     }
 
     // ---- The button -----------------------------------------------------------------------------

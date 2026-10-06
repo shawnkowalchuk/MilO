@@ -6,7 +6,7 @@
 >
 > **This is one of four documents** that work together — see §17 for how they fit.
 >
-> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-03
+> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-06
 
 ---
 
@@ -190,7 +190,7 @@ Code isn't "done" until **all** are true:
 - [ ] UI uses existing tokens/components — no one-off styles (§8)
 - [ ] Surface scope matches what was decided at kickoff (§9)
 - [ ] Self-reviewed the full PR diff
-- [ ] Works on the POCO X5 itself, not just the emulator
+- [ ] Works on the POCO X5 itself, not just the emulator. Work whose device checks have not run yet is merged all the same (§11), and the documents then say that it is unproven on the phone
 - [ ] FINDINGS_LOG.md updated; APP_ENCYCLOPEDIA.md updated if behavior changed
 
 ---
@@ -201,7 +201,7 @@ Code isn't "done" until **all** are true:
 - **Unit test the trip rules** — grace period, minimum distance, point filtering, Business or Personal by schedule. Written as pure Kotlin so they run as plain JVM tests.
 - **No Robolectric.** Its current release needs Java 21 to simulate API 36 and 37, and the Mac has only JDK 17. Behaviour that needs Android is tested on the phone.
 - **Skip trivial UI tests.**
-- **Device test checklist** — `docs/DEVICE_TEST_CHECKLIST.md`, run on the POCO X5 before each phase is handed over. Bluetooth triggers, background starts and HyperOS limits cannot be tested anywhere else. Every change that adds behaviour only the phone can prove adds its checks to that file in the same change.
+- **Device test checklist** — `docs/DEVICE_TEST_CHECKLIST.md`, run on the POCO X5. A phase's behaviour counts as proven only when its checks have run there. **The checks do not hold up the next phase:** on 2026-10-05 Shawn replaced "stop after each phase" with "carry on through the phases without a stop in between", so the next phase starts when the last one is merged and the checks are run beside the later work (FINDINGS_LOG, 2026-10-06). If a check fails, that fix comes before anything built on top of it. Bluetooth triggers, background starts and HyperOS limits cannot be tested anywhere else. Every change that adds behaviour only the phone can prove adds its checks to that file in the same change.
 - Tools: JUnit 4, kotlinx-coroutines-test, Turbine (`./gradlew testDebugUnitTest`).
 
 The bar: *would a bug here lose a trip, or put a wrong number on the report accounts reads?* If yes, test it.
@@ -243,7 +243,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 - **That rule is kept by hand.** GitHub Free cannot block merges on a private repo, so only Shawn stops a red build from merging.
 - **CI cannot test a Bluetooth-triggered start.** The device checklist (§11) does.
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.
-- **Tag releases** (`v1.2.0`). There is no `CHANGELOG.md`: FINDINGS_LOG.md is the dated record of what changed. A release is the build installed on the phone at a phase hand-over; there is no release pipeline.
+- **Tag releases** (`v1.2.0`). There is no `CHANGELOG.md`: FINDINGS_LOG.md is the dated record of what changed. A release is the build installed on the phone when a phase is finished; there is no release pipeline.
 
 ---
 
@@ -274,7 +274,7 @@ Some debt is fine — taking it on deliberately to ship is valid. The rule is: *
 
 - Log knowingly-cut corners in `docs/FINDINGS_LOG.md`: what, why, cost-to-fix-later.
 - Tag in-code shortcuts searchably: `// TODO(debt): ...`.
-- **One cleanup pass per phase:** prune dead code, clear TODOs, update deps before each hand-over.
+- **One cleanup pass per phase:** prune dead code, clear TODOs, update deps before the phase is called finished.
 
 ---
 

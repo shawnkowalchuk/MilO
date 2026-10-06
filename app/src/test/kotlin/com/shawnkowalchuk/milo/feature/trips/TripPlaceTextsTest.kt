@@ -118,6 +118,20 @@ class TripPlaceTextsTest {
     }
 
     @Test
+    fun `a deleted trip shows the addresses it had, and no line when it had none`() {
+        assertEquals(routeText(shop, leduc), line(TripKind.DELETED, shop, leduc).placesText())
+        // The side that was never stored is "no address found", never "looking up".
+        assertEquals(
+            PlacesText.FromTo(
+                PlaceSide.Address("12 Shop Rd, Edmonton"),
+                PlaceSide.Words(R.string.trips_place_not_found),
+            ),
+            line(TripKind.DELETED, from = shop).placesText(),
+        )
+        assertNull(line(TripKind.DELETED).placesText())
+    }
+
+    @Test
     fun `no state leaves the line of a finished trip or a trip in progress out`() {
         val states = listOf(shop, TripPlace.LookingUp, TripPlace.NotFound)
 

@@ -75,10 +75,28 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[SOUND_ENABLED] = enabled }
     }
 
-    /** Pass null to go back to the bundled chirp. */
-    suspend fun setCustomSoundUri(uri: String?) {
-        require(uri == null || uri.isNotBlank()) { "A custom sound needs a URI, or null for none" }
-        dataStore.edit { it.setOrRemove(CUSTOM_SOUND_URI, uri) }
+    /**
+     * Stores the sound Shawn chose. The two values always change together.
+     *
+     * @param uri where MilO's own copy of the audio file is.
+     * @param name what the file he picked was called, or null if the phone gave none. A blank
+     * name is refused: pass null.
+     */
+    suspend fun setCustomSound(uri: String, name: String?) {
+        require(uri.isNotBlank()) { "A custom sound needs a URI" }
+        require(name == null || name.isNotBlank()) { "A sound's name is text, or null for none" }
+        dataStore.edit { preferences ->
+            preferences[CUSTOM_SOUND_URI] = uri
+            preferences.setOrRemove(CUSTOM_SOUND_NAME, name)
+        }
+    }
+
+    /** Goes back to the bundled chirp. */
+    suspend fun clearCustomSound() {
+        dataStore.edit { preferences ->
+            preferences.remove(CUSTOM_SOUND_URI)
+            preferences.remove(CUSTOM_SOUND_NAME)
+        }
     }
 
     /** Pass the time End was pressed to hold automatic start off, null to release it. */
@@ -112,6 +130,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
                 preferences[MINIMUM_TRIP_DISTANCE_METRES] ?: defaults.minimumTripDistanceMetres,
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
+            customSoundName = preferences[CUSTOM_SOUND_NAME],
             autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
@@ -135,6 +154,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         val MINIMUM_TRIP_DISTANCE_METRES = intPreferencesKey("minimum_trip_distance_metres")
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
+        val CUSTOM_SOUND_NAME = stringPreferencesKey("custom_sound_name")
         val AUTO_START_HELD_OFF_SINCE_MS = longPreferencesKey("auto_start_held_off_since_ms")
         val LAST_PROCESS_EXIT_IMPORTED_AT_MS =
             longPreferencesKey("last_process_exit_imported_at_ms")

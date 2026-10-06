@@ -12,9 +12,10 @@ import kotlinx.coroutines.flow.Flow
  *
  * Every update of a trip in progress takes the "open" status as a parameter and matches on it,
  * so a late or repeated call can never alter a trip that has already been closed. Each returns
- * the number of rows it changed: 1, or 0 when the trip was not open. The one update of a closed
- * trip, [recordAddressLookup], matches on "finished" the same way and writes nothing but the
- * four address columns.
+ * the number of rows it changed: 1, or 0 when the trip was not open. The two updates of a closed
+ * trip match on a status the same way: [recordAddressLookup] on "finished", writing nothing but
+ * the four address columns, and [changeStatus] on the status it is given, writing nothing but
+ * the status.
  */
 @Dao
 interface TripDao {
@@ -23,6 +24,9 @@ interface TripDao {
 
     @Query("SELECT * FROM trips WHERE status = :status ORDER BY id DESC LIMIT 1")
     suspend fun findNewestWithStatus(status: TripStatus): Trip?
+
+    @Query("SELECT * FROM trips WHERE id = :tripId")
+    suspend fun findById(tripId: Long): Trip?
 
     @Query("SELECT * FROM trips WHERE status = :status ORDER BY startedAtMs DESC")
     fun observeWithStatus(status: TripStatus): Flow<List<Trip>>
@@ -79,7 +83,8 @@ interface TripDao {
 
     /**
      * The trips with [finished] status that still lack an address and have had fewer than
-     * [maxAttempts] failed lookups, newest first. Open and discarded trips are never returned.
+     * [maxAttempts] failed lookups, newest first. Open, discarded and deleted trips are never
+     * returned.
      */
     @Query(
         "SELECT * FROM trips WHERE status = :finished " +
@@ -110,4 +115,12 @@ interface TripDao {
         atMs: Long,
         finished: TripStatus,
     ): Int
+
+    /**
+     * Moves a trip from one status to another and changes nothing else on its row. A trip that
+     * does not have the status [from] is left alone, so a second call, or a call for a trip
+     * that is still open, changes nothing.
+     */
+    @Query("UPDATE trips SET status = :to WHERE id = :tripId AND status = :from")
+    suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int
 }

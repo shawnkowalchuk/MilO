@@ -58,7 +58,7 @@ class SettingsStoreTest {
         store.setGracePeriodSeconds(300)
         store.setMinimumTripDistanceMetres(500)
         store.setSoundEnabled(false)
-        store.setCustomSoundUri("content://media/external/audio/media/42")
+        store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
         store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
         store.setLastProcessExitImportedAtMs(1_791_028_800_000)
 
@@ -70,7 +70,8 @@ class SettingsStoreTest {
                 gracePeriodSeconds = 300,
                 minimumTripDistanceMetres = 500,
                 soundEnabled = false,
-                customSoundUri = "content://media/external/audio/media/42",
+                customSoundUri = "file:/data/sounds/own_trip_start_sound_1",
+                customSoundName = "r2d2.mp3",
                 autoStartHeldOffSinceMs = 1_791_028_700_000,
                 lastProcessExitImportedAtMs = 1_791_028_800_000,
             ),
@@ -122,12 +123,27 @@ class SettingsStoreTest {
     }
 
     @Test
-    fun `the custom sound can be removed again`() = withStore { store ->
-        store.setCustomSoundUri("content://media/external/audio/media/42")
+    fun `going back to the bundled sound forgets the custom sound and its name`() =
+        withStore { store ->
+            store.setSoundEnabled(false)
+            store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
 
-        store.setCustomSoundUri(null)
+            store.clearCustomSound()
 
-        assertEquals(null, store.current().customSoundUri)
+            // Whether the sound plays at all is another setting, and stays as it was.
+            assertEquals(MiloSettings(soundEnabled = false), store.current())
+        }
+
+    @Test
+    fun `a custom sound whose file had no name is stored without one`() = withStore { store ->
+        store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
+
+        store.setCustomSound("file:/data/sounds/own_trip_start_sound_2", name = null)
+
+        val settings = store.current()
+        assertEquals("file:/data/sounds/own_trip_start_sound_2", settings.customSoundUri)
+        // Not the name of the sound before.
+        assertEquals(null, settings.customSoundName)
     }
 
     @Test
@@ -152,7 +168,8 @@ class SettingsStoreTest {
         assertRefused { store.setMinimumTripDistanceMetres(-1) }
         assertRefused { store.setTruck(" ", name = null, associationId = null) }
         assertRefused { store.setTruck("AA:BB:CC:DD:EE:FF", name = " ", associationId = null) }
-        assertRefused { store.setCustomSoundUri("") }
+        assertRefused { store.setCustomSound("", name = "r2d2.mp3") }
+        assertRefused { store.setCustomSound("file:/data/sounds/own", name = " ") }
         assertRefused { store.setAutoStartHeldOffSinceMs(-1) }
         assertRefused { store.setLastProcessExitImportedAtMs(-1) }
 

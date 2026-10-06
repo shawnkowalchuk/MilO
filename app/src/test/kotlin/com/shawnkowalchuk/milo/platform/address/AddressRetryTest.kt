@@ -58,9 +58,20 @@ class AddressRetryTest {
     }
 
     @Test
-    fun `a discarded trip and a trip in progress are never due`() {
+    fun `a discarded trip, a deleted trip and a trip in progress are never due`() {
         assertFalse(isDueForLookup(trip(status = TripStatus.DISCARDED), now))
+        assertFalse(isDueForLookup(trip(status = TripStatus.DELETED), now))
         assertFalse(isDueForLookup(trip(status = TripStatus.OPEN), now))
+    }
+
+    @Test
+    fun `a trip that is restored, or counted after all, is due like any finished trip`() {
+        val deleted = trip(status = TripStatus.DELETED, startAddress = "12 Shop Rd, Edmonton")
+        val discarded = trip(status = TripStatus.DISCARDED)
+
+        // What Restore and "Count this trip" do to a row: the status, and nothing else.
+        assertTrue(isDueForLookup(deleted.copy(status = TripStatus.FINISHED), now))
+        assertTrue(isDueForLookup(discarded.copy(status = TripStatus.FINISHED), now))
     }
 
     @Test
