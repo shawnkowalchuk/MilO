@@ -16,6 +16,8 @@ Each capability is documented with: what it does, who can use it, how it works s
 
 **What exists after the screens (work package 3):** storage, the trip rules as tested pure code, crash and kill capture, everything that records a trip once one is started (the trip controller, the foreground service, GPS recording, the notifications, the trip-start sound, the watch on Android Auto), everything that starts and ends one by itself (the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, pairing with the truck), and five screens behind a bottom navigation bar: Home, Trips (one month at a time), Setup (the permission checklist, with the truck pairing screen opened from it) and Log (the event log). **None of the automatic part has met a real Bluetooth connection or the POCO X5 yet, and the screens of work package 3 have never been drawn anywhere:** they were built and proven with the build and unit tests only. What the phone has to prove is in `docs/DEVICE_TEST_CHECKLIST.md`.
 
+**Added by work package 4:** each finished trip gets a start and an end address, looked up with the phone's own geocoder and shown on the Trips screen as "from → to" (see [GPS recording and distance](#gps-recording-and-distance) and [Trip log](#trip-log-home-day-and-month-views)). It was pulled forward from phase 2 on its own; the day view, Business/Personal and editing are still phase 2. Run on an emulator, not on the phone.
+
 **The app in one line:** MilO is a personal Android app (native Kotlin, one phone, no backend, no accounts, no Play Store) that automatically logs business mileage in Shawn's work truck and produces a monthly PDF to email to accounts.
 
 **Target phone:** Xiaomi POCO X5 Pro 5G (global ROM), Android 14, HyperOS 2.0. Installed from Android Studio on a Mac mini.
@@ -186,7 +188,7 @@ Bluetooth permissions, companion device association, the foreground service, and
 
 ## GPS recording and distance
 
-**Status:** In progress (phase 1): fixes are recorded during a trip, and the trip's distance and its start and end coordinates are stored when it closes. Addresses (reverse geocoding) are not built · **Platforms:** Android · **Last updated:** 2026-10-03
+**Status:** In progress (phase 1): fixes are recorded during a trip, and the trip's distance and its start and end coordinates are stored when it closes. The start and end addresses are looked up afterwards and stored with the trip (run on an emulator, never on the phone) · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
 Records the truck's position during a trip and turns it into a distance in km, with start and finish addresses.
@@ -213,11 +215,24 @@ Distance between two fixes is the haversine great-circle distance, in pure Kotli
 
 Every fix is stored in `raw_points` whether or not these rules use it, with both clocks, its accuracy and its reported speed, so a trip can be recalculated later with better rules. The thresholds are named constants gathered in `DistanceLimits`.
 
+*Addresses.* `TripAddresses` in `platform/address/` turns the stored start and end positions of a trip into two addresses.
+1. **It only watches.** It reads the trip controller's published state and the stored trips, and writes nothing but the four address columns of a finished trip. Ending a trip never waits for it, and a failure in it leaves the trip as it was.
+2. **When it looks.** One pass over the trips that are due is made when a trip stops being in progress, at every process start, and each time the Trips screen comes to the front. The pass at process start is asked for through the trip controller (`TripController.whenCaughtUp`), so it runs after the controller has dealt with what the last process left behind: a trip the restart rules close there was never seen in progress by the lookup, and is looked up by that pass. Passes run one at a time; a request made during a pass leads to one more pass after it. There is no scheduled job (WorkManager is not in the build yet): a trip whose lookup failed waits for the next of those occasions.
+3. **Which trips are due** (`isDueForLookup` in `AddressRetry.kt`): a `FINISHED` trip that lacks an address for an end whose position is stored, has not used up its attempts, and whose last attempt is long enough ago. A `DISCARDED` trip is never looked up. Trips recorded before addresses existed are due like any other, and are caught up by the first pass.
+4. **The lookup itself** is Android's `Geocoder` (`GeocoderAddressLookup`, behind the interface `AddressLookup`): no key, a network connection, up to five candidates asked for, 20 seconds waited at most. On Android 13 and later the answer arrives on a listener; on Android 12 the blocking call runs on a background thread, which is interrupted when the 20 seconds are up (`onBlockingThread`; that form has never been run, the phone is Android 14). This is the one place where a position leaves the phone.
+5. **One line per address** (`addressLine` in `AddressLine.kt`), in this order of preference: the street and the town, with the house number in front when the geocoder gives one ("10103 104 Avenue Northwest, Edmonton"); the street alone; the town alone (the district, county or province stands in where the geocoder names no town); and last the geocoder's own line with the country and the postal code taken out. A country or a postal code is never shown. Of several candidates the one that says the most is used, and the geocoder's first when two say as much. A house number does not count as saying more: the geocoder lists its best match first, and a numbered candidate further down can be the building next door or one on another street.
+6. **No network is not an attempt.** Before a pass asks anything, `NetworkStatus` asks Android whether the phone has a working internet connection. Without one nothing is asked and nothing is counted. The log gets one line, and another only when what is waiting has changed: a trip that starts and ends without a network gets one while its start is waiting and one, "Waiting: 1 finished trip.", once it has ended.
+7. **Giving up.** A lookup that leaves an address missing (the geocoder knows none there, or it failed) is counted on the trip. After the first the trip waits at least 2 minutes, after the second 1 hour, after the third 1 day; after the fourth (`MAX_ADDRESS_ATTEMPTS`) it is not asked about again. An address that was found is kept, so a trip can end up with one of the two. A lookup that fails outright also ends the pass: the trips waiting behind it would fail the same way and each lose an attempt.
+8. **A trip in progress.** Its row has no position until it closes, so the lookup reads the position of the trip's first usable fix from the trip controller (`CurrentTrip.startLatitude`), asks for its address once, and keeps the answer in memory for the Trips screen (`TripAddresses.openTripStart`). When the trip closes with that same start position, the remembered address is stored without asking again.
+9. **The event log,** category `ADDRESS`: one line per lookup of a trip ("Trip 3: start address found; end address none (the geocoder knows no address there). Failed attempt 1 of 4; the next one is at least 2 min away."), one per lookup for a trip in progress, and one when a pass was put off for lack of a network. The lines name no address and no position.
+
 **Where the code lives**
+- `platform/address/`: `TripAddresses.kt` (the passes), `AddressRetry.kt` (what is due, when to give up, what a row says about each end), `AddressLine.kt` (the one line), `AddressLookup.kt` and `GeocoderAddressLookup.kt` (the geocoder), `NetworkStatus.kt`, `AddressLogText.kt` (the log lines). `app/MiloApplication.kt` asks for the pass at process start, through `TripController.whenCaughtUp`.
+- `data/trip/`: the four address columns on `Trip`, `findTripsLackingAddress` and `recordAddressLookup` on `TripRepository`. The migration that added the columns is `data/MiloMigrations.kt`.
 - `platform/trip/LocationRecorder.kt` (the request and the callback); `platform/trip/TripLedger.kt` (stores each fix, closes the trip).
 - `core/trip/`: `DistanceCalculator.kt` (the four rules and the thresholds), `Haversine.kt`, `TrackPoint.kt`, `TripProgress.kt` (the running distance and the time of the last movement), `TripClosing.kt` (minimum distance, end time and positions).
 - `data/point/`: `RawPoint.kt` (the table), `RawPointDao.kt`, `RawPointRepository.kt`; the database is `data/PointsDatabase.kt`.
-- Tests: `app/src/test/.../core/trip/DistanceCalculatorTest.kt`, `DistanceCalculatorParkedTest.kt`, `DistanceCalculatorOutlierTest.kt`, `DistanceCalculatorTurnsTest.kt`, `HaversineTest.kt`, `TripProgressTest.kt`, `TripClosingTest.kt`.
+- Tests: `app/src/test/.../core/trip/DistanceCalculatorTest.kt`, `DistanceCalculatorParkedTest.kt`, `DistanceCalculatorOutlierTest.kt`, `DistanceCalculatorTurnsTest.kt`, `HaversineTest.kt`, `TripProgressTest.kt`, `TripClosingTest.kt`; for the addresses `app/src/test/.../platform/address/AddressLineTest.kt`, `AddressRetryTest.kt`, `TripAddressesTest.kt`, `TripAddressesWithControllerTest.kt` (the lookup beside a real trip controller), `GeocoderAddressLookupTest.kt` (the time limit around Android 12's blocking call) and `app/src/test/.../data/MiloMigrationsTest.kt`.
 
 **Edge cases & gotchas**
 - The distance shown during a trip can be a little higher than the stored one: what is recorded during the grace period counts while the trip is open, and is cut off when it closes.
@@ -234,7 +249,13 @@ Every fix is stored in `raw_points` whether or not these rules use it, with both
 - After a reboot in the middle of a trip the elapsed-realtime clock restarts, so the distance covered across the reboot cannot be checked and is not counted.
 - The phone's own speed reading is stored but not used yet. It is the likely next refinement: for the parked-truck rule in place of stated accuracy (which would end the corner cutting), and to reject a leap from a fix that says it is standing still.
 - If the phone's clock was wrong at the start of a trip and corrected during it, the distance is still right (points are cut by stored order, not by time), but the trip's stored start time is the wrong one and can even be later than its end.
-- A trip can end with no signal, so geocoding must retry later.
+- **An address can arrive late.** A trip that ends with no signal, or whose lookup is cut short because the phone puts MilO to sleep once the trip service has stopped, gets its address at the next occasion: the next trip ending, MilO being started, or the Trips screen being opened. Until then the Trips screen says it is still being looked up. The same goes for a trip the restart rules close later than at process start (after the trip service could not be started, or together with the start of a new trip): the lookup never saw it in progress, so it waits for the next occasion, which for a new trip is its first GPS fix.
+- **A trip MilO has given up on stays without that address.** Nothing asks again, and there is no way yet to enter one by hand (`[DEBT]` in FINDINGS_LOG).
+- **An address is what the geocoder says, not a measurement.** It names the nearest address it knows, which at a large yard or a rural site can be a neighbour's, an "Unnamed Road", or nothing. The stored coordinates remain the record. An address once stored is never replaced by a later lookup.
+- The house number is written before the street, as in Canada, whatever the phone's language.
+- The same place can be worded differently on two trips if the first fixes fell on different sides of a lot.
+- The start address shown for a trip in progress is held in memory. If the process is restarted in mid-trip it is looked up again.
+- A trip discarded as a false start may still have had its start looked up in its first seconds, for the screen. Nothing is stored for it.
 
 ---
 
@@ -392,7 +413,7 @@ Decides whether a trip is Business or Personal from when it started.
 
 ## Trip log: home, day and month views
 
-**Status:** In progress: the home screen shows the trip in progress, and the Trips screen lists one month at a time (times and km only). Never run on a phone. The rest is phase 2 · **Platforms:** Android · **Last updated:** 2026-10-05
+**Status:** In progress: the home screen shows the trip in progress, and the Trips screen lists one month at a time (times, from and to addresses, km). Never run on a phone. The rest is phase 2 · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
 Shows what was recorded and lets Shawn correct it.
@@ -410,9 +431,12 @@ Shows what was recorded and lets Shawn correct it.
 *Trips* (`feature/trips/`), the second button of the bottom bar. Shawn asked for it by name on 2026-10-05: "a trip button to view previous and current months trips".
 1. It opens on the current month, every time it is entered. At the top, one card: the month's name and year, the total km, the number of trips, and two buttons, Previous month and Next month. Next month is greyed out on the current month: the screen never goes past it. Back is one month at a time, without limit.
 2. Under it a switch, "Show discarded trips", off by default.
-3. Then the trips, one card per day, newest day first and newest trip first within a day. Each trip shows its start time, its end time and its km.
-4. **What is counted.** The total and the number of trips are of the finished trips only. A trip discarded as too short (or as a false start) is left out of the list and the totals; a line says how many are hidden. With the switch on they are listed in their day, marked "Discarded … Not counted" with their km greyed, and the totals do not change. This is how a real trip that was wrongly discarded can be spotted during testing.
-5. **A trip in progress** is shown in a card of its own above the days, "In progress", with its start time and its running distance, and is not in the total until it ends. The running distance comes from the trip controller, because the stored row holds 0 while a trip is open; if the controller is not recording that trip, no figure is shown.
+3. Then the trips, one card per day, newest day first and newest trip first within a day. Each trip shows its start time, its end time and its km, and under the times where it went: "10103 104 Avenue Northwest, Edmonton → 9321 Jasper Avenue, Edmonton". Shawn asked for this: "I just want to track from start address to end one for each trip." There is no map.
+   - **A missing address is said in words,** never as coordinates and never as a gap. While neither address is known: "Looking up the addresses…". When MilO has given up on both: "No address found for this trip." With one known, the other side of the arrow says "looking up the address…" or "no address found".
+   - The words are chosen by plain functions in `TripPlaceTexts.kt` from what the trip's row says (`startPlace` and `endPlace` in `platform/address/AddressRetry.kt`): an address, still being looked up, or not found.
+   - Each time the screen comes to the front it asks for the missing addresses to be looked up (see [GPS recording and distance](#gps-recording-and-distance)). An address that arrives while the screen is open appears by itself.
+4. **What is counted.** The total and the number of trips are of the finished trips only. A trip discarded as too short (or as a false start) is left out of the list and the totals; a line says how many are hidden. With the switch on they are listed in their day, marked "Discarded … Not counted" with their km greyed and no line about addresses (a discarded trip is never looked up), and the totals do not change. This is how a real trip that was wrongly discarded can be spotted during testing.
+5. **A trip in progress** is shown in a card of its own above the days, "In progress", with its start time and its running distance, and is not in the total until it ends. The running distance comes from the trip controller, because the stored row holds 0 while a trip is open; if the controller is not recording that trip, no figure is shown. Under it, where the trip started: "Where it started is not known yet." until the first usable GPS fix, then "Looking up where it started…", then "From (address)", or "No address found for where it started."
 6. **Which day and month a trip belongs to.** The day and the month it started in, in the phone's time zone. A trip that runs past midnight is listed once, under the day it started.
 7. An empty month says "No trips in (month and year)."
 8. **Reading.** Only the month on screen is read: `TripRepository.observeTripsStartedBetween` takes a span of time, and `monthSpan` in `core/util/TimeSpan.kt` gives the span of a month in a time zone (from local midnight on the 1st up to, not including, local midnight on the next 1st, so a month in which the clocks change is an hour longer or shorter). The list follows the database: a trip that closes while the screen is open appears by itself. Which month is the current one is worked out again each time the screen comes to the front.
@@ -420,16 +444,17 @@ Shows what was recorded and lets Shawn correct it.
 
 **Where the code lives**
 - `feature/home/HomeScreen.kt` and `HomeViewModel.kt`.
-- `feature/trips/`: `TripsScreen.kt` and `TripRows.kt` (the screen), `TripsViewModel.kt`, `TripMonth.kt` (what is counted and how it is grouped).
+- `feature/trips/`: `TripsScreen.kt` and `TripRows.kt` (the screen), `TripsViewModel.kt`, `TripMonth.kt` (what is counted and how it is grouped), `TripPlaceTexts.kt` (the words for where a trip went).
 - `core/util/TimeSpan.kt` (a month as a span of time; the day and month of a stored time) and `TimeFormat.kt` (the month heading, the day heading, the time of day).
 - `data/trip/TripDao.kt` and `TripRepository.kt` (the query by span of time).
-- Tests: `app/src/test/.../feature/trips/TripMonthTest.kt`, `app/src/test/.../core/util/TimeSpanTest.kt` and `TimeFormatTest.kt`.
+- Tests: `app/src/test/.../feature/trips/TripMonthTest.kt` and `TripPlaceTextsTest.kt`, `app/src/test/.../core/util/TimeSpanTest.kt` and `TimeFormatTest.kt`.
 
 **Edge cases & gotchas**
-- **The Trips screen has never been drawn.** Device checks 76 to 79.
+- **The Trips screen has never been drawn on the phone.** Device checks 76 to 86. It was drawn on an emulator on 2026-10-05, with addresses (FINDINGS_LOG).
 - **The Trips screen has no send, share or export.** Sending a month or a date range to the accountant is [Monthly PDF and submission](#monthly-pdf-and-submission), which is not built.
-- Addresses, Business/Personal, the day view, editing, deleting and adding a trip are phase 2. Until then every finished trip counts, whatever the time of day.
-- The `trips` table has no index on the start time, so the query reads the whole table. At a few thousand rows a year that takes milliseconds. The index is a schema change and waits for the first migration (FINDINGS_LOG, 2026-10-05).
+- Business/Personal, the day view, editing, deleting and adding a trip are phase 2. Until then every finished trip counts, whatever the time of day. An address cannot be corrected by hand until editing exists.
+- The query by span of time is read through an index on the start time, added by the first migration (database version 2).
+- "From → to" wraps onto a second line when the two addresses are long; a trip's row is then taller than its neighbours.
 - A trip still recording at the turn of the month is shown in the month it started in, not in the new current month.
 - The total is added up in metres and rounded once. The km of the single trips, each rounded to one decimal, can therefore add up to 0.1 more or less than the total shown.
 - If the phone's time zone changes, the days and months are worked out again in the new zone the next time the screen comes to the front. A trip near midnight can then move to the neighbouring day.
@@ -491,6 +516,7 @@ Produces the monthly reimbursement report and hands it to Gmail.
    - `LOCATION`: fixes being requested and stopped, the time to the first fix and its accuracy, and location being lost for 10 seconds or more and coming back. A shorter loss is not logged: the emulator reports one around every fix.
    - `ERROR`: a failure inside the controller, with its stack trace; an unreadable settings file.
    - `PAIRING`: the truck being paired or adopted, a pairing that failed and why, and every check of the pairing with its result. While no truck is armed, the line also lists the phone's paired devices with their addresses, names an association that was not adopted, and says if the phone has no companion device support.
+   - `ADDRESS`: every lookup of a trip's start and end address with what happened to each end and, if it failed, which attempt of four it was; a lookup for a trip in progress; a pass put off because the phone had no network. These are not written through the trip controller's inbox, so they are dated when written and can sit minutes or days after the trip they name. They name no address and no position.
 
 7. **The Log screen** (`feature/eventlog/`), the last button of the bottom bar: the stored log, newest first.
    - Each line shows its time as `2026-10-05 08:14:03` (to the second, 24-hour, in the phone's own time zone, the same form in every language), its category by its stored name (`CRASH` and `ERROR` in red) and its message.
@@ -507,7 +533,7 @@ Checked on an emulator (Android 16) on 2026-10-03: an induced crash, a force sto
 - `data/crash/`: `CrashFileStore.kt` (the crash files and where they are kept).
 - `data/eventlog/`: `EventLogEntry.kt` (the table and the categories), `EventLogDao.kt`, `EventLogRepository.kt`.
 - `app/MiloApplication.kt` starts both; `app/AppContainer.kt` builds them.
-- The trip lines are written by `platform/trip/TripWorker.kt` and worded in `platform/trip/TripLogText.kt` and `TripLedger.kt`. The source of a Bluetooth or companion trigger is worded in `platform/bluetooth/TruckSignals.kt`, and the pairing lines in `platform/bluetooth/TruckPairing.kt` and `TruckPairingCheck.kt`.
+- The trip lines are written by `platform/trip/TripWorker.kt` and worded in `platform/trip/TripLogText.kt` and `TripLedger.kt`. The address lines are written by `platform/address/TripAddresses.kt` and worded in `AddressLogText.kt`. The source of a Bluetooth or companion trigger is worded in `platform/bluetooth/TruckSignals.kt`, and the pairing lines in `platform/bluetooth/TruckPairing.kt` and `TruckPairingCheck.kt`.
 - Tests: `app/src/test/.../platform/diagnostics/`, `app/src/test/.../data/crash/` and `app/src/test/.../feature/eventlog/EventLogPageTest.kt`.
 - What can only be checked on the phone is in `docs/DEVICE_TEST_CHECKLIST.md`.
 

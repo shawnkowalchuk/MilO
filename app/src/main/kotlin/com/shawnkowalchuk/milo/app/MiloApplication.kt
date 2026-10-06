@@ -11,9 +11,9 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does four things only: it owns the [AppContainer], it starts the crash and kill capture,
- * it has the trip controller look at what the last process left behind, and it checks that
- * Android still watches for the truck.
+ * It does five things only: it owns the [AppContainer], it starts the crash and kill capture,
+ * it has the trip controller look at what the last process left behind, it checks that
+ * Android still watches for the truck, and it has the addresses of finished trips caught up.
  */
 class MiloApplication : Application() {
     /** Created in [onCreate]. Screens and services reach every shared object through it. */
@@ -43,10 +43,19 @@ class MiloApplication : Application() {
         // The association with the truck is Android's and can be removed behind MilO's back.
         // Asking Android again to watch for the truck changes nothing if it already does.
         container.truckPairing.check(PROCESS_START)
+
+        // Trips whose address lookup failed, or that were recorded before MilO looked addresses
+        // up at all, are tried again. The request goes through the trip controller so that the
+        // pass follows the reconcile above: a trip the restart rules close there is finished by
+        // the time the pass reads the trips. The lookup never saw that trip in progress, so
+        // nothing else would ask for it. The lookup itself is created here, not in the callback,
+        // so that it is watching before the controller publishes anything.
+        val addresses = container.tripAddresses
+        container.tripController.whenCaughtUp { addresses.catchUp(PROCESS_START) }
     }
 
     private companion object {
-        /** What the event log calls the reconcile and the pairing check at process start. */
+        /** What the event log calls the work that is prompted by a process start. */
         const val PROCESS_START = "process start"
     }
 }

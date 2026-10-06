@@ -48,6 +48,7 @@ internal fun InProgressCard(trip: TripLine, zone: ZoneId) {
                 )
             }
         }
+        trip.placesText()?.let { PlacesLine(it) }
         Text(
             text = stringResource(R.string.trips_in_progress_note),
             style = MaterialTheme.typography.bodyMedium,
@@ -65,7 +66,10 @@ internal fun DayCard(day: TripDay, zone: ZoneId) {
     }
 }
 
-/** A trip's start and end time and its distance. A discarded trip says that it is not counted. */
+/**
+ * A trip's start and end time, where it went, and its distance. A discarded trip says that it is
+ * not counted.
+ */
 @Composable
 private fun TripRow(trip: TripLine, zone: ZoneId) {
     val locale = LocalConfiguration.current.locales[0]
@@ -90,6 +94,7 @@ private fun TripRow(trip: TripLine, zone: ZoneId) {
                 },
                 style = MaterialTheme.typography.bodyLarge,
             )
+            trip.placesText()?.let { PlacesLine(it) }
             if (discarded) {
                 Text(
                     text = stringResource(R.string.trips_discarded_note),
@@ -112,4 +117,31 @@ private fun TripRow(trip: TripLine, zone: ZoneId) {
             )
         }
     }
+}
+
+/**
+ * Where a trip went, under its times: "from → to", or in plain words that an address is still
+ * being looked up or that none was found. Never coordinates, and never a gap.
+ */
+@Composable
+private fun PlacesLine(places: PlacesText) {
+    Text(
+        text =
+            when (places) {
+                is PlacesText.Sentence -> stringResource(places.text)
+
+                is PlacesText.From -> stringResource(R.string.trips_from, places.address)
+
+                is PlacesText.FromTo ->
+                    stringResource(R.string.trips_from_to, places.from.text(), places.to.text())
+            },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun PlaceSide.text(): String = when (this) {
+    is PlaceSide.Address -> line
+    is PlaceSide.Words -> stringResource(text)
 }

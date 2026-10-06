@@ -14,8 +14,6 @@ import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.point.RawPointDao
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
-import com.shawnkowalchuk.milo.data.trip.Trip
-import com.shawnkowalchuk.milo.data.trip.TripDao
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
@@ -27,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.yield
 
 /**
  * Everything the trip controller touches, replaced by stand-ins held in memory: the two
@@ -75,10 +74,19 @@ class FakeTruck : TruckConnectionSource {
     /** Set to make the phone unable to say, as it is without the Bluetooth permission. */
     var unreadable = false
 
-    override suspend fun read(): TruckReading = when {
-        unreadable -> TruckReading.unknown("the test took Bluetooth away")
-        connected -> TruckReading.connected("the test says so")
-        else -> TruckReading.notConnected("the test says so")
+    /**
+     * Set to make a reading take a moment, as asking the phone's Bluetooth does: whatever else
+     * is ready to run gets its turn before the answer comes.
+     */
+    var takesAMoment = false
+
+    override suspend fun read(): TruckReading {
+        if (takesAMoment) yield()
+        return when {
+            unreadable -> TruckReading.unknown("the test took Bluetooth away")
+            connected -> TruckReading.connected("the test says so")
+            else -> TruckReading.notConnected("the test says so")
+        }
     }
 }
 
@@ -150,76 +158,6 @@ fun TrackPoint.asFix(): RawPoint = RawPoint(
     accuracyMetres = accuracyMetres,
     speedMetresPerSecond = null,
 )
-
-class FakeTripDao : TripDao {
-    val rows = mutableListOf<Trip>()
-
-    /** Set to make the next insert fail once, as a full disk would. */
-    var failNextInsert: Exception? = null
-
-    override suspend fun insert(trip: Trip): Long {
-        failNextInsert?.let { failure ->
-            failNextInsert = null
-            throw failure
-        }
-        val id = rows.size + 1L
-        rows += trip.copy(id = id)
-        return id
-    }
-
-    override suspend fun findNewestWithStatus(status: TripStatus): Trip? =
-        rows.lastOrNull { it.status == status }
-
-    override fun observeWithStatus(status: TripStatus): Flow<List<Trip>> =
-        flowOf(rows.filter { it.status == status })
-
-    override fun observeStartedBetween(fromMs: Long, untilMs: Long): Flow<List<Trip>> =
-        flowOf(rows.filter { it.startedAtMs in fromMs until untilMs }.reversed())
-
-    override suspend fun markTruckSeen(tripId: Long, open: TripStatus): Int =
-        change(tripId, open) { it.copy(truckSeen = true) }
-
-    override suspend fun setGrace(
-        tripId: Long,
-        startedAtMs: Long?,
-        deadlineMs: Long?,
-        open: TripStatus,
-    ): Int = change(tripId, open) {
-        it.copy(graceStartedAtMs = startedAtMs, graceDeadlineMs = deadlineMs)
-    }
-
-    override suspend fun close(
-        tripId: Long,
-        closedStatus: TripStatus,
-        endedAtMs: Long,
-        distanceMetres: Double,
-        startLatitude: Double?,
-        startLongitude: Double?,
-        endLatitude: Double?,
-        endLongitude: Double?,
-        open: TripStatus,
-    ): Int = change(tripId, open) {
-        it.copy(
-            status = closedStatus,
-            endedAtMs = endedAtMs,
-            distanceMetres = distanceMetres,
-            startLatitude = startLatitude,
-            startLongitude = startLongitude,
-            endLatitude = endLatitude,
-            endLongitude = endLongitude,
-            graceStartedAtMs = null,
-            graceDeadlineMs = null,
-        )
-    }
-
-    /** Like the real queries: only a row with the expected status is changed. */
-    private fun change(tripId: Long, status: TripStatus, update: (Trip) -> Trip): Int {
-        val index = rows.indexOfFirst { it.id == tripId && it.status == status }
-        if (index < 0) return 0
-        rows[index] = update(rows[index])
-        return 1
-    }
-}
 
 class FakeRawPointDao : RawPointDao {
     val rows = mutableListOf<RawPoint>()

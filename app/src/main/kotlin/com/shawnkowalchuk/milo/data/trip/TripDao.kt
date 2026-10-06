@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.Flow
 /**
  * The SQL for the trips table. Only [TripRepository] calls it.
  *
- * Every update takes the "open" status as a parameter and matches on it, so a late or repeated
- * call can never alter a trip that has already been closed. Each returns the number of rows it
- * changed: 1, or 0 when the trip was not open.
+ * Every update of a trip in progress takes the "open" status as a parameter and matches on it,
+ * so a late or repeated call can never alter a trip that has already been closed. Each returns
+ * the number of rows it changed: 1, or 0 when the trip was not open. The one update of a closed
+ * trip, [recordAddressLookup], matches on "finished" the same way and writes nothing but the
+ * four address columns.
  */
 @Dao
 interface TripDao {
@@ -27,9 +29,7 @@ interface TripDao {
 
     /**
      * Every trip that started in the half-open range from [fromMs] up to, not including,
-     * [untilMs], whatever its status, newest first. The trips table has no index on
-     * `startedAtMs`, so this reads the whole table; at a few thousand rows a year that takes
-     * milliseconds.
+     * [untilMs], whatever its status, newest first. Read through the index on `startedAtMs`.
      */
     @Query(
         "SELECT * FROM trips WHERE startedAtMs >= :fromMs AND startedAtMs < :untilMs " +
@@ -75,5 +75,39 @@ interface TripDao {
         endLatitude: Double?,
         endLongitude: Double?,
         open: TripStatus,
+    ): Int
+
+    /**
+     * The trips with [finished] status that still lack an address and have had fewer than
+     * [maxAttempts] failed lookups, newest first. Open and discarded trips are never returned.
+     */
+    @Query(
+        "SELECT * FROM trips WHERE status = :finished " +
+            "AND (startAddress IS NULL OR endAddress IS NULL) " +
+            "AND addressAttempts < :maxAttempts ORDER BY id DESC",
+    )
+    suspend fun findLackingAddress(finished: TripStatus, maxAttempts: Int): List<Trip>
+
+    /**
+     * Writes what one lookup found. An address that is already stored is kept, whatever is
+     * passed, and a null leaves the column as it is. Nothing but the four address columns is
+     * touched, and only on a trip with [finished] status.
+     *
+     * @param failedAttempts 1 if the lookup left an address of the trip missing, else 0.
+     */
+    @Query(
+        "UPDATE trips SET startAddress = COALESCE(startAddress, :startAddress), " +
+            "endAddress = COALESCE(endAddress, :endAddress), " +
+            "addressAttempts = addressAttempts + :failedAttempts, " +
+            "addressLastAttemptAtMs = :atMs " +
+            "WHERE id = :tripId AND status = :finished",
+    )
+    suspend fun recordAddressLookup(
+        tripId: Long,
+        startAddress: String?,
+        endAddress: String?,
+        failedAttempts: Int,
+        atMs: Long,
+        finished: TripStatus,
     ): Int
 }

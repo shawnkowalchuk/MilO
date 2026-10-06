@@ -4,7 +4,7 @@
 >
 > **How it grows.** A change that adds behaviour only the phone can prove adds its checks here, in the same change. A check is removed only when the behaviour it covers is removed.
 >
-> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG. The screens of work package 3 (checks 52 to 79) have run nowhere at all.
+> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG. The screens of work package 3 (checks 52 to 79) have run nowhere at all, except Trips, which was drawn on an emulator with work package 4. The addresses and the database migration of work package 4 (checks 80 to 86) ran on an emulator only.
 
 ---
 
@@ -12,6 +12,7 @@
 
 - The debug build is installed from the Mac (`./gradlew installDebug`, or Android Studio). HyperOS needs "Install via USB" and "USB debugging (Security settings)" switched on first (FINDINGS_LOG, 2026-10-03).
 - **Never uninstall to fix a problem.** From phase 1 on the build holds real trips (STANDARDS §13).
+- **Before installing the build with the addresses (work package 4), do check 80.** That build changes the database on the phone from version 1 to version 2 the first time it is opened. Check 80 takes a copy of the trips off the phone first.
 - **Set the phone up on MilO's Setup screen** (the bottom bar, third button). It asks for each permission and opens each setting; checks 54 to 66 go through it row by row, and they are the first time that screen runs anywhere. Should the screen fail, the permissions can still be granted by hand. In the phone's settings: Apps, MilO, Permissions: Location set to "Allow all the time" with "Use precise location" on, Nearby devices allowed, and Notifications allowed. Or from the Mac:
 
 ```
@@ -33,6 +34,7 @@ Without Nearby devices no trip starts at all, not even with the Start trip butto
 5. Checks 10 to 30: a trip started by hand. Keep the truck switched off or out of range, except in the checks that name it (17 and 29): now that it is paired, connecting to it starts a trip by itself.
 6. Checks 31 to 51: the truck starts and ends a trip. Checks 36 to 43 switch Autostart off on purpose; switch it back on afterwards.
 7. Checks 69 to 79, in any order.
+8. Check 80 before the build with the addresses is installed, the rest of 80 to 86 after it.
 
 ## Reading the event log
 
@@ -47,7 +49,7 @@ adb exec-out run-as com.shawnkowalchuk.milo cat databases/milo.db-shm > milo.db-
 sqlite3 milo.db "SELECT datetime(atMs/1000,'unixepoch','localtime'), category, message FROM event_log ORDER BY atMs, id;"
 ```
 
-Copy all three files: the newest entries can still be in the `-wal` file. Keep the copies out of the project folder. Android Studio's Database Inspector (App Inspection) shows the same table without copying.
+Copy all three files: the newest entries can still be in the `-wal` file (on the emulator the whole database was in it, and `milo.db` itself held one empty page). Force-stop MilO first if the copy has to be exact, as in check 80: files copied one after the other from a running app may not belong together. Keep the copies out of the project folder. Android Studio's Database Inspector (App Inspection) shows the same table without copying.
 
 The state before and after each trigger is in the `detail` column: add `, detail` to the query to see it.
 
@@ -55,6 +57,7 @@ The trips are in the same file, and the GPS fixes in `points.db` (copy it the sa
 
 ```
 sqlite3 milo.db "SELECT id, datetime(startedAtMs/1000,'unixepoch','localtime'), datetime(endedAtMs/1000,'unixepoch','localtime'), status, startedBy, round(distanceMetres) FROM trips;"
+sqlite3 milo.db "SELECT id, status, startAddress, endAddress, addressAttempts, datetime(addressLastAttemptAtMs/1000,'unixepoch','localtime') FROM trips;"
 sqlite3 points.db "SELECT tripId, count(*), round(avg(accuracyMetres),1) FROM raw_points GROUP BY tripId;"
 ```
 
@@ -313,6 +316,30 @@ After checks 60 to 66, read the Log. For every button that could not open its ow
 | 77 | Switch "Show discarded trips" on. | The discarded trip appears in its day, marked "Discarded … Not counted", its km greyed. The total and the number of trips do not change. | not run |
 | 78 | Press Previous month, then Next month. | A month without trips says "No trips in (month and year)". Next month is greyed out on the current month, and works from an earlier one. Leaving Trips and coming back shows the current month again. | not run |
 | 79 | Start a trip by hand, open Trips, walk or drive a little, end the trip. If it can be arranged: start a trip before midnight and end it after. | While recording: a card "In progress" at the top with the start time and a growing km figure, and the total unchanged. After End trip it moves into its day and the total grows. The trip over midnight is listed once, under the day it started. | not run |
+
+## Work package 4: the database migration and the addresses
+
+**What ran on an emulator** (Android 16, 2026-10-05, FINDINGS_LOG): the migration from version 1 with three trips and 57 log lines in it, a deliberately broken migration (which left every row as it was), the addresses of trips recorded before the update, a trip in progress, and a trip ended in airplane mode. **What only the phone can show:** the migration of the phone's own file, HyperOS's geocoder, and whether a lookup survives the moment the trip service stops.
+
+### Before and after the update: the database
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 80 | **Before installing.** With the old build still on the phone: force-stop MilO (Settings, Apps, MilO, Force stop; no trip in progress), then copy `milo.db`, `milo.db-wal` and `milo.db-shm` to a dated folder outside the project with the three `adb exec-out run-as … cat` lines under "Reading the event log", and `points.db` with its two side files the same way. On the copy: `sqlite3 milo.db "PRAGMA user_version; SELECT count(*) FROM trips; SELECT count(*) FROM event_log;"` and write the three numbers down. Keep a second copy of the folder untouched: `sqlite3` changes the files it opens. | `1`, then the number of trips and of log lines. This copy is what the trips are restored from if anything below goes wrong. | not run |
+| 81 | Install the new build over the old one (`./gradlew installDebug`, or `adb install -r`). Open MilO. Then force-stop it and copy the three files again, into another folder. `sqlite3 milo.db "PRAGMA user_version; PRAGMA integrity_check; SELECT count(*) FROM trips; SELECT max(id) FROM event_log;"` Compare the old columns: `sqlite3 milo.db "SELECT id,startedAtMs,endedAtMs,status,startedBy,truckSeen,graceStartedAtMs,graceDeadlineMs,distanceMetres,startLatitude,startLongitude,endLatitude,endLongitude FROM trips ORDER BY id;"` on the new copy against `SELECT * FROM trips ORDER BY id;` on the copy of check 80 (`diff` the two outputs). | MilO opens on the home screen, with no crash. `2`, `ok`, the same number of trips, more log lines than before. The two outputs are the same, line for line. **If MilO does not open:** do not uninstall and do not clear its data. On the emulator a migration that failed left the file at version 1 with every row in place, and the next start of a corrected build wrote a `CRASH` line "Migration didn't properly handle…" to the log. Copy the three files again, compare them with check 80's, and stop there. | not run |
+
+To put the copy of check 80 back (done once on the emulator, never on the phone, and only for a build that can open version 1): force-stop MilO, then for each of the three files `adb exec-in run-as com.shawnkowalchuk.milo sh -c 'cat > databases/milo.db' < milo.db`, with the file's own name in both places.
+
+### The addresses
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 82 | Straight after check 81, with Wi-Fi or mobile data on: open Trips. Then open Log. | Within a few seconds every finished trip recorded before the update shows "from → to" under its times, in place of "Looking up the addresses…". A discarded trip (switch on) has no such line. Log: one `ADDRESS` line per finished trip, "Trip N: start address found; end address found." **Write down what the yard and one job site are called,** and whether Shawn would recognise them. If the Log says "this phone has no geocoder", HyperOS has none and nothing below can work. | not run |
+| 83 | Start a trip by hand outdoors with data on and open Trips. Drive or walk more than 300 m and end it. | The card "In progress" says "Where it started is not known yet." until the first fix, then "Looking up where it started…" for a moment, then "From (address)". After End trip the trip is in its day with "from → to". Log: `ADDRESS` "Trip N (in progress): start address found." and "Trip N: start address found; end address found." | not run |
+| 84 | Let the truck end a trip by itself (switch off, walk away, wait out the grace period) with the screen off and MilO not open. Ten minutes later open Log, then Trips. | Either an `ADDRESS` line for that trip a second or two after its `TRIP` "finished" line (the lookup ran before HyperOS put MilO to sleep), or none until the moment MilO was opened, or "put off … no network connection" although the phone had data. **Write down which.** In every case the trip has its addresses once Trips has been open for a few seconds. | not run |
+| 85 | Switch airplane mode on. Start a trip by hand, move more than 300 m, end it, open Trips. Then switch airplane mode off, wait for data, leave Trips and come back. | End trip works as always. The row says "Looking up the addresses…". Log: two `ADDRESS` lines and no more, however often Trips is opened: at the first fix "Address lookup put off (trip N has a start): no network connection. Waiting: 0 finished trips and the start of trip N (in progress).", and at End trip "Address lookup put off (trip N is over): no network connection. Waiting: 1 finished trip." (more than 1 if older trips are still waiting). No "Failed attempt". After coming back online and reopening Trips: "from → to", and the log line "start address found; end address found." | not run |
+| 86 | If a trip ever ends somewhere with no address (a field road, a remote site): read its row and the Log over the next two days. | First "(address) → looking up the address…" and a log line "end address none (the geocoder knows no address there). Failed attempt 1 of 4; the next one is at least 2 min away." The later attempts come no sooner than 2 minutes, 1 hour and 1 day apart, each only when a trip ends, MilO starts or Trips is opened. After the fourth: "(address) → no address found" and "this trip is not looked up again." Write down what the geocoder does give for such a place ("Unnamed Road" is an address to it). | not run |
+| 87 | With data on, start a trip by hand and move more than 300 m. Force-stop MilO in mid-trip (Settings, Apps, MilO, Force stop) and leave it for 35 minutes. Open MilO, **do not open Trips**, wait ten seconds, open Log. | `TRIGGER` "process start: picked up the stored state…", `TRIP` "Trip N: finished, … m; ended by STALE_AT_RESTART; …", and straight after it `ADDRESS` "Trip N: start address found; end address found." The pass at process start waits for the trip controller, so the trip is already finished when it looks. Run on stand-ins only (a unit test); never on a phone or an emulator in this form. | not run |
 
 ## Later work packages
 

@@ -88,7 +88,7 @@ Step 4 is kept by the controller, not by the service: an event that would leave 
 
 ### Permissions declared
 
-`BLUETOOTH_CONNECT`, fine, coarse and background location, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`, `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`, `REQUEST_COMPANION_RUN_IN_BACKGROUND`, and `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. Not needed: `BLUETOOTH_SCAN`, exact alarms, internet.
+`BLUETOOTH_CONNECT`, fine, coarse and background location, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`, `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`, `REQUEST_COMPANION_RUN_IN_BACKGROUND`, and `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. Not needed: `BLUETOOTH_SCAN`, exact alarms, internet. One more permission is declared that trip detection does not use: `ACCESS_NETWORK_STATE`, for the address lookup (amendment 26).
 
 All are in the manifest. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` was the last to be added, on 2026-10-05 with the permission checklist (the Setup screen): it only allows MilO to ask for the exemption, and the checklist's battery row is the one place that asks (STANDARDS §12: declare only what built code uses).
 
@@ -137,7 +137,7 @@ Phone screens reach the controller through their ViewModels.
 
 **Open, and assumed for now**
 - A trip that begins before the first unlock after a reboot starts recording at unlock.
-- Reverse geocoding of start and finish addresses arrives in phase 2 with the day view. Phase 1 stores coordinates.
+- Reverse geocoding of start and finish addresses was to arrive in phase 2 with the day view. It was built on 2026-10-05, on its own (amendment 26); the day view is still phase 2.
 
 ## Amendments
 
@@ -180,3 +180,7 @@ Phone screens reach the controller through their ViewModels.
 **2026-10-05, the screens (work package 3).** One point, written into the text above.
 
 25. **`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is declared.** The permission checklist exists as the Setup screen, and its battery row asks for the exemption with Android's own dialog. This closes point 17.
+
+**2026-10-05, the addresses (work package 4).** One point, written into the text above.
+
+26. **Addresses are looked up beside the recording, never inside it, and `ACCESS_NETWORK_STATE` is declared for them.** Reverse geocoding was pulled forward from phase 2. `platform/address/TripAddresses` reads the controller's published state and writes only the address columns of a finished trip, so nothing in this record changes: no trigger, rule or effect knows about addresses. The one addition to the controller's side is that `CurrentTrip` carries the position of the trip's first usable fix. The lookup's pass at process start is asked for through the controller's existing `whenCaughtUp`, so that it follows the reconcile and finds a trip the restart rules have just closed; the controller only runs the callback. The permission lets the lookup ask whether the phone is online before it asks the geocoder; it is granted at install, and MilO still needs no internet permission (APP_ENCYCLOPEDIA, "GPS recording and distance"; FINDINGS_LOG, 2026-10-05).

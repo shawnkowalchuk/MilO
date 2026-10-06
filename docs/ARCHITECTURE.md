@@ -4,7 +4,7 @@
 >
 > **Status:** Living document · **Last updated:** 2026-10-05 · **See also:** ENGINEERING_STANDARDS.md (the rules), APP_ENCYCLOPEDIA.md (how each feature works)
 
-Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing (`TruckPairing`, which the pairing screen calls). The phone UI has five screens behind a bottom navigation bar (`app/MiloNavigation.kt`): Home (the trip in progress, one Start trip / End trip button, and a warning while setup is incomplete), Trips (one month at a time), Setup (the permission checklist, in `feature/setup/` with its rules in `platform/system/`), the truck pairing screen opened from Setup, and Log (the event log). **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. **The screens other than Home have never been drawn anywhere:** they were built and proven with the build and unit tests only (`docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
+Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing (`TruckPairing`, which the pairing screen calls); and the lookup of each trip's start and end address in `platform/address/`. The phone UI has five screens behind a bottom navigation bar (`app/MiloNavigation.kt`): Home (the trip in progress, one Start trip / End trip button, and a warning while setup is incomplete), Trips (one month at a time), Setup (the permission checklist, in `feature/setup/` with its rules in `platform/system/`), the truck pairing screen opened from Setup, and Log (the event log). **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. **The screens other than Home and Trips have never been drawn anywhere:** they were built and proven with the build and unit tests only (`docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79). Trips and the address lookup ran on an emulator, not on the phone (checks 80 to 86). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
 
 ---
 
@@ -100,7 +100,22 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 - **A trip that nothing records is not kept in memory.** If the service is lost and Android will not start it again, or storage fails in mid-event, the worker drops what it holds. The open trip row is the truth, and the next look at storage picks it up or closes it.
 - **Every GPS fix goes through the controller's inbox too**, so fixes are stored in arrival order under the trip that is open at that moment.
 
-**How the shared objects are made.** `app/MiloApplication` is the first code to run in the process, however it was started. It creates one `app/AppContainer`, which builds the databases, the repositories, the settings store, the trip controller, the setup checklist and the opener of settings screens (each lazily, on first use) and owns the application-wide coroutine scope. A screen's ViewModel is given what it needs from the container in `app/MiloNavigation`, so a feature never imports the `app` package. The container decides nothing about storage: it calls the `build...` functions in `data/`, which own every file name and folder. Everything else is handed what it needs through its constructor. There is no Hilt and no global singleton: to see what a class depends on, read its constructor; to see what it is given, read `AppContainer`.
+**How addresses are found.** `platform/address/TripAddresses` stands beside the recording, not inside it:
+
+```
+[ TripController.activity ] --read--> [ TripAddresses ] --asks--> AddressLookup (Geocoder)
+[ a process start, the Trips screen ] --catchUp()--^   |
+                                                       +--writes--> the address columns of a
+                                                                    FINISHED trip, the event log
+```
+
+- It reads the controller's published state and the stored trips, and writes only a finished trip's four address columns, through `TripRepository`. The trip rules, the controller and the service know nothing of it, so a lookup cannot delay the end of a trip and a failed one cannot change a trip.
+- A pass over the trips that are due is asked for with `catchUp`: by `MiloApplication` at process start, by the Trips screen's ViewModel each time the screen comes to the front, and by the class itself when the controller stops showing a trip as in progress. The request at process start is handed to `TripController.whenCaughtUp`, so the pass follows the reconcile: a trip the restart rules close at start is never published as in progress, and only that pass looks it up. This is the one place where the two meet, and the controller still knows nothing of addresses: it runs a callback when its inbox has been worked off. Requests go through a channel that keeps only the newest and one coroutine works them off, so passes never overlap.
+- What is due, how the attempts are spaced and when a trip is given up on are pure functions (`AddressRetry.kt`), shared with the Trips screen so that what the screen says and what the lookup does cannot disagree. Turning a geocoder's answer into one line is another (`AddressLine.kt`).
+- The geocoder is behind the interface `AddressLookup`, and the network check is a plain function handed in, so the whole class runs in unit tests on stand-ins.
+- There is no scheduled job. WorkManager is in the planned stack for work that can wait (section 2), but it is not in the build yet, and the work order for this package put it out of scope; a lookup that failed waits for the next of the occasions above.
+
+**How the shared objects are made.** `app/MiloApplication` is the first code to run in the process, however it was started. It creates one `app/AppContainer`, which builds the databases, the repositories, the settings store, the trip controller, the address lookup, the setup checklist and the opener of settings screens (each lazily, on first use) and owns the application-wide coroutine scope. A screen's ViewModel is given what it needs from the container in `app/MiloNavigation`, so a feature never imports the `app` package. The container decides nothing about storage: it calls the `build...` functions in `data/`, which own every file name and folder. Everything else is handed what it needs through its constructor. There is no Hilt and no global singleton: to see what a class depends on, read its constructor; to see what it is given, read `AppContainer`.
 
 **How the phone screens are reached.** Navigation 3. `app/MiloApp` holds the back stack and frames every screen with the bottom bar; `app/MiloNavigation` shows the screen on top of the back stack and is the only code that knows more than one feature.
 
@@ -166,6 +181,9 @@ data/                # the only layer that touches storage. The two Room databas
 platform/            # the only layer that touches Android system services: Bluetooth,
                      #   companion device, location, notifications, audio, Android Auto
 platform/trip/       # TripController, TripService, GPS recording, notifications, the sound
+platform/address/    # the start and end address of each trip: the geocoder, the passes over
+                     #   the trips that still lack one, the rule for giving up, the one-line
+                     #   form of an address
 platform/bluetooth/  # the triggers: the Bluetooth receiver, the companion service, the boot and
                      #   update receiver; the reading "is the truck connected?"; pairing
 platform/car/        # so far only the watch on Android Auto's connection
@@ -183,13 +201,17 @@ The Android entry points (`MiloApplication` and `MainActivity`) live in `app/`. 
 
 ## 6. Data model
 
-What phase 1 stores is built and described here exactly. Later phases add to it, each change as a Room migration: the phone holds real trips from phase 1 on, so no table is ever dropped and rebuilt. The source of truth for the tables is the schema Room exports to `app/schemas/` at every build; those files are committed.
+What phase 1 stores is built and described here exactly. Later phases add to it, each change as a Room migration: the phone holds real trips from phase 1 on, so no table is ever dropped and rebuilt. The source of truth for the tables is the schema Room exports to `app/schemas/` at every build, one file per version; those files are committed.
+
+**Migrations** are in `data/MiloMigrations.kt`, one step per version, handed to Room by `buildMiloDatabase`. A step only adds. There is no destructive fallback: a version without a step makes the database fail to open, loudly. Room runs a step, checks the result against the tables the code declares and stores the new version number inside one transaction; if the step or the check fails, the whole transaction is rolled back and the file stays at its old version with every row (seen on an emulator, FINDINGS_LOG 2026-10-05). `MiloMigrationsTest` checks each step against the exported schema files: the statements it runs must be exactly what the newer file has more than the older one.
 
 Conventions that hold everywhere: times are wall-clock milliseconds since 1970 unless a column says otherwise; distances are metres (kilometres exist only on screen); a column that holds one of a fixed set of values stores the Kotlin enum's name as text, so a constant can be added freely but never renamed without a migration.
 
-### Main database: `milo.db` (`data/MiloDatabase`, version 1)
+### Main database: `milo.db` (`data/MiloDatabase`, version 2)
 
-**`trips`** (`data/trip/Trip`): one row per trip, open or closed.
+Version 1 was phase 1 as first installed on the phone. Version 2 (2026-10-05) added the four address columns of `trips` and the index on `startedAtMs`.
+
+**`trips`** (`data/trip/Trip`): one row per trip, open or closed, indexed on `startedAtMs`.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -203,8 +225,12 @@ Conventions that hold everywhere: times are wall-clock milliseconds since 1970 u
 | `graceDeadlineMs` | integer, null | When the grace period runs out. Set and cleared together with the column above |
 | `distanceMetres` | real | Written when the trip closes; 0 while open |
 | `startLatitude`, `startLongitude`, `endLatitude`, `endLongitude` | real, null | Written when the trip closes; null if no usable GPS fix was recorded |
+| `startAddress` | text, null | Since version 2. Where the trip started, as one line such as "12 Shop Rd, Edmonton". Null until the geocoder has been asked and has found one. Written only for a `FINISHED` trip, by the address lookup, and never replaced once set |
+| `endAddress` | text, null | Since version 2. Where it ended, on the same terms |
+| `addressAttempts` | integer, default 0 | Since version 2. How many lookups have left an address of this trip missing. At 4 (`MAX_ADDRESS_ATTEMPTS`) the trip is not asked about again |
+| `addressLastAttemptAtMs` | integer, null | Since version 2. When the addresses were last looked up, successfully or not; null if never. The next attempt after a failed one waits 2 minutes, 1 hour, then 1 day from this time |
 
-At most one trip is `OPEN`. The repository enforces it: starting a trip while one is open returns the open one. The Trips screen reads the trips that started in a span of time (`observeTripsStartedBetween`). There is no index on `startedAtMs`, so that reads the whole table, which at a few thousand rows a year takes milliseconds; the index is to be added with the first migration. Not here yet, and added by the phase that builds each: Business or Personal, addresses, the manual or edited flag.
+At most one trip is `OPEN`. The repository enforces it: starting a trip while one is open returns the open one. The Trips screen reads the trips that started in a span of time (`observeTripsStartedBetween`), through the index on `startedAtMs`. The address lookup reads the finished trips that still lack an address (`findTripsLackingAddress`) and writes the four address columns (`recordAddressLookup`), which is the only write to a trip that is no longer open. Not here yet, and added by the phase that builds each: Business or Personal, the manual or edited flag.
 
 **`event_log`** (`data/eventlog/EventLogEntry`), indexed on `atMs`.
 
@@ -212,7 +238,7 @@ At most one trip is `OPEN`. The repository enforces it: starting a trip while on
 |---|---|---|
 | `id` | integer, key | Assigned by the database |
 | `atMs` | integer | When the event happened. A crash or a kill is written at the next start but dated when it happened, so the log is ordered by this column |
-| `category` | text | `PROCESS`, `CRASH`, `ERROR` (a failure that was caught), `TRIGGER` (a trip trigger, with the state before and after in `detail`), `SERVICE`, `GRACE`, `ANDROID_AUTO`, `TRIP`, `LOCATION`, `PAIRING` |
+| `category` | text | `PROCESS`, `CRASH`, `ERROR` (a failure that was caught), `TRIGGER` (a trip trigger, with the state before and after in `detail`), `SERVICE`, `GRACE`, `ANDROID_AUTO`, `TRIP`, `LOCATION`, `PAIRING`, `ADDRESS` (a lookup of a trip's addresses; added with version 2, which needed no change to the table) |
 | `message` | text | One short line |
 | `detail` | text, null | Anything longer, such as a stack trace |
 
@@ -266,7 +292,7 @@ Both files are in the app's standard databases folder. Room keeps three more fil
 
 **A raw point refers to its trip by id only.** SQLite cannot enforce a foreign key across database files, so `tripId` is a plain indexed column. Nothing deletes a trip today (a short trip is marked `DISCARDED`). Any later code that does delete one must delete its points itself, through `RawPointRepository`.
 
-**Repositories are the only way in.** `TripRepository`, `RawPointRepository`, `EventLogRepository`, `SettingsStore` and `CrashFileStore` are the API the rest of the app uses; the DAOs, the DataStore and the files are not touched, or even located, from outside `data/`. Every write to a trip is safe to repeat, and a write to a trip that is no longer open changes nothing.
+**Repositories are the only way in.** `TripRepository`, `RawPointRepository`, `EventLogRepository`, `SettingsStore` and `CrashFileStore` are the API the rest of the app uses; the DAOs, the DataStore and the files are not touched, or even located, from outside `data/`. Every write of the trip rules to a trip is safe to repeat, and one made to a trip that is no longer open changes nothing. The one write to a closed trip is the address lookup's (`recordAddressLookup`), which touches the address columns of a `FINISHED` trip and nothing else. It is the one write that is **not** safe to repeat: every call moves the time of the last attempt, and a call that leaves an address missing counts one more attempt, so it is made once for each lookup and never wrapped in a retry.
 
 ---
 
@@ -287,7 +313,8 @@ None of these is a service of our own. Each is a system or Google component alre
 | Bluetooth (system) | Detecting the truck connecting and disconnecting; reading whether it is connected; hearing Bluetooth itself being switched on or off, for the pairing screen's list | `platform/bluetooth/` | Built, never run against a real connection. Receivers must be exported (section 10) |
 | CompanionDeviceManager (system) | Association with the truck; the system wakes the app on presence | `platform/bluetooth/` | Built; ran on an emulator (Android 16). Behaviour on HyperOS is untested |
 | Fused location (Play services) | GPS fixes during a trip | `platform/trip/LocationRecorder` | Built. A fix every 5 seconds, no cached first position |
-| Geocoder (system) | Start and end addresses | `platform/` | Needs network and has no availability guarantee, so a failed lookup is retried later |
+| Geocoder (system) | Start and end addresses | `platform/address/GeocoderAddressLookup` | Built; ran on an emulator. Needs network, takes no key, has no availability guarantee. A failed lookup is tried again at the next occasion, four times at most. The one place a position leaves the phone |
+| ConnectivityManager (system) | Whether the phone is online, asked before the geocoder is | `platform/address/NetworkStatus` | Needs `ACCESS_NETWORK_STATE`. MilO has no INTERNET permission and opens no connection itself |
 | Android Auto (Car App Library) | The in-truck screen; `CarConnection` keeps a trip open | `platform/car/` | `CarConnection` is built; the screen is not. Distribution risk (section 10) |
 | Activity recognition (Play services) | The phase 2 driving alert | `platform/` | Alert only. It never starts a trip |
 | Gmail | Sending the monthly PDF | `platform/` | An intent opens the draft and Shawn taps send. The app cannot learn whether it was sent |
@@ -340,6 +367,11 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 **Data safety**
 - Auto Backup cap: 25 MB per app, all-or-nothing, silent when exceeded. This is why raw GPS points live in a separate database file (section 6). (`2026-10-03-pdf-email-backup.md`)
 - Signing-key risk: every build for the phone is signed with one dedicated key (`~/keys/milo.jks`, password in the macOS Keychain). A build signed with any other key cannot update the installed app. The only way forward would be an uninstall, which deletes every trip, and Auto Backup then refuses to restore. So the keystore and its password must be backed up off the Mac, and a manual export is the only copy of the trips that does not depend on the key. (`2026-10-03-pdf-email-backup.md`)
+
+**Addresses**
+- Android's geocoder needs a network and promises neither an answer nor a right one; on this phone it is Google Play services. An address is a label, and the stored coordinates stay the record. (`2026-10-03-location-and-car.md`, findings 17 to 20)
+- The research's retry design was a WorkManager job with a network constraint. This build has none (WorkManager is not a dependency yet, and this package was to add none): the lookup runs at process start, when a trip ends and when the Trips screen comes to the front, and checks the network itself. A trip that ends offline therefore waits for one of those occasions. (FINDINGS_LOG, 2026-10-05)
+- When a trip ends by itself the trip service stops, and HyperOS may freeze or kill the process before the geocoder answers. The trip is then caught up at the next occasion. Not measured on the phone.
 
 **Recording**
 - A fused location request combines interval and distance as AND, so "every 5 seconds or 10 m" cannot be asked for. The request is a fix every 5 seconds, and the 10 m rule is applied in MilO's own distance calculation. (`2026-10-03-location-and-car.md`)

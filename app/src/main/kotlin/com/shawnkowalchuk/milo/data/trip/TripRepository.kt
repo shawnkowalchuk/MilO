@@ -8,10 +8,13 @@ import kotlinx.coroutines.flow.Flow
 /**
  * The only way the rest of the app reads or writes trips.
  *
- * The writes mirror the effects of the trip rules (`core/trip/TripEffect`) one for one, and each
- * is safe to repeat: starting twice gives the same trip, and changing a trip that is no longer
- * open changes nothing. The functions that change an open trip return false in that case, so
- * the caller can write the surprise to the event log.
+ * The writes to an open trip mirror the effects of the trip rules (`core/trip/TripEffect`) one
+ * for one, and each is safe to repeat: starting twice gives the same trip, and changing a trip
+ * that is no longer open changes nothing. The functions that change an open trip return false
+ * in that case, so the caller can write the surprise to the event log.
+ *
+ * The one write that is not safe to repeat is [recordAddressLookup], the only write to a trip
+ * that has closed: every call counts as a lookup of its own.
  */
 class TripRepository(private val dao: TripDao) {
     /** The trip being recorded or waiting out its grace period, or null when idle. */
@@ -65,5 +68,42 @@ class TripRepository(private val dao: TripDao) {
         endLatitude = closed.end?.latitude,
         endLongitude = closed.end?.longitude,
         open = TripStatus.OPEN,
+    ) == 1
+
+    /**
+     * The finished trips that still lack a start or an end address and have had fewer than
+     * [maxAttempts] failed lookups, newest first. A discarded trip is never among them: it is
+     * not looked up.
+     */
+    suspend fun findTripsLackingAddress(maxAttempts: Int): List<Trip> =
+        dao.findLackingAddress(TripStatus.FINISHED, maxAttempts)
+
+    /**
+     * Stores the outcome of one address lookup on a finished trip. It writes the address
+     * columns only: whatever happens here, the trip's times, distance and positions stay as
+     * they were. An address that is already stored is never replaced.
+     *
+     * Call it once for each lookup, and never again to be sure: every call moves the time of
+     * the last attempt to [atMs], and with [stillLacking] counts one more failed attempt.
+     *
+     * @param startAddress the start address that was found, or null if none was.
+     * @param endAddress the end address that was found, or null if none was.
+     * @param stillLacking true if the trip is still without one of its addresses after this
+     * lookup. It is counted as a failed attempt.
+     * @return false if the trip is not a finished one, in which case nothing was written.
+     */
+    suspend fun recordAddressLookup(
+        tripId: Long,
+        startAddress: String?,
+        endAddress: String?,
+        stillLacking: Boolean,
+        atMs: Long,
+    ): Boolean = dao.recordAddressLookup(
+        tripId = tripId,
+        startAddress = startAddress,
+        endAddress = endAddress,
+        failedAttempts = if (stillLacking) 1 else 0,
+        atMs = atMs,
+        finished = TripStatus.FINISHED,
     ) == 1
 }

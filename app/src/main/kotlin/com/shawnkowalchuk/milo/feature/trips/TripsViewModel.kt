@@ -6,6 +6,7 @@ import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.YearMonth
 import java.time.ZoneId
@@ -47,12 +48,17 @@ data class TripsUiState(
  *
  * @param tripActivity the trip controller's state, for the running distance of a trip in
  * progress.
+ * @param openTripStart where the trip in progress started, from the address lookup.
+ * @param lookUpAddresses asks for the addresses that finished trips still lack. Called each
+ * time the screen comes to the front; a plain function, like the ones for navigation.
  * @param clock and [zone] are read again each time the screen comes to the front: the phone can
  * cross midnight, the end of a month or a time zone while MilO is open.
  */
 class TripsViewModel(
     private val trips: TripRepository,
     tripActivity: StateFlow<TripActivity>,
+    openTripStart: StateFlow<OpenTripStart?>,
+    private val lookUpAddresses: () -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
 ) : ViewModel() {
@@ -84,7 +90,7 @@ class TripsViewModel(
             }
 
     val state: StateFlow<TripsUiState> =
-        combine(choice, monthTrips, tripActivity) { chosen, read, activity ->
+        combine(choice, monthTrips, tripActivity, openTripStart) { chosen, read, activity, start ->
             chosen.toUiState(
                 // Right after a step the trips in hand are still the previous month's. They are
                 // not shown under the new month's name: the screen says it is reading.
@@ -96,6 +102,7 @@ class TripsViewModel(
                             showDiscarded = chosen.showDiscarded,
                             liveTripId = activity.trip?.tripId,
                             liveDistanceMetres = activity.trip?.distanceMetres,
+                            liveStart = start,
                         )
                     } else {
                         null
@@ -119,8 +126,13 @@ class TripsViewModel(
         choice.update { it.copy(showDiscarded = show) }
     }
 
-    /** Works out again which month is the current one. The month on screen stays where it is. */
+    /**
+     * Works out again which month is the current one; the month on screen stays where it is.
+     * Also has the missing addresses looked up: this screen is where they are read, and the
+     * phone may have had no network when the trips ended.
+     */
     fun onCameToFront() {
+        lookUpAddresses()
         val now = openingChoice()
         choice.update {
             it.copy(current = now.current, zone = now.zone, shown = minOf(it.shown, now.current))

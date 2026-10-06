@@ -23,6 +23,9 @@ data class TripActivity(val trip: CurrentTrip? = null, val startFailure: StartFa
  * truck disconnected is cut off.
  * @param waitingForTruck true while the grace period runs: the truck has gone and the trip ends
  * unless it comes back.
+ * @param startLatitude where the trip started: its first usable GPS fix, with [startLongitude].
+ * Null until there is one. The stored row has no position until the trip closes, so this is
+ * the only place the start of a trip in progress can be read (the address lookup does).
  */
 data class CurrentTrip(
     val tripId: Long,
@@ -30,6 +33,8 @@ data class CurrentTrip(
     val startedBy: TripStartCause,
     val distanceMetres: Double,
     val waitingForTruck: Boolean,
+    val startLatitude: Double? = null,
+    val startLongitude: Double? = null,
 )
 
 /**
@@ -60,6 +65,8 @@ internal fun tripActivityOf(
                 startedBy = open.startedBy,
                 distanceMetres = open.progress.distance.metres,
                 waitingForTruck = trip.grace != null,
+                startLatitude = open.progress.distance.firstAccepted?.latitude,
+                startLongitude = open.progress.distance.firstAccepted?.longitude,
             ),
         startFailure = startFailure,
     )

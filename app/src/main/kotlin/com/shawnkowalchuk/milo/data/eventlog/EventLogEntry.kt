@@ -57,4 +57,7 @@ enum class EventCategory {
 
     /** The truck being paired, and each check that Android still watches for it. */
     PAIRING,
+
+    /** A lookup of a trip's start and end address: what was found, or why nothing was. */
+    ADDRESS,
 }
