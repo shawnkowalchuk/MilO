@@ -215,7 +215,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 **No password, API key, token, or secret is ever written into source code, a script, or anything committed to git.** Absolute. A secret committed once lives in git history forever, even after you delete it.
 
 - **This app has no secrets.** No backend, no accounts, no API keys, so no `.env` and nothing to inject.
-- **The one future secret is a signing keystore.** Today the build uses the standard debug keystore and the repo has no signing config. A dedicated keystore and its passwords stay outside git.
+- **The one secret is the signing keystore and its password.** The keystore is `~/keys/milo.jks`, outside the repo. Its password is in the macOS Keychain under the name `milo-keystore` and nowhere else; the build reads it from there (`app/build.gradle.kts`). Both must be backed up off the Mac: without them MilO can only be reinstalled by wiping its trips. If the keystore exists and the Keychain entry is missing, the build fails with instructions. Where there is no keystore at all (CI, a fresh clone) the build uses the throwaway debug key, and that build must never be installed over the real one.
 - **If a secret is ever added,** it is prompted for or injected at runtime, never written into a script, and a missing one fails loudly at startup.
 - **Secret-scanning (gitleaks)** in the pre-commit hook and in CI.
 

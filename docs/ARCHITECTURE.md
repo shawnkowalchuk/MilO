@@ -241,7 +241,7 @@ No Sentry, no analytics, no API keys.
 
 | Environment | Backend project | Used for | URL / build channel |
 |---|---|---|---|
-| The phone | None | Everything: development, testing and Shawn's real trips | Debug build, standard debug keystore, installed from Android Studio or with `./gradlew installDebug` |
+| The phone | None | Everything: development, testing and Shawn's real trips | Debug build signed with the dedicated key in `~/keys/milo.jks`, installed from Android Studio or with `./gradlew installDebug` |
 
 There is one environment because there is no backend to separate (STANDARDS §13). The build on the phone holds real trip data, so an uninstall is data loss.
 
@@ -271,7 +271,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 
 **Data safety**
 - Auto Backup cap: 25 MB per app, all-or-nothing, silent when exceeded. This is why raw GPS points live in a separate database file (section 6). (`2026-10-03-pdf-email-backup.md`)
-- Signing-key risk: the debug keystore is generated per Mac. A build signed with a different key cannot update the installed app. The only way forward is an uninstall, which deletes every trip, and Auto Backup then refuses to restore. A manual export is the only copy that does not depend on the key. (`2026-10-03-pdf-email-backup.md`)
+- Signing-key risk: every build for the phone is signed with one dedicated key (`~/keys/milo.jks`, password in the macOS Keychain). A build signed with any other key cannot update the installed app. The only way forward would be an uninstall, which deletes every trip, and Auto Backup then refuses to restore. So the keystore and its password must be backed up off the Mac, and a manual export is the only copy of the trips that does not depend on the key. (`2026-10-03-pdf-email-backup.md`)
 
 **Recording**
 - A fused location request combines interval and distance as AND, so "every 5 seconds or 10 m" cannot be asked for. The request is a fix every 5 seconds, and the 10 m rule is applied in MilO's own distance calculation. (`2026-10-03-location-and-car.md`)

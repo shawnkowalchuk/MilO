@@ -5,6 +5,57 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// --- Signing ----------------------------------------------------------------------------------
+// Every build that goes on the phone is signed with one dedicated key, kept outside this
+// repository. Android refuses to update an app whose signature has changed, and refuses to
+// restore its backup too, so losing or changing the key means wiping every trip.
+// (docs/ENGINEERING_STANDARDS.md section 12.)
+//
+// Where the key is absent (GitHub's CI, a fresh clone) the build falls back to the throwaway
+// debug key. Those builds are never installed over the real one.
+val miloKeystore: File =
+    file(
+        providers
+            .gradleProperty("milo.keystore.file")
+            .getOrElse("${providers.systemProperty("user.home").get()}/keys/milo.jks"),
+    )
+
+// The name of the macOS Keychain entry that holds the keystore's password.
+val miloKeychainEntry = "milo-keystore"
+
+// Reads the keystore password from the macOS Keychain. It is asked for only when the keystore
+// exists, so this never runs on CI, where there is no `security` command.
+fun readKeystorePassword(): String {
+    val password =
+        providers
+            .exec {
+                commandLine(
+                    "security",
+                    "find-generic-password",
+                    "-a",
+                    providers.systemProperty("user.name").get(),
+                    "-s",
+                    miloKeychainEntry,
+                    "-w",
+                )
+                // A missing entry must reach the clear message below, not a raw exit code.
+                isIgnoreExitValue = true
+            }.standardOutput
+            .asText
+            .get()
+            .trim()
+    if (password.isEmpty()) {
+        throw GradleException(
+            "MilO's signing keystore exists at $miloKeystore, but the macOS Keychain has no " +
+                "password for it under the name \"$miloKeychainEntry\". Add it with:\n" +
+                "  security add-generic-password -U -a \"\$USER\" -s $miloKeychainEntry -w\n" +
+                "A missing password stops the build on purpose: a build signed with any other " +
+                "key could not update the app on the phone.",
+        )
+    }
+    return password
+}
+
 room3 {
     // Room writes the tables of each database version to app/schemas as JSON. The folder is
     // committed: the phone holds real trips from phase 1 on, so every later change to a table
@@ -26,6 +77,34 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+    }
+
+    signingConfigs {
+        if (miloKeystore.exists()) {
+            create("milo") {
+                val password = readKeystorePassword()
+                storeFile = miloKeystore
+                storePassword = password
+                keyAlias = "milo"
+                // A PKCS12 keystore has one password for the store and the key inside it.
+                keyPassword = password
+            }
+        } else {
+            logger.lifecycle(
+                "MilO: no signing keystore at $miloKeystore, so this build is signed with the " +
+                    "throwaway debug key. Do not install it over a build signed with the real key.",
+            )
+        }
+    }
+
+    buildTypes {
+        // Android Studio's Run button installs the debug build, so that is the build that must
+        // carry the real key. Release is signed the same way for when it is first needed.
+        val miloSigning = signingConfigs.findByName("milo")
+        if (miloSigning != null) {
+            getByName("debug") { signingConfig = miloSigning }
+            getByName("release") { signingConfig = miloSigning }
+        }
     }
 
     compileOptions {

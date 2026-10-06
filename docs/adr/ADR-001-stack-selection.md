@@ -31,7 +31,7 @@ Constraints that shaped the choices:
 - minSdk 31, compileSdk 37, targetSdk 37. Android 17 (API 37) is the newest stable platform, and the current AndroidX releases require compileSdk 37 (V27, V28).
 - Feature-first packages inside the one module: `app/`, `feature/<name>/`, `core/designsystem/`, `core/util/`, `data/`, `platform/`. The layout and its rules are in ENGINEERING_STANDARDS §3.
 - Manual dependency injection: an `AppContainer` created by the `Application` class.
-- Signing: the standard debug keystore for now. No signing config in the repo.
+- Signing: the standard debug keystore for now. No signing config in the repo. *(Superseded on 2026-10-05: builds for the phone are signed with a dedicated key outside the repo. See ENGINEERING_STANDARDS §12 and the findings log.)*
 
 ### Toolchain
 

@@ -22,6 +22,17 @@
 
 ## Log
 
+### 2026-10-05
+
+**`[CHANGE]` Builds for the phone are signed with a dedicated key**
+Shawn created `~/keys/milo.jks` (PKCS12, alias `milo`) and stored its password in the macOS Keychain as `milo-keystore`. `app/build.gradle.kts` signs the debug and release builds with it whenever the keystore exists, reading the password from the Keychain at configuration time. Debug is signed too because Android Studio's Run button installs the debug build, and that is the build that will hold the real trips. Checked: the APK's signer is the new key; a keystore without a Keychain entry fails the build with instructions; no keystore falls back to the debug key with a warning, which is what CI gets.
+- **Why the Keychain and not a `keystore.properties` file:** STANDARDS §12 says a secret is prompted for or injected, never written into a file. After a signed build, a search of the build output and of Gradle's configuration cache for the password found nothing in plain text.
+- **What the Keychain does not protect against:** the entry was created with the `security` tool, so any program running as Shawn can read it the same way without a prompt. It keeps the password out of files, backups and git, not away from other software on the Mac.
+- **Any build installed before this change was signed with the debug key** and cannot be updated in place. On the emulator that means one uninstall. Nothing had been installed on the phone yet.
+- **The key was made twice.** The first keystore and Keychain entry never matched, because the hidden password prompts in the app's terminal pane did not receive what was typed. If a password ever has to be re-entered, check afterwards that it opens the keystore: `keytool -list -keystore ~/keys/milo.jks`.
+
+---
+
 ### 2026-10-03
 
 **`[CHANGE]` Pre-commit hook switched on; CI proven on GitHub**
