@@ -77,9 +77,9 @@ class TripMonthCategoryTest {
                 ),
             )
 
-        assertEquals(Tally(2, 20_500.0), month.totals.business)
-        assertEquals(Tally(2, 45_000.0), month.totals.personal)
-        assertEquals(Tally(0, 0.0), month.totals.unsorted)
+        assertEquals(Tally(2, 205), month.totals.business)
+        assertEquals(Tally(2, 450), month.totals.personal)
+        assertEquals(Tally(0, 0), month.totals.unsorted)
         // Every finished trip, for the line that says a trip can be tapped.
         assertEquals(4, month.tripCount)
     }
@@ -88,9 +88,9 @@ class TripMonthCategoryTest {
     fun `a finished trip that is not sorted yet is in neither total`() {
         val month = summary(listOf(trip("2026-10-05T14:00:00Z", 12_300.0, category = null)))
 
-        assertEquals(Tally(0, 0.0), month.totals.business)
-        assertEquals(Tally(0, 0.0), month.totals.personal)
-        assertEquals(Tally(1, 12_300.0), month.totals.unsorted)
+        assertEquals(Tally(0, 0), month.totals.business)
+        assertEquals(Tally(0, 0), month.totals.personal)
+        assertEquals(Tally(1, 123), month.totals.unsorted)
     }
 
     // ---- A day's heading --------------------------------------------------------------------------
@@ -112,10 +112,10 @@ class TripMonthCategoryTest {
         val (saturday, monday) = month.days
         assertEquals(LocalDate.of(2026, 10, 5), monday.date)
         assertEquals(3, monday.sessionCount)
-        assertEquals(20_500.0, monday.businessMetres, 0.0)
+        assertEquals(205, monday.businessTenths)
         assertEquals(LocalDate.of(2026, 10, 10), saturday.date)
         assertEquals(1, saturday.sessionCount)
-        assertEquals(0.0, saturday.businessMetres, 0.0)
+        assertEquals(0, saturday.businessTenths)
     }
 
     @Test
@@ -130,7 +130,7 @@ class TripMonthCategoryTest {
         for (shown in listOf(false, true)) {
             val day = summary(trips, showLeftOut = shown).days.single()
             assertEquals(1, day.sessionCount)
-            assertEquals(12_300.0, day.businessMetres, 0.0)
+            assertEquals(123, day.businessTenths)
         }
     }
 
@@ -148,7 +148,7 @@ class TripMonthCategoryTest {
         val day = summary(listOf(ignored), showLeftOut = true).days.single()
 
         assertEquals(0, day.sessionCount)
-        assertEquals(0.0, day.businessMetres, 0.0)
+        assertEquals(0, day.businessTenths)
     }
 
     // ---- What a row says --------------------------------------------------------------------------

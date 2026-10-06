@@ -212,11 +212,13 @@ internal fun Quiet(text: String) {
  * A text button at the end of its line, where the buttons of a `StatusRow` sit too. The row
  * takes the card's whole width: a card is only as wide inside as its widest line, and with two
  * short lines above it the button would otherwise sit in the middle.
+ *
+ * @param enabled false greys the button out while what it does has to wait.
  */
 @Composable
-internal fun EndButton(text: String, onClick: () -> Unit) {
+internal fun EndButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = onClick) {
+        TextButton(onClick = onClick, enabled = enabled) {
             Text(text = text)
         }
     }

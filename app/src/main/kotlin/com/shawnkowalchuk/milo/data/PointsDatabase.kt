@@ -7,12 +7,15 @@ import androidx.room3.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.point.RawPointDao
+import com.shawnkowalchuk.milo.data.transfer.PointsTransferDao
 import kotlinx.coroutines.Dispatchers
 
 /**
- * The file name of the raw points database. Phase 4's backup rules must exclude this file from
- * cloud backup by name, together with the three files Room keeps beside it: `points.db-wal`,
- * `points.db-shm` and `points.db.lck`.
+ * The file name of the raw points database. The backup rules
+ * (`res/xml/data_extraction_rules.xml`) keep this file out of cloud backup by this name,
+ * together with the three files Room keeps beside it: `points.db-wal`, `points.db-shm` and
+ * `points.db.lck`. Renaming it here without renaming it there would put the points into the
+ * cloud backup, and past its 25 MB limit nothing at all is backed up.
  */
 const val POINTS_DATABASE_FILE = "points.db"
 
@@ -28,6 +31,9 @@ const val POINTS_DATABASE_FILE = "points.db"
 @Database(entities = [RawPoint::class], version = 1)
 abstract class PointsDatabase : RoomDatabase() {
     abstract fun rawPointDao(): RawPointDao
+
+    /** For an export and an import only: it can remove raw points. */
+    abstract fun pointsTransferDao(): PointsTransferDao
 }
 
 /** Builds the raw points database. Called once, by the `AppContainer`. No destructive fallback. */

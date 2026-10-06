@@ -1,37 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Nothing leaves the phone yet: every storage area is excluded from both cloud backup and
-    phone-to-phone transfer. See the comment in AndroidManifest.xml for the reason.
+    What Android's backup takes of MilO's files, and what it leaves. Two cases, with different
+    rules: a backup to Shawn's Google account ("cloud-backup"), and a direct transfer from one
+    phone to another when a new phone is set up ("device-transfer").
 
-    The device_ domains are the same four areas in device-protected storage, the part of the
-    phone an app can read after a reboot before the first unlock. Nothing is stored there today.
-    They are listed so the first sentence stays true if that changes.
+    EXCLUDE ELEMENTS ONLY. With no include element Android takes everything of the app that
+    is not excluded here; a single include element switches that default off and takes only
+    what is included. That matters most for the main database: Room keeps its newest changes
+    in a second file, milo.db-wal, until it moves them into milo.db. A rule that included
+    "milo.db" by name would leave the -wal file behind, and every trip that was still in it
+    would be missing after a restore. So nothing names the main database at all: it is taken
+    because it is not excluded, together with its -wal file.
 
-    Phase 4 replaces this file with real rules (trips and settings backed up, raw GPS points
-    kept out of the cloud). Use exclude elements only when that happens: a single include
-    element silently switches off the "everything else is included" default.
+    What is taken, in both cases:
+      databases/milo.db (+ -wal)   the trips, the sent reports and the event log
+      files/datastore/             the settings (a DataStore file)
+
+    What is never taken, in either case:
+      - no_backup/                 Android never takes this folder. It holds the crash files,
+                                   MilO's copy of a chosen trip-start sound, the notes of the
+                                   backup agent, the safety copies before an import and a file
+                                   that is being imported. Each is about this phone, or too
+                                   large for the cloud's 25 MB.
+      - cache/                     Android never takes it either: the report files, and the
+                                   event log as a text file.
+      - the -shm and .lck files beside each database, below. Both are working files of one
+        running process: SQLite builds the -shm file again from the -wal file when a database
+        is opened, and the .lck file is Room's own lock. Neither holds data.
+      - files/profileInstalled     written by Android's profile installer about this install.
+
+    The raw GPS points (databases/points.db) are the one difference between the two cases:
+
+      cloud-backup     EXCLUDED. A fix every five seconds is some 25 to 60 MB a year, and the
+                       cloud backup takes NOTHING AT ALL from an app whose files are over
+                       25 MB, without a word to anyone. The points must never be what pushes
+                       the trips out of the backup. All four files of the database are
+                       excluded together: a -wal file restored beside a new, empty points.db
+                       would be read as that database's own log and corrupt it.
+      device-transfer  INCLUDED. A transfer has a limit of 2 GB, and a new phone should have
+                       the tracks of the old one.
+
+    The file names are those of data/MiloDatabase.kt and data/PointsDatabase.kt. A database
+    that is renamed there has to be renamed here.
+
+    The device_ domains (device-protected storage, readable before the first unlock after a
+    reboot) are not listed: MilO stores nothing there.
+
+    No disableIfNoEncryptionCapabilities: with it, a phone without a screen lock would not be
+    backed up at all, and Android says nothing about that either. With a screen lock set, the
+    cloud backup is encrypted with it in any case.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
-        <exclude domain="device_root" path="." />
-        <exclude domain="device_file" path="." />
-        <exclude domain="device_database" path="." />
-        <exclude domain="device_sharedpref" path="." />
+        <exclude domain="database" path="points.db" />
+        <exclude domain="database" path="points.db-wal" />
+        <exclude domain="database" path="points.db-shm" />
+        <exclude domain="database" path="points.db.lck" />
+        <exclude domain="database" path="milo.db-shm" />
+        <exclude domain="database" path="milo.db.lck" />
+        <exclude domain="file" path="profileInstalled" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
-        <exclude domain="device_root" path="." />
-        <exclude domain="device_file" path="." />
-        <exclude domain="device_database" path="." />
-        <exclude domain="device_sharedpref" path="." />
+        <exclude domain="database" path="points.db-shm" />
+        <exclude domain="database" path="points.db.lck" />
+        <exclude domain="database" path="milo.db-shm" />
+        <exclude domain="database" path="milo.db.lck" />
+        <exclude domain="file" path="profileInstalled" />
     </device-transfer>
 </data-extraction-rules>

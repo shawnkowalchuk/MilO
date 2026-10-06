@@ -196,13 +196,42 @@ class FakeEventLogDao : EventLogDao {
     /** Safe to read from a test thread while the controller's worker is still writing. */
     val entries = CopyOnWriteArrayList<EventLogEntry>()
 
+    private var inserted = 0L
+
+    /** Each line gets the next id, as the table gives it, so that lines can be told apart. */
     override suspend fun insert(entry: EventLogEntry): Long {
-        entries += entry
-        return entries.size.toLong()
+        val id = ++inserted
+        entries += entry.copy(id = id)
+        return id
     }
 
     override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> =
-        flowOf(entries.sortedByDescending { it.atMs }.take(limit))
+        flowOf(newestFirst().take(limit))
+
+    override fun observeNewestOf(category: EventCategory, limit: Int): Flow<List<EventLogEntry>> =
+        flowOf(newestFirst().filter { it.category == category }.take(limit))
+
+    override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) = entries
+        .sortedWith(compareBy<EventLogEntry> { it.atMs }.thenBy { it.id })
+        .filter { it.atMs > afterAtMs || (it.atMs == afterAtMs && it.id > afterId) }
+        .take(limit)
+
+    override suspend fun count(): Int = entries.size
+
+    override suspend fun atMsOfEntryBehind(newerEntries: Int): Long? =
+        newestFirst().getOrNull(newerEntries)?.atMs
+
+    override suspend fun deleteOlderThan(beforeMs: Long): Int {
+        val old = entries.filter { it.atMs < beforeMs }
+        entries.removeAll(old)
+        return old.size
+    }
+
+    private fun newestFirst(): List<EventLogEntry> = entries.sortedWith(
+        compareByDescending<EventLogEntry> {
+            it.atMs
+        }.thenByDescending { it.id },
+    )
 }
 
 class FakeSettingsFile : DataStore<Preferences> {

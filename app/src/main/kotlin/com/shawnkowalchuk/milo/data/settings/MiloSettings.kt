@@ -33,9 +33,9 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Five fields are not settings Shawn chooses: [lastDrivingAlertAtMs] and the last four. They are
- * small pieces of state that must outlive the process, and the settings store is where such
- * values live.
+ * Seven fields are not settings Shawn chooses: [lastDrivingAlertAtMs], [reminderShown],
+ * [lastExport] and the last four. They are small pieces of state that must outlive the process,
+ * and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -68,6 +68,14 @@ enum class ConfirmedStep(val key: String) {
  * or null while it is not set. MilO itself sends nothing.
  * @param reportHandOver the report that was handed to the email app and not answered for
  * yet, or null when no question is waiting. Not a setting either: see [ReportHandOver].
+ * @param reminderEnabled whether MilO reminds Shawn, with a notification, that last month's
+ * report has not been sent.
+ * @param reminderDay the day of the month from which it does so, 1 to 31. In a month with
+ * fewer days it is that month's last day.
+ * @param reminderShown the month the reminder was last shown for and the day it was shown on,
+ * or null if it never was. Not a setting: see [ReminderShown].
+ * @param lastExport when all of MilO's data was last written to an export file, or null if it
+ * never was. Not a setting: see [LastExport].
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -94,6 +102,10 @@ data class MiloSettings(
     val reportVehicle: String? = null,
     val accountantEmail: String? = null,
     val reportHandOver: ReportHandOver? = null,
+    val reminderEnabled: Boolean = true,
+    val reminderDay: Int = DEFAULT_REMINDER_DAY,
+    val reminderShown: ReminderShown? = null,
+    val lastExport: LastExport? = null,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

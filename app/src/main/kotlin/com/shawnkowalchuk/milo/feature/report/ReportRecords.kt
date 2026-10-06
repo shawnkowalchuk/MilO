@@ -1,11 +1,12 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
-import com.shawnkowalchuk.milo.core.report.formatTenths
-import com.shawnkowalchuk.milo.core.report.metresOfTenths
-import com.shawnkowalchuk.milo.core.report.tenthsOfAKilometre
+import com.shawnkowalchuk.milo.core.util.formatTenths
+import com.shawnkowalchuk.milo.core.util.metresOfTenths
+import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
+import com.shawnkowalchuk.milo.data.report.RemovedReport
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.report.SentReportRepository
@@ -130,6 +131,37 @@ class ReportRecords(
         )
     }
 
+    /**
+     * Shawn removed a report from the list of sent reports, because it was recorded by mistake.
+     * The row is deleted and nothing else is written; a month whose only report it was is "not
+     * submitted" again by that alone. One line goes to the event log.
+     *
+     * @return false if nothing was removed: storage failed, or the list no longer holds the
+     * report. The event log says which.
+     */
+    suspend fun removed(id: Long): Boolean {
+        val removed =
+            try {
+                sent.remove(id)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                // Storage failed, whatever it threw. Left alone, the exception would end the
+                // process, and the trip service runs in it.
+                failed("Removing a report from the list of sent reports", failure)
+                return false
+            }
+        if (removed == null) {
+            log(
+                "Remove refused on the Report screen: the list of sent reports holds no " +
+                    "report with the id $id. Nothing changed",
+            )
+            return false
+        }
+        log(removedText(removed))
+        return true
+    }
+
     /** Something about a report failed and was caught. */
     suspend fun failed(what: String, failure: Exception) {
         eventLog.add(clock(), EventCategory.ERROR, "$what failed", failure.stackTraceToString())
@@ -157,6 +189,34 @@ internal fun sentText(stored: SentReport): String {
     val total = figures(stored.tripCount, tenthsOfAKilometre(stored.distanceMetres))
     return "Report for ${stored.period.inLogWords()} recorded as sent, on Shawn's word: " +
         "$which, $total. $effect"
+}
+
+/** The event-log line for a report that was removed from the list of sent reports. */
+internal fun removedText(removed: RemovedReport): String {
+    val report = removed.report
+    val which =
+        if (report.revision == 0) {
+            "the first report for this period"
+        } else {
+            "revision ${report.revision}"
+        }
+    val left = removed.leftForPeriod
+    val effect =
+        when {
+            report.kind == SentReportKind.RANGE -> "A date range marked no month as submitted"
+
+            left.isEmpty() -> "The month is no longer marked as submitted"
+
+            else ->
+                "The month stays marked as submitted: ${left.size} other report(s) for it " +
+                    "are still in the list (revision " +
+                    "${left.map { it.revision }.sorted().joinToString(", ")}), and keep " +
+                    "their numbers"
+        }
+    val total = figures(report.tripCount, tenthsOfAKilometre(report.distanceMetres))
+    return "Sent report removed from the list by hand, on the Report screen: " +
+        "${report.period.inLogWords()}, $which, $total. $effect. No trip and no email was " +
+        "touched"
 }
 
 /**

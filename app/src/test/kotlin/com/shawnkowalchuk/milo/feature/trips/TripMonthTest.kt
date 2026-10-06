@@ -72,7 +72,7 @@ class TripMonthTest {
 
         val month = summary(trips)
 
-        assertEquals(20_500.0, month.totals.business.metres, 0.0)
+        assertEquals(205, month.totals.business.tenths)
         assertEquals(2, month.tripCount)
     }
 
@@ -95,7 +95,7 @@ class TripMonthTest {
         assertEquals(0, shown.hiddenLeftOut)
 
         for (month in listOf(hidden, shown)) {
-            assertEquals(12_300.0, month.totals.business.metres, 0.0)
+            assertEquals(123, month.totals.business.tenths)
             assertEquals(1, month.tripCount)
         }
     }
@@ -119,7 +119,7 @@ class TripMonthTest {
         val month = summary(emptyList())
 
         assertTrue(month.isEmpty)
-        assertEquals(0.0, month.totals.business.metres, 0.0)
+        assertEquals(0, month.totals.business.tenths)
         assertEquals(0, month.tripCount)
         assertEquals(0, month.hiddenLeftOut)
     }
@@ -164,7 +164,7 @@ class TripMonthTest {
         val month = summary(listOf(overMidnight))
 
         assertEquals(listOf(LocalDate.of(2026, 10, 5)), month.days.map { it.date })
-        assertEquals(30_000.0, month.totals.business.metres, 0.0)
+        assertEquals(300, month.totals.business.tenths)
     }
 
     @Test
@@ -198,7 +198,7 @@ class TripMonthTest {
         assertNull(inProgress.endedAtMs)
         // Not among the day's trips, and not in the total until it ends.
         assertEquals(listOf(finished.id), month.days.single().trips.map { it.id })
-        assertEquals(12_300.0, month.totals.business.metres, 0.0)
+        assertEquals(123, month.totals.business.tenths)
         assertEquals(1, month.tripCount)
         assertFalse(month.isEmpty)
     }

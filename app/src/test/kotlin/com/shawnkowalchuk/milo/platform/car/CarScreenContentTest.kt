@@ -200,12 +200,21 @@ class CarScreenContentTest {
     }
 
     @Test
-    fun `today shows the count and the kilometres rounded once`() {
+    fun `today shows the count and the kilometres, added up trip by trip as each is printed`() {
         val today = todayOf(20_000.0, 20_000.0, 1_249.0)
 
         val shown = carContent(TripActivity(), today = today)
 
         assertEquals(TodayFigures(tripCount = 3, kilometres = "41.2"), shown.today)
+    }
+
+    @Test
+    fun `today's kilometres are the sum the phone's Today card and the report would show`() {
+        // Three trips of 1,149 m are each 1.1 km on the phone and on the report, so 3.3 km.
+        // Their metres added up and rounded once would be 3.4.
+        val shown = carContent(TripActivity(), today = todayOf(1_149.0, 1_149.0, 1_149.0))
+
+        assertEquals(TodayFigures(tripCount = 3, kilometres = "3.3"), shown.today)
     }
 
     // ---- The button -----------------------------------------------------------------------------

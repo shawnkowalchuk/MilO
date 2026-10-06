@@ -2,11 +2,14 @@ package com.shawnkowalchuk.milo.data.report
 
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -105,6 +108,32 @@ class ReportFileStoreTest {
 
         assertEquals(2, removed)
         assertEquals(listOf("Mileage-2026-09.pdf"), names())
+    }
+
+    @Test
+    fun `a file written piece by piece is complete or not there, like any other`() = runBlocking {
+        val whole =
+            store.writeInPieces("MilO-log-2026-10-06.txt") { out ->
+                // A piece, a wait as for the next read of storage, and another piece.
+                out.write("first\n".toByteArray())
+                yield()
+                out.write("second\n".toByteArray())
+            }
+        assertEquals("first\nsecond\n", whole.readText())
+
+        try {
+            store.writeInPieces("MilO-log-2026-10-06.txt") { out ->
+                out.write("half".toByteArray())
+                throw IOException("the log could not be read on")
+            }
+            fail("A write that failed half-way was reported as done")
+        } catch (failure: IOException) {
+            assertEquals("the log could not be read on", failure.message)
+        }
+
+        // The file from before is as it was, and nothing half-written lies beside it.
+        assertEquals("first\nsecond\n", whole.readText())
+        assertEquals(listOf("MilO-log-2026-10-06.txt"), names())
     }
 
     @Test

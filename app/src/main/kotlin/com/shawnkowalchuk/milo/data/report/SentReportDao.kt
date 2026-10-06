@@ -9,12 +9,9 @@ import kotlinx.coroutines.flow.Flow
 /**
  * The SQL for the table of sent reports. Only [SentReportRepository] calls it.
  *
- * There is an insert and there are reads, and nothing else: a sent report is never updated and
- * never deleted.
+ * There is an insert, there are reads, and there is one delete, for a report that was recorded
+ * by mistake ([remove]). A sent report is never updated.
  */
-// TODO(debt): a report that was recorded by mistake ("I sent it" pressed for an email that was
-//  discarded) cannot be taken back, and one answered "Not sent" by mistake can only be recorded
-//  by sending it again. Neither has a button yet. See docs/FINDINGS_LOG.md (2026-10-06).
 @Dao
 interface SentReportDao {
     @Insert
@@ -30,6 +27,27 @@ interface SentReportDao {
             "AND lastDay = :lastDay",
     )
     suspend fun findFor(kind: SentReportKind, firstDay: Long, lastDay: Long): List<SentReport>
+
+    @Query("SELECT * FROM sent_reports WHERE id = :id")
+    suspend fun findById(id: Long): SentReport?
+
+    @Query("DELETE FROM sent_reports WHERE id = :id")
+    suspend fun deleteById(id: Long): Int
+
+    /**
+     * Removes the report with this [id] from the list, and no other row: the reports that stay
+     * keep their revision numbers. The read, the delete and the look at what is left share a
+     * transaction, so what is returned is what was true at the moment of the delete.
+     *
+     * @return the row that was removed with what is left for its period, or null if there is
+     * no such row, in which case nothing was changed.
+     */
+    @Transaction
+    suspend fun remove(id: Long): RemovedReport? {
+        val report = findById(id) ?: return null
+        deleteById(id)
+        return RemovedReport(report, findFor(report.kind, report.firstDay, report.lastDay))
+    }
 
     /**
      * Stores [report] with the revision number that is next for its kind and days

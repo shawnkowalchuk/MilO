@@ -24,8 +24,9 @@ enum class SentReportKind {
  *
  * A row is written when he answers "I sent it" after coming back from the email app, and at no
  * other moment: Android cannot tell an app whether an email was sent, so MilO takes his word.
- * A row is never changed or removed afterwards. It is a record of what was sent, with the
- * figures the report had then, which later edits of the trips do not reach.
+ * A row is never changed afterwards. It is a record of what was sent, with the figures the
+ * report had then, which later edits of the trips do not reach. It leaves the table in one way
+ * only: he removes it himself on the Report screen, because it was recorded by mistake.
  *
  * @param firstDay the first day of the period, as days since 1970-01-01 (a calendar day, not a
  * moment in time, so no time zone can move it). Read it with `LocalDate.ofEpochDay`, or in
@@ -52,6 +53,14 @@ data class SentReport(
     val distanceMetres: Double,
     val revision: Int,
 )
+
+/**
+ * A report that was removed from the list, and what the list still holds for its period.
+ *
+ * @param leftForPeriod the reports of the same kind and days that are still there, in any
+ * order. Empty means the removed one was the period's only report.
+ */
+data class RemovedReport(val report: SentReport, val leftForPeriod: List<SentReport>)
 
 /** The kind of row a report for this period is stored as. */
 val ReportPeriod.kind: SentReportKind

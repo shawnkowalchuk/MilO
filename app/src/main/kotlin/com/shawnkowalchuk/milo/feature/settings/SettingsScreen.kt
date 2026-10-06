@@ -41,6 +41,7 @@ internal class SettingsActions(
     val onDrivingAlertEnabled: (Boolean) -> Unit,
     val schedule: ScheduleActions,
     val report: ReportDetailActions,
+    val reminder: ReminderActions,
 )
 
 /** What the card of the report for the accountant can ask for: each field reports its text. */
@@ -68,9 +69,11 @@ internal class ScheduleActions(
 /**
  * The settings: which truck, who the report for the accountant is from and where it goes, how
  * long a trip waits for the truck to reconnect, how short a trip may be, the work schedule that
- * makes a trip Business or Personal, what becomes of a trip outside it, the driving alert, and
- * the sound of a trip start. The reminder's setting arrives with the phase that builds it.
+ * makes a trip Business or Personal, what becomes of a trip outside it, the driving alert, the
+ * monthly reminder to send last month's report, the sound of a trip start, and, last, Android's
+ * backup with the export and import of all data.
  *
+ * @param dataViewModel the last card's own ViewModel: see [DataViewModel].
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
  * @param onBack leaves the screen.
@@ -78,6 +81,7 @@ internal class ScheduleActions(
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    dataViewModel: DataViewModel,
     onChangeTruck: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -123,16 +127,33 @@ fun SettingsScreen(
                     onVehicle = viewModel::onReportVehicle,
                     onAccountantEmail = viewModel::onAccountantEmail,
                 ),
+            reminder =
+                ReminderActions(
+                    onEnabled = viewModel::onReminderEnabled,
+                    onDayStep = viewModel::onReminderDayStep,
+                ),
         )
-    SettingsContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
+    SettingsContent(
+        state = state,
+        actions = actions,
+        onBack = onBack,
+        modifier = modifier,
+        dataCard = { DataCard(dataViewModel) },
+    )
 }
 
+/**
+ * @param dataCard the card for backup, export and import. It is handed in whole, because it
+ * has a state of its own: it is shown also when the settings cannot be read, which is when a
+ * copy of the trips is wanted most.
+ */
 @Composable
 private fun SettingsContent(
     state: SettingsUiState,
     actions: SettingsActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    dataCard: @Composable () -> Unit,
 ) {
     Column(
         modifier =
@@ -167,6 +188,8 @@ private fun SettingsContent(
                 // Second, and not last: the Report screen sends Shawn here for his name and
                 // the accountant's address, and the long schedule card would bury them.
                 ReportDetailsCard(state.report, actions.report)
+                // Under the report's own card: it is the reminder to send that report.
+                ReminderCard(state, actions.reminder)
                 TripRulesCard(state, actions)
                 ScheduleCard(state, actions.schedule)
                 OutsideScheduleCard(state, actions.schedule)
@@ -174,6 +197,9 @@ private fun SettingsContent(
                 SoundCard(state, actions)
             }
         }
+        // Last: it is used a few times a year, and it is the one card that can replace
+        // everything, so it is not among the settings that are changed in passing.
+        if (state != SettingsUiState.Reading) dataCard()
     }
 }
 
@@ -216,16 +242,23 @@ private fun SettingsPreview() {
                     accountantEmail = "accounts@example",
                     emailRefused = true,
                 ),
+            reminderEnabled = true,
+            reminderDay = 1,
+            canRemindEarlier = false,
+            canRemindLater = true,
             problem = SettingsProblem.SOUND_NOT_PLAYABLE,
         )
     val schedule = ScheduleActions({ _, _ -> }, { _, _, _ -> }, { _, _, _ -> }, {}, {})
     val report = ReportDetailActions({}, {}, {}, {})
+    val reminder = ReminderActions({}, {})
     MiloTheme {
         Surface {
             SettingsContent(
                 state = state,
-                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule, report),
+                actions =
+                    SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
                 onBack = {},
+                dataCard = {},
             )
         }
     }

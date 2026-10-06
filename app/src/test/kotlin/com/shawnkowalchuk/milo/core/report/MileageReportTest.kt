@@ -1,5 +1,8 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.util.formatTenths
+import com.shawnkowalchuk.milo.core.util.metresOfTenths
+import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale

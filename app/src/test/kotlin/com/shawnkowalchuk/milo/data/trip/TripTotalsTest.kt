@@ -63,7 +63,8 @@ class TripTotalsTest {
         val today = todayTrips(startedToday)
 
         assertEquals(2, today.count)
-        assertEquals(41_249.0, today.totalMetres, 0.0)
+        // 20.0 km and 21.2 km, as each is printed.
+        assertEquals(412, today.totalTenths)
         assertEquals(55 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -74,7 +75,7 @@ class TripTotalsTest {
 
         for (today in listOf(nothing, onlyLeftOut)) {
             assertEquals(0, today.count)
-            assertEquals(0.0, today.totalMetres, 0.0)
+            assertEquals(0, today.totalTenths)
             assertEquals(0L, today.driveTimeMs)
             assertTrue(today.sessions.isEmpty())
         }
@@ -96,7 +97,8 @@ class TripTotalsTest {
             )
 
         assertEquals(2, today.count)
-        assertEquals(8_450.0, today.totalMetres, 0.0)
+        // 8.2 km, and 250 m, which is printed as 0.3 km.
+        assertEquals(85, today.totalTenths)
         assertEquals(25 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -121,11 +123,13 @@ class TripTotalsTest {
     }
 
     @Test
-    fun `the total is added up in metres, so the rounding of single trips does not accumulate`() {
-        // Each prints as 0.1 km, three of them as 0.4 km: 149 m each is 447 m.
+    fun `the total is the sum of the figures printed for the trips, so the rows add up to it`() {
+        // Each prints as 0.1 km, so three of them are 0.3 km: what a reader gets who adds the
+        // rows up. Their 447 m rounded once would be 0.4 km.
         val today = todayTrips(List(3) { trip(it * 10L, 5, 149.0) })
 
-        assertEquals(447.0, today.totalMetres, 0.0)
+        assertEquals(3, today.totalTenths)
+        assertEquals(3, today.totals.unsorted.tenths)
     }
 
     @Test
@@ -137,7 +141,7 @@ class TripTotalsTest {
         val today = todayTrips(listOf(backwards, ordinary))
 
         assertEquals(30 * MINUTE_MS, today.driveTimeMs)
-        assertEquals(12_000.0, today.totalMetres, 0.0)
+        assertEquals(120, today.totalTenths)
     }
 
     @Test

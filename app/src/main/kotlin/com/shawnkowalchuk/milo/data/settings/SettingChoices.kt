@@ -1,7 +1,7 @@
 package com.shawnkowalchuk.milo.data.settings
 
-// The values the Settings screen offers for the two trip settings, and the arithmetic of
-// stepping through them. Pure, so the ranges are tested without a phone. The settings store
+// The values the Settings screen offers for the two trip settings and for the reminder's day,
+// and the arithmetic of stepping through them. Pure, so the ranges are tested without a phone. The settings store
 // itself accepts any value that is not negative; these are what Shawn can choose.
 
 /**
@@ -60,3 +60,10 @@ val GRACE_PERIOD_CHOICE = SteppedChoice(min = 30, max = 600, step = 30)
  * zero: with no minimum, a start that never left the yard would be a counted trip.
  */
 val MINIMUM_TRIP_DISTANCE_CHOICE = SteppedChoice(min = 100, max = 2000, step = 100)
+
+/**
+ * The reminder's day of the month: the 1st to the 31st, a day at a time. A month that is
+ * shorter than the day chosen uses its own last day, so the 29th to the 31st are offered too.
+ */
+val REMINDER_DAY_CHOICE =
+    SteppedChoice(min = REMINDER_DAYS.first, max = REMINDER_DAYS.last, step = 1)

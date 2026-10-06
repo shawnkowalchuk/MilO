@@ -187,6 +187,7 @@ internal fun TripsContent(
                 monthName = monthName,
                 summary = summary,
                 submission = state.submission,
+                changed = state.changedSinceSent,
                 zone = state.zone,
                 canStepForward = state.canStepForward,
                 onPreviousMonth = actions.onPreviousMonth,

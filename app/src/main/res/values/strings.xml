@@ -2,7 +2,10 @@
 <resources>
     <string name="app_name">MilO</string>
 
-    <!-- Shared: a distance in kilometres. The number is produced by formatKilometres(). -->
+    <!--
+        Shared: a distance in kilometres. The number is produced by formatKilometres() for one
+        trip and by formatTenths() for a total.
+    -->
     <string name="distance_km">%1$s km</string>
     <!-- Shared: a length of time in whole minutes, or in whole hours and minutes. -->
     <string name="duration_minutes">%1$d min</string>
@@ -76,7 +79,7 @@
     <string name="start_problem_bluetooth_permission">Bluetooth permission is missing. Allow \"Nearby devices\" for MilO in the phone\'s settings.</string>
     <string name="start_problem_refused">Android did not allow recording to start. Open MilO and press Start trip.</string>
 
-    <!-- Notifications. The three channel names appear in the phone's notification settings. -->
+    <!-- Notifications. The channel names appear in the phone's notification settings. -->
     <string name="notification_channel_trip">Trip in progress</string>
     <string name="notification_channel_failures">Trip problems</string>
     <string name="notification_channel_driving">Driving alert</string>
@@ -86,6 +89,14 @@
     <!-- The driving alert. Tapping it starts a trip; nothing starts until it is tapped. -->
     <string name="notification_driving_title">You seem to be driving</string>
     <string name="notification_driving_text">No trip is being recorded. Tap to start one.</string>
+    <!--
+        The monthly reminder. The channel's name appears in the phone's notification settings.
+        The title's argument is a month from formatMonthAndYear(), such as September 2026.
+        Tapping it opens the Report screen for that month.
+    -->
+    <string name="notification_channel_reminder">Monthly reminder</string>
+    <string name="notification_reminder_title">Mileage report for %1$s</string>
+    <string name="notification_reminder_text">It has not been sent to your accountant yet. Tap to open it.</string>
 
     <!-- Setup: the permission checklist. -->
     <string name="setup_title">Setup</string>
@@ -208,6 +219,17 @@
     <string name="log_empty">The event log is empty.</string>
     <string name="log_has_detail">Tap for details</string>
     <string name="log_show_older">Show older entries</string>
+    <!-- Event log: the way to send the log to somebody, as a text file. -->
+    <string name="log_share">Share the whole log</string>
+    <string name="log_share_detail">Makes a text file of every line, oldest first, and offers it to your apps, so that you can send it to whoever is helping you. The file names the truck and the phone\'s other paired devices, and holds every address you typed or replaced on the edit screen.</string>
+    <string name="log_share_working">Writing the file…</string>
+    <string name="log_share_failed">The log could not be written to a file. Its newest line says why.</string>
+    <!-- What the share sheet and the receiving app are told the file is. -->
+    <string name="log_share_title">MilO event log</string>
+    <!-- Event log: the first of the filter's choices. The others are the stored names of the categories. -->
+    <string name="log_filter_all">All</string>
+    <!-- The argument is a category by its stored name, such as TRIP. -->
+    <string name="log_empty_filtered">The log has no %1$s line.</string>
 
     <!-- Trips: one month at a time. -->
     <string name="trips_title">Trips</string>
@@ -304,6 +326,13 @@
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
     <!-- Trips: the way from the month's card to the Report screen, for the month on screen. -->
     <string name="trips_action_report">Report for the accountant</string>
+    <!--
+        Trips: on the card of a submitted month whose Business trips are not what the newest
+        report held. The arguments are that report's trips and distance, then the month's now:
+        11 trips, 330.1 km, 12 trips, 345.6 km.
+    -->
+    <string name="trips_changed_since_sent">Changed since the report was sent. It listed %1$s and %2$s; the month now has %3$s and %4$s.</string>
+    <string name="trips_changed_since_sent_detail">If your accountant needs the new figures, send the report again. It goes out as a revision.</string>
 
     <!--
         Trips and the Report screen: whether the month's report has been sent. Chosen by
@@ -313,6 +342,8 @@
     <string name="report_not_submitted">Not submitted</string>
     <string name="report_submitted_on">Submitted on %1$s</string>
     <string name="report_submitted_revised">Submitted on %1$s. Sent again on %3$s (revision %2$d).</string>
+    <!-- For a month whose first report was removed from the list, so that a revision is all that is left. -->
+    <string name="report_submitted_by_revision">Submitted on %1$s (revision %2$d)</string>
 
     <!--
         The edit screen, opened from Trips: a finished trip's times, addresses and distance
@@ -421,7 +452,7 @@
         <item quantity="other">%1$d Business trips · %2$s</item>
     </plurals>
     <string name="report_summary_none">No Business trips in this period. The report would say so, with a total of 0.0 km.</string>
-    <string name="report_summary_rounding">The report adds up the kilometres it prints, trip by trip, so that its columns add up. Its total can therefore differ a little from the month\'s figure on the Trips screen.</string>
+    <string name="report_summary_rounding">The total is the sum of the kilometres printed for each trip, so the report\'s columns add up. The Trips screen adds up the same way.</string>
     <plurals name="report_summary_marked">
         <item quantity="one">%d of them was added or edited by hand. It carries an asterisk (*) on the report.</item>
         <item quantity="other">%d of them were added or edited by hand. They carry an asterisk (*) on the report.</item>
@@ -463,6 +494,14 @@
     <string name="report_problem_no_pdf_viewer">This phone has no app that can show a PDF. The PDF was created all the same.</string>
     <string name="report_problem_no_share_app">This phone has no app to share the file with.</string>
     <string name="report_problem_record">That could not be recorded. The Log screen says why.</string>
+    <string name="report_problem_remove">That report could not be removed. The Log screen says why.</string>
+    <!--
+        The question before a report is sent for a month that has not ended. The arguments are
+        the month, such as October 2026, and its last day from formatDay().
+    -->
+    <string name="report_not_ended_title">Send before the month has ended?</string>
+    <string name="report_not_ended_text">%1$s has not ended yet: its last day is %2$s. A report sent now lists the Business trips up to this moment. Trips you make later this month are then on no report until you send the month again, as a revision.</string>
+    <string name="report_not_ended_confirm">Send now</string>
     <!--
         The question before a report is sent for a period that was sent before. The arguments
         are the period, the day it was last sent, its number of trips and distance as the list
@@ -491,6 +530,16 @@
         <item quantity="other">Sent on %1$s · %2$d trips</item>
     </plurals>
     <string name="report_sent_revision">Revision %1$d</string>
+    <!--
+        Sent reports: taking one out of the list again, and the question before it. The
+        arguments are the period and the day it was recorded as sent, from formatDate(); for a
+        month that stays submitted, also the day it then counts as submitted on.
+    -->
+    <string name="report_remove">Remove</string>
+    <string name="report_remove_title">Remove this sent report?</string>
+    <string name="report_remove_text_month_unmarked">The report for %1$s, recorded as sent on %2$s, is deleted from this list, and %1$s goes back to \"Not submitted\".\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here; to mark the month again, send its report again.</string>
+    <string name="report_remove_text_month_kept">The report for %1$s, recorded as sent on %2$s, is deleted from this list. %1$s stays submitted, on %3$s, because another report for it is in the list. The reports that stay keep their revision numbers.\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here.</string>
+    <string name="report_remove_text_range">The report for %1$s, recorded as sent on %2$s, is deleted from this list. A date range marked no month, so nothing else changes.\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here.</string>
 
     <!--
         The words printed on the PDF. It is read by the accountant, so it says "business" as a
@@ -573,6 +622,17 @@
     <string name="settings_driving_enabled">Tell me when I drive without a trip</string>
     <string name="settings_driving_detail">During your work hours, if the phone notices that you are driving while no trip is being recorded and the truck is not connected, MilO sends a notification. Tap it to start a trip. MilO never starts one from this by itself: the phone cannot tell the truck from any other vehicle.</string>
     <string name="settings_driving_needs">It needs the Physical activity permission, which the Setup screen asks for. The phone can take a minute or more to notice that you are driving.</string>
+    <!-- Settings: the monthly reminder to send last month's report. -->
+    <string name="settings_reminder_title">Monthly reminder</string>
+    <string name="settings_reminder_enabled">Remind me to send last month\'s report</string>
+    <string name="settings_reminder_detail">A notification once a day, from the day below until the report for last month is recorded as sent. Tap it to open that report. A month without a Business trip brings no reminder.</string>
+    <string name="settings_reminder_day_label">Start on this day of the month</string>
+    <string name="settings_reminder_day_detail">In a month that has fewer days, the reminder starts on its last day.</string>
+    <!-- The argument is the day of the month, 1 to 31. -->
+    <string name="settings_reminder_day_value">Day %1$d</string>
+    <!-- Settings: spoken by the screen reader for the minus and the plus beside the day. -->
+    <string name="settings_reminder_day_earlier">An earlier day</string>
+    <string name="settings_reminder_day_later">A later day</string>
     <string name="settings_sound_title">Trip-start sound</string>
     <string name="settings_sound_enabled">Play a sound when a trip starts</string>
     <string name="settings_sound_built_in">Sound in use: the built-in sound</string>
@@ -590,6 +650,89 @@
     <string name="settings_sound_refused_large">That file is too large for a trip-start sound (more than %1$d MB). The sound was not changed.</string>
     <string name="settings_sound_refused_playable">That file cannot be played as a sound. The sound was not changed.</string>
     <string name="settings_sound_no_picker">This phone has no app to pick a file with. The sound was not changed.</string>
+
+    <!-- Settings: Android's backup, and the export and import of all data. -->
+    <string name="settings_data_title">Backup, export and import</string>
+    <string name="settings_data_backup">Android backs MilO up by itself, to your Google account and when you move to a new phone, if backup is switched on in the phone\'s own settings: the trips, the sent reports, the settings and the event log. The event log names the truck and the other paired devices, with their Bluetooth addresses, and holds addresses you typed. The GPS points are moved from phone to phone only, never to the cloud. After a restore the truck has to be paired again, and Setup gone through again.</string>
+    <string name="settings_data_export_intro">An export is your own copy of everything, in one file, kept where you choose. It needs neither Google nor this phone.</string>
+    <!-- The arguments are a day from formatDate() and a time of day from formatTimeOfDay(). -->
+    <string name="settings_data_last_export">Last export: %1$s at %2$s</string>
+    <string name="settings_data_last_export_without_points">Last export: %1$s at %2$s, without the GPS points</string>
+    <string name="settings_data_never_exported">No export has been made on this phone yet.</string>
+    <string name="settings_data_include_points">Include the GPS points</string>
+    <string name="settings_data_include_points_detail">Every position MilO recorded along every trip. They make the file many times larger. The trips are complete without them. Switched off, the file still says where each trip started and ended, as an address and as a position, with its times and its distance.</string>
+    <string name="settings_data_export">Export all data</string>
+    <string name="settings_data_import_intro">An import replaces everything on this phone with what is in an export file. MilO reads the whole file first, and asks before it changes anything.</string>
+    <string name="settings_data_import">Import data</string>
+    <!-- The arguments are a day from formatDate() and a time of day from formatTimeOfDay(). -->
+    <string name="settings_data_safety_copy">Before an import MilO kept a copy of what this phone held then, on %1$s at %2$s.</string>
+    <string name="settings_data_restore_safety_copy">Put that data back</string>
+    <string name="settings_data_trip_in_progress">A trip is being recorded. Export and import wait until it has ended.</string>
+    <string name="settings_data_working_export">Writing the file…</string>
+    <string name="settings_data_working_read">Reading and checking the file…</string>
+    <string name="settings_data_working_import">Replacing the data on this phone. This can take a minute…</string>
+    <!-- Settings: how many of each thing an export holds, as the pieces of the sentences below. -->
+    <plurals name="settings_data_trips">
+        <item quantity="one">%1$,d trip</item>
+        <item quantity="other">%1$,d trips</item>
+    </plurals>
+    <plurals name="settings_data_sent_reports">
+        <item quantity="one">%1$,d sent report</item>
+        <item quantity="other">%1$,d sent reports</item>
+    </plurals>
+    <plurals name="settings_data_points">
+        <item quantity="one">%1$,d GPS point</item>
+        <item quantity="other">%1$,d GPS points</item>
+    </plurals>
+    <!-- Settings: what an export came to. The arguments are the pieces above. -->
+    <string name="settings_data_exported">Exported: %1$s, %2$s and %3$s.</string>
+    <string name="settings_data_exported_without_points">Exported: %1$s and %2$s, without the GPS points.</string>
+    <string name="settings_data_exported_no_settings">The settings are not in the file: MilO could not read them.</string>
+    <!-- The argument is the GPS points piece above. -->
+    <string name="settings_data_exported_points_left_out">Left out of the file: %1$s that are stored for no trip this phone holds. The Log screen says which.</string>
+    <!-- Settings: what an import came to. The arguments are the pieces above. -->
+    <string name="settings_data_imported">Imported: %1$s, %2$s and %3$s.</string>
+    <string name="settings_data_imported_no_points">Imported: %1$s and %2$s. The file holds no GPS points, so the imported trips have none.</string>
+    <string name="settings_data_imported_points_failed">Imported: %1$s and %2$s. The GPS points in the file could not be stored. The trips are complete without them. Import the same file again to try once more. The Log screen says why.</string>
+    <string name="settings_data_imported_settings_kept">The file holds no settings, so the settings of this phone were kept.</string>
+    <string name="settings_data_imported_settings_failed">The settings in the file could not be stored, so the settings of this phone are still in force. The Log screen says why.</string>
+    <string name="settings_data_imported_pair_again">The truck has to be paired again on this phone before a trip can start by itself. Use the button of the Truck card, at the top of this screen.</string>
+    <string name="settings_data_imported_safety">What this phone held before is kept inside MilO. \"Put that data back\" undoes the import.</string>
+    <!-- Settings: what became of an import that MilO was closed in the middle of. -->
+    <string name="settings_data_cut_off_finished">MilO was closed in the middle of the last import. It finished the import when it started again.</string>
+    <string name="settings_data_cut_off_nothing">MilO was closed just as the last import began, before anything was replaced. Everything on this phone is as it was. Import the file again.</string>
+    <string name="settings_data_cut_off_points">MilO was closed in the middle of the last import. The trips and the sent reports are the file\'s. Its GPS points are not stored, and its settings may not be either. Import the same file again to make it whole. The Log screen says more.</string>
+    <string name="settings_data_cut_off_not_finished">MilO was closed in the middle of the last import and could not finish it afterwards. The trips and the sent reports are the file\'s, and GPS points of the trips before it may still be stored with them. Import the same file again. The Log screen says why.</string>
+    <!-- Settings: why an export or an import was not made. -->
+    <string name="settings_data_refused_trip">A trip is being recorded, so nothing was done. Try again when it has ended.</string>
+    <string name="settings_data_refused_export">The file could not be written, and what was written of it was removed. The Log screen says why.</string>
+    <string name="settings_data_refused_export_left">The file could not be written, and what was written of it could not be removed. That file is not a complete export: delete it. The Log screen says why.</string>
+    <string name="settings_data_refused_read">MilO could not read that file. Nothing was changed. The Log screen says why.</string>
+    <!-- The argument is the limit in megabytes. -->
+    <string name="settings_data_refused_large">That file is too large to be an export of MilO\'s (more than %1$d MB). Nothing was changed.</string>
+    <string name="settings_data_refused_not_export">That file is not an export of MilO\'s. Nothing was changed.</string>
+    <!-- The arguments are the format version the file is in, and the newest one this MilO reads. -->
+    <string name="settings_data_refused_newer">That file was written by a newer MilO (export format %1$d). This MilO reads export formats up to %2$d. Update MilO on this phone, then import the file again. Nothing was changed.</string>
+    <string name="settings_data_refused_damaged">That file is damaged or incomplete, so it was not imported. Nothing was changed. The Log screen says what is wrong with it.</string>
+    <string name="settings_data_refused_no_safety_copy">There is no copy to put back.</string>
+    <string name="settings_data_refused_safety">MilO could not first keep a copy of what this phone holds, so it replaced nothing. The Log screen says why.</string>
+    <string name="settings_data_refused_nothing_replaced">The import failed before anything was replaced. Everything on this phone is as it was. The Log screen says why.</string>
+    <string name="settings_data_no_picker">This phone has no app to pick a file with. Nothing was done.</string>
+    <!--
+        Settings: the question before an import. Its text is these paragraphs, one after the
+        other. The arguments of the first are the day and the time the file was exported, and
+        the pieces above; those of "replaces" are the trips and sent reports on this phone.
+    -->
+    <string name="settings_data_question_title">Replace everything on this phone?</string>
+    <string name="settings_data_question_file">The file was exported on %1$s at %2$s and holds %3$s, %4$s and %5$s.</string>
+    <string name="settings_data_question_file_no_points">The file was exported on %1$s at %2$s and holds %3$s and %4$s. It holds no GPS points.</string>
+    <string name="settings_data_question_safety_file">This is the copy MilO kept before an import, on %1$s at %2$s. It holds %3$s, %4$s and %5$s.</string>
+    <string name="settings_data_question_replaces">Importing REPLACES everything on this phone: its %1$s and %2$s go, with all their GPS points, and the file\'s take their place. Nothing is merged.</string>
+    <string name="settings_data_question_settings">The settings are replaced by the file\'s as well. A truck that is paired on this phone stays paired; otherwise the truck has to be paired again afterwards.</string>
+    <string name="settings_data_question_no_settings">The file holds no settings: the settings of this phone stay.</string>
+    <string name="settings_data_question_safety">MilO first keeps a copy of what this phone holds now, so that the import can be undone. The event log is not replaced.</string>
+    <string name="settings_data_question_safety_put_back">MilO first keeps a copy of what this phone holds now, so that this can be undone as well. The copy that is put back is then removed, because the phone holds it again. The event log is not replaced.</string>
+    <string name="settings_data_question_confirm">Replace everything</string>
 
     <!-- Settings: who the report for the accountant is from, and where it goes. -->
     <string name="settings_report_title">Report for the accountant</string>

@@ -8,6 +8,7 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
 import com.shawnkowalchuk.milo.data.settings.isEmailAddress
@@ -35,6 +36,9 @@ private const val KEEP_WATCHING_MS = 5_000L
 /** What the event log calls a change of the driving alert's switch. */
 private const val DRIVING_ALERT_SWITCH = "the Settings switch"
 
+/** What the event log calls a look at the reminder that a change of its card prompted. */
+private const val REMINDER_CARD = "the reminder was changed in Settings"
+
 /**
  * The Settings screen's link to the stored settings. It keeps no copy of them: what the screen
  * shows is the settings store's own flow, and every press writes to the store.
@@ -45,15 +49,19 @@ private const val DRIVING_ALERT_SWITCH = "the Settings switch"
  * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
  * sorted again because the schedule changed.
  *
- * The one exception is the driving alert's switch. The alert has no trigger of its own to read
- * the setting at: it has to ask the phone to report driving, or to stop, when the switch is
- * pressed, so it is told ([armDrivingAlert]).
+ * The exceptions are the driving alert's switch and the reminder's card. The alert has no
+ * trigger of its own to read the setting at: it has to ask the phone to report driving, or to
+ * stop, when the switch is pressed, so it is told ([armDrivingAlert]). The monthly reminder is
+ * told for a like reason ([lookAtReminder]): a reminder that is showing must go when it is
+ * switched off, and not at tomorrow's look.
  *
  * @param ownSound copies and checks a picked audio file, and goes back to the built-in sound.
  * @param playSound plays the trip-start sound the way a trip start does, given the stored
  * custom sound or null for the built-in one. Called on the main thread.
  * @param armDrivingAlert has the driving alert bring its request to the phone in line with the
  * stored switch. Its argument says what prompted it, for the event log.
+ * @param lookAtReminder has the monthly reminder decide again, from the stored settings,
+ * whether it is shown. Its argument says what prompted it, for the event log.
  * @param clock wall-clock milliseconds.
  */
 class SettingsViewModel(
@@ -61,6 +69,7 @@ class SettingsViewModel(
     private val ownSound: OwnTripSound,
     private val playSound: (customSoundUri: String?) -> Unit,
     private val armDrivingAlert: (source: String) -> Unit,
+    private val lookAtReminder: (source: String) -> Unit,
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
 ) : ViewModel() {
@@ -149,6 +158,18 @@ class SettingsViewModel(
     fun onDrivingAlertEnabled(enabled: Boolean) = change {
         settings.setDrivingAlertEnabled(enabled)
         armDrivingAlert(DRIVING_ALERT_SWITCH)
+    }
+
+    /** Stored first, so that the reminder finds the new value when it looks. */
+    fun onReminderEnabled(enabled: Boolean) = change {
+        settings.setReminderEnabled(enabled)
+        lookAtReminder(REMINDER_CARD)
+    }
+
+    /** The reminder's day of the month, one day later or earlier. */
+    fun onReminderDayStep(later: Boolean) = change {
+        settings.setReminderDay(REMINDER_DAY_CHOICE.step(it.reminderDay, later))
+        lookAtReminder(REMINDER_CARD)
     }
 
     /**

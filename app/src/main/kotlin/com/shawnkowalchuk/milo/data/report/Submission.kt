@@ -1,12 +1,14 @@
 package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
 import java.time.YearMonth
 
 // What the list of sent reports says about a period: whether it was sent before, which revision
-// the next report for it is, whether a month counts as submitted, and what one more report for
-// it would do. Pure functions, shared by the Trips screen's month card and the Report screen, so
-// the two cannot disagree.
+// the next report for it is, whether a month counts as submitted, what one more report for it
+// would do, what removing one would do, and whether a month's trips are still what was sent.
+// Pure functions, shared by the Trips screen's month card, the Report screen and the monthly
+// reminder, so the three cannot disagree.
 
 /**
  * The reports among [sent] that were sent for exactly [period], oldest first: the same kind and
@@ -32,12 +34,17 @@ fun nextRevision(sentBefore: List<SentReport>): Int =
 /**
  * That a month has been submitted, and how often.
  *
- * @param first the report that made the month submitted.
+ * @param first the report that makes the month submitted: the one with the lowest revision
+ * number that is in the list. That is the original, unless the original was removed from the
+ * list; then it is the earliest revision that is left.
  * @param latest the newest report for the month. It is [first] itself until a revision is sent.
  */
 data class MonthSubmission(val first: SentReport, val latest: SentReport) {
-    /** How many times a report replaced the first one. 0 for a month that was sent once. */
+    /** The newest report's revision number. 0 for a month whose original is its only report. */
     val revisions: Int get() = latest.revision
+
+    /** Whether the list holds a later report for the month than [first]. */
+    val sentAgain: Boolean get() = latest.id != first.id
 }
 
 /**
@@ -84,4 +91,78 @@ fun sentEffect(period: ReportPeriod, sent: List<SentReport>): SentEffect = when 
             else -> SentEffect.RevisesMonth(nextRevision(sentBefore), first.sentAtMs)
         }
     }
+}
+
+/**
+ * What removing one report from the list would do. The question before it is removed says it,
+ * so that nobody takes a month back to "not submitted" without having been told.
+ */
+sealed interface RemovalEffect {
+    /** The month's only report: the month goes back to not submitted. */
+    data object UnmarksMonth : RemovalEffect
+
+    /**
+     * One of several reports for a month: the month stays submitted, from then on by the day
+     * the earliest report still listed was sent, [submittedAtMs]. The others keep their numbers.
+     */
+    data class MonthStaysSubmitted(val submittedAtMs: Long) : RemovalEffect
+
+    /** A date range: it leaves the list, and no month was marked by it. */
+    data object UnlistsRange : RemovalEffect
+}
+
+/**
+ * What removing [report] would do, given every report that was [sent] (with [report] still
+ * among them or not: it is left out of the count either way).
+ */
+fun removalEffect(report: SentReport, sent: List<SentReport>): RemovalEffect =
+    when (val period = report.period) {
+        is ReportPeriod.Range -> RemovalEffect.UnlistsRange
+
+        is ReportPeriod.Month -> {
+            val left = sentFor(period, sent).filter { it.id != report.id }
+            when (val first = left.firstOrNull()) {
+                null -> RemovalEffect.UnmarksMonth
+                else -> RemovalEffect.MonthStaysSubmitted(first.sentAtMs)
+            }
+        }
+    }
+
+/**
+ * That a submitted month's Business trips are not what its newest report held: the month may
+ * need to be sent again, as a revision.
+ *
+ * @param sentTripCount and [sentTenths] are the newest report's figures.
+ * @param tripCount and [tenths] are what a report made now would hold.
+ */
+data class ChangedSinceSent(
+    val sentTripCount: Int,
+    val sentTenths: Long,
+    val tripCount: Int,
+    val tenths: Long,
+)
+
+/**
+ * Whether a submitted month's Business trips have changed since its report was sent, or null
+ * if they have not, as far as MilO can tell, or if the month is not submitted.
+ *
+ * **What it goes by** is what the list of sent reports already stores for each report: how many
+ * Business trips it listed and the total it printed. Both are compared with the month's newest
+ * report. So it notices a Business trip that was added, deleted, restored or marked Personal,
+ * and a distance that was changed, since then. It does **not** notice a change that leaves both
+ * figures as they were: a time or an address that was edited, or two changes that cancel out.
+ * Nothing stores when a trip was last changed.
+ *
+ * @param tripCount how many Business trips the month has now, and [tenths] what they add up
+ * to as the report adds up (`sumOfTenths`).
+ */
+fun changedSinceSent(
+    submission: MonthSubmission?,
+    tripCount: Int,
+    tenths: Long,
+): ChangedSinceSent? {
+    val newest = submission?.latest ?: return null
+    val sentTenths = tenthsOfAKilometre(newest.distanceMetres)
+    if (newest.tripCount == tripCount && sentTenths == tenths) return null
+    return ChangedSinceSent(newest.tripCount, sentTenths, tripCount, tenths)
 }

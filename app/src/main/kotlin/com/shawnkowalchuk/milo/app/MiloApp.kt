@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,6 +18,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloNavigationBar
 import com.shawnkowalchuk.milo.core.designsystem.component.NavigationBarEntry
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import java.time.YearMonth
 
 /**
  * The root of the phone UI: applies the theme once, and frames every screen with the bottom
@@ -26,9 +28,12 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
  * It is also where a screen is left, by any of the three ways out (Android's Back, a screen's
  * own Back arrow, a button of the bottom bar), and so where the question is asked before
  * something typed and not saved is thrown away ([UnsavedWork]).
+ *
+ * @param reportToOpen the month whose Report screen a tap on the monthly reminder asked for,
+ * or null. The screen is opened once, and [onReportOpened] says that the request is dealt with.
  */
 @Composable
-fun MiloApp(container: AppContainer) {
+fun MiloApp(container: AppContainer, reportToOpen: YearMonth?, onReportOpened: () -> Unit) {
     MiloTheme {
         // Saved and restored by Navigation 3, so the screen that was showing comes back after
         // Android has put MilO away and brought it back.
@@ -45,6 +50,19 @@ fun MiloApp(container: AppContainer) {
         fun leave(to: TopLevelDestination?, atOnce: () -> Unit) {
             val asked = unsavedWork.asked(to)
             if (asked == null) atOnce() else unsavedWork = asked
+        }
+
+        // A tap on the monthly reminder is one more way out of the screen on top, and goes the
+        // same way as the others: while that screen holds something typed and not saved, the
+        // question comes first. "Discard" then clears the way, and the report is opened by the
+        // second run of this effect; "Keep editing" drops the request (below).
+        LaunchedEffect(reportToOpen, unsavedWork.unsaved) {
+            if (reportToOpen != null) {
+                leave(TopLevelDestination.TRIPS) {
+                    backStack.showReport(ReportKey(reportToOpen.year, reportToOpen.monthValue))
+                    onReportOpened()
+                }
+            }
         }
 
         // The app draws behind the status and navigation bars (see MainActivity). Scaffold
@@ -97,7 +115,11 @@ fun MiloApp(container: AppContainer) {
                     unsavedWork = UnsavedWork()
                     backStack.leaveTop(to)
                 },
-                onDismiss = { unsavedWork = unsavedWork.kept() },
+                onDismiss = {
+                    unsavedWork = unsavedWork.kept()
+                    // Staying on the form is also the answer to a reminder that was tapped.
+                    onReportOpened()
+                },
             )
         }
     }

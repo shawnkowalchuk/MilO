@@ -21,13 +21,15 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ChoiceRow
 import com.shawnkowalchuk.milo.core.designsystem.component.DateDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
+import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
+import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.text.submissionWords
-import com.shawnkowalchuk.milo.core.report.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatDate
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
+import com.shawnkowalchuk.milo.core.util.formatTenths
 
 // Three of the cards of the Report screen: which period, what a report of it would hold, and
 // the reports that were sent. The buttons that make and send one are in ReportActionsCard.kt.
@@ -73,6 +75,7 @@ internal fun PeriodCard(state: ReportUiState.Ready, actions: ReportActions) {
                         submissionWords(
                             firstSentAtMs = submission?.first?.sentAtMs,
                             revisions = submission?.revisions ?: 0,
+                            sentAgain = submission?.sentAgain ?: false,
                             latestSentAtMs = submission?.latest?.sentAtMs,
                             zone = state.zone,
                             locale = locale,
@@ -172,12 +175,20 @@ internal fun SummaryCard(state: ReportUiState.Ready) {
  * Every report Shawn has said he sent, newest first: the period, the day, how many trips and
  * how far, and which revision it was. The figures are the ones the report had when it was
  * sent; a trip that was changed since does not change them.
+ *
+ * Each has a Remove button, for an "I sent it" that was a mistake. The screen asks first.
+ *
+ * @param onRemove Remove was pressed on the report with this id.
  */
 @Composable
-internal fun SentReportsCard(state: ReportUiState.Ready) {
+internal fun SentReportsCard(state: ReportUiState.Ready, onRemove: (Long) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     SectionCard(title = stringResource(R.string.report_sent_title)) {
         if (state.sent.isEmpty()) Quiet(stringResource(R.string.report_sent_none))
+        if (state.problem == ReportProblem.COULD_NOT_REMOVE) {
+            val words = stringResource(ReportProblem.COULD_NOT_REMOVE.wordsRes())
+            StatusRow(label = words, status = RowStatus.PROBLEM)
+        }
         for (line in state.sent) {
             val km = formatKilometres(line.distanceMetres, locale)
             FigureRow(figure = stringResource(R.string.distance_km, km)) {
@@ -190,6 +201,12 @@ internal fun SentReportsCard(state: ReportUiState.Ready) {
                 Quiet(pluralStringResource(R.plurals.report_sent_line, trips, day, trips))
                 if (line.revision > 0) {
                     Quiet(stringResource(R.string.report_sent_revision, line.revision))
+                }
+            }
+            // At the end of a line of its own, under the report it removes.
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { onRemove(line.id) }, enabled = !state.working) {
+                    Text(text = stringResource(R.string.report_remove))
                 }
             }
         }

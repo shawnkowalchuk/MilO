@@ -62,10 +62,10 @@ private fun TripsPreview() {
         )
     val summary =
         MonthSummary(
-            totals = CategoryTotals(Tally(1, 24_900.0), Tally(1, 23_400.0), Tally(0, 0.0)),
+            totals = CategoryTotals(Tally(1, 249), Tally(1, 234), Tally(0, 0)),
             inProgress =
                 TripLine(4, morning + 9_000_000, null, 3_200.0, TripKind.IN_PROGRESS, from = shop),
-            days = listOf(TripDay(LocalDate.of(2026, 10, 3), trips, 2, 24_900.0)),
+            days = listOf(TripDay(LocalDate.of(2026, 10, 3), trips, 2, 249)),
             hiddenLeftOut = 0,
         )
     val state =

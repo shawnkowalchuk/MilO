@@ -9,8 +9,9 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * What the list of sent reports says: whether a month is submitted, and which revision the next
- * report for a period is.
+ * What the list of sent reports says: whether a month is submitted, which revision the next
+ * report for a period is, what removing a report does, and whether a month's trips are still
+ * what was sent.
  */
 class SubmissionTest {
     private val october = YearMonth.of(2026, 10)
@@ -154,6 +155,111 @@ class SubmissionTest {
         assertEquals(SentEffect.ListsRange, sentEffect(range(5, 18), emptyList()))
         assertEquals(SentEffect.ListsRange, sentEffect(range(5, 18), listOf(part)))
         assertEquals(SentEffect.ListsRange, sentEffect(range(1, 31), listOf(sent(month(october)))))
+    }
+
+    // ---- Removing a report from the list ----------------------------------------------------------
+
+    @Test
+    fun `removing a month's only report takes the month back to not submitted`() {
+        val only = sent(month(october))
+        val others = listOf(sent(month(september)), sent(range(1, 31)))
+
+        assertEquals(RemovalEffect.UnmarksMonth, removalEffect(only, listOf(only) + others))
+        // The same answer when the list handed in no longer holds the report itself.
+        assertEquals(RemovalEffect.UnmarksMonth, removalEffect(only, others))
+        assertNull(monthSubmission(october, others))
+    }
+
+    @Test
+    fun `removing one of a month's reports leaves it submitted by the earliest that is left`() {
+        val first = sent(month(october), revision = 0, sentAtMs = 1_000)
+        val second = sent(month(october), revision = 1, sentAtMs = 5_000)
+        val third = sent(month(october), revision = 2, sentAtMs = 9_000)
+        val all = listOf(third, second, first)
+
+        assertEquals(RemovalEffect.MonthStaysSubmitted(5_000), removalEffect(first, all))
+        assertEquals(RemovalEffect.MonthStaysSubmitted(1_000), removalEffect(second, all))
+        assertEquals(RemovalEffect.MonthStaysSubmitted(1_000), removalEffect(third, all))
+    }
+
+    @Test
+    fun `a month whose original was removed is submitted by its revision, number kept`() {
+        val revision = sent(month(october), revision = 1, sentAtMs = 5_000)
+
+        val submission = monthSubmission(october, listOf(revision))
+
+        assertEquals(revision, submission?.first)
+        assertEquals(1, submission?.revisions)
+        // Nothing was sent again after it: it is the one report that is left.
+        assertEquals(false, submission?.sentAgain)
+        // And the next one counts on from it.
+        assertEquals(2, nextRevision(sentFor(month(october), listOf(revision))))
+    }
+
+    @Test
+    fun `a month with a later report says that it was sent again`() {
+        val first = sent(month(october), revision = 0)
+        val second = sent(month(october), revision = 1)
+
+        assertEquals(false, monthSubmission(october, listOf(first))?.sentAgain)
+        assertEquals(true, monthSubmission(october, listOf(second, first))?.sentAgain)
+    }
+
+    @Test
+    fun `removing a date range changes no month`() {
+        val part = sent(range(5, 18))
+        val monthReport = sent(month(october))
+
+        assertEquals(RemovalEffect.UnlistsRange, removalEffect(part, listOf(part, monthReport)))
+        assertEquals(RemovalEffect.UnlistsRange, removalEffect(sent(range(1, 31)), emptyList()))
+    }
+
+    // ---- Changed since it was sent ----------------------------------------------------------------
+
+    @Test
+    fun `a month that still has the trips and the total of its report has not changed`() {
+        // The rows of this test hold 31 trips and 412.3 km.
+        val submission = monthSubmission(october, listOf(sent(month(october))))
+
+        assertNull(changedSinceSent(submission, tripCount = 31, tenths = 4_123))
+    }
+
+    @Test
+    fun `a trip more or less, or another total, is a change, with both sets of figures`() {
+        val submission = monthSubmission(october, listOf(sent(month(october))))
+
+        assertEquals(
+            ChangedSinceSent(
+                sentTripCount = 31,
+                sentTenths = 4_123,
+                tripCount = 32,
+                tenths = 4_201,
+            ),
+            changedSinceSent(submission, tripCount = 32, tenths = 4_201),
+        )
+        // One trip marked Personal and another, as long, marked Business: the count is the
+        // same and the total too, and nothing is noticed. A tenth of a kilometre is.
+        assertNull(changedSinceSent(submission, tripCount = 31, tenths = 4_123))
+        assertEquals(4_124L, changedSinceSent(submission, 31, 4_124)?.tenths)
+        assertEquals(30, changedSinceSent(submission, 30, 4_123)?.tripCount)
+    }
+
+    @Test
+    fun `it is the newest report the month is held against`() {
+        val first = sent(month(october), revision = 0)
+        val revised =
+            sent(month(october), revision = 1).copy(tripCount = 32, distanceMetres = 420_100.0)
+        val submission = monthSubmission(october, listOf(revised, first))
+
+        // What the revision listed is what the month has: nothing to say.
+        assertNull(changedSinceSent(submission, tripCount = 32, tenths = 4_201))
+        // The figures of the first report are no longer the measure.
+        assertEquals(32, changedSinceSent(submission, 31, 4_123)?.sentTripCount)
+    }
+
+    @Test
+    fun `a month that is not submitted has nothing to have changed from`() {
+        assertNull(changedSinceSent(submission = null, tripCount = 12, tenths = 3_456))
     }
 
     @Test

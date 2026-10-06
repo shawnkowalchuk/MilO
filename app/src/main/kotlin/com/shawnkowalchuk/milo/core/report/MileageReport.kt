@@ -1,49 +1,19 @@
 package com.shawnkowalchuk.milo.core.report
 
 import com.shawnkowalchuk.milo.core.util.localDateOf
-import java.math.BigDecimal
+import com.shawnkowalchuk.milo.core.util.sumOfTenths
+import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Locale
 
 // The report for the accountant as plain values: who it is from, what it covers, and its trips
 // grouped by day with what they add up to. Pure Kotlin. The PDF and the CSV are both made from
 // this one value, so the two can never show different trips or different figures.
-
-private const val METRES_PER_TENTH_OF_A_KILOMETRE = 100.0
-
-/**
- * A distance as the report prints it: whole tenths of a kilometre, 12 349 m being 123.
- *
- * **The report adds up the figures it prints.** Every trip is rounded to a tenth of a kilometre
- * once, here, and a day's subtotal and the period's total are sums of those rounded figures.
- * Whoever adds a column of the report up by hand therefore gets the figure printed under it.
- * The screens round a sum of metres once instead, so the month's figure on the Trips screen can
- * differ from the report's total by a tenth or two.
- *
- * @throws IllegalArgumentException if [metres] is negative, infinite or not a number. A
- * distance like that means the stored trip is corrupt, and a mileage claim should fail loudly
- * rather than print a plausible-looking figure (the rule of `formatKilometres`).
- */
-fun tenthsOfAKilometre(metres: Double): Long {
-    require(metres.isFinite() && metres >= 0.0) {
-        "A distance must be a finite, non-negative number of metres, but was $metres"
-    }
-    return Math.round(metres / METRES_PER_TENTH_OF_A_KILOMETRE)
-}
-
-/**
- * Tenths of a kilometre as the kilometre figure that is printed, with one decimal: 123 becomes
- * "12.3". Worked out in decimal arithmetic, so the figure is exactly the tenths it is given.
- *
- * @param locale decides the decimal separator: the phone's for the PDF, `Locale.ROOT` for the
- * CSV, which a spreadsheet reads.
- */
-fun formatTenths(tenths: Long, locale: Locale): String =
-    String.format(locale, "%.1f", BigDecimal.valueOf(tenths, 1))
-
-/** The same distance in metres, the unit every stored distance has. */
-fun metresOfTenths(tenths: Long): Double = tenths * METRES_PER_TENTH_OF_A_KILOMETRE
+//
+// **The report adds up the figures it prints.** A trip is rounded to a tenth of a kilometre
+// once, and a day's subtotal and the period's total are sums of those rounded figures, so that
+// whoever adds a column up by hand gets the figure printed under it. The rule is `sumOfTenths`
+// in `core/util/DistanceFormat.kt`, which the screens add up by as well.
 
 /** Why a trip's figures are Shawn's own and not what MilO recorded. The report marks both. */
 enum class ReportMark {
@@ -79,7 +49,7 @@ data class ReportTrip(
 /** The trips that started on one calendar day, in the order they started. */
 data class ReportDay(val date: LocalDate, val trips: List<ReportTrip>) {
     /** The day's subtotal: the sum of the figures printed for its trips. */
-    val tenths: Long get() = trips.sumOf { it.tenths }
+    val tenths: Long get() = sumOfTenths(trips.map { it.distanceMetres })
 }
 
 /**

@@ -26,7 +26,8 @@ private const val DAY_MS = 24 * 60 * 60 * 1000L
 const val KEEP_REPORT_FILES_MS = 7 * DAY_MS
 
 /**
- * The PDF and CSV files MilO makes for the accountant.
+ * The files MilO makes to be handed to another app: the PDF and the CSV for the accountant,
+ * and the event log as a text file when Shawn shares it from the Log screen.
  *
  * They are in the cache because each can be made again from the trips at any time, and the cache
  * is never part of a backup. The price: Android empties the cache by itself when the phone runs
@@ -48,7 +49,19 @@ class ReportFileStore(private val folder: File) {
      * @throws IOException if the file cannot be written. Nothing is left behind then, and a
      * file of that name from before is still as it was.
      */
-    fun write(name: String, content: (OutputStream) -> Unit): File {
+    fun write(name: String, content: (OutputStream) -> Unit): File = writing(name, content)
+
+    /**
+     * The same for a file whose content is read from storage piece by piece while it is
+     * written (the event log), so that the whole of it is never held in memory.
+     */
+    suspend fun writeInPieces(name: String, content: suspend (OutputStream) -> Unit): File =
+        writing(name) { stream -> content(stream) }
+
+    // Inline, so that the one way of writing a file serves both a plain and a suspending
+    // writer: a suspending call may stand inside the block only because it is copied into its
+    // caller.
+    private inline fun writing(name: String, content: (OutputStream) -> Unit): File {
         // Never a path: a name with a folder in it, or one that means a folder, could put the
         // file outside the one folder that is shared.
         require(name.isNotBlank() && File(name).name == name && name != "." && name != "..") {

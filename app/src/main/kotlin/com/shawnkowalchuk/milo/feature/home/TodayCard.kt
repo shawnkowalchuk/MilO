@@ -11,6 +11,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.text.categoryWordsRes
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.Tally
@@ -58,7 +59,7 @@ internal fun TodayCard(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = kilometres(totals.business.metres, locale),
+                    text = total(totals.business, locale),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
@@ -100,7 +101,7 @@ private fun Apart(plural: Int, tally: Tally, locale: Locale) {
                 plural,
                 tally.count,
                 tally.count,
-                kilometres(tally.metres, locale),
+                total(tally, locale),
             ),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -142,6 +143,11 @@ private fun SessionRow(
 @Composable
 private fun kilometres(metres: Double, locale: Locale): String =
     stringResource(R.string.distance_km, formatKilometres(metres, locale))
+
+/** A total as it is printed: the sum of the figures the rows show, never of their metres. */
+@Composable
+private fun total(tally: Tally, locale: Locale): String =
+    stringResource(R.string.distance_km, formatTenths(tally.tenths, locale))
 
 /** "23 min" or "1 h 5 min": whole minutes, rounded down. */
 @Composable

@@ -68,6 +68,13 @@ class StartupDiagnosticsTest {
 
     private fun exitLines() = log.entries.filter { it.message.contains("ended") }
 
+    /** A line written [daysAgo] days ago, one second apart from its neighbours. */
+    private fun old(daysAgo: Int, number: Int) = EventLogEntry(
+        atMs = NOW_MS - daysAgo * 86_400_000L - number * 1_000L,
+        category = EventCategory.TRIP,
+        message = "old line $daysAgo days, number $number",
+    )
+
     @Test
     fun `a start imports the waiting crash, every exit record and notes the new process`() {
         crashFiles.write(CrashRecord.from(NOW_MS - 1_000, "main", IllegalStateException("boom")))
@@ -130,6 +137,41 @@ class StartupDiagnosticsTest {
     }
 
     @Test
+    fun `a start trims the lines that are too old to keep, after writing its own, and says so`() {
+        // A log from long ago, longer than what is always kept, and a week of newer lines.
+        repeat(700) { log.entries += old(daysAgo = 200, number = it) }
+        repeat(900) { log.entries += old(daysAgo = 3, number = it) }
+
+        startProcess()
+
+        // 1,606 lines after this start's own six. The newest thousand stay whatever their
+        // age: the six, the 900 of this week and the 94 newest of the old ones. The other 606
+        // are older than 90 days as well, and go.
+        assertEquals(94, log.entries.count { it.message.startsWith("old line 200 days") })
+        assertEquals(900, log.entries.count { it.message.startsWith("old line 3 days") })
+        val last = log.entries.last()
+        assertEquals(EventCategory.PROCESS, last.category)
+        assertEquals(
+            "Event log trimmed: 606 lines older than 90 days removed. The newest 1000 lines " +
+                "are kept whatever their age",
+            last.message,
+        )
+        // Its own lines were written first, and are all still there.
+        assertEquals(5, exitLines().size)
+        assertEquals(1, log.entries.count { it.message == "Process $PID started" })
+    }
+
+    @Test
+    fun `a start with nothing to trim writes nothing about it`() {
+        repeat(40) { log.entries += old(daysAgo = 200, number = it) }
+
+        startProcess()
+
+        assertEquals(46, log.entries.size)
+        assertEquals("Process $PID started", log.entries.last().message)
+    }
+
+    @Test
     fun `when the event log cannot be written the failure goes to a crash file instead`() {
         log.failOnInsert = 1
         log.failForGood = true
@@ -176,6 +218,26 @@ class StartupDiagnosticsTest {
 
         override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> =
             flowOf(entries.sortedByDescending { it.atMs }.take(limit))
+
+        override fun observeNewestOf(
+            category: EventCategory,
+            limit: Int,
+        ): Flow<List<EventLogEntry>> =
+            flowOf(entries.filter { it.category == category }.sortedByDescending { it.atMs })
+
+        override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) =
+            entries.filter { it.atMs > afterAtMs }.sortedBy { it.atMs }.take(limit)
+
+        override suspend fun count(): Int = entries.size
+
+        override suspend fun atMsOfEntryBehind(newerEntries: Int): Long? =
+            entries.sortedByDescending { it.atMs }.getOrNull(newerEntries)?.atMs
+
+        override suspend fun deleteOlderThan(beforeMs: Long): Int {
+            val old = entries.filter { it.atMs < beforeMs }
+            entries.removeAll(old)
+            return old.size
+        }
     }
 
     /** Stands in for the settings file: held in memory, or failing every read with [failure]. */

@@ -89,7 +89,8 @@ internal fun ActionsCard(state: ReportUiState.Ready, actions: ReportActions) {
         Quiet(stringResource(R.string.report_export_csv_detail))
 
         if (state.working) Quiet(stringResource(R.string.report_working))
-        state.problem?.let {
+        // A report that could not be removed is said in the list it was to be removed from.
+        state.problem?.takeIf { it != ReportProblem.COULD_NOT_REMOVE }?.let {
             StatusRow(label = stringResource(it.wordsRes()), status = RowStatus.PROBLEM)
         }
     }
@@ -121,4 +122,5 @@ internal fun ReportProblem.wordsRes(): Int = when (this) {
     ReportProblem.NO_PDF_VIEWER -> R.string.report_problem_no_pdf_viewer
     ReportProblem.NO_SHARE_APP -> R.string.report_problem_no_share_app
     ReportProblem.COULD_NOT_RECORD -> R.string.report_problem_record
+    ReportProblem.COULD_NOT_REMOVE -> R.string.report_problem_remove
 }

@@ -43,6 +43,7 @@ internal class ReportActions(
     val onSend: () -> Unit,
     val onExportCsv: () -> Unit,
     val onOpenSettings: () -> Unit,
+    val onRemoveSent: (Long) -> Unit,
 )
 
 /**
@@ -51,7 +52,8 @@ internal class ReportActions(
  *
  * MilO sends nothing itself. "Send to accountant" opens the email app with the PDF attached,
  * and Shawn presses send there. Android does not tell an app what became of an email, so when
- * he is back MilO asks, and only his "I sent it" records the report as sent.
+ * he is back MilO asks, and only his "I sent it" records the report as sent. A report that was
+ * recorded by mistake can be removed from the list again, after a question.
  *
  * @param onBack leaves the screen. Navigation belongs to the app, not the feature.
  * @param onOpenSettings opens Settings, where the name and the accountant's address are set.
@@ -77,7 +79,11 @@ fun ReportScreen(
     // it, until he next comes back to the screen.
     var heldBack by remember { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { heldBack = false }
-    var askingToResend by rememberSaveable { mutableStateOf(false) }
+    // Which of the questions before sending is being asked (its place in the list the screen
+    // was given), and which sent report is being asked about before it is removed. Saved, so
+    // that turning the phone closes neither.
+    var askingBeforeSend by rememberSaveable { mutableStateOf<Int?>(null) }
+    var removingId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // Another app is opened on MilO's own activity, so that Back from it leads here. What comes
     // back says nothing about an email ("Output: nothing", in Android's own words): it only
@@ -122,31 +128,53 @@ fun ReportScreen(
                     // report is sent: one question at a time.
                     ready?.awaiting != null -> heldBack = false
 
-                    // Sending a period again asks first. A press that lacks a setting is not
-                    // asked about: it is refused, and the screen says what is missing.
-                    ready?.resend != null && ready.missing.isEmpty() -> askingToResend = true
+                    // A month that has not ended, and a period that was sent before, ask first.
+                    // A press that lacks a setting is not asked about: it is refused, and the
+                    // screen says what is missing.
+                    ready != null && ready.missing.isEmpty() && ready.sendQuestions.isNotEmpty() ->
+                        askingBeforeSend = 0
 
-                    // TODO(debt): a month that has not ended is sent without a question, and a
-                    //  month whose trips changed after it was sent still reads "Submitted" with
-                    //  nothing said. See docs/FINDINGS_LOG.md (2026-10-06).
                     else -> viewModel.onSend()
                 }
             },
             onExportCsv = viewModel::onExportCsv,
             onOpenSettings = onOpenSettings,
+            onRemoveSent = { id -> removingId = id },
         )
     ReportContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 
-    val resend = ready?.resend
-    if (askingToResend && resend != null) {
-        ResendQuestion(
-            resend = resend,
-            zone = ready.zone,
+    // One question at a time, in the order the screen was given them. "Yes" to the last one
+    // sends; "no" to any of them sends nothing.
+    val asked = askingBeforeSend
+    val question = asked?.let { ready?.sendQuestions?.getOrNull(it) }
+    if (ready != null && asked != null && question != null) {
+        BeforeSendQuestion(
+            question = question,
+            state = ready,
             onSend = {
-                askingToResend = false
-                viewModel.onSend()
+                if (asked < ready.sendQuestions.lastIndex) {
+                    askingBeforeSend = asked + 1
+                } else {
+                    askingBeforeSend = null
+                    viewModel.onSend()
+                }
             },
-            onKeep = { askingToResend = false },
+            onKeep = { askingBeforeSend = null },
+        )
+    }
+
+    // Looked up again each time: once the report is gone from the list, by this press or
+    // otherwise, there is nothing left to ask about.
+    val removing = ready?.sent?.firstOrNull { it.id == removingId }
+    if (ready != null && removing != null) {
+        RemoveQuestion(
+            report = removing,
+            zone = ready.zone,
+            onRemove = {
+                removingId = null
+                viewModel.onRemoveSent(removing.id)
+            },
+            onKeep = { removingId = null },
         )
     }
 
@@ -198,7 +226,7 @@ internal fun ReportContent(
                 PeriodCard(state, actions)
                 SummaryCard(state)
                 ActionsCard(state, actions)
-                SentReportsCard(state)
+                SentReportsCard(state, actions.onRemoveSent)
             }
         }
     }

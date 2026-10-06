@@ -24,6 +24,18 @@ private object UnwritableLog : EventLogDao {
     override suspend fun insert(entry: EventLogEntry): Long = throw IOException("the disk is full")
 
     override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> = flowOf(emptyList())
+
+    override fun observeNewestOf(category: EventCategory, limit: Int): Flow<List<EventLogEntry>> =
+        flowOf(emptyList())
+
+    override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) =
+        emptyList<EventLogEntry>()
+
+    override suspend fun count(): Int = 0
+
+    override suspend fun atMsOfEntryBehind(newerEntries: Int): Long? = null
+
+    override suspend fun deleteOlderThan(beforeMs: Long): Int = 0
 }
 
 /**

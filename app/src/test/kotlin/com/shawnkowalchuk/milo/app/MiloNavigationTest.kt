@@ -185,6 +185,40 @@ class MiloNavigationTest {
     }
 
     @Test
+    fun `a tap on the monthly reminder shows that month's report as if opened from Trips`() {
+        val report = ReportKey(year = 2026, month = 9)
+        val wherever =
+            listOf(
+                listOf<NavKey>(HomeKey),
+                listOf(HomeKey, LogKey),
+                listOf(HomeKey, SettingsKey, PairingKey),
+                listOf(HomeKey, TripsKey, TripEditKey(tripId = 12)),
+                // Another month's report was open.
+                listOf(HomeKey, TripsKey, ReportKey(2026, 8), SettingsKey),
+            )
+
+        for (open in wherever) {
+            val backStack = open.toMutableList()
+
+            backStack.showReport(report)
+
+            // Back leads to Trips and then to Home, and the bar marks Trips.
+            assertEquals(listOf(HomeKey, TripsKey, report), backStack)
+            assertEquals(TopLevelDestination.TRIPS, topLevelOf(backStack))
+        }
+    }
+
+    @Test
+    fun `a reminder tapped while that very report is open leaves one report on the stack`() {
+        val report = ReportKey(year = 2026, month = 9)
+        val backStack = mutableListOf<NavKey>(HomeKey, TripsKey, report)
+
+        backStack.showReport(report)
+
+        assertEquals(listOf(HomeKey, TripsKey, report), backStack)
+    }
+
+    @Test
     fun `the bar's button closes the Report screen on its way to its own screen`() {
         val backStack = mutableListOf<Any>(HomeKey, TripsKey, ReportKey(2026, 9), SettingsKey)
 

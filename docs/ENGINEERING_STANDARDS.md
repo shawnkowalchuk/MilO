@@ -48,7 +48,7 @@ Pinned. Changing the stack mid-project is the most expensive form of debt there 
 | Navigation | Navigation 3 1.2.0; kotlinx-serialization-json 1.11.0 for its back-stack keys | Navigation 2 is in maintenance mode. |
 | State | ViewModel (lifecycle 2.11.0), coroutines 1.11.0 | A screen's state lives in its ViewModel. No global store. |
 | Storage | Room 3.0.3 on bundled SQLite; DataStore Preferences 1.2.1 for settings | New app, so start on Room's current line. |
-| Background work | WorkManager 2.12.0 | Only for jobs that can wait. Never to start a trip. |
+| Background work | WorkManager 2.12.0 | Only for jobs that can wait. Never to start a trip. Not in the build yet: no job has needed it. The monthly reminder uses one inexact `AlarmManager` alarm a day instead (FINDINGS_LOG, 2026-10-06). |
 | Location | play-services-location 21.4.0 | Fused location provider. |
 | Android Auto | `androidx.car.app` 1.7.0 | The in-truck screen and `CarConnection`. |
 | Dependency injection | Manual: an `AppContainer` created by the `Application` class | **No Hilt.** Small app, and Hilt's plugin is tied to AGP majors. |
@@ -90,8 +90,8 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
   data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
                           #   touches storage
   platform/               # the only layer that touches Android system services: Bluetooth,
-                          #   companion device, location, driving detection, notifications, audio,
-                          #   Android Auto
+                          #   companion device, location, driving detection, notifications, alarms,
+                          #   audio, Android Auto
 ```
 
 **Rules:**
@@ -227,9 +227,9 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 - **Secret-scanning (gitleaks)** in the pre-commit hook and in CI.
 
 ### Other baselines
-- **Location data stays on the phone.** It leaves only in files Shawn sends or saves himself (PDF, CSV, manual export), in his own Android backup once phase 4 turns that on, and as coordinates given to Android's Geocoder for an address lookup. There is no server.
-- **No personal data in logs that leave the device** (Logcat, CI output, crash text): no coordinates, addresses or names. The in-app event log stays on the phone.
-- **Validate all input** — what Shawn types and any imported file.
+- **Location data stays on the phone.** It leaves only in files Shawn sends or saves himself (PDF, CSV, and since 2026-10-06 the export file, which holds every trip's positions and, unless he switches them off, every raw GPS point), in his own Android backup (switched on since 2026-10-06: the trips with their positions and addresses go to his Google account, the raw points only to a phone he moves to), and as coordinates given to Android's Geocoder for an address lookup. There is no server. **MilO itself still sends nothing:** it has no INTERNET permission and no storage permission; a file is written where Android's own file picker put it, and the backup is Android's.
+- **No personal data in logs that leave the device** (Logcat, CI output, crash text): no coordinates, addresses or names. The in-app event log stays on the phone unless Shawn shares it himself: since 2026-10-06 the Log screen can hand it to Android's share sheet as a text file. That file is his to send, and the screen says before the press what it holds: the truck's and the other paired devices' names and Bluetooth addresses, and every address he typed or replaced on the edit screen (an edit's line names the address before and after). It holds no GPS position, and that must stay so: nothing written to the event log may contain one.
+- **Validate all input** — what Shawn types and any imported file. An import checks the whole file before it touches anything, refuses what it does not know (a newer format, an unknown part, a value that cannot be), and takes nothing about the truck's pairing on the file's word (`data/transfer/ExportChecks.kt`, `platform/transfer/TruckArrival.kt`).
 - **Least privilege** — declare only the permissions a built feature uses.
 - **Dependency scanning** — Dependabot alerts on the GitHub repo. `.github/workflows/dependency-graph.yml` sends GitHub the full list of libraries the build resolves, on every push to `main`. It holds the only write permission in the workflows (`contents: write`, which GitHub's submission API requires). Shawn must switch on the dependency graph and Dependabot alerts in the repo settings, or it has no effect.
 
