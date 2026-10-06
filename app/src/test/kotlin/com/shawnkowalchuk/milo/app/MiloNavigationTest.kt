@@ -102,6 +102,47 @@ class MiloNavigationTest {
     }
 
     @Test
+    fun `the edit screen opens on top of Trips, once, and closes back to it`() {
+        val backStack = mutableListOf<Any>(HomeKey, TripsKey)
+
+        repeat(2) { backStack.openOnTop(TripEditKey(tripId = 12)) }
+        assertEquals(listOf(HomeKey, TripsKey, TripEditKey(tripId = 12)), backStack)
+
+        // After a save, and again by the Back arrow while the screen slides away.
+        repeat(2) { backStack.closeIfOnTop(TripEditKey(tripId = 12)) }
+        assertEquals(listOf<Any>(HomeKey, TripsKey), backStack)
+    }
+
+    @Test
+    fun `the empty edit screen, for a missed trip, is a screen of its own`() {
+        val backStack = mutableListOf<Any>(HomeKey, TripsKey)
+
+        repeat(2) { backStack.openOnTop(TripEditKey(tripId = null)) }
+
+        assertEquals(listOf(HomeKey, TripsKey, TripEditKey(tripId = null)), backStack)
+    }
+
+    @Test
+    fun `the bar keeps showing Trips while the edit screen is open`() {
+        val editing = listOf(HomeKey, TripsKey, TripEditKey(tripId = 12))
+        val adding = listOf(HomeKey, TripsKey, TripEditKey(tripId = null))
+
+        assertEquals(TopLevelDestination.TRIPS, topLevelOf(editing))
+        assertEquals(TopLevelDestination.TRIPS, topLevelOf(adding))
+    }
+
+    @Test
+    fun `the bar's button closes the edit screen on its way to its own screen`() {
+        val backStack = mutableListOf<Any>(HomeKey, TripsKey, TripEditKey(tripId = 12))
+
+        // What the press does to the back stack. While something typed is not saved the app
+        // asks first, and only then does this (UnsavedWorkTest).
+        backStack.showTopLevel(LogKey, home = HomeKey)
+
+        assertEquals(listOf<Any>(HomeKey, LogKey), backStack)
+    }
+
+    @Test
     fun `the bar shows the screen the pairing screen was opened from`() {
         assertEquals(TopLevelDestination.HOME, topLevelOf(listOf(HomeKey)))
         assertEquals(TopLevelDestination.TRIPS, topLevelOf(listOf(HomeKey, TripsKey)))

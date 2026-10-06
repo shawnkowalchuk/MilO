@@ -132,8 +132,31 @@ class TripPlaceTextsTest {
     }
 
     @Test
+    fun `an address that was left empty by hand is said to be that`() {
+        // Not "no address found": MilO never looked.
+        assertEquals(
+            PlacesText.Sentence(R.string.trips_addresses_left_blank),
+            routeText(TripPlace.LeftBlank, TripPlace.LeftBlank),
+        )
+        assertEquals(
+            PlacesText.FromTo(
+                PlaceSide.Address("12 Shop Rd, Edmonton"),
+                PlaceSide.Words(R.string.trips_place_left_blank),
+            ),
+            routeText(shop, TripPlace.LeftBlank),
+        )
+        assertEquals(
+            PlacesText.FromTo(
+                PlaceSide.Words(R.string.trips_place_left_blank),
+                PlaceSide.Words(R.string.trips_place_looking_up),
+            ),
+            routeText(TripPlace.LeftBlank, TripPlace.LookingUp),
+        )
+    }
+
+    @Test
     fun `no state leaves the line of a finished trip or a trip in progress out`() {
-        val states = listOf(shop, TripPlace.LookingUp, TripPlace.NotFound)
+        val states = listOf(shop, TripPlace.LookingUp, TripPlace.NotFound, TripPlace.LeftBlank)
 
         for (from in states) {
             for (to in states) {

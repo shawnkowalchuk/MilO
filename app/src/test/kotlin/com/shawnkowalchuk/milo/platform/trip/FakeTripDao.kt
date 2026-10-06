@@ -90,11 +90,16 @@ class FakeTripDao : TripDao {
         )
     }
 
+    // The condition is written out as the SQL has it, and not taken from startPlace() and
+    // endPlace(): a test compares the two, so that the rule in Kotlin and the query cannot
+    // drift apart unnoticed.
     override suspend fun findLackingAddress(finished: TripStatus, maxAttempts: Int): List<Trip> =
         rows
             .filter { it.status == finished && it.addressAttempts < maxAttempts }
-            .filter { it.startAddress == null || it.endAddress == null }
-            .sortedByDescending { it.id }
+            .filter {
+                (it.startAddress == null && !it.startAddressByHand) ||
+                    (it.endAddress == null && !it.endAddressByHand)
+            }.sortedByDescending { it.id }
 
     override suspend fun recordAddressLookup(
         tripId: Long,
@@ -110,13 +115,20 @@ class FakeTripDao : TripDao {
         }
         return change(tripId, finished) {
             it.copy(
-                startAddress = it.startAddress ?: startAddress,
-                endAddress = it.endAddress ?: endAddress,
+                startAddress = kept(it.startAddress, it.startAddressByHand, startAddress),
+                endAddress = kept(it.endAddress, it.endAddressByHand, endAddress),
                 addressAttempts = it.addressAttempts + failedAttempts,
                 addressLastAttemptAtMs = atMs,
             )
         }
     }
+
+    /**
+     * As the SQL has it: an address of Shawn's own is kept even where it is empty, and any
+     * other is kept where there is one.
+     */
+    private fun kept(stored: String?, byHand: Boolean, found: String?): String? =
+        if (byHand) stored else stored ?: found
 
     override suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int {
         failNextStatusChange?.let { failure ->
@@ -161,6 +173,58 @@ class FakeTripDao : TripDao {
         }
         return changeIf(tripId, { it.status == finished && it.category != category }) {
             it.copy(category = category, categorySetByHand = true)
+        }
+    }
+
+    /** Set to make the next write of an edit or a restore fail once, as a full disk would. */
+    var failNextByHandWrite: Exception? = null
+
+    // Exactly the columns the SQL names, each from its own parameter. A rule that changed any
+    // other column of the row would therefore not see it stored here either, and the tests of
+    // the rules compare what is stored with what the rule answered.
+    override suspend fun writeByHand(
+        tripId: Long,
+        startedAtMs: Long,
+        endedAtMs: Long?,
+        distanceMetres: Double,
+        startAddress: String?,
+        endAddress: String?,
+        startAddressByHand: Boolean,
+        endAddressByHand: Boolean,
+        addressAttempts: Int,
+        addressLastAttemptAtMs: Long?,
+        category: TripCategory?,
+        categorySetByHand: Boolean,
+        ranPastSchedule: Boolean,
+        editedByHand: Boolean,
+        recordedStartedAtMs: Long?,
+        recordedEndedAtMs: Long?,
+        recordedDistanceMetres: Double?,
+        finished: TripStatus,
+    ): Int {
+        failNextByHandWrite?.let { failure ->
+            failNextByHandWrite = null
+            throw failure
+        }
+        return change(tripId, finished) {
+            it.copy(
+                startedAtMs = startedAtMs,
+                endedAtMs = endedAtMs,
+                distanceMetres = distanceMetres,
+                startAddress = startAddress,
+                endAddress = endAddress,
+                startAddressByHand = startAddressByHand,
+                endAddressByHand = endAddressByHand,
+                addressAttempts = addressAttempts,
+                addressLastAttemptAtMs = addressLastAttemptAtMs,
+                category = category,
+                categorySetByHand = categorySetByHand,
+                ranPastSchedule = ranPastSchedule,
+                editedByHand = editedByHand,
+                recordedStartedAtMs = recordedStartedAtMs,
+                recordedEndedAtMs = recordedEndedAtMs,
+                recordedDistanceMetres = recordedDistanceMetres,
+            )
         }
     }
 

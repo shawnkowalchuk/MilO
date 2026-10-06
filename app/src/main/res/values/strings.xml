@@ -238,7 +238,9 @@
         <item quantity="one">%d deleted or discarded trip is not shown.</item>
         <item quantity="other">%d deleted or discarded trips are not shown.</item>
     </plurals>
-    <string name="trips_press_hint">Tap a trip to mark it Business or Personal, or to delete it.</string>
+    <string name="trips_press_hint">Tap a trip to edit it, mark it Business or Personal, or delete it.</string>
+    <!-- Trips: the way to the edit screen, empty, for a trip MilO did not record. -->
+    <string name="trips_action_add">Add a missed trip</string>
     <!-- Trips: spoken by the screen reader for what a tap on a finished trip does. -->
     <string name="trips_row_press">show or hide what can be done with this trip</string>
     <string name="trips_in_progress_title">In progress</string>
@@ -249,7 +251,16 @@
     <string name="trips_deleted_note">Deleted by you. Not counted.</string>
     <!-- Trips: a trip left out because Settings says to ignore trips outside the work hours. -->
     <string name="trips_ignored_note">Left out: it started outside your work hours, and Settings says to ignore such trips. Not counted.</string>
+    <!--
+        Trips: a trip whose times, addresses or distance are typed in and not recorded. The
+        asterisk stands after the trip's times (the argument), and one of the two lines under
+        the trip says what it means. The monthly report will mark the same trips with it.
+    -->
+    <string name="trips_time_marked">%1$s *</string>
+    <string name="trips_mark_added">* Added by hand</string>
+    <string name="trips_mark_edited">* Edited by hand</string>
     <!-- Trips: what can be done with a trip. -->
+    <string name="trips_action_edit">Edit trip</string>
     <string name="trips_action_mark_business">Mark as Business</string>
     <string name="trips_action_mark_personal">Mark as Personal</string>
     <string name="trips_action_delete">Delete trip</string>
@@ -273,14 +284,97 @@
     <string name="trips_from_to">%1$s → %2$s</string>
     <string name="trips_place_looking_up">looking up the address…</string>
     <string name="trips_place_not_found">no address found</string>
+    <!-- An address field of the edit screen that was left empty. MilO does not look it up. -->
+    <string name="trips_place_left_blank">no address entered</string>
     <!-- Trips: in place of the line above when neither address is known. -->
     <string name="trips_addresses_looking_up">Looking up the addresses…</string>
     <string name="trips_addresses_not_found">No address found for this trip.</string>
+    <string name="trips_addresses_left_blank">No address entered for this trip.</string>
     <!-- Trips: where the trip in progress started. The argument is an address. -->
     <string name="trips_from">From %1$s</string>
     <string name="trips_start_looking_up">Looking up where it started…</string>
     <string name="trips_start_not_found">No address found for where it started.</string>
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
+
+    <!--
+        The edit screen, opened from Trips: a finished trip's times, addresses and distance
+        changed by hand, or a trip MilO missed typed in.
+    -->
+    <string name="trip_edit_title">Edit trip</string>
+    <string name="trip_add_title">Add a missed trip</string>
+    <string name="trip_edit_reading">Reading the trip…</string>
+    <string name="trip_edit_not_editable">This trip cannot be changed here. It was deleted, or it is not a finished trip. Go back to Trips.</string>
+    <string name="trip_edit_intro">Change what is wrong, then press Save. If you change a time, an address or the distance, the trip is marked \"edited by hand\". What MilO recorded is kept, and you can put it back.</string>
+    <string name="trip_edit_added_intro">You added this trip by hand, so MilO has no recording of it. Change what is wrong, then press Save.</string>
+    <string name="trip_add_intro">For a trip MilO did not record. It is saved as a finished trip, counted like any other, and marked \"added by hand\".</string>
+    <string name="trip_edit_when_title">When</string>
+    <!-- The argument is a day from formatDay(), such as Tuesday, October 6, 2026. -->
+    <string name="trip_edit_date">Date: %1$s</string>
+    <!-- The argument is a time of day from formatClockTime(), such as 08:14. -->
+    <string name="trip_edit_start">Start: %1$s</string>
+    <string name="trip_edit_end">End: %1$s</string>
+    <string name="trip_edit_start_not_set">Start: choose a time</string>
+    <string name="trip_edit_end_not_set">End: choose a time</string>
+    <!-- The edit screen: the titles of the time picker. -->
+    <string name="trip_edit_pick_start">When the trip started</string>
+    <string name="trip_edit_pick_end">When the trip ended</string>
+    <!-- The edit screen: the switch for a trip that ran past midnight. -->
+    <string name="trip_edit_ends_next_day">Ended the next day</string>
+    <!-- The argument is a day from formatDay(), such as Tuesday, October 6, 2026. -->
+    <string name="trip_edit_ends_on">The end time is on %1$s.</string>
+    <string name="trip_edit_where_title">Where</string>
+    <string name="trip_edit_from">From</string>
+    <string name="trip_edit_to">To</string>
+    <string name="trip_edit_where_note">An address you type or change here stays as you typed it. MilO does not look it up again.</string>
+    <string name="trip_add_where_note">MilO has no GPS position for this trip, so it cannot look the addresses up. They are what you type here.</string>
+    <string name="trip_edit_distance_title">Distance</string>
+    <string name="trip_edit_kilometres">Kilometres</string>
+    <string name="trip_edit_kind_title">Business or Personal</string>
+    <!-- The edit screen: who chose Business or Personal, under the two choices. -->
+    <string name="trip_edit_kind_by_you">Chosen by you. Changing the times does not change it.</string>
+    <string name="trip_edit_kind_by_schedule">Chosen by MilO from your work hours and the start time. Choose the other one if it is wrong.</string>
+    <string name="trip_edit_kind_as_saved">As this trip was saved. If you change when it started, MilO chooses again from your work hours.</string>
+    <string name="trip_edit_kind_needs_start">Choose the start time first. MilO then picks one from your work hours, and you can change it.</string>
+    <string name="trip_edit_kind_not_known">MilO cannot tell which it is. Choose one yourself.</string>
+    <string name="trip_edit_save">Save</string>
+    <string name="trip_add_save">Add this trip</string>
+    <!--
+        The edit screen: why a press on Save stored nothing. One line per thing to put right,
+        shown in the card it is about: the times in "When", the distance under its field.
+    -->
+    <string name="trip_edit_problem_start_missing">Choose when the trip started.</string>
+    <string name="trip_edit_problem_end_missing">Choose when the trip ended.</string>
+    <!-- The argument is the name of the switch, trip_edit_ends_next_day. -->
+    <string name="trip_edit_problem_end_not_after_start">The end must be later than the start. If the trip ran past midnight, switch on \"%1$s\". Nothing was saved.</string>
+    <string name="trip_edit_problem_future">A trip cannot start or end in the future. Check the date and the times. Nothing was saved.</string>
+    <string name="trip_edit_problem_overlaps_recording">A trip is being recorded right now, and this one would run into it. Make it end before the recording started, or end the recording first. Nothing was saved.</string>
+    <string name="trip_edit_problem_distance_missing">Type the distance in kilometres.</string>
+    <string name="trip_edit_problem_distance_not_a_number">The distance must be a number, such as 12.4. Nothing was saved.</string>
+    <string name="trip_edit_problem_distance_negative">The distance cannot be less than zero. Nothing was saved.</string>
+    <!-- The argument is the longest distance the form takes for one trip, in kilometres. -->
+    <string name="trip_edit_problem_distance_too_long">That is more than %1$d km for one trip. Check the distance. Nothing was saved.</string>
+    <!-- The argument is a speed in kilometres per hour. -->
+    <string name="trip_edit_problem_distance_too_fast">That distance is too far for the time between the start and the end: more than %1$d km/h on average. Check the distance and the times. Nothing was saved.</string>
+    <string name="trip_edit_save_failed">That could not be saved. The Log screen says why.</string>
+    <!-- The edit screen: what MilO recorded of a trip that was edited, and the way back to it. -->
+    <string name="trip_edit_recorded_title">What MilO recorded</string>
+    <!-- The arguments are a day, the trip's times such as 08:14 – 08:39, and its distance. -->
+    <string name="trip_edit_recorded_trip">%1$s\n%2$s · %3$s</string>
+    <string name="trip_edit_recorded_note">You changed this trip by hand. Restoring puts these times and this distance back, removes any address you typed so that MilO looks it up again, and takes the \"edited by hand\" mark away.</string>
+    <string name="trip_edit_restore">Restore recorded values</string>
+    <string name="trip_edit_restore_title">Restore recorded values?</string>
+    <!-- The argument is the recorded trip, as trip_edit_recorded_trip writes it. -->
+    <string name="trip_edit_restore_text">%1$s\n\nThe times and the distance go back to these, and what you typed in their place is dropped. Any address you typed is removed and looked up again. The Log screen keeps a line that says what was changed.</string>
+    <string name="trip_edit_restore_confirm">Restore</string>
+
+    <!--
+        The question asked before a screen is left while it holds something typed that has not
+        been saved: by Back, by the screen's own arrow or by a button of the bottom bar.
+    -->
+    <string name="leave_unsaved_title">Leave without saving?</string>
+    <string name="leave_unsaved_text">What you changed on this screen has not been saved. If you leave now, it is lost and nothing is stored.</string>
+    <string name="leave_unsaved_discard">Discard</string>
+    <string name="leave_unsaved_keep">Keep editing</string>
 
     <!-- Settings, opened from Home. -->
     <string name="settings_title">Settings</string>

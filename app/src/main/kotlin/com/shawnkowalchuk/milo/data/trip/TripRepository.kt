@@ -3,9 +3,11 @@ package com.shawnkowalchuk.milo.data.trip
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.schedule.TripClassification
 import com.shawnkowalchuk.milo.core.schedule.TripFiling
+import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -16,16 +18,23 @@ import kotlinx.coroutines.flow.Flow
  * that is no longer open changes nothing. The functions that change an open trip return false
  * in that case, so the caller can write the surprise to the event log.
  *
- * Four writes are made to a trip that has closed. [recordAddressLookup] is the one write that
+ * Six writes are made to a trip that has closed. [recordAddressLookup] is the one write that
  * is not safe to repeat: every call counts as a lookup of its own. [correct] is Shawn's own
  * change to a trip (delete, restore, count after all); it changes the status and nothing else,
  * and a second call changes nothing. [sortUnsorted] gives a trip recorded before there was a
  * work schedule its Business or Personal, once. [setCategoryByHand] is Shawn's own choice of
- * the two, and nothing but another choice of his changes it afterwards.
+ * the two, and nothing but another choice of his changes it afterwards. [editByHand] and
+ * [restoreRecorded] are the edit form's: they change a finished trip's times, distance and
+ * addresses, and put back what MilO recorded. A repeated one changes nothing.
+ *
+ * One more makes a row that was never open: [addByHand], a trip Shawn types in.
  */
 class TripRepository(private val dao: TripDao) {
     /** The trip being recorded or waiting out its grace period, or null when idle. */
     suspend fun findOpenTrip(): Trip? = dao.findNewestWithStatus(TripStatus.OPEN)
+
+    /** One trip by its id, whatever its status, or null if there is none. */
+    suspend fun findTrip(tripId: Long): Trip? = dao.findById(tripId)
 
     /** Finished trips, newest first. Discarded and deleted trips are left out. */
     fun observeFinishedTrips(): Flow<List<Trip>> = dao.observeWithStatus(TripStatus.FINISHED)
@@ -181,5 +190,47 @@ class TripRepository(private val dao: TripDao) {
         } else {
             CategoryChangeOutcome.Refused(found = after)
         }
+    }
+
+    /**
+     * Stores one save of the edit form on a finished trip. What is written, and whether the
+     * trip is marked as edited by it, is decided by `editedTrip` from the row as it is at this
+     * moment; a trip that is not a finished one is refused by the write itself, like [correct].
+     *
+     * @param schedule the work schedule as it is now, or null if the settings cannot be read.
+     * It is used only if the trip has to be sorted again (`refileTrip`).
+     */
+    suspend fun editByHand(
+        tripId: Long,
+        edit: TripEdit,
+        schedule: WorkSchedule?,
+        zone: ZoneId,
+    ): ByHandOutcome = dao.rewriteFinished(tripId, TripStatus.FINISHED) { stored ->
+        editedTrip(stored, edit, schedule, zone)
+    }
+
+    /**
+     * Puts back what MilO recorded of an edited trip (`restoredTrip`): its times and its
+     * distance, with any address Shawn typed handed back to the lookup. Refused for a trip
+     * that has nothing to put back.
+     */
+    suspend fun restoreRecorded(
+        tripId: Long,
+        schedule: WorkSchedule?,
+        zone: ZoneId,
+    ): ByHandOutcome = dao.rewriteFinished(tripId, TripStatus.FINISHED) { stored ->
+        restoredTrip(stored, schedule, zone)
+    }
+
+    /**
+     * Stores a trip Shawn typed in, as a finished trip marked as added by hand
+     * (`tripAddedByHand`). It was never open, so the rule that only one trip is open at a time
+     * is not touched by it, and the trip rules never see it.
+     *
+     * @return the row as stored, with its id.
+     */
+    suspend fun addByHand(typed: TypedTrip, schedule: WorkSchedule?, zone: ZoneId): Trip {
+        val trip = tripAddedByHand(typed, schedule, zone)
+        return trip.copy(id = dao.insert(trip))
     }
 }

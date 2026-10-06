@@ -57,6 +57,9 @@ internal fun routeText(from: TripPlace, to: TripPlace): PlacesText = when {
     from == TripPlace.NotFound && to == TripPlace.NotFound ->
         PlacesText.Sentence(R.string.trips_addresses_not_found)
 
+    from == TripPlace.LeftBlank && to == TripPlace.LeftBlank ->
+        PlacesText.Sentence(R.string.trips_addresses_left_blank)
+
     else -> PlacesText.FromTo(from.asSide(), to.asSide())
 }
 
@@ -67,13 +70,18 @@ internal fun routeText(from: TripPlace, to: TripPlace): PlacesText = when {
  */
 internal fun startText(from: TripPlace?): PlacesText = when (from) {
     null -> PlacesText.Sentence(R.string.trips_start_not_known_yet)
+
     is TripPlace.Known -> PlacesText.From(from.address)
+
     TripPlace.LookingUp -> PlacesText.Sentence(R.string.trips_start_looking_up)
-    TripPlace.NotFound -> PlacesText.Sentence(R.string.trips_start_not_found)
+
+    // A trip in progress has no address of Shawn's own; the two read alike if it ever did.
+    TripPlace.NotFound, TripPlace.LeftBlank -> PlacesText.Sentence(R.string.trips_start_not_found)
 }
 
 private fun TripPlace.asSide(): PlaceSide = when (this) {
     is TripPlace.Known -> PlaceSide.Address(address)
     TripPlace.LookingUp -> PlaceSide.Words(R.string.trips_place_looking_up)
     TripPlace.NotFound -> PlaceSide.Words(R.string.trips_place_not_found)
+    TripPlace.LeftBlank -> PlaceSide.Words(R.string.trips_place_left_blank)
 }

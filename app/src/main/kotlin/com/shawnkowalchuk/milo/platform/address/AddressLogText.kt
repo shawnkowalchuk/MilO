@@ -46,6 +46,11 @@ internal sealed interface PlaceOutcome {
     data object NoPosition : PlaceOutcome {
         override val leavesGap = false
     }
+
+    /** Shawn emptied this address himself. It is his, and is not asked about, now or later. */
+    data object LeftBlankByHand : PlaceOutcome {
+        override val leavesGap = false
+    }
 }
 
 private fun PlaceOutcome.inWords(): String = when (this) {
@@ -65,6 +70,8 @@ private fun PlaceOutcome.inWords(): String = when (this) {
     PlaceOutcome.NotAsked -> "not asked"
 
     PlaceOutcome.NoPosition -> "none (the trip has no position there)"
+
+    PlaceOutcome.LeftBlankByHand -> "none (left empty by hand, so not looked up)"
 }
 
 /**

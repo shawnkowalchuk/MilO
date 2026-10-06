@@ -18,10 +18,14 @@ import kotlinx.coroutines.flow.Flow
  * the four address columns, and [changeStatus] on the status it is given, writing nothing but
  * the status.
  *
- * Business or Personal is written in three places and no other. [close] stores what the
- * schedule made of the trip in the same update that closes it. [sortUnsorted] does the same
- * for a closed trip that has no category yet, and for no other. [setCategoryByHand] is Shawn's
- * own choice for a finished trip, and the only one that marks the row as set by hand.
+ * Business or Personal is written by [close], which stores what the schedule made of the trip
+ * in the same update that closes it; by [sortUnsorted], which does the same for a closed trip
+ * that has no category yet, and for no other; by [setCategoryByHand], Shawn's own choice for a
+ * finished trip on the Trips screen; and by [writeByHand].
+ *
+ * [writeByHand] is the one write behind the edit form: an edit of a finished trip, and
+ * "Restore recorded values". It is only ever called by [rewriteFinished], which reads the row
+ * and writes it back inside one transaction. A trip that is typed in by hand is an [insert].
  */
 @Dao
 interface TripDao {
@@ -93,27 +97,35 @@ interface TripDao {
     ): Int
 
     /**
-     * The trips with [finished] status that still lack an address and have had fewer than
-     * [maxAttempts] failed lookups, newest first. Open, discarded and deleted trips are never
-     * returned.
+     * The trips with [finished] status that still lack an address the lookup may fill in, and
+     * have had fewer than [maxAttempts] failed lookups, newest first. Open, discarded and
+     * deleted trips are never returned, and an address that is Shawn's own (typed, or emptied
+     * by hand) does not count as lacking.
      */
     @Query(
         "SELECT * FROM trips WHERE status = :finished " +
-            "AND (startAddress IS NULL OR endAddress IS NULL) " +
+            "AND ((startAddress IS NULL AND startAddressByHand = 0) " +
+            "OR (endAddress IS NULL AND endAddressByHand = 0)) " +
             "AND addressAttempts < :maxAttempts ORDER BY id DESC",
     )
     suspend fun findLackingAddress(finished: TripStatus, maxAttempts: Int): List<Trip>
 
     /**
      * Writes what one lookup found. An address that is already stored is kept, whatever is
-     * passed, and a null leaves the column as it is. Nothing but the four address columns is
-     * touched, and only on a trip with [finished] status.
+     * passed, and a null leaves the column as it is. An address that is Shawn's own is never
+     * written to, even where he left it empty: the condition is in the update itself, so a
+     * lookup that was under way while he saved the edit form cannot undo what he typed.
+     * Nothing but the four address columns is touched, and only on a trip with [finished]
+     * status.
      *
      * @param failedAttempts 1 if the lookup left an address of the trip missing, else 0.
      */
     @Query(
-        "UPDATE trips SET startAddress = COALESCE(startAddress, :startAddress), " +
-            "endAddress = COALESCE(endAddress, :endAddress), " +
+        "UPDATE trips SET " +
+            "startAddress = CASE WHEN startAddressByHand = 1 THEN startAddress " +
+            "ELSE COALESCE(startAddress, :startAddress) END, " +
+            "endAddress = CASE WHEN endAddressByHand = 1 THEN endAddress " +
+            "ELSE COALESCE(endAddress, :endAddress) END, " +
             "addressAttempts = addressAttempts + :failedAttempts, " +
             "addressLastAttemptAtMs = :atMs " +
             "WHERE id = :tripId AND status = :finished",
@@ -178,4 +190,97 @@ interface TripDao {
             "AND (category IS NULL OR category != :category)",
     )
     suspend fun setCategoryByHand(tripId: Long, category: TripCategory, finished: TripStatus): Int
+
+    /**
+     * Writes the figures of a trip with [finished] status that Shawn's own hand may change: its
+     * times, distance and addresses, Business or Personal, and the marks and kept figures that
+     * go with an edit. A trip in any other status is not matched, so one that is being recorded,
+     * or was deleted while the form was open, is never written to.
+     *
+     * Called by [rewriteFinished] only, which works the values out from the row as it is read
+     * in the same transaction.
+     */
+    @Query(
+        "UPDATE trips SET startedAtMs = :startedAtMs, endedAtMs = :endedAtMs, " +
+            "distanceMetres = :distanceMetres, " +
+            "startAddress = :startAddress, endAddress = :endAddress, " +
+            "startAddressByHand = :startAddressByHand, endAddressByHand = :endAddressByHand, " +
+            "addressAttempts = :addressAttempts, " +
+            "addressLastAttemptAtMs = :addressLastAttemptAtMs, " +
+            "category = :category, categorySetByHand = :categorySetByHand, " +
+            "ranPastSchedule = :ranPastSchedule, editedByHand = :editedByHand, " +
+            "recordedStartedAtMs = :recordedStartedAtMs, " +
+            "recordedEndedAtMs = :recordedEndedAtMs, " +
+            "recordedDistanceMetres = :recordedDistanceMetres " +
+            "WHERE id = :tripId AND status = :finished",
+    )
+    suspend fun writeByHand(
+        tripId: Long,
+        startedAtMs: Long,
+        endedAtMs: Long?,
+        distanceMetres: Double,
+        startAddress: String?,
+        endAddress: String?,
+        startAddressByHand: Boolean,
+        endAddressByHand: Boolean,
+        addressAttempts: Int,
+        addressLastAttemptAtMs: Long?,
+        category: TripCategory?,
+        categorySetByHand: Boolean,
+        ranPastSchedule: Boolean,
+        editedByHand: Boolean,
+        recordedStartedAtMs: Long?,
+        recordedEndedAtMs: Long?,
+        recordedDistanceMetres: Double?,
+        finished: TripStatus,
+    ): Int
+
+    /**
+     * Makes one of Shawn's own changes to a finished trip: reads the row, asks [rewrite] what
+     * it is to become, and stores that with [writeByHand]. The three share a transaction, so
+     * the address lookup or the trip rules cannot write to the table in between, and what
+     * [rewrite] saw is what is replaced.
+     *
+     * @param rewrite a pure rule from `TripEdit.kt`. Of what it answers, only the columns
+     * [writeByHand] names are stored.
+     */
+    @Transaction
+    suspend fun rewriteFinished(
+        tripId: Long,
+        finished: TripStatus,
+        rewrite: TripRewrite,
+    ): ByHandOutcome {
+        val stored = findById(tripId)
+        if (stored == null || stored.status != finished) return ByHandOutcome.Refused(stored)
+        val wanted = rewrite.of(stored) ?: return ByHandOutcome.Refused(stored)
+        if (wanted == stored) return ByHandOutcome.Unchanged(stored)
+        val written =
+            writeByHand(
+                tripId = tripId,
+                startedAtMs = wanted.startedAtMs,
+                endedAtMs = wanted.endedAtMs,
+                distanceMetres = wanted.distanceMetres,
+                startAddress = wanted.startAddress,
+                endAddress = wanted.endAddress,
+                startAddressByHand = wanted.startAddressByHand,
+                endAddressByHand = wanted.endAddressByHand,
+                addressAttempts = wanted.addressAttempts,
+                addressLastAttemptAtMs = wanted.addressLastAttemptAtMs,
+                category = wanted.category,
+                categorySetByHand = wanted.categorySetByHand,
+                ranPastSchedule = wanted.ranPastSchedule,
+                editedByHand = wanted.editedByHand,
+                recordedStartedAtMs = wanted.recordedStartedAtMs,
+                recordedEndedAtMs = wanted.recordedEndedAtMs,
+                recordedDistanceMetres = wanted.recordedDistanceMetres,
+                finished = finished,
+            )
+        // Read back, not assumed: the outcome carries what the row really holds now.
+        val after = findById(tripId)
+        return if (written == 1 && after != null) {
+            ByHandOutcome.Done(before = stored, after = after)
+        } else {
+            ByHandOutcome.Refused(after)
+        }
+    }
 }

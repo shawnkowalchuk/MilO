@@ -23,9 +23,10 @@ const val MILO_DATABASE_FILE = "milo.db"
  * out of it (see [PointsDatabase]).
  *
  * Raising [Database.version] needs a migration (`MiloMigrations.kt`) and the schema file Room
- * writes to `app/schemas`. Version 2 added the trips' addresses; version 3, Business or Personal.
+ * writes to `app/schemas`. Version 2 added the trips' addresses; version 3, Business or Personal;
+ * version 4, the marks of a trip that was added or edited by hand and what was recorded before.
  */
-@Database(entities = [Trip::class, EventLogEntry::class], version = 3)
+@Database(entities = [Trip::class, EventLogEntry::class], version = 4)
 abstract class MiloDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
 

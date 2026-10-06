@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.text.categoryWordsRes
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.data.trip.ByHandMark
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 
 // Which words a trip's row uses for what the trip is saved as, for why it is not counted, and
@@ -31,6 +32,17 @@ internal fun TripLine.leftOutNoteRes(): Int? = when (kind) {
     TripKind.DELETED -> R.string.trips_deleted_note
 
     TripKind.COUNTED, TripKind.IN_PROGRESS -> null
+}
+
+/**
+ * The words that say a trip's figures are Shawn's own, or null for a trip that is as MilO
+ * recorded it. The trip in progress has none. Both lines start with the asterisk the row puts
+ * after the trip's times, which is the mark the monthly report will use for the same trips.
+ */
+internal fun TripLine.byHandNoteRes(): Int? = when (mark.takeIf { kind != TripKind.IN_PROGRESS }) {
+    ByHandMark.ADDED -> R.string.trips_mark_added
+    ByHandMark.EDITED -> R.string.trips_mark_edited
+    null -> null
 }
 
 internal fun TripCorrection.labelRes(): Int = when (this) {
