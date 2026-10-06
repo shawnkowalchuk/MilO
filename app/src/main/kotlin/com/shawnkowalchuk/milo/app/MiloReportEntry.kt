@@ -45,10 +45,11 @@ internal fun ReportEntry(container: AppContainer, backStack: NavBackStack<NavKey
                                     settings = container.settingsStore,
                                     records = records,
                                 ),
-                            documents = container.reportDocuments,
-                            handOff = container.reportHandOff,
-                            texts = container.reportTexts,
+                            documents = container.reports.documents,
+                            handOff = container.reports.handOff,
+                            texts = container.reports.texts,
                             records = records,
+                            onRecordedAsSent = { container.reports.reminder.look(REPORT_SENT) },
                             clock = System::currentTimeMillis,
                             zone = ZoneId::systemDefault,
                         )
@@ -59,3 +60,6 @@ internal fun ReportEntry(container: AppContainer, backStack: NavBackStack<NavKey
         onOpenSettings = { backStack.openOnTop(SettingsKey) },
     )
 }
+
+/** What the event log calls the look at the reminder that follows an "I sent it". */
+private const val REPORT_SENT = "a report was recorded as sent"

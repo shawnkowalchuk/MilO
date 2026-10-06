@@ -83,6 +83,16 @@ internal fun <T> MutableList<T>.showTopLevel(destination: T, home: T) {
 }
 
 /**
+ * Shows the Report screen for a month from wherever MilO is, for a tap on the monthly reminder.
+ * The back stack is then what it is when the screen is opened by hand: Home, Trips, and the
+ * report on top, so Back leads to Trips and from there to Home. Whatever was open is closed.
+ */
+internal fun MutableList<NavKey>.showReport(report: ReportKey) {
+    showTopLevel(TripsKey, HomeKey)
+    add(report)
+}
+
+/**
  * Opens a screen on top of the one showing, for a button that leads from one screen to another.
  * Not added twice if the button is pressed twice before the screen has changed: a back stack
  * may hold a key only once.

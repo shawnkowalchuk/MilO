@@ -44,4 +44,18 @@ class EventLogPageTest {
         assertEquals(2L, page.entries.last().id)
         assertTrue(page.hasOlder)
     }
+
+    @Test
+    fun `the page says which category it was read for, or that it was read for all`() {
+        assertEquals(null, eventLogPage(entries(3), wanted = 200).filter)
+        assertEquals(
+            EventCategory.TRIGGER,
+            eventLogPage(entries(3), wanted = 200, filter = EventCategory.TRIGGER).filter,
+        )
+        // An empty page still says which category has no line.
+        val none = eventLogPage(emptyList(), wanted = 200, filter = EventCategory.CRASH)
+        assertEquals(EventCategory.CRASH, none.filter)
+        assertTrue(none.entries.isEmpty())
+        assertFalse(none.hasOlder)
+    }
 }

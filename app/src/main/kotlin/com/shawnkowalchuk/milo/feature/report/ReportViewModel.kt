@@ -40,6 +40,9 @@ private const val KEEP_WATCHING_MS = 5_000L
  * @param texts the subject and the first lines of the email.
  * @param records keeps the report that waits for its answer, and writes what became of a
  * report to the list of sent reports and to the log.
+ * @param onRecordedAsSent a report was recorded as sent. The app has the monthly reminder
+ * looked at, so that a reminder for that month goes away at once. A plain function, like the
+ * ones for navigation.
  * @param clock and [zone] are read again each time the screen comes to the front.
  */
 class ReportViewModel(
@@ -49,6 +52,7 @@ class ReportViewModel(
     private val handOff: ReportHandOff,
     private val texts: ReportTexts,
     private val records: ReportRecords,
+    private val onRecordedAsSent: () -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
 ) : ViewModel() {
@@ -60,8 +64,8 @@ class ReportViewModel(
     private val passing = MutableStateFlow(ReportPassing())
     private var launches = 0
 
-    /** True while an answer to "Did you send it?" is being stored. Main thread only. */
-    private var answering = false
+    /** True while the list of sent reports is being written to. Main thread only. */
+    private var recording = false
 
     private val sources: StateFlow<ReportSources?> =
         reading
@@ -208,20 +212,34 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Shawn's answer to "Did you send it?" for the report that was handed to the email app.
-     * One answer at a time: a second tap while the first is being stored does nothing.
-     */
+    /** Shawn's answer to "Did you send it?" for the report that was handed to the email app. */
     fun onAnswer(sent: Boolean) {
         val report = sources.value?.settings?.reportHandOver ?: return
-        if (answering) return
-        answering = true
+        record(ReportProblem.COULD_NOT_RECORD) {
+            records.answered(report, sent).also { stored -> if (stored && sent) onRecordedAsSent() }
+        }
+    }
+
+    /**
+     * Removes a report from the list of sent reports, once the screen has asked and Shawn has
+     * said yes: an "I sent it" that was a mistake. The list, and whether its month is
+     * submitted, follow storage.
+     */
+    fun onRemoveSent(id: Long) = record(ReportProblem.COULD_NOT_REMOVE) { records.removed(id) }
+
+    /**
+     * One write to the list of sent reports at a time: a second tap while the first is being
+     * stored does nothing.
+     *
+     * @param write answers whether it was stored. If not, [ifNot] is said on the screen.
+     */
+    private fun record(ifNot: ReportProblem, write: suspend () -> Boolean) {
+        if (recording) return
+        recording = true
         viewModelScope.launch {
-            val stored = records.answered(report, sent)
-            passing.update {
-                it.copy(problem = ReportProblem.COULD_NOT_RECORD.takeUnless { stored })
-            }
-            answering = false
+            val stored = write()
+            passing.update { it.copy(problem = ifNot.takeUnless { stored }) }
+            recording = false
         }
     }
 

@@ -12,9 +12,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
+import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.text.submissionWords
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatTenths
+import com.shawnkowalchuk.milo.data.report.ChangedSinceSent
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.trip.Tally
 import java.time.ZoneId
@@ -27,10 +30,16 @@ import java.util.Locale
  * made of. Personal follows in a quieter line of its own, so the two can never be read as one
  * total.
  *
- * Under the figures, whether the month's report has been sent to the accountant, and the way
- * to the Report screen for this month.
+ * The figures are added up as the report for the accountant adds up (`sumOfTenths`), so the
+ * Business figure here is the total that report prints.
+ *
+ * Under the figures, whether the month's report has been sent to the accountant, whether the
+ * month's Business trips are still what was sent, and the way to the Report screen for this
+ * month.
  *
  * @param submission that the month's report was sent, and when; null while it was not.
+ * @param changed that the month's Business trips are no longer what its newest report held;
+ * null while they are, and for a month that is not submitted.
  * @param onOpenReport opens the Report screen for the month on this card.
  */
 @Composable
@@ -38,6 +47,7 @@ internal fun MonthCard(
     monthName: String,
     summary: MonthSummary?,
     submission: MonthSubmission?,
+    changed: ChangedSinceSent?,
     zone: ZoneId,
     canStepForward: Boolean,
     onPreviousMonth: () -> Unit,
@@ -53,7 +63,7 @@ internal fun MonthCard(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = kilometres(totals.business.metres, locale),
+                text = kilometres(totals.business.tenths, locale),
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
@@ -76,12 +86,14 @@ internal fun MonthCard(
                 submissionWords(
                     firstSentAtMs = submission?.first?.sentAtMs,
                     revisions = submission?.revisions ?: 0,
+                    sentAgain = submission?.sentAgain ?: false,
                     latestSentAtMs = submission?.latest?.sentAtMs,
                     zone = zone,
                     locale = locale,
                 ),
             style = MaterialTheme.typography.bodyLarge,
         )
+        if (changed != null) ChangedSince(changed, locale)
         // At the end of a line of its own, like every way to another screen.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onOpenReport) {
@@ -112,13 +124,38 @@ private fun Apart(plural: Int, tally: Tally, locale: Locale) {
                 plural,
                 tally.count,
                 tally.count,
-                kilometres(tally.metres, locale),
+                kilometres(tally.tenths, locale),
             ),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
+/**
+ * That the month's Business trips are not what the report that was sent held, with both sets
+ * of figures, so that Shawn can tell whether a revision is needed. The way to send one is the
+ * button under it.
+ */
 @Composable
-private fun kilometres(metres: Double, locale: Locale): String =
-    stringResource(R.string.distance_km, formatKilometres(metres, locale))
+private fun ChangedSince(changed: ChangedSinceSent, locale: Locale) {
+    StatusRow(
+        label =
+            stringResource(
+                R.string.trips_changed_since_sent,
+                trips(changed.sentTripCount),
+                kilometres(changed.sentTenths, locale),
+                trips(changed.tripCount),
+                kilometres(changed.tenths, locale),
+            ),
+        status = RowStatus.PROBLEM,
+        supportingText = stringResource(R.string.trips_changed_since_sent_detail),
+    )
+}
+
+@Composable
+private fun trips(count: Int): String = pluralStringResource(R.plurals.trips_count, count, count)
+
+/** A total as it is printed, from tenths of a kilometre: "412.3 km". */
+@Composable
+private fun kilometres(tenths: Long, locale: Locale): String =
+    stringResource(R.string.distance_km, formatTenths(tenths, locale))

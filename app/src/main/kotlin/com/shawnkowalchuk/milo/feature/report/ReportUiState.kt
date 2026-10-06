@@ -8,12 +8,14 @@ import com.shawnkowalchuk.milo.core.report.ReportSender
 import com.shawnkowalchuk.milo.core.report.reportDays
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
+import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.ReportSelection
 import com.shawnkowalchuk.milo.data.report.SentEffect
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.monthSubmission
 import com.shawnkowalchuk.milo.data.report.nextRevision
 import com.shawnkowalchuk.milo.data.report.period
+import com.shawnkowalchuk.milo.data.report.removalEffect
 import com.shawnkowalchuk.milo.data.report.sentEffect
 import com.shawnkowalchuk.milo.data.report.sentFor
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -45,7 +47,12 @@ data class ReportSummary(
     val tripInProgress: Boolean,
 )
 
-/** One line of the list of sent reports. */
+/**
+ * One line of the list of sent reports.
+ *
+ * @param removal what removing this report from the list would do, which the question says
+ * before it is removed.
+ */
 data class SentLine(
     val id: Long,
     val period: ReportPeriod,
@@ -53,6 +60,7 @@ data class SentLine(
     val tripCount: Int,
     val distanceMetres: Double,
     val revision: Int,
+    val removal: RemovalEffect,
 )
 
 /**
@@ -79,6 +87,9 @@ enum class ReportProblem {
 
     /** Shawn said he sent the report, and storage could not record it. */
     COULD_NOT_RECORD,
+
+    /** A report was to be removed from the list of sent reports, and it was not. */
+    COULD_NOT_REMOVE,
 }
 
 /** Which other app a file is being handed to. */
@@ -114,6 +125,7 @@ sealed interface ReportUiState {
      * @param missing what stands in the way of sending the report. Shown as soon as the screen
      * is drawn, so that it is known before a button is pressed.
      * @param resend set if the chosen period was sent before: sending then asks first.
+     * @param sendQuestions what "Send to accountant" asks before it sends, in order.
      * @param working true while a file is being made. The buttons wait.
      * @param pdfPages how many pages the PDF has that was made of exactly this report, or null
      * if there is none: then there is nothing to open.
@@ -137,6 +149,7 @@ sealed interface ReportUiState {
         val missing: List<MissingDetail>,
         val accountantEmail: String?,
         val resend: Resend?,
+        val sendQuestions: List<SendQuestion>,
         val working: Boolean,
         val pdfPages: Int?,
         val problem: ReportProblem?,
@@ -197,7 +210,7 @@ fun mileageReport(
 fun resendOf(period: ReportPeriod, sent: List<SentReport>): Resend? {
     val sentBefore = sentFor(period, sent)
     val last = sentBefore.lastOrNull() ?: return null
-    return Resend(last = last.asLine(), revision = nextRevision(sentBefore))
+    return Resend(last = last.asLine(sent), revision = nextRevision(sentBefore))
 }
 
 /**
@@ -224,6 +237,7 @@ fun reportUiState(
     missing = settings.missingForSending(),
     accountantEmail = settings.accountantEmail,
     resend = resendOf(choice.period, sent),
+    sendQuestions = sendQuestions(choice.period, today, sentFor(choice.period, sent).isNotEmpty()),
     working = passing.working,
     pdfPages = passing.pdfPages,
     problem = passing.problem,
@@ -231,7 +245,7 @@ fun reportUiState(
     launch = passing.launch,
     awaiting = settings.reportHandOver,
     awaitingEffect = settings.reportHandOver?.let { sentEffect(it.period, sent) },
-    sent = sent.map { it.asLine() },
+    sent = sent.map { it.asLine(sent) },
 )
 
 /**
@@ -267,11 +281,12 @@ enum class ReportNeed {
     }
 }
 
-private fun SentReport.asLine(): SentLine = SentLine(
+private fun SentReport.asLine(sent: List<SentReport>): SentLine = SentLine(
     id = id,
     period = period,
     sentAtMs = sentAtMs,
     tripCount = tripCount,
     distanceMetres = distanceMetres,
     revision = revision,
+    removal = removalEffect(this, sent),
 )

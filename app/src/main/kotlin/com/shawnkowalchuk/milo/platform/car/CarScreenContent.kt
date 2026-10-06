@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
@@ -78,7 +79,12 @@ enum class CarAction(val labelRes: Int, val trigger: TripTrigger, val source: St
  */
 data class TripFigures(val kilometres: String, val hours: Long, val minutes: Long)
 
-/** Today's finished trips as the "Today" row prints them. */
+/**
+ * Today's finished trips as the "Today" row prints them.
+ *
+ * @param kilometres the number only: the sum of the trips' own figures, each rounded to a
+ * tenth of a kilometre first (`sumOfTenths`), like every total on the phone and on the report.
+ */
 data class TodayFigures(val tripCount: Int, val kilometres: String)
 
 /**
@@ -115,7 +121,8 @@ fun carScreenContent(
     return CarScreenContent(
         status = carStatus(activity, setupNeedsAttention),
         trip = trip?.let { tripFigures(it, nowMs, locale) },
-        today = today?.let { TodayFigures(it.count, formatKilometres(it.totalMetres, locale)) },
+        // Added up as the phone's screens and the report add up: trip by trip, as printed.
+        today = today?.let { TodayFigures(it.count, formatTenths(it.totalTenths, locale)) },
         // One button, because exactly one of the two makes sense at any moment. End is offered
         // for as long as a trip is open, the grace period included, as on the phone.
         action = if (trip == null) CarAction.START_TRIP else CarAction.END_TRIP,

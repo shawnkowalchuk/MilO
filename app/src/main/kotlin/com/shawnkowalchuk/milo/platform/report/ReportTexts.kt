@@ -8,9 +8,9 @@ import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.ReportFormat
 import com.shawnkowalchuk.milo.core.report.ReportWords
 import com.shawnkowalchuk.milo.core.report.SubjectWords
-import com.shawnkowalchuk.milo.core.report.formatTenths
 import com.shawnkowalchuk.milo.core.report.periodInWords
 import com.shawnkowalchuk.milo.core.report.reportSubject
+import com.shawnkowalchuk.milo.core.util.formatTenths
 
 /**
  * The words of the report, read from the string resources, and how this phone writes dates and

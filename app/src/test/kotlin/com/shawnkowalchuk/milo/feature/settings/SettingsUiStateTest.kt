@@ -44,6 +44,24 @@ class SettingsUiStateTest {
     }
 
     @Test
+    fun `the reminder is on out of the box, on the 1st, and its day stops at both ends`() {
+        val fresh = shown()
+        val middle = shown(MiloSettings(reminderEnabled = false, reminderDay = 15))
+        val last = shown(MiloSettings(reminderDay = 31))
+
+        assertTrue(fresh.reminderEnabled)
+        assertEquals(1, fresh.reminderDay)
+        assertFalse(fresh.canRemindEarlier)
+        assertTrue(fresh.canRemindLater)
+        // Switched off, the day is still the stored one: it comes back with the switch.
+        assertFalse(middle.reminderEnabled)
+        assertEquals(15, middle.reminderDay)
+        assertTrue(middle.canRemindEarlier && middle.canRemindLater)
+        assertTrue(last.canRemindEarlier)
+        assertFalse(last.canRemindLater)
+    }
+
+    @Test
     fun `at the defaults both numbers can go either way`() {
         val state = shown()
 

@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.core.report
 
 import com.shawnkowalchuk.milo.core.util.formatDay
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

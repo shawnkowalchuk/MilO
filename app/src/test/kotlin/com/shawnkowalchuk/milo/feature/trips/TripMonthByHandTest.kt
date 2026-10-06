@@ -93,9 +93,9 @@ class TripMonthByHandTest {
         val month = summary(listOf(recorded, edited, added))
 
         // 12 km recorded, 15 km as edited (not the 12 km it was recorded with), 20 km typed in.
-        assertEquals(Tally(3, 47_000.0), month.totals.business)
+        assertEquals(Tally(3, 470), month.totals.business)
         assertEquals(3, month.days.single().sessionCount)
-        assertEquals(47_000.0, month.days.single().businessMetres, 0.0)
+        assertEquals(470, month.days.single().businessTenths)
     }
 
     @Test
@@ -103,15 +103,15 @@ class TripMonthByHandTest {
         val today = todayTrips(listOf(recorded, edited, added))
 
         assertEquals(3, today.count)
-        assertEquals(47_000.0, today.totalMetres, 0.0)
-        assertEquals(Tally(3, 47_000.0), today.totals.business)
+        assertEquals(470, today.totalTenths)
+        assertEquals(Tally(3, 470), today.totals.business)
     }
 
     @Test
     fun `a trip added by hand that is deleted leaves the totals like any other`() {
         val month = summary(listOf(recorded, added.copy(status = TripStatus.DELETED)))
 
-        assertEquals(Tally(1, 12_000.0), month.totals.business)
+        assertEquals(Tally(1, 120), month.totals.business)
         assertEquals(1, month.hiddenLeftOut)
     }
 

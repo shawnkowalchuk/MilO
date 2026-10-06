@@ -2,16 +2,34 @@ package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * The only way the rest of the app reads or writes the list of sent reports.
  *
- * It can be added to and read, and that is all. Whether a month is submitted is not stored
- * anywhere: it is worked out from this list (`monthSubmission`), so the two can never disagree.
+ * It can be added to and read, and a report that was recorded by mistake can be removed from
+ * it. Whether a month is submitted is not stored anywhere: it is worked out from this list
+ * (`monthSubmission`), so the two can never disagree, and a month whose only report is removed
+ * is "not submitted" again by that alone.
  */
 class SentReportRepository(private val dao: SentReportDao) {
-    /** Every sent report, newest first, and again each time one is added. */
+    /** Every sent report, newest first, and again each time one is added or removed. */
     fun observeSent(): Flow<List<SentReport>> = dao.observeAll()
+
+    /** Every sent report as the list stands right now, newest first. */
+    suspend fun currentSent(): List<SentReport> = dao.observeAll().first()
+
+    /**
+     * Removes one report from the list, for an "I sent it" that was a mistake. Nothing else is
+     * written: the reports that stay keep their revision numbers, and the next report for the
+     * period takes the number after the highest one still listed (`nextRevision`).
+     *
+     * Safe to repeat: a second call finds no such row and changes nothing.
+     *
+     * @return what was removed and what is left for its period, or null if the list holds no
+     * report with this [id].
+     */
+    suspend fun remove(id: Long): RemovedReport? = dao.remove(id)
 
     /**
      * Records that Shawn sent a report. Call it once, when he has said so: it is **not** safe

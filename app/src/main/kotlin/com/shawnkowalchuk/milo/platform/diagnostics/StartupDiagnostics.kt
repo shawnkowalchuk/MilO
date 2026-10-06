@@ -3,6 +3,8 @@ package com.shawnkowalchuk.milo.platform.diagnostics
 import android.os.Process
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.crash.CrashRecord
+import com.shawnkowalchuk.milo.data.eventlog.EVENT_LOG_KEEP_DAYS
+import com.shawnkowalchuk.milo.data.eventlog.EVENT_LOG_KEEP_NEWEST
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -11,14 +13,15 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Runs once at every process start and writes to the event log what happened since the last one:
  * the crashes left behind as files, the reasons the system recorded for earlier processes ending,
- * and the fact that a new process has started.
+ * and the fact that a new process has started. Then it trims the log: lines that are too old to
+ * keep are removed, so that the log does not grow without end beside the trips.
  *
  * Each record is written to the log first and only then marked as done (its file deleted, the
  * timestamp moved on), one record at a time. If the process dies in between, that one record is
  * imported again at the next start. A duplicate line is harmless; a lost one could be the line
  * that explains a missed trip.
  *
- * Gathering evidence must never be what stops the app. Each of the three steps runs on its own:
+ * Gathering evidence must never be what stops the app. Each of the four steps runs on its own:
  * a step that fails is written to the event log and the next one still runs (see [attempt]).
  *
  * @param processExitsAfter the system's exit records newer than a wall-clock time, oldest first.
@@ -38,9 +41,28 @@ class StartupDiagnostics(
     suspend fun record() {
         if (!attempt("importing crash files") { importCrashes() }) return
         if (!attempt("importing process exit records") { importProcessExits() }) return
-        attempt("logging the process start") {
-            eventLog.add(clock(), EventCategory.PROCESS, "Process $processId started")
-        }
+        val logged =
+            attempt("logging the process start") {
+                eventLog.add(clock(), EventCategory.PROCESS, "Process $processId started")
+            }
+        // Last, so that everything this start has to say is written before anything is removed.
+        if (logged) attempt("trimming the event log") { trim() }
+    }
+
+    /**
+     * Removes the lines that are too old to keep (`EventLogRepository.trim`), and says so in the
+     * log when it removed any. On most starts there is nothing to remove, and nothing is written.
+     */
+    private suspend fun trim() {
+        val nowMs = clock()
+        val removed = eventLog.trim(nowMs)
+        if (removed == 0) return
+        eventLog.add(
+            nowMs,
+            EventCategory.PROCESS,
+            "Event log trimmed: $removed lines older than $EVENT_LOG_KEEP_DAYS days removed. " +
+                "The newest $EVENT_LOG_KEEP_NEWEST lines are kept whatever their age",
+        )
     }
 
     private suspend fun importCrashes() {

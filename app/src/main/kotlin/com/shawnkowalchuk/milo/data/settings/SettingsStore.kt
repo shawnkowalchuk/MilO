@@ -30,9 +30,10 @@ const val SETTINGS_FILE_NAME = "settings"
  * cannot hold a day that ends before it starts.
  *
  * @param dataStore created once by the `AppContainer`. DataStore allows only one instance per
- * file in a process.
+ * file in a process. It is `internal` for `TransferStorage.kt` alone, which writes what an
+ * export, an import and a restore have to store; nothing outside this package may touch it.
  */
-class SettingsStore(private val dataStore: DataStore<Preferences>) {
+class SettingsStore(internal val dataStore: DataStore<Preferences>) {
     /** The current settings, and again each time one changes. */
     val settings: Flow<MiloSettings> = dataStore.data.map(::toSettings)
 
@@ -174,6 +175,22 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it.writeReportHandOver(handOver) }
     }
 
+    /** Switches the monthly reminder to send last month's report on or off. */
+    suspend fun setReminderEnabled(enabled: Boolean) {
+        dataStore.edit { it.writeReminderEnabled(enabled) }
+    }
+
+    /** Stores the day of the month the reminder starts on, 1 to 31. */
+    suspend fun setReminderDay(day: Int) {
+        require(day in REMINDER_DAYS) { "The reminder's day must be a day of a month: $day" }
+        dataStore.edit { it.writeReminderDay(day) }
+    }
+
+    /** Stores that the reminder was shown, so that it is shown once a day and no more. */
+    suspend fun setReminderShown(shown: ReminderShown) {
+        dataStore.edit { it.writeReminderShown(shown) }
+    }
+
     /** Pass the time End was pressed to hold automatic start off, null to release it. */
     suspend fun setAutoStartHeldOffSinceMs(sinceMs: Long?) {
         require(sinceMs == null || sinceMs >= 0) { "A timestamp cannot be negative: $sinceMs ms" }
@@ -217,6 +234,10 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             reportVehicle = preferences[REPORT_VEHICLE],
             accountantEmail = preferences[ACCOUNTANT_EMAIL],
             reportHandOver = preferences.readReportHandOver(),
+            reminderEnabled = preferences.readReminderEnabled(),
+            reminderDay = preferences.readReminderDay(),
+            reminderShown = preferences.readReminderShown(),
+            lastExport = preferences.readLastExport(),
             autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
@@ -232,9 +253,9 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
 
     // The key names are what is written to the file. Renaming one silently resets that setting.
     // The keys of the confirmed setup steps are on ConfirmedStep itself, the keys of the work
-    // schedule, three for each day, are in ScheduleStorage.kt, and the six of a report that
-    // waits for its answer are in ReportHandOver.kt.
-    private companion object {
+    // schedule, three for each day, are in ScheduleStorage.kt, the six of a report that waits
+    // for its answer are in ReportHandOver.kt, and the reminder's four in ReminderStorage.kt.
+    internal companion object {
         val TRUCK_ADDRESS = stringPreferencesKey("truck_address")
         val TRUCK_NAME = stringPreferencesKey("truck_name")
         val TRUCK_ASSOCIATION_ID = intPreferencesKey("truck_association_id")
@@ -271,6 +292,6 @@ fun buildSettingsStore(context: Context): SettingsStore = SettingsStore(
 )
 
 /** Preferences cannot hold null: "no value" is stored by removing the key. */
-private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {
+internal fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {
     if (value == null) remove(key) else this[key] = value
 }

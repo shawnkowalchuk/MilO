@@ -29,6 +29,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import java.time.ZoneId
@@ -99,7 +100,7 @@ internal fun DayCard(day: TripDay, context: TripRowContext) {
                     day.sessionCount,
                     stringResource(
                         R.string.distance_km,
-                        formatKilometres(day.businessMetres, locale),
+                        formatTenths(day.businessTenths, locale),
                     ),
                 ),
             style = MaterialTheme.typography.bodyMedium,

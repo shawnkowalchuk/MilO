@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -126,6 +127,60 @@ class SentReportRepositoryTest {
 
         assertEquals(0, stored.tripCount)
         assertEquals(0.0, stored.distanceMetres, 0.0)
+    }
+
+    @Test
+    fun `a removed report leaves the list, and the others keep their numbers`() = runTest {
+        val first = sent.recordSent(october, 1_000, 31, 412_300.0)
+        val second = sent.recordSent(october, 2_000, 32, 420_100.0)
+        val part = sent.recordSent(range, 3_000, 4, 26_800.0)
+
+        val removed = sent.remove(first.id)
+
+        assertEquals(first, removed?.report)
+        assertEquals(listOf(second), removed?.leftForPeriod)
+        // Nothing else was written: the revision is still revision 1, the range untouched.
+        assertEquals(listOf(second, part), dao.rows)
+        assertEquals(listOf(part, second), sent.currentSent())
+    }
+
+    @Test
+    fun `the next report after a removal takes the number after the highest one still listed`() =
+        runTest {
+            val first = sent.recordSent(october, 1_000, 31, 412_300.0)
+            val second = sent.recordSent(october, 2_000, 32, 420_100.0)
+
+            // The original removed: the revision keeps its 1, and the next is 2.
+            sent.remove(first.id)
+            assertEquals(2, sent.recordSent(october, 3_000, 32, 420_100.0).revision)
+
+            // The newest removed: its number is free again.
+            sent.remove(dao.rows.last().id)
+            assertEquals(2, sent.recordSent(october, 4_000, 32, 420_100.0).revision)
+            assertEquals(listOf(second.id, 4L), dao.rows.map { it.id })
+        }
+
+    @Test
+    fun `removing a report that is not in the list changes nothing, also the second time`() =
+        runTest {
+            val only = sent.recordSent(october, 1_000, 31, 412_300.0)
+
+            assertNull(sent.remove(only.id + 7))
+            assertEquals(listOf(only), dao.rows)
+
+            assertEquals(only, sent.remove(only.id)?.report)
+            assertNull(sent.remove(only.id))
+            assertEquals(emptyList<SentReport>(), dao.rows)
+        }
+
+    @Test
+    fun `a removal that storage refuses reaches the caller, and leaves the row`() = runTest {
+        val only = sent.recordSent(october, 1_000, 31, 412_300.0)
+        dao.failNextDelete = IOException("disk full")
+
+        assertThrows(IOException::class.java) { runBlocking { sent.remove(only.id) } }
+
+        assertEquals(listOf(only), dao.rows)
     }
 
     @Test

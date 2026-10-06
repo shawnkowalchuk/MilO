@@ -19,13 +19,15 @@ private const val REPORTS_AUTHORITY_SUFFIX = ".reports"
 
 private const val PDF_TYPE = "application/pdf"
 private const val CSV_TYPE = "text/csv"
+private const val TEXT_TYPE = "text/plain"
 private const val MAIL_SCHEME = "mailto"
 
 /**
  * Builds the requests that hand a report file to another app: the email app, a PDF viewer, or
  * whatever Shawn picks from Android's share sheet. It only builds them. They are started from
  * the Report screen, on its activity, so that the other app opens on top of MilO and Back
- * leads back to it.
+ * leads back to it. The event log, shared from the Log screen as a text file, goes the same
+ * way: it is written into the same folder and handed out by the same provider.
  *
  * **MilO sends nothing itself.** It has no INTERNET permission. The email is a draft in the
  * email app, with the address, the subject and the file filled in, and Shawn presses send.
@@ -86,11 +88,19 @@ class ReportHandOff(context: Context) {
      *
      * @param title what the share sheet and the receiving app are told the file is.
      */
-    fun toShare(csv: File, title: String): Intent {
-        val uri = uriOf(csv)
+    fun toShare(csv: File, title: String): Intent = shareSheet(csv, CSV_TYPE, title)
+
+    /**
+     * Offers the event log, written to [log] as plain text, to Android's share sheet. Where it
+     * goes is Shawn's choice, as with the CSV.
+     */
+    fun toShareText(log: File, title: String): Intent = shareSheet(log, TEXT_TYPE, title)
+
+    private fun shareSheet(file: File, fileType: String, title: String): Intent {
+        val uri = uriOf(file)
         val send =
             Intent(Intent.ACTION_SEND).apply {
-                type = CSV_TYPE
+                type = fileType
                 putExtra(Intent.EXTRA_SUBJECT, title)
                 putExtra(Intent.EXTRA_STREAM, uri)
                 readable(uri)

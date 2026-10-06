@@ -6,7 +6,9 @@ import com.shawnkowalchuk.milo.data.buildPointsDatabase
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.crash.buildCrashFileStore
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
+import com.shawnkowalchuk.milo.data.eventlog.EventLogFiles
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
+import com.shawnkowalchuk.milo.data.eventlog.buildEventLogFiles
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.report.SentReportRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -27,10 +29,6 @@ import com.shawnkowalchuk.milo.platform.diagnostics.ProcessExitReader
 import com.shawnkowalchuk.milo.platform.diagnostics.StartupDiagnostics
 import com.shawnkowalchuk.milo.platform.driving.DrivingAlert
 import com.shawnkowalchuk.milo.platform.driving.PlayServicesDrivingDetection
-import com.shawnkowalchuk.milo.platform.report.ReportDocuments
-import com.shawnkowalchuk.milo.platform.report.ReportHandOff
-import com.shawnkowalchuk.milo.platform.report.ReportTexts
-import com.shawnkowalchuk.milo.platform.report.buildReportDocuments
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.SetupReader
 import com.shawnkowalchuk.milo.platform.system.SystemScreens
@@ -83,6 +81,9 @@ class AppContainer(context: Context) {
     val eventLogRepository: EventLogRepository by lazy {
         EventLogRepository(miloDatabase.eventLogDao())
     }
+
+    /** Writes the event log to a text file, for the Log screen's Share. */
+    val eventLogFiles: EventLogFiles by lazy { buildEventLogFiles(appContext, eventLogRepository) }
 
     /** The reports Shawn has said he sent. A month is "submitted" because of a row in it. */
     val sentReportRepository: SentReportRepository by lazy {
@@ -252,17 +253,17 @@ class AppContainer(context: Context) {
         )
     }
 
-    /** The words of the report for the accountant, and how this phone writes dates and times. */
-    val reportTexts: ReportTexts by lazy { ReportTexts(appContext) }
-
     /**
-     * Makes the PDF and the CSV of a report, in the app's cache. Nothing here sends anything:
-     * the files are handed to another app by [reportHandOff], when Shawn asks for it.
+     * What makes a report for the accountant and hands it over, and the monthly reminder to
+     * send it. In a class of its own, because this file is at its size limit.
      */
-    val reportDocuments: ReportDocuments by lazy { buildReportDocuments(appContext, reportTexts) }
+    val reports: ReportObjects by lazy { ReportObjects(appContext, this) }
 
-    /** Builds the requests that hand a report file to the email app, a viewer or a share. */
-    val reportHandOff: ReportHandOff by lazy { ReportHandOff(appContext) }
+    /** Android's backup, and the export and import of all data. A class of its own, likewise. */
+    val transfer: TransferObjects by lazy {
+        val main = miloDatabase.mainTransferDao()
+        TransferObjects(transferParts(appContext, this, main, pointsDatabase.pointsTransferDao()))
+    }
 
     /**
      * Makes an audio file Shawn picked the trip-start sound, by copying it into MilO's own

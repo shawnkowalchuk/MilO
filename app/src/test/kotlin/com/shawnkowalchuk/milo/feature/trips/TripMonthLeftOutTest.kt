@@ -61,7 +61,7 @@ class TripMonthLeftOutTest {
 
         val month = summary(listOf(kept, deleted))
 
-        assertEquals(12_300.0, month.totals.business.metres, 0.0)
+        assertEquals(123, month.totals.business.tenths)
         assertEquals(1, month.tripCount)
         assertEquals(listOf(kept.id), month.days.single().trips.map { it.id })
         assertEquals(1, month.hiddenLeftOut)
@@ -87,7 +87,7 @@ class TripMonthLeftOutTest {
         )
         // Listing them changes nothing about what is counted.
         for (month in listOf(hidden, shown)) {
-            assertEquals(12_300.0, month.totals.business.metres, 0.0)
+            assertEquals(123, month.totals.business.tenths)
             assertEquals(1, month.tripCount)
         }
     }
@@ -108,7 +108,8 @@ class TripMonthLeftOutTest {
             )
 
         assertEquals(2, month.tripCount)
-        assertEquals(8_450.0, month.totals.business.metres, 0.0)
+        // 8.2 km, and 250 m, which is printed as 0.3 km.
+        assertEquals(85, month.totals.business.tenths)
         assertEquals(0, month.hiddenLeftOut)
     }
 

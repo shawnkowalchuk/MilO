@@ -105,20 +105,22 @@ data class TripLine(
  *
  * @param sessionCount how many counted trips the day has, Business and Personal together.
  * Deleted and discarded trips are not among them, listed or not.
- * @param businessMetres what the day's Business trips add up to.
+ * @param businessTenths what the day's Business trips add up to, in tenths of a kilometre: the
+ * sum of the figures its Business rows show.
  */
 data class TripDay(
     val date: LocalDate,
     val trips: List<TripLine>,
     val sessionCount: Int,
-    val businessMetres: Double,
+    val businessTenths: Long,
 )
 
 /**
  * One month, ready to show.
  *
- * @param totals the finished trips, added up by what they are saved as. Added up in metres and
- * rounded once, when it is shown, so the rounding of single trips never accumulates.
+ * @param totals the finished trips, added up by what they are saved as, each trip as it is
+ * printed (`sumOfTenths`). The month's Business figure is therefore the total its report for
+ * the accountant prints, and the sum of the days' own figures.
  * @param inProgress the trip being recorded, if it started in this month.
  * @param days newest day first. Holds deleted and discarded trips only if they were asked for.
  * @param hiddenLeftOut how many deleted and discarded trips the month has that [days] leaves
@@ -219,7 +221,7 @@ fun monthSummary(
                         date = date,
                         trips = lines.sortedWith(newestFirst),
                         sessionCount = dayTotals.count,
-                        businessMetres = dayTotals.business.metres,
+                        businessTenths = dayTotals.business.tenths,
                     )
                 }.sortedByDescending { it.date },
         hiddenLeftOut = if (showLeftOut) 0 else leftOut.size,

@@ -15,32 +15,39 @@ import java.util.Locale
  * In one place because the Trips screen's month card and the Report screen both say it, and a
  * month must read the same on both.
  *
- * @param submitted whether a report for the whole month has been sent.
- * @param revisions how many times a report replaced the first one.
+ * @param submitted whether a report for the whole month is in the list of sent reports.
+ * @param revisions the newest report's revision number: 0 for the month's original report.
+ * @param sentAgain whether the list holds a later report for the month than the one that makes
+ * it submitted. False with a revision number above 0 means that only a revision is left: the
+ * original was removed from the list.
  */
-fun submissionWordsRes(submitted: Boolean, revisions: Int): Int = when {
+fun submissionWordsRes(submitted: Boolean, revisions: Int, sentAgain: Boolean): Int = when {
     !submitted -> R.string.report_not_submitted
-    revisions > 0 -> R.string.report_submitted_revised
+    sentAgain -> R.string.report_submitted_revised
+    revisions > 0 -> R.string.report_submitted_by_revision
     else -> R.string.report_submitted_on
 }
 
 /**
- * The sentence itself, for a month whose first report was sent at [firstSentAtMs] (null if
- * none was) and whose newest one, revision [revisions], at [latestSentAtMs].
+ * The sentence itself, for a month that is submitted by the report sent at [firstSentAtMs]
+ * (null if none is) and whose newest one, revision [revisions], was sent at [latestSentAtMs].
  */
 @Composable
 fun submissionWords(
     firstSentAtMs: Long?,
     revisions: Int,
+    sentAgain: Boolean,
     latestSentAtMs: Long?,
     zone: ZoneId,
     locale: Locale,
 ): String {
     val first = firstSentAtMs?.let { formatDate(it, zone, locale) }
     val latest = latestSentAtMs?.let { formatDate(it, zone, locale) }
-    return when (val words = submissionWordsRes(submitted = first != null, revisions)) {
+    return when (val words = submissionWordsRes(first != null, revisions, sentAgain)) {
         R.string.report_submitted_revised ->
             stringResource(words, first.orEmpty(), revisions, latest.orEmpty())
+
+        R.string.report_submitted_by_revision -> stringResource(words, first.orEmpty(), revisions)
 
         R.string.report_submitted_on -> stringResource(words, first.orEmpty())
 

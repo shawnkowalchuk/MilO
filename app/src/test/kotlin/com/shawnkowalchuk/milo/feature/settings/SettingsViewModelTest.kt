@@ -47,6 +47,9 @@ class SettingsViewModelTest {
     /** Each time the driving alert was told: by what name, and what the switch was stored as. */
     private val armed = mutableListOf<Pair<String, Boolean>>()
 
+    /** Each time the monthly reminder was told: what was stored for it at that moment. */
+    private val reminderLooks = mutableListOf<Pair<Boolean, Int>>()
+
     private val noFiles =
         object : PickedAudio {
             override fun open(uri: String): InputStream = throw FileNotFoundException(uri)
@@ -74,6 +77,11 @@ class SettingsViewModelTest {
             // moment is what matters.
             armDrivingAlert = { source ->
                 armed += source to runBlocking { settings.current().drivingAlertEnabled }
+            },
+            // The reminder reads the stored settings when it looks, like the alert.
+            lookAtReminder = {
+                val stored = runBlocking { settings.current() }
+                reminderLooks += stored.reminderEnabled to stored.reminderDay
             },
             eventLog = eventLog,
             clock = { 0L },
@@ -103,6 +111,39 @@ class SettingsViewModelTest {
 
         assertEquals(true, SettingsStore(file).current().drivingAlertEnabled)
         assertEquals(listOf("the Settings switch" to false, "the Settings switch" to true), armed)
+    }
+
+    @Test
+    fun `the reminder's switch and day are stored first, and then the reminder looks`() = runTest {
+        val file = FakeSettingsFile()
+        val viewModel = viewModel(file)
+
+        viewModel.onReminderDayStep(later = true)
+        runCurrent()
+        viewModel.onReminderDayStep(later = true)
+        runCurrent()
+        viewModel.onReminderEnabled(false)
+        runCurrent()
+
+        assertEquals(3, SettingsStore(file).current().reminderDay)
+        assertEquals(false, SettingsStore(file).current().reminderEnabled)
+        // Each look found the value of its own press in the file already.
+        assertEquals(listOf(true to 2, true to 3, false to 3), reminderLooks)
+    }
+
+    @Test
+    fun `the reminder's day stops at the 1st and at the 31st`() = runTest {
+        val file = FakeSettingsFile()
+        val viewModel = viewModel(file)
+
+        viewModel.onReminderDayStep(later = false)
+        runCurrent()
+        assertEquals(1, SettingsStore(file).current().reminderDay)
+
+        SettingsStore(file).setReminderDay(31)
+        viewModel.onReminderDayStep(later = true)
+        runCurrent()
+        assertEquals(31, SettingsStore(file).current().reminderDay)
     }
 
     @Test

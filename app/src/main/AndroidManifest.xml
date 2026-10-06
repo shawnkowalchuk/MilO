@@ -24,7 +24,8 @@
 
     <!--
         A runtime permission from Android 13. Without it the trip service still runs, but its
-        notification and the "could not start this trip" warning are not shown.
+        notification, the "could not start this trip" warning, the driving alert and the monthly
+        reminder are not shown.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -42,7 +43,12 @@
     -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
-    <!-- The reconcile after a reboot: the truck may already be connected, and no event says so. -->
+    <!--
+        The reconcile after a reboot: the truck may already be connected, and no event says so.
+        The same start of MilO asks again for the monthly reminder's daily alarm, which Android
+        forgets at a reboot. That alarm is an inexact one and needs no permission of its own:
+        MilO declares neither SCHEDULE_EXACT_ALARM nor USE_EXACT_ALARM, on purpose.
+    -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!--
@@ -107,17 +113,39 @@
     </queries>
 
     <!--
-        Backup is switched off on purpose until phase 4 designs it.
-        Android restores backed-up data whenever the app is installed, including a reinstall from
-        Android Studio. Until there are rules saying what is safe to restore, that would bring
-        back stale trip state and a truck pairing that does not exist on the new install.
-        allowBackup="false" stops cloud backup; it does NOT stop phone-to-phone transfer on
-        Android 12 and later, which is why data_extraction_rules.xml excludes that as well.
+        Android's backup is switched on, and what it takes is decided in one place:
+        res/xml/data_extraction_rules.xml. In short: the main database (trips, sent reports,
+        event log) and the settings go into the cloud backup and into a transfer to another
+        phone; the raw GPS points go into a transfer only, because the cloud backup takes
+        nothing at all from an app that is over 25 MB.
+
+        backupAgent with fullBackupOnly: Android still does the copying itself, by those
+        rules. The agent (platform/transfer/MiloBackupAgent) only brings each database into
+        one file first, writes down a backup that was refused for its size, and writes down
+        a restore, after which MilO takes the truck's association and the confirmations of
+        the setup checklist out of the restored settings: neither is true on another phone.
+
+        Left at their defaults on purpose:
+        - backupInForeground (false): Android ends an app's process before it backs it up,
+          and its own schedule passes over an app that is in the foreground. The trip service
+          is a foreground service, so a backup Android makes by itself does not end a
+          recording. A backup that is asked for does not look: "adb shell bmgr backupnow"
+          during a recording ended MilO's process on an emulator, and the trip had a gap of
+          16 seconds. Whether "Back up now" in the phone's own settings does the same is not
+          known (docs/DEVICE_TEST_CHECKLIST.md): do not press it during a trip.
+        - restoreAnyVersion (false) and killAfterRestore (true).
+        A restored database is opened like any other: one from an older build is migrated
+        step by step, and there is no destructive fallback (data/MiloDatabase.kt).
+
+        Android restores a backup whenever the app is installed, a reinstall from Android
+        Studio included, and only for the same signing key.
     -->
     <application
         android:name=".app.MiloApplication"
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:backupAgent=".platform.transfer.MiloBackupAgent"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupOnly="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -142,9 +170,10 @@
 
         <!--
             Hands the report for the accountant to another app: the PDF to the email app or a
-            viewer, the CSV to whatever Shawn shares it with. That app cannot read MilO's files
-            by itself, so MilO gives it the address of one file through this provider, with a
-            permission to read that file and nothing else.
+            viewer, the CSV to whatever Shawn shares it with. The event log, when he shares it
+            from the Log screen as a text file, goes the same way. That app cannot read MilO's
+            files by itself, so MilO gives it the address of one file through this provider,
+            with a permission to read that file and nothing else.
 
             Not exported, and grantUriPermissions: nothing can ask the provider for a file on
             its own; only an app MilO has handed an address to can read it, for as long as its
@@ -257,6 +286,17 @@
         -->
         <receiver
             android:name=".platform.driving.DrivingReceiver"
+            android:exported="false" />
+
+        <!--
+            Where the daily alarm of the monthly reminder arrives (platform/reminder/). Declared
+            here so that the alarm can start MilO's process. It looks at whether last month's
+            report is still to be sent and posts a notification at most; it never touches a
+            trip. Not exported and without an intent filter: the alarm is a PendingIntent that
+            MilO makes itself and aims at this class by name.
+        -->
+        <receiver
+            android:name=".platform.reminder.ReminderReceiver"
             android:exported="false" />
 
         <!--

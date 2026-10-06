@@ -1,5 +1,8 @@
 package com.shawnkowalchuk.milo.feature.eventlog
 
+import android.content.ActivityNotFoundException
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +18,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,28 +35,73 @@ import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogEntry
 import java.time.ZoneId
 
+/** What the Log screen can ask for. */
+internal class EventLogActions(
+    val onShowOlder: () -> Unit,
+    val onFilter: (EventCategory?) -> Unit,
+    val onShare: () -> Unit,
+)
+
 /**
  * The stored event log, newest first: Shawn's only window into why a trip did or did not start.
  * Every line shows its time to the second, in the phone's own time zone, its category and its
  * message. A line that has more to say (the state before and after a trigger, a stack trace)
  * opens when it is pressed.
+ *
+ * The list can be narrowed to the lines of one category. And the whole log can be shared as a
+ * text file, through Android's share sheet, so that it can be sent to whoever is helping
+ * without plugging the phone into a computer.
  */
 @Composable
 fun EventLogScreen(viewModel: EventLogViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
-    EventLogContent(state = state, onShowOlder = viewModel::onShowOlder, modifier = modifier)
+    val share by viewModel.share.collectAsState()
+    val shareTitle = stringResource(R.string.log_share_title)
+
+    // The share sheet is opened on MilO's own activity, so that Back from it leads here. What
+    // comes back says nothing: sharing has no result.
+    val shareSheet =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    val launch = share.launch
+    LaunchedEffect(launch?.id) {
+        if (launch != null) {
+            val opened =
+                try {
+                    shareSheet.launch(launch.intent)
+                    true
+                } catch (noSuchApp: ActivityNotFoundException) {
+                    // A phone with nothing to share a file with. The screen says so.
+                    false
+                }
+            viewModel.onShareLaunched(launch, opened)
+        }
+    }
+
+    EventLogContent(
+        state = state,
+        share = share,
+        actions =
+            EventLogActions(
+                onShowOlder = viewModel::onShowOlder,
+                onFilter = viewModel::onFilter,
+                onShare = { viewModel.onShare(shareTitle) },
+            ),
+        modifier = modifier,
+    )
 }
 
 @Composable
 private fun EventLogContent(
     state: EventLogUiState?,
-    onShowOlder: () -> Unit,
+    share: LogShare,
+    actions: EventLogActions,
     modifier: Modifier = Modifier,
 ) {
     // Which entry is open. It belongs to the screen, not the log, so it is kept here; saved, so
     // a rotation does not close the stack trace being read.
     var openEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
     val zone = ZoneId.systemDefault()
+    val filter = state?.filter
 
     // A lazy list: only the rows on screen are laid out, however many have been read.
     LazyColumn(
@@ -61,9 +110,19 @@ private fun EventLogContent(
         verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
     ) {
         item { ScreenTitle(text = stringResource(R.string.log_title)) }
+        item { ShareLog(share, actions.onShare) }
+        item { CategoryFilter(filter, actions.onFilter) }
         when {
             state == null -> item { Note(stringResource(R.string.log_reading)) }
-            state.entries.isEmpty() -> item { Note(stringResource(R.string.log_empty)) }
+
+            state.entries.isNotEmpty() -> Unit
+
+            // The category's own name, as the lines carry it.
+            filter != null -> item {
+                Note(stringResource(R.string.log_empty_filtered, filter.name))
+            }
+
+            else -> item { Note(stringResource(R.string.log_empty)) }
         }
         items(items = state?.entries.orEmpty(), key = { it.id }) { entry ->
             LogEntryRow(
@@ -76,7 +135,7 @@ private fun EventLogContent(
         }
         if (state?.hasOlder == true) {
             item {
-                TextButton(onClick = onShowOlder, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = actions.onShowOlder, modifier = Modifier.fillMaxWidth()) {
                     Text(text = stringResource(R.string.log_show_older))
                 }
             }
@@ -165,7 +224,11 @@ private fun EventLogPreview() {
         )
     MiloTheme {
         Surface {
-            EventLogContent(state = EventLogUiState(entries, hasOlder = true), onShowOlder = {})
+            EventLogContent(
+                state = EventLogUiState(entries, hasOlder = true),
+                share = LogShare(problem = LogShareProblem.COULD_NOT_WRITE),
+                actions = EventLogActions({}, {}, {}),
+            )
         }
     }
 }

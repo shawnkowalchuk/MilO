@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
+import com.shawnkowalchuk.milo.data.report.ChangedSinceSent
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.report.SentReport
+import com.shawnkowalchuk.milo.data.report.changedSinceSent
 import com.shawnkowalchuk.milo.data.report.monthSubmission
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
@@ -48,6 +50,8 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  * @param summary the month's trips, or null while they are being read.
  * @param submission that the month's report has been sent to the accountant, and when, or null
  * while it has not been.
+ * @param changedSinceSent that the month's Business trips are no longer what its newest report
+ * held, or null while they are (`changedSinceSent`): a revision may be needed.
  */
 data class TripsUiState(
     val month: YearMonth,
@@ -57,6 +61,7 @@ data class TripsUiState(
     val changeFailed: Boolean,
     val summary: MonthSummary?,
     val submission: MonthSubmission? = null,
+    val changedSinceSent: ChangedSinceSent? = null,
 )
 
 /**
@@ -122,24 +127,22 @@ class TripsViewModel(
                 start,
                 sent,
             ->
-            chosen.toUiState(
-                submission = monthSubmission(chosen.shown, sent),
-                // Right after a step the trips in hand are still the previous month's. They are
-                // not shown under the new month's name: the screen says it is reading.
-                summary =
-                    if (read.month == chosen.shown && read.zone == chosen.zone) {
-                        monthSummary(
-                            trips = read.trips,
-                            zone = chosen.zone,
-                            showLeftOut = chosen.showLeftOut,
-                            liveTripId = activity.trip?.tripId,
-                            liveDistanceMetres = activity.trip?.distanceMetres,
-                            liveStart = start,
-                        )
-                    } else {
-                        null
-                    },
-            )
+            // Right after a step the trips in hand are still the previous month's. They are
+            // not shown under the new month's name: the screen says it is reading.
+            val summary =
+                if (read.month == chosen.shown && read.zone == chosen.zone) {
+                    monthSummary(
+                        trips = read.trips,
+                        zone = chosen.zone,
+                        showLeftOut = chosen.showLeftOut,
+                        liveTripId = activity.trip?.tripId,
+                        liveDistanceMetres = activity.trip?.distanceMetres,
+                        liveStart = start,
+                    )
+                } else {
+                    null
+                }
+            chosen.toUiState(summary, monthSubmission(chosen.shown, sent))
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(KEEP_WATCHING_MS),
@@ -218,5 +221,11 @@ class TripsViewModel(
             changeFailed = changeFailed,
             summary = summary,
             submission = submission,
+            // The month's Business figures are the report's own (the same trips, added up the
+            // same way), so they can be held against what the newest report listed.
+            changedSinceSent =
+                summary?.totals?.business?.let { now ->
+                    changedSinceSent(submission, now.count, now.tenths)
+                },
         )
 }

@@ -2,10 +2,16 @@ package com.shawnkowalchuk.milo.data.trip
 
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.sumOfTenths
 
 // Which stored trips count, and what a day or a month of them adds up to. Pure functions,
 // shared by the Trips screen, the home screen and the Android Auto screen, so that the three
 // can never count a trip differently.
+//
+// **Every total here is added up as the report for the accountant adds up:** each trip is
+// rounded to a tenth of a kilometre, and the rounded figures are added (`sumOfTenths` in
+// `core/util/DistanceFormat.kt`). So the rows of a day add up to the figure in its heading,
+// the days to the month, and the month's Business figure is the total its report prints.
 
 /**
  * Whether this trip is in a total: a finished trip, and nothing else. A trip in progress is not
@@ -17,8 +23,13 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
  */
 val Trip.isCounted: Boolean get() = status == TripStatus.FINISHED
 
-/** A number of trips and what they add up to, in metres, rounded only when it is shown. */
-data class Tally(val count: Int, val metres: Double)
+/**
+ * A number of trips and what they add up to.
+ *
+ * @param tenths the total in tenths of a kilometre: the sum of the trips' own figures, each
+ * rounded to a tenth first, which is how the report for the accountant adds up.
+ */
+data class Tally(val count: Int, val tenths: Long)
 
 /**
  * Counted trips added up by what they are saved as.
@@ -47,7 +58,7 @@ private fun <T> totalsOf(
 ): CategoryTotals {
     fun tally(wanted: TripCategory?): Tally {
         val matching = counted.filter { category(it) == wanted }
-        return Tally(matching.size, matching.sumOf(metres))
+        return Tally(matching.size, sumOfTenths(matching.map(metres)))
     }
     return CategoryTotals(
         business = tally(TripCategory.BUSINESS),
@@ -82,16 +93,18 @@ data class TodaySession(
 /**
  * Today's finished trips, newest first.
  *
- * The totals are added up in metres and milliseconds and rounded once, when they are shown, like
- * the month totals of the Trips screen, so the rounding of single trips never accumulates.
+ * The kilometres are added up as the report adds up, trip by trip as each is printed (see the
+ * top of this file), so the rows of the Today card add up to the figures above them. The drive
+ * time is added up in milliseconds and rounded once, when it is shown.
  *
- * [count], [totalMetres] and [driveTimeMs] are of every counted trip, Business and Personal
+ * [count], [totalTenths] and [driveTimeMs] are of every counted trip, Business and Personal
  * together; the Android Auto screen shows those. The home screen shows the split in [totals].
  */
 data class TodayTrips(val sessions: List<TodaySession>) {
     val count: Int get() = sessions.size
 
-    val totalMetres: Double get() = sessions.sumOf { it.distanceMetres }
+    /** Every counted trip of today in one figure, in tenths of a kilometre. */
+    val totalTenths: Long get() = sumOfTenths(sessions.map { it.distanceMetres })
 
     val driveTimeMs: Long get() = sessions.sumOf { it.driveTimeMs }
 

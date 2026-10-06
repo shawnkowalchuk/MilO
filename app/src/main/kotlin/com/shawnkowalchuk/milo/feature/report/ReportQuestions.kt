@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -9,19 +10,107 @@ import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.periodInWords
 import com.shawnkowalchuk.milo.core.util.formatDate
+import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.SentEffect
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
 import java.time.ZoneId
 import java.util.Locale
 
-// The two questions of the Report screen: before a period is sent a second time, and, when
-// MilO is in front again after the email app, whether the email was sent.
+// The questions of the Report screen: before a month is sent that has not ended, before a
+// period is sent a second time, when MilO is in front again after the email app, whether the
+// email was sent, and before a report is removed from the list of sent reports.
 
 /** A period in the words of the screen, the PDF and the email's subject. */
 @Composable
 internal fun periodWords(period: ReportPeriod, locale: Locale): String =
     periodInWords(period, locale, stringResource(R.string.report_period_range_words))
+
+/** One of the questions before a report is sent ([sendQuestions]), with its two answers. */
+@Composable
+internal fun BeforeSendQuestion(
+    question: SendQuestion,
+    state: ReportUiState.Ready,
+    onSend: () -> Unit,
+    onKeep: () -> Unit,
+) {
+    val resend = state.resend
+    when {
+        question == SendQuestion.MONTH_NOT_ENDED -> NotEndedQuestion(state, onSend, onKeep)
+
+        resend != null -> ResendQuestion(resend, state.zone, onSend, onKeep)
+
+        // Asked only for a period that was sent before, so this is never reached. If it ever
+        // were, the question is closed and nothing is sent without one having been seen.
+        else -> LaunchedEffect(Unit) { onKeep() }
+    }
+}
+
+/**
+ * Asked before a report is sent for a month that has not ended. The Report screen opens on the
+ * month the Trips screen was showing, which is usually the current one, and a report sent on
+ * the 28th leaves the trips of the last days on no report until the month is sent again.
+ */
+@Composable
+private fun NotEndedQuestion(state: ReportUiState.Ready, onSend: () -> Unit, onKeep: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
+    val period = state.choice.period
+    ConfirmDialog(
+        title = stringResource(R.string.report_not_ended_title),
+        text =
+            stringResource(
+                R.string.report_not_ended_text,
+                periodWords(period, locale),
+                formatDay(period.lastDay, locale),
+            ),
+        confirmLabel = stringResource(R.string.report_not_ended_confirm),
+        dismissLabel = stringResource(R.string.action_cancel),
+        onConfirm = onSend,
+        onDismiss = onKeep,
+    )
+}
+
+/**
+ * Asked before a report is removed from the list of sent reports: it says what removing it
+ * does, which depends on what else the list holds ([RemovalEffect]). Removing takes away the
+ * record that a report was sent, and there is no button that puts it back.
+ */
+@Composable
+internal fun RemoveQuestion(
+    report: SentLine,
+    zone: ZoneId,
+    onRemove: () -> Unit,
+    onKeep: () -> Unit,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    val period = periodWords(report.period, locale)
+    val sentOn = formatDate(report.sentAtMs, zone, locale)
+    val text =
+        when (val effect = report.removal) {
+            RemovalEffect.UnmarksMonth ->
+                stringResource(R.string.report_remove_text_month_unmarked, period, sentOn)
+
+            is RemovalEffect.MonthStaysSubmitted ->
+                stringResource(
+                    R.string.report_remove_text_month_kept,
+                    period,
+                    sentOn,
+                    formatDate(effect.submittedAtMs, zone, locale),
+                )
+
+            RemovalEffect.UnlistsRange ->
+                stringResource(R.string.report_remove_text_range, period, sentOn)
+        }
+    ConfirmDialog(
+        title = stringResource(R.string.report_remove_title),
+        text = text,
+        confirmLabel = stringResource(R.string.report_remove),
+        dismissLabel = stringResource(R.string.action_cancel),
+        onConfirm = onRemove,
+        onDismiss = onKeep,
+    )
+}
 
 /**
  * Asked before a report is sent for a period that was sent before. Sending again is allowed;
@@ -29,7 +118,7 @@ internal fun periodWords(period: ReportPeriod, locale: Locale): String =
  * report is labelled a revision.
  */
 @Composable
-internal fun ResendQuestion(resend: Resend, zone: ZoneId, onSend: () -> Unit, onKeep: () -> Unit) {
+private fun ResendQuestion(resend: Resend, zone: ZoneId, onSend: () -> Unit, onKeep: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val last = resend.last
     val trips = pluralStringResource(R.plurals.trips_count, last.tripCount, last.tripCount)

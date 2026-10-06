@@ -1,8 +1,11 @@
 package com.shawnkowalchuk.milo.data.trip
 
+import com.shawnkowalchuk.milo.core.report.ReportDay
+import com.shawnkowalchuk.milo.core.report.ReportTrip
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -61,9 +64,10 @@ class TripCategoryTotalsTest {
     fun `Business and Personal are added up apart, and only counted trips are in either`() {
         val totals = categoryTotals(mixedDay)
 
-        assertEquals(Tally(2, 41_249.0), totals.business)
-        assertEquals(Tally(1, 6_500.0), totals.personal)
-        assertEquals(Tally(1, 3_000.0), totals.unsorted)
+        // 20.0 km and 21.2 km, as each is printed: 41.2 km.
+        assertEquals(Tally(2, 412), totals.business)
+        assertEquals(Tally(1, 65), totals.personal)
+        assertEquals(Tally(1, 30), totals.unsorted)
         assertEquals(4, totals.count)
     }
 
@@ -74,13 +78,13 @@ class TripCategoryTotalsTest {
 
         val totals = categoryTotals(listOf(business, longPersonal))
 
-        assertEquals(Tally(1, 5_000.0), totals.business)
-        assertEquals(Tally(1, 400_000.0), totals.personal)
+        assertEquals(Tally(1, 50), totals.business)
+        assertEquals(Tally(1, 4_000), totals.personal)
     }
 
     @Test
     fun `no trips add up to three empty totals`() {
-        val nothing = Tally(0, 0.0)
+        val nothing = Tally(0, 0)
 
         assertEquals(CategoryTotals(nothing, nothing, nothing), categoryTotals(emptyList()))
     }
@@ -95,18 +99,35 @@ class TripCategoryTotalsTest {
         val marked = other.copy(category = TripCategory.PERSONAL, categorySetByHand = true)
         val after = categoryTotals(listOf(one, marked))
 
-        assertEquals(Tally(2, 12_000.0), before.business)
-        assertEquals(Tally(1, 5_000.0), after.business)
-        assertEquals(Tally(1, 7_000.0), after.personal)
+        assertEquals(Tally(2, 120), before.business)
+        assertEquals(Tally(1, 50), after.business)
+        assertEquals(Tally(1, 70), after.personal)
         assertEquals(before.count, after.count)
     }
 
     @Test
-    fun `each total is added up in metres, so the rounding of single trips does not accumulate`() {
-        // Each prints as 0.1 km, three of them as 0.4 km: 149 m each is 447 m.
+    fun `each total is the sum of the figures printed for its trips, as on the report`() {
+        // Each prints as 0.1 km, so three of them are 0.3 km. Their 447 m rounded once would be
+        // 0.4 km: a total that the rows above it do not add up to, and not the report's.
         val totals = categoryTotals(List(3) { trip(it * 10L, 5, 149.0, TripCategory.BUSINESS) })
 
-        assertEquals(447.0, totals.business.metres, 0.0)
+        assertEquals(3, totals.business.tenths)
+    }
+
+    @Test
+    fun `the Business total is the total the report for the accountant prints`() {
+        // 193 trips that each round down by 4 m: the case in which the screens used to show a
+        // month one kilometre longer than its report.
+        val distances = List(193) { 11_504.0 }
+        val trips = distances.mapIndexed { i, metres ->
+            trip(i * 10L, 5, metres, TripCategory.BUSINESS)
+        }
+        val onReport = distances.map { ReportTrip(0, null, null, null, it) }
+
+        val business = categoryTotals(trips).business
+
+        assertEquals(ReportDay(LocalDate.of(2026, 10, 5), onReport).tenths, business.tenths)
+        assertEquals(193 * 115L, business.tenths)
     }
 
     // ---- Today ------------------------------------------------------------------------------------
@@ -115,9 +136,9 @@ class TripCategoryTotalsTest {
     fun `today's figures are split the same way, with the drive time of the Business trips`() {
         val today = todayTrips(mixedDay)
 
-        assertEquals(Tally(2, 41_249.0), today.totals.business)
-        assertEquals(Tally(1, 6_500.0), today.totals.personal)
-        assertEquals(Tally(1, 3_000.0), today.totals.unsorted)
+        assertEquals(Tally(2, 412), today.totals.business)
+        assertEquals(Tally(1, 65), today.totals.personal)
+        assertEquals(Tally(1, 30), today.totals.unsorted)
         assertEquals(55 * MINUTE_MS, today.businessDriveTimeMs)
     }
 
@@ -125,9 +146,10 @@ class TripCategoryTotalsTest {
     fun `today's count and distance of every trip are still there for the Android Auto screen`() {
         val today = todayTrips(mixedDay)
 
-        // Business, Personal and unsorted together: the car's row has not changed.
+        // Business, Personal and unsorted together, each trip as it is printed:
+        // 20.0 + 21.2 + 6.5 + 3.0 km.
         assertEquals(4, today.count)
-        assertEquals(50_749.0, today.totalMetres, 0.0)
+        assertEquals(507, today.totalTenths)
         assertEquals(80 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -146,7 +168,7 @@ class TripCategoryTotalsTest {
     fun `a day of Personal trips only has no Business figures, and is not an empty day`() {
         val today = todayTrips(listOf(trip(0, 30, 12_000.0, TripCategory.PERSONAL)))
 
-        assertEquals(Tally(0, 0.0), today.totals.business)
+        assertEquals(Tally(0, 0), today.totals.business)
         assertEquals(0L, today.businessDriveTimeMs)
         assertEquals(1, today.count)
     }

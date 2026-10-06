@@ -208,12 +208,14 @@ fun MiloNavigation(
                                             ownSound = container.ownTripSound,
                                             playSound = container.soundPreview::play,
                                             armDrivingAlert = container.drivingAlert::arm,
+                                            lookAtReminder = container.reports.reminder::look,
                                             eventLog = container.eventLogRepository,
                                             clock = System::currentTimeMillis,
                                         )
                                     }
                                 },
                             ),
+                        dataViewModel = viewModel(factory = dataViewModelFactory(container)),
                         onChangeTruck = { backStack.openOnTop(PairingKey) },
                         onBack = { backStack.closeIfOnTop(SettingsKey) },
                     )
@@ -223,7 +225,15 @@ fun MiloNavigation(
                         viewModel =
                             viewModel(
                                 factory = viewModelFactory {
-                                    initializer { EventLogViewModel(container.eventLogRepository) }
+                                    initializer {
+                                        EventLogViewModel(
+                                            eventLog = container.eventLogRepository,
+                                            files = container.eventLogFiles,
+                                            shareRequest = container.reports.handOff::toShareText,
+                                            clock = System::currentTimeMillis,
+                                            zone = ZoneId::systemDefault,
+                                        )
+                                    }
                                 },
                             ),
                     )

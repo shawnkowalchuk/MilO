@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.settings
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -96,6 +97,9 @@ sealed interface SettingsUiState {
      * @param drivingAlertEnabled whether MilO notifies when the phone reports driving during
      * the work hours with no trip being recorded.
      * @param report who the report for the accountant is from, and where it goes.
+     * @param reminderEnabled whether MilO reminds that last month's report has not been sent.
+     * @param reminderDay the day of the month from which it does, 1 to 31.
+     * @param canRemindEarlier false on the 1st, and [canRemindLater] on the 31st.
      * @param problem the last press that did not work, until the next one.
      */
     data class Ready(
@@ -115,6 +119,10 @@ sealed interface SettingsUiState {
         val ignoreOutsideSchedule: Boolean,
         val drivingAlertEnabled: Boolean,
         val report: ReportFields,
+        val reminderEnabled: Boolean,
+        val reminderDay: Int,
+        val canRemindEarlier: Boolean,
+        val canRemindLater: Boolean,
         val problem: SettingsProblem?,
     ) : SettingsUiState
 }
@@ -170,6 +178,10 @@ fun settingsUiState(
             accountantEmail = refusedEmail ?: settings.accountantEmail.orEmpty(),
             emailRefused = refusedEmail != null,
         ),
+    reminderEnabled = settings.reminderEnabled,
+    reminderDay = settings.reminderDay,
+    canRemindEarlier = REMINDER_DAY_CHOICE.canStepDown(settings.reminderDay),
+    canRemindLater = REMINDER_DAY_CHOICE.canStepUp(settings.reminderDay),
     problem = problem,
 )
 

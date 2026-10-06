@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

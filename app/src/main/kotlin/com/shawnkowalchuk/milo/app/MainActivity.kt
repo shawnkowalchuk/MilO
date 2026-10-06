@@ -1,18 +1,31 @@
 package com.shawnkowalchuk.milo.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.shawnkowalchuk.milo.platform.reminder.reportMonthToOpen
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
+import java.time.YearMonth
 
 /**
- * The only activity. It hosts the Compose UI and says when MilO has been opened or has come
- * back to the front, and nothing else: no logic, no system calls. Anything that talks to
- * Android (Bluetooth, location, notifications) belongs in `platform/` and is reached through a
- * ViewModel.
+ * The only activity. It hosts the Compose UI, says when MilO has been opened or has come back
+ * to the front, and passes on which month's report a tap on the monthly reminder asked for.
+ * Nothing else: no logic, no system calls. Anything that talks to Android (Bluetooth, location,
+ * notifications) belongs in `platform/` and is reached through a ViewModel.
  */
 class MainActivity : ComponentActivity() {
+    /**
+     * The month whose Report screen a tap on the monthly reminder asked for, until the screens
+     * have opened it. Read from the request that started or reached the activity; what the
+     * request holds is the reminder's own business (`reportMonthToOpen`).
+     */
+    private var reportToOpen by mutableStateOf<YearMonth?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -21,23 +34,43 @@ class MainActivity : ComponentActivity() {
         // the phone today does not shift after a system update.
         enableEdgeToEdge()
 
+        // Only for an activity that is being built for the first time. One that Android builds
+        // again (the phone was turned, or MilO was put away and brought back) still carries the
+        // request it was first started with, and that tap was dealt with then: the screens come
+        // back as they were left.
+        if (savedInstanceState == null) reportToOpen = reportMonthToOpen(intent)
+
         val container = (application as MiloApplication).container
         setContent {
-            MiloApp(container)
+            MiloApp(
+                container = container,
+                reportToOpen = reportToOpen,
+                onReportOpened = { reportToOpen = null },
+            )
         }
     }
 
+    /** The reminder was tapped while MilO's activity was already there. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        reportMonthToOpen(intent)?.let { reportToOpen = it }
+    }
+
     /**
-     * ADR-002's reconcile at app launch, and the check that Android still watches for the
-     * truck. Both run every time MilO comes to the front, not only when the activity is first
-     * created: Android keeps an activity for days, and opening MilO is what Shawn does when a
-     * trip did not start by itself. Each call only queues work; nothing here waits.
+     * ADR-002's reconcile at app launch, the check that Android still watches for the truck,
+     * and a look at the monthly reminder. All run every time MilO comes to the front, not only
+     * when the activity is first created: Android keeps an activity for days, and opening MilO
+     * is what Shawn does when a trip did not start by itself. Each call only queues work;
+     * nothing here waits.
      */
     override fun onStart() {
         super.onStart()
         val container = (application as MiloApplication).container
         container.tripController.onTrigger(TripTrigger.RECONCILE, APP_OPENED)
         container.truckPairing.check(APP_OPENED)
+        // The monthly reminder is looked at whenever MilO comes to the front, beside its daily
+        // alarm: on a phone that holds the alarm back, opening MilO is what brings it.
+        container.reports.reminder.look(APP_OPENED)
     }
 
     /**
@@ -52,7 +85,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        /** What the event log calls the reconcile and the pairing check at app launch. */
+        /** What the event log calls the work that is prompted by MilO coming to the front. */
         const val APP_OPENED = "app opened"
 
         /** What the event log calls the driving alert's look at its permission. */

@@ -11,11 +11,17 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does seven things only: it owns the [AppContainer], it starts the crash and kill capture,
- * it has the trip controller look at what the last process left behind, it checks that
- * Android still watches for the truck, it has the addresses of finished trips caught up, it
- * has the trips that are not sorted into Business or Personal yet sorted, and it has the
- * driving alert ask the phone again to report driving.
+ * It does ten things only: it owns the [AppContainer], it has what Android's backup left
+ * behind dealt with (a restore above all), it starts the crash and kill capture (which also
+ * trims the event log), it has an import finished that the last process was ended in the
+ * middle of, it has the trip controller look at what the last process left behind,
+ * it checks that Android still watches for the truck, it has the addresses of finished trips
+ * caught up, it has the trips that are not sorted into Business or Personal yet sorted, it has
+ * the driving alert ask the phone again to report driving, and it has the monthly reminder ask
+ * for its daily alarm again and look at whether a reminder is due.
+ *
+ * Android's backup and restore do not come through here: Android runs them in a process of
+ * another kind, with a plain `Application` object in place of this one (`MiloBackupAgent`).
  */
 class MiloApplication : Application() {
     /** Created in [onCreate]. Screens and services reach every shared object through it. */
@@ -33,7 +39,18 @@ class MiloApplication : Application() {
         // Reading files and the database must not hold up the main thread, least of all when
         // the process was started by a trip trigger with seconds to begin recording.
         container.applicationScope.launch(Dispatchers.IO) {
+            // First what the backup agent left behind. After a restore the settings are those
+            // of another installation, and what was only true there is taken out before the
+            // diagnostics read them. The pairing check below may run before this has finished;
+            // it then finds no association for the truck either way, and is asked once more.
+            container.transfer.aftermath.settle()
             container.startupDiagnostics.record()
+            // Last, an import that the process before this one was ended in the middle of: it
+            // stored the file's trips and left the raw points of the trips that are gone.
+            // Finishing it can take half a minute, so it comes after the diagnostics, whose
+            // lines say when this process started. It touches no trip, and a trigger that
+            // started this process does not wait for it.
+            container.transfer.dataTransfer.finishCutOffImport()
         }
 
         // ADR-002's reconcile. No Bluetooth event fires for a truck that is already connected
@@ -68,6 +85,15 @@ class MiloApplication : Application() {
         // and both of those start a new process, so it is made again here. Nothing in it can
         // start a trip: a report of driving leads to a notification at most.
         container.drivingAlert.arm(PROCESS_START)
+
+        // Android forgets every alarm at a reboot and when an app is force-stopped, and both
+        // end in a new process, so the reminder's daily alarm is asked for again here. The
+        // reminder is looked at as well: the phone may have been off on the reminder day. It
+        // waits for the reconcile like the two passes above, so that a process started by a
+        // trip trigger does the trigger's work first. Built here and not in the callback, which
+        // runs on the trip controller's own worker.
+        val reminder = container.reports.reminder
+        container.tripController.whenCaughtUp { reminder.arm(PROCESS_START) }
     }
 
     private companion object {
