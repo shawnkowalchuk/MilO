@@ -1,6 +1,8 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
+import com.shawnkowalchuk.milo.data.trip.TodaySession
+import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.util.Locale
@@ -20,9 +22,16 @@ internal fun carTrip(metres: Double = 12_449.0, waitingForTruck: Boolean = false
     waitingForTruck = waitingForTruck,
 )
 
+/** Today's finished trips, one for each distance given. Their times do not matter to the car. */
+internal fun todayOf(vararg metres: Double) = TodayTrips(
+    metres.mapIndexed { index, distance ->
+        TodaySession(index + 1L, STARTED_AT_MS, STARTED_AT_MS + MINUTE_MS, distance)
+    },
+)
+
 internal fun carContent(
     activity: TripActivity,
-    today: TodayTrips? = TodayTrips(count = 0, totalMetres = 0.0),
+    today: TodayTrips? = todayOf(),
     setupNeedsAttention: Boolean = false,
     nowMs: Long = NOW_MS,
     locale: Locale = Locale.CANADA,

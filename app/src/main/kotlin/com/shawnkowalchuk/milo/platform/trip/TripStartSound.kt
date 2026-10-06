@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import com.shawnkowalchuk.milo.R
+import java.io.File
 import java.io.IOException
 
 /**
@@ -23,13 +24,20 @@ import java.io.IOException
  *   switch channel sounds off (docs/research/2026-10-03-miui-dev-bluetooth-audio.md).
  *
  * The bundled sound is `res/raw/trip_start_chirp.wav`, an original synthesised chirp made by
- * `tools/make_trip_start_chirp.py`. If Shawn has chosen his own audio file, that is played, and
- * the bundled one is the fallback whenever his cannot be: the file moved, was deleted, or is
- * not audio.
+ * `tools/make_trip_start_chirp.py`. If Shawn has chosen his own audio file, MilO's copy of it
+ * is played (`OwnTripSound`), and the bundled one is the fallback whenever the copy cannot be:
+ * it is gone, or it does not play after all.
+ *
+ * One sound at a time: a sound that is still playing is cut off by the next one, so pressing
+ * Play on the Settings screen twice does not play two on top of each other. Call it on the
+ * main thread, which is also where the player reports back.
  *
  * @param onNote a line for the event log.
  */
 class TripStartSound(private val context: Context, private val onNote: (String) -> Unit) {
+    /** The sound that is playing, if one is. */
+    private var playing: MediaPlayer? = null
+
     /**
      * @param customSoundUri the audio file from the settings, or null for the bundled chirp.
      */
@@ -68,7 +76,9 @@ class TripStartSound(private val context: Context, private val onNote: (String) 
         onFailure: () -> Unit,
         setSource: (MediaPlayer) -> Unit,
     ): Boolean {
+        playing?.release()
         val player = MediaPlayer()
+        playing = player
         return try {
             player.setAudioAttributes(
                 AudioAttributes
@@ -80,9 +90,9 @@ class TripStartSound(private val context: Context, private val onNote: (String) 
             setSource(player)
             phoneSpeaker()?.let(player::setPreferredDevice)
             player.setOnPreparedListener(MediaPlayer::start)
-            player.setOnCompletionListener(MediaPlayer::release)
+            player.setOnCompletionListener(::finished)
             player.setOnErrorListener { failed, what, extra ->
-                failed.release()
+                finished(failed)
                 onNote("The trip-start sound failed while playing $describe (error $what/$extra)")
                 onFailure()
                 true
@@ -103,8 +113,14 @@ class TripStartSound(private val context: Context, private val onNote: (String) 
         }
     }
 
-    private fun abandon(player: MediaPlayer, describe: String, failure: Exception): Boolean {
+    /** Hands the player back to Android, and forgets it unless a newer sound has replaced it. */
+    private fun finished(player: MediaPlayer) {
         player.release()
+        if (playing === player) playing = null
+    }
+
+    private fun abandon(player: MediaPlayer, describe: String, failure: Exception): Boolean {
+        finished(player)
         onNote("The trip-start sound could not play $describe: $failure")
         return false
     }
@@ -113,4 +129,30 @@ class TripStartSound(private val context: Context, private val onNote: (String) 
         .getSystemService(AudioManager::class.java)
         .getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+}
+
+/**
+ * Whether Android can play [file], asked before it becomes the trip-start sound: null if it can,
+ * else what the player said. A file the player can prepare is one it can play.
+ *
+ * It reads the start of the file and can take a moment, so it is not for the main thread.
+ */
+fun playbackProblem(file: File): String? {
+    val player = MediaPlayer()
+    return try {
+        player.setDataSource(file.path)
+        player.prepare()
+        null
+    } catch (unreadable: IOException) {
+        // What the player throws for a file that is not audio, or is damaged.
+        unreadable.toString()
+    } catch (invalid: IllegalArgumentException) {
+        invalid.toString()
+    } catch (wrongState: IllegalStateException) {
+        wrongState.toString()
+    } catch (denied: SecurityException) {
+        denied.toString()
+    } finally {
+        player.release()
+    }
 }

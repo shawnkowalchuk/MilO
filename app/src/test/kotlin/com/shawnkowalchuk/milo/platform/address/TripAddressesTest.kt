@@ -119,9 +119,9 @@ class TripAddressesTest {
     }
 
     @Test
-    fun `a discarded trip and a trip in progress are not looked up`() = runTest {
-        stored(from = 53.1, to = 53.2, status = TripStatus.DISCARDED)
-        stored(from = 53.3, to = 53.4, status = TripStatus.OPEN)
+    fun `a discarded trip, a deleted trip and a trip in progress are not looked up`() = runTest {
+        val neverLookedUp = listOf(TripStatus.DISCARDED, TripStatus.OPEN, TripStatus.DELETED)
+        neverLookedUp.forEach { stored(from = 53.1, to = 53.2, status = it) }
 
         pass(addresses())
 

@@ -47,12 +47,12 @@ class TripMonthTest {
 
     private fun summary(
         trips: List<Trip>,
-        showDiscarded: Boolean = false,
+        showLeftOut: Boolean = false,
         liveTripId: Long? = null,
         liveDistanceMetres: Double? = null,
         liveStart: OpenTripStart? = null,
     ): MonthSummary =
-        monthSummary(trips, edmonton, showDiscarded, liveTripId, liveDistanceMetres, liveStart)
+        monthSummary(trips, edmonton, showLeftOut, liveTripId, liveDistanceMetres, liveStart)
 
     // ---- Totals -----------------------------------------------------------------------------------
 
@@ -78,18 +78,18 @@ class TripMonthTest {
         val counted = trip("2026-10-05T14:00:00Z", metres = 12_300.0)
         val discarded = trip("2026-10-05T16:00:00Z", metres = 250.0, status = TripStatus.DISCARDED)
 
-        val hidden = summary(listOf(counted, discarded), showDiscarded = false)
-        val shown = summary(listOf(counted, discarded), showDiscarded = true)
+        val hidden = summary(listOf(counted, discarded), showLeftOut = false)
+        val shown = summary(listOf(counted, discarded), showLeftOut = true)
 
         assertEquals(listOf(counted.id), hidden.days.single().trips.map { it.id })
-        assertEquals(1, hidden.hiddenDiscarded)
+        assertEquals(1, hidden.hiddenLeftOut)
 
         // Listed newest first, and marked so it is not taken for a counted trip.
         assertEquals(
             listOf(discarded.id to TripKind.DISCARDED, counted.id to TripKind.COUNTED),
             shown.days.single().trips.map { it.id to it.kind },
         )
-        assertEquals(0, shown.hiddenDiscarded)
+        assertEquals(0, shown.hiddenLeftOut)
 
         for (month in listOf(hidden, shown)) {
             assertEquals(12_300.0, month.totalMetres, 0.0)
@@ -102,11 +102,11 @@ class TripMonthTest {
         val onlyDiscarded =
             listOf(trip("2026-10-05T14:00:00Z", metres = 90.0, status = TripStatus.DISCARDED))
 
-        val hidden = summary(onlyDiscarded, showDiscarded = false)
-        val shown = summary(onlyDiscarded, showDiscarded = true)
+        val hidden = summary(onlyDiscarded, showLeftOut = false)
+        val shown = summary(onlyDiscarded, showLeftOut = true)
 
         assertTrue(hidden.isEmpty)
-        assertEquals(1, hidden.hiddenDiscarded)
+        assertEquals(1, hidden.hiddenLeftOut)
         assertFalse(shown.isEmpty)
         assertEquals(0, shown.tripCount)
     }
@@ -118,7 +118,7 @@ class TripMonthTest {
         assertTrue(month.isEmpty)
         assertEquals(0.0, month.totalMetres, 0.0)
         assertEquals(0, month.tripCount)
-        assertEquals(0, month.hiddenDiscarded)
+        assertEquals(0, month.hiddenLeftOut)
     }
 
     // ---- Grouping ---------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ class TripMonthTest {
             trip("2026-10-05T14:00:00Z", metres = 120.0, status = TripStatus.DISCARDED)
                 .copy(startLatitude = 53.5, startLongitude = -113.5)
 
-        val line = summary(listOf(discarded), showDiscarded = true).days.single().trips.single()
+        val line = summary(listOf(discarded), showLeftOut = true).days.single().trips.single()
 
         assertNull(line.from)
         assertNull(line.to)

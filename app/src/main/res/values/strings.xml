@@ -4,6 +4,11 @@
 
     <!-- Shared: a distance in kilometres. The number is produced by formatKilometres(). -->
     <string name="distance_km">%1$s km</string>
+    <!-- Shared: a length of time in whole minutes, or in whole hours and minutes. -->
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <!-- Shared: the button of a question that does not do the thing asked about. -->
+    <string name="action_cancel">Cancel</string>
 
     <!-- Design system: spoken by the screen reader in place of a row's indicator. -->
     <string name="status_ok">OK</string>
@@ -38,6 +43,17 @@
     <string name="home_setup_warning_title">Setup needs attention</string>
     <string name="home_setup_warning_text">Something MilO needs is not set, or no truck is paired. A trip may not start by itself.</string>
     <string name="home_setup_warning_action">Open Setup</string>
+    <!-- Home: spoken by the screen reader for the cog beside the title. -->
+    <string name="home_open_settings">Settings</string>
+    <!-- Home: today's finished trips. The trip in progress is the card above. -->
+    <string name="home_today_title">Today</string>
+    <string name="home_today_none">No finished trips yet today.</string>
+    <!-- The arguments are the number of trips and a length of time such as 1 h 5 min. -->
+    <plurals name="home_today_summary">
+        <item quantity="one">%1$d trip · %2$s driving</item>
+        <item quantity="other">%1$d trips · %2$s driving</item>
+    </plurals>
+    <string name="home_today_in_progress_note">The trip in progress is added when it ends.</string>
 
     <!-- Why recording could not start: on the home screen, one line per problem found. -->
     <string name="start_problem_title">MilO could not start this trip</string>
@@ -183,18 +199,36 @@
     </plurals>
     <string name="trips_previous_month">Previous month</string>
     <string name="trips_next_month">Next month</string>
-    <string name="trips_show_discarded">Show discarded trips</string>
+    <string name="trips_show_left_out">Show deleted and discarded trips</string>
     <!-- The argument is a month from formatMonthAndYear(), such as October 2026. -->
     <string name="trips_empty">No trips in %1$s.</string>
-    <plurals name="trips_hidden_discarded">
-        <item quantity="one">%d trip was discarded and is not shown.</item>
-        <item quantity="other">%d trips were discarded and are not shown.</item>
+    <plurals name="trips_hidden_left_out">
+        <item quantity="one">%d deleted or discarded trip is not shown.</item>
+        <item quantity="other">%d deleted or discarded trips are not shown.</item>
     </plurals>
+    <string name="trips_press_hint">Tap a trip to delete it.</string>
+    <!-- Trips: spoken by the screen reader for what a tap on a finished trip does. -->
+    <string name="trips_row_press">show or hide the Delete button</string>
     <string name="trips_in_progress_title">In progress</string>
-    <string name="trips_in_progress_note">Still recording. Not in the month\'s total until it ends.</string>
+    <string name="trips_in_progress_note">Still recording. Not in the month\'s total until it ends. It cannot be deleted while it is recording.</string>
     <!-- The arguments are two times of day from formatTimeOfDay(): the start and the end. -->
     <string name="trips_time_range">%1$s – %2$s</string>
     <string name="trips_discarded_note">Discarded: too short, or a start that was never confirmed. Not counted.</string>
+    <string name="trips_deleted_note">Deleted by you. Not counted.</string>
+    <!-- Trips: the one thing that can be done with a trip. -->
+    <string name="trips_action_delete">Delete trip</string>
+    <string name="trips_action_restore">Restore</string>
+    <string name="trips_action_count">Count this trip</string>
+    <!--
+        Trips: the question before a trip is deleted. The arguments are the trip, such as
+        08:14 – 08:39 · 12.4 km, and the label of the switch that shows deleted trips.
+    -->
+    <string name="trips_delete_title">Delete this trip?</string>
+    <!-- How the question names the trip. The arguments are its times and its distance. -->
+    <string name="trips_delete_trip">%1$s · %2$s</string>
+    <string name="trips_delete_text">%1$s\n\nIt leaves the list and the month\'s total. It is not destroyed: switch on \"%2$s\" to see it again and restore it.</string>
+    <string name="trips_delete_confirm">Delete</string>
+    <string name="trips_change_failed">That trip could not be changed. The Log screen says why.</string>
     <!--
         Trips: where a trip went, under its times. The arguments are the start and the end:
         two addresses such as 12 Shop Rd, Edmonton, or one of the two phrases below standing
@@ -211,6 +245,44 @@
     <string name="trips_start_looking_up">Looking up where it started…</string>
     <string name="trips_start_not_found">No address found for where it started.</string>
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
+
+    <!-- Settings, opened from Home. -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_reading">Reading the settings…</string>
+    <string name="settings_unreadable">MilO cannot read its settings, so they cannot be shown or changed here. Trips are still recorded, with the usual values. The Log screen says why.</string>
+    <string name="settings_could_not_save">That change could not be saved. The Log screen says why.</string>
+    <string name="settings_truck_title">Truck</string>
+    <string name="settings_truck_detail">A trip starts by itself when this truck connects.</string>
+    <string name="settings_trips_title">Trips</string>
+    <string name="settings_applies_next_trip">A change applies from the next trip. A trip that is being recorded may already use it.</string>
+    <string name="settings_grace_label">Wait after the truck disconnects</string>
+    <string name="settings_grace_detail">How long a trip stays open for the truck to reconnect. If it does, the same trip carries on.</string>
+    <!-- The argument is a number of minutes from formatMinutes(), such as 2 or 2.5. -->
+    <string name="settings_grace_value">%1$s min</string>
+    <!-- Settings: spoken by the screen reader for the minus and the plus of each number. -->
+    <string name="settings_grace_less">Wait less</string>
+    <string name="settings_grace_more">Wait longer</string>
+    <string name="settings_minimum_label">Shortest trip that counts</string>
+    <string name="settings_minimum_detail">A shorter trip is discarded, such as moving the truck around the yard. A discarded trip can still be counted on the Trips screen.</string>
+    <string name="settings_minimum_less">Count shorter trips</string>
+    <string name="settings_minimum_more">Count only longer trips</string>
+    <string name="settings_sound_title">Trip-start sound</string>
+    <string name="settings_sound_enabled">Play a sound when a trip starts</string>
+    <string name="settings_sound_built_in">Sound in use: the built-in sound</string>
+    <string name="settings_sound_own">Sound in use: your own sound</string>
+    <!-- The argument is the name of the audio file that was picked. -->
+    <string name="settings_sound_own_named">Sound in use: your own sound, %1$s</string>
+    <string name="settings_sound_note">It plays at the phone\'s notification volume, so it is silent when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode.</string>
+    <string name="settings_sound_copying">Copying the sound…</string>
+    <string name="settings_sound_play">Play</string>
+    <string name="settings_sound_use_own">Use my own sound</string>
+    <string name="settings_sound_use_built_in">Use the built-in sound</string>
+    <!-- Settings: why a picked file did not become the sound. -->
+    <string name="settings_sound_refused_copy">MilO could not copy that file. The sound was not changed.</string>
+    <!-- The argument is the limit in megabytes. -->
+    <string name="settings_sound_refused_large">That file is too large for a trip-start sound (more than %1$d MB). The sound was not changed.</string>
+    <string name="settings_sound_refused_playable">That file cannot be played as a sound. The sound was not changed.</string>
+    <string name="settings_sound_no_picker">This phone has no app to pick a file with. The sound was not changed.</string>
 
     <!--
         The Android Auto screen. Its header is app_name, its button uses home_start_trip and

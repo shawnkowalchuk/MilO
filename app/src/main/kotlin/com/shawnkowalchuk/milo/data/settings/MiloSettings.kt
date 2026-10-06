@@ -39,7 +39,10 @@ enum class ConfirmedStep(val key: String) {
  * @param gracePeriodSeconds how long a trip waits after the truck disconnects.
  * @param minimumTripDistanceMetres trips shorter than this are discarded.
  * @param soundEnabled whether the trip-start sound plays.
- * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp.
+ * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp. It names
+ * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
+ * @param customSoundName what the file he picked was called, for display only. Null with no
+ * custom sound, and when the phone gave no name for the file.
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -56,6 +59,7 @@ data class MiloSettings(
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
+    val customSoundName: String? = null,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

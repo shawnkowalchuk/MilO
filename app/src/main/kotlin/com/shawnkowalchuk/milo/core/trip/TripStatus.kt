@@ -17,4 +17,11 @@ enum class TripStatus {
      * distance (a bad threshold, a phone that reports poor accuracy) can still be recovered.
      */
     DISCARDED,
+
+    /**
+     * A finished trip that Shawn deleted on the Trips screen. The trip rules never produce this
+     * status and never act on it. Nothing but the status changed, and the raw points stay, so
+     * restoring the trip puts it back exactly as it was (`data/trip/TripCorrection.kt`).
+     */
+    DELETED,
 }

@@ -1,9 +1,9 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.formatKilometres
-import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
+import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
@@ -18,9 +18,6 @@ import java.util.Locale
 // Every figure is already rounded to what the screen prints (kilometres to one decimal, time to
 // whole minutes). Two contents are therefore equal exactly when the screen would look the same,
 // which is how the screen knows that there is nothing to redraw.
-
-private const val MS_PER_MINUTE = 60_000L
-private const val MINUTES_PER_HOUR = 60L
 
 /**
  * The line of the Status row. Each constant is one sentence in strings.xml.
@@ -99,27 +96,10 @@ data class CarScreenContent(
 )
 
 /**
- * Today's finished trips as stored: how many, and how far in metres.
- *
- * Added up in metres and rounded once, when shown, like the month totals of the Trips screen.
- */
-data class TodayTrips(val count: Int, val totalMetres: Double)
-
-/**
- * What counts as "today", by the rule of the Trips screen: finished trips only. A discarded trip
- * is left out, and the trip in progress is not counted until it ends (it has a row of its own).
- *
- * @param startedToday every trip that started today, whatever its status.
- */
-fun todayTrips(startedToday: List<Trip>): TodayTrips {
-    val finished = startedToday.filter { it.status == TripStatus.FINISHED }
-    return TodayTrips(count = finished.size, totalMetres = finished.sumOf { it.distanceMetres })
-}
-
-/**
  * The screen's content for one moment.
  *
- * @param today today's finished trips, or null if they are not known.
+ * @param today today's finished trips, or null if they are not known. What counts as today is
+ * decided by `todayTrips` in `data/trip/TripTotals.kt`, which the phone's home screen uses too.
  * @param setupNeedsAttention the home screen's rule (`needsAttention`): a required row of the
  * setup checklist is not in order.
  * @param locale decides the decimal separator of the kilometre figures.
@@ -185,12 +165,12 @@ private fun refusalStatus(failure: StartFailure): CarStatus =
     }
 
 private fun tripFigures(trip: CurrentTrip, nowMs: Long, locale: Locale): TripFigures {
-    // Whole minutes, rounded down, as a stopwatch counts them. Never negative: the phone's clock
-    // can be set back while a trip is open.
-    val wholeMinutes = (nowMs - trip.startedAtMs).coerceAtLeast(0) / MS_PER_MINUTE
+    // Whole minutes, rounded down, and never negative: the phone's clock can be set back while
+    // a trip is open.
+    val sinceStart = wholeHoursAndMinutes(nowMs - trip.startedAtMs)
     return TripFigures(
         kilometres = formatKilometres(trip.distanceMetres, locale),
-        hours = wholeMinutes / MINUTES_PER_HOUR,
-        minutes = wholeMinutes % MINUTES_PER_HOUR,
+        hours = sinceStart.hours,
+        minutes = sinceStart.minutes,
     )
 }

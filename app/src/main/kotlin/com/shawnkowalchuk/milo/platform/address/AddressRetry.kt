@@ -69,8 +69,10 @@ fun waitAfterAttemptMs(failedAttempts: Int): Long? = when {
  * Whether [trip]'s addresses should be looked up at [nowMs].
  *
  * Only a finished trip is looked up: an open one has no stored position yet, and a discarded
- * one is not shown or counted. It must lack an address for an end whose position is known, must
- * not have used up its attempts, and its last attempt must be long enough ago.
+ * or a deleted one is not counted. (A deleted trip that is restored, or a discarded one that is
+ * counted after all, is a finished trip again and is due like any other.) It must lack an
+ * address for an end whose position is known, must not have used up its attempts, and its last
+ * attempt must be long enough ago.
  */
 fun isDueForLookup(trip: Trip, nowMs: Long): Boolean {
     if (trip.status != TripStatus.FINISHED) return false

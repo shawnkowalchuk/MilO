@@ -20,8 +20,11 @@ import com.shawnkowalchuk.milo.feature.home.HomeScreen
 import com.shawnkowalchuk.milo.feature.home.HomeViewModel
 import com.shawnkowalchuk.milo.feature.pairing.PairingScreen
 import com.shawnkowalchuk.milo.feature.pairing.PairingViewModel
+import com.shawnkowalchuk.milo.feature.settings.SettingsScreen
+import com.shawnkowalchuk.milo.feature.settings.SettingsViewModel
 import com.shawnkowalchuk.milo.feature.setup.SetupScreen
 import com.shawnkowalchuk.milo.feature.setup.SetupViewModel
+import com.shawnkowalchuk.milo.feature.trips.TripCorrections
 import com.shawnkowalchuk.milo.feature.trips.TripsScreen
 import com.shawnkowalchuk.milo.feature.trips.TripsViewModel
 import java.time.ZoneId
@@ -42,12 +45,15 @@ data object SetupKey : NavKey
 @Serializable
 data object LogKey : NavKey
 
-/** What the event log calls the address lookup that the Trips screen asks for. */
-private const val TRIPS_SCREEN = "the Trips screen came to the front"
-
-/** The truck pairing screen. Not in the bottom bar: it is opened from Setup. */
+/**
+ * The truck pairing screen. Not in the bottom bar: it is opened from Setup, and from Settings.
+ */
 @Serializable
 data object PairingKey : NavKey
+
+/** The Settings screen. Not in the bottom bar: it is opened from Home. */
+@Serializable
+data object SettingsKey : NavKey
 
 /** The four screens of the bottom navigation bar, in the order the bar shows them. */
 enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: ImageVector) {
@@ -59,7 +65,8 @@ enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: Ima
 
 /**
  * The bottom-bar screen the back stack is in: the nearest one under whatever is on top. With
- * the pairing screen open that is Setup, so the bar keeps showing where Shawn is.
+ * the pairing screen open from Setup that is Setup, and with Settings open (or the pairing
+ * screen on top of Settings) it is Home, so the bar keeps showing where Shawn came from.
  */
 internal fun topLevelOf(backStack: List<NavKey>): TopLevelDestination = backStack
     .asReversed()
@@ -77,6 +84,15 @@ internal fun <T> MutableList<T>.showTopLevel(destination: T, home: T) {
     while (size > 1) removeAt(lastIndex)
     if (isEmpty()) add(home)
     if (destination != home) add(destination)
+}
+
+/**
+ * Opens a screen on top of the one showing, for a button that leads from one screen to another.
+ * Not added twice if the button is pressed twice before the screen has changed: a back stack
+ * may hold a key only once.
+ */
+internal fun <T> MutableList<T>.openOnTop(screen: T) {
+    if (screen !in this) add(screen)
 }
 
 /**
@@ -135,13 +151,17 @@ fun MiloNavigation(
                                 factory = viewModelFactory {
                                     initializer {
                                         HomeViewModel(
-                                            container.tripController,
-                                            container.setupChecklist,
+                                            controller = container.tripController,
+                                            checklist = container.setupChecklist,
+                                            trips = container.tripRepository,
+                                            clock = System::currentTimeMillis,
+                                            zone = ZoneId::systemDefault,
                                         )
                                     }
                                 },
                             ),
                         onOpenSetup = { backStack.showTopLevel(SetupKey, HomeKey) },
+                        onOpenSettings = { backStack.openOnTop(SettingsKey) },
                     )
                 }
                 entry<TripsKey> {
@@ -152,11 +172,15 @@ fun MiloNavigation(
                                     initializer {
                                         TripsViewModel(
                                             trips = container.tripRepository,
+                                            corrections =
+                                                TripCorrections(
+                                                    trips = container.tripRepository,
+                                                    eventLog = container.eventLogRepository,
+                                                    clock = System::currentTimeMillis,
+                                                ),
                                             tripActivity = container.tripController.activity,
                                             openTripStart = container.tripAddresses.openTripStart,
-                                            lookUpAddresses = {
-                                                container.tripAddresses.catchUp(TRIPS_SCREEN)
-                                            },
+                                            lookUpAddresses = container.tripAddresses::catchUp,
                                             clock = System::currentTimeMillis,
                                             zone = ZoneId::systemDefault,
                                         )
@@ -178,9 +202,7 @@ fun MiloNavigation(
                                     }
                                 },
                             ),
-                        // Not added twice if the button is pressed twice before the
-                        // screen has changed: a back stack may hold a key only once.
-                        onOpenPairing = { if (PairingKey !in backStack) backStack.add(PairingKey) },
+                        onOpenPairing = { backStack.openOnTop(PairingKey) },
                     )
                 }
                 entry<PairingKey> {
@@ -202,6 +224,26 @@ fun MiloNavigation(
                                 },
                             ),
                         onBack = { backStack.closeIfOnTop(PairingKey) },
+                    )
+                }
+                entry<SettingsKey> {
+                    SettingsScreen(
+                        viewModel =
+                            viewModel(
+                                factory = viewModelFactory {
+                                    initializer {
+                                        SettingsViewModel(
+                                            settings = container.settingsStore,
+                                            ownSound = container.ownTripSound,
+                                            playSound = container.soundPreview::play,
+                                            eventLog = container.eventLogRepository,
+                                            clock = System::currentTimeMillis,
+                                        )
+                                    }
+                                },
+                            ),
+                        onChangeTruck = { backStack.openOnTop(PairingKey) },
+                        onBack = { backStack.closeIfOnTop(SettingsKey) },
                     )
                 }
                 entry<LogKey> {

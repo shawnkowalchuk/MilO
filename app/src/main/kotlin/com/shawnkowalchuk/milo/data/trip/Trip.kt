@@ -11,6 +11,9 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
  * One trip, open or closed. Business or Personal and the edited flag arrive with the phases
  * that build them, each as a migration (the first one is in `data/MiloMigrations.kt`).
  *
+ * A row is never removed. A trip under the minimum distance is kept as discarded, and one that
+ * Shawn deletes is kept as deleted; both are a matter of [status] alone, so each can be undone.
+ *
  * All times are wall-clock milliseconds since 1970, because they are shown to Shawn and must
  * still mean something after a reboot. Distances are metres; kilometres exist only on screen.
  *

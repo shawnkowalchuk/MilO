@@ -53,7 +53,7 @@ class CarScreenRefreshTest {
                 "today's trips arrived" to
                     (carContent(recording, today = null) to before),
                 "a trip was added to today" to
-                    (before to carContent(recording, today = TodayTrips(1, 5_000.0))),
+                    (before to carContent(recording, today = todayOf(5_000.0))),
                 "a start was refused" to (idle to carContent(TripActivity(startFailure = refused))),
             )
 

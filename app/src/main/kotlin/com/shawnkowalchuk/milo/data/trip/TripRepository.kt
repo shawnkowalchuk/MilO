@@ -13,14 +13,16 @@ import kotlinx.coroutines.flow.Flow
  * that is no longer open changes nothing. The functions that change an open trip return false
  * in that case, so the caller can write the surprise to the event log.
  *
- * The one write that is not safe to repeat is [recordAddressLookup], the only write to a trip
- * that has closed: every call counts as a lookup of its own.
+ * Two writes are made to a trip that has closed. [recordAddressLookup] is the one write that is
+ * not safe to repeat: every call counts as a lookup of its own. [correct] is Shawn's own change
+ * to a trip (delete, restore, count after all); it changes the status and nothing else, and a
+ * second call changes nothing.
  */
 class TripRepository(private val dao: TripDao) {
     /** The trip being recorded or waiting out its grace period, or null when idle. */
     suspend fun findOpenTrip(): Trip? = dao.findNewestWithStatus(TripStatus.OPEN)
 
-    /** Finished trips, newest first. Discarded trips are left out. */
+    /** Finished trips, newest first. Discarded and deleted trips are left out. */
     fun observeFinishedTrips(): Flow<List<Trip>> = dao.observeWithStatus(TripStatus.FINISHED)
 
     /**
@@ -72,8 +74,8 @@ class TripRepository(private val dao: TripDao) {
 
     /**
      * The finished trips that still lack a start or an end address and have had fewer than
-     * [maxAttempts] failed lookups, newest first. A discarded trip is never among them: it is
-     * not looked up.
+     * [maxAttempts] failed lookups, newest first. A discarded or a deleted trip is never among
+     * them: neither is looked up.
      */
     suspend fun findTripsLackingAddress(maxAttempts: Int): List<Trip> =
         dao.findLackingAddress(TripStatus.FINISHED, maxAttempts)
@@ -106,4 +108,24 @@ class TripRepository(private val dao: TripDao) {
         atMs = atMs,
         finished = TripStatus.FINISHED,
     ) == 1
+
+    /**
+     * Makes one of Shawn's changes to a closed trip: deletes a finished one, restores a deleted
+     * one, or counts a discarded one after all. Only the status is written. Whether the change
+     * may be made is decided by the update itself, which matches on the status the change
+     * starts from, so a trip that is still being recorded can never be deleted, whatever the
+     * screen showed when the button was pressed.
+     *
+     * The trip's raw points are never touched: they are what a restored or counted trip can
+     * still be recalculated from.
+     */
+    suspend fun correct(tripId: Long, correction: TripCorrection): TripCorrectionOutcome {
+        val changed = dao.changeStatus(tripId, from = correction.from, to = correction.to) == 1
+        val trip = dao.findById(tripId)
+        return if (changed && trip != null) {
+            TripCorrectionOutcome.Done(trip)
+        } else {
+            TripCorrectionOutcome.Refused(found = trip?.status)
+        }
+    }
 }
