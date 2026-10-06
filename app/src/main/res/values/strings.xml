@@ -9,13 +9,32 @@
     <string name="status_ok">OK</string>
     <string name="status_problem">Needs attention</string>
 
-    <!-- Home (placeholder content until phase 1 supplies real trips). -->
-    <string name="home_today_title">Today</string>
-    <string name="home_today_empty">No trips recorded yet</string>
-    <string name="home_status_title">Status</string>
-    <string name="home_status_installed">App installed</string>
-    <string name="home_status_installed_detail">The project skeleton builds and runs.</string>
-    <string name="home_status_detection">Trip detection</string>
-    <string name="home_status_detection_detail">Not built yet. Arrives in phase 1.</string>
+    <!-- Trip status: on the home screen, and as the title of the trip notification. -->
+    <string name="trip_status_idle">No trip in progress</string>
+    <string name="trip_status_in_progress">Trip in progress</string>
+    <string name="trip_status_waiting_for_truck">Trip in progress. Waiting for the truck to reconnect</string>
+    <!-- The argument is a time of day from formatTimeOfDay(), such as 08:14. -->
+    <string name="trip_started_at">Started at %1$s</string>
+
+    <!-- Home. -->
+    <string name="home_trip_title">Current trip</string>
+    <string name="home_trip_idle_detail">Press Start trip to record one by hand.</string>
     <string name="home_start_trip">Start trip</string>
+    <string name="home_end_trip">End trip</string>
+
+    <!-- Why recording could not start: on the home screen, one line per problem found. -->
+    <string name="start_problem_title">MilO could not start this trip</string>
+    <string name="start_problem_location_permission">Location permission is missing. Allow precise location for MilO in the phone\'s settings.</string>
+    <string name="start_problem_background_location">Location is not set to \"Allow all the time\". Change it for MilO in the phone\'s settings.</string>
+    <string name="start_problem_location_off">Location is switched off on this phone.</string>
+    <string name="start_problem_background_restricted">Battery use for MilO is set to Restricted. Change it in the phone\'s settings.</string>
+    <string name="start_problem_bluetooth_permission">Bluetooth permission is missing. Allow \"Nearby devices\" for MilO in the phone\'s settings.</string>
+    <string name="start_problem_refused">Android did not allow recording to start. Open MilO and press Start trip.</string>
+
+    <!-- Notifications. The two channel names appear in the phone's notification settings. -->
+    <string name="notification_channel_trip">Trip in progress</string>
+    <string name="notification_channel_failures">Trip problems</string>
+    <string name="notification_trip_starting">Starting a trip</string>
+    <string name="notification_could_not_start_title">MilO could not start this trip</string>
+    <string name="notification_could_not_start_text">Tap to start</string>
 </resources>

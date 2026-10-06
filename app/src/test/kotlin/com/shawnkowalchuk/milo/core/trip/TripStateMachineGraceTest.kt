@@ -206,8 +206,8 @@ class TripStateMachineGraceTest {
 
         val result = IN_GRACE.on(ManualEnd(truckConnected = true, nextMorning))
 
-        assertEquals(expired + TripEffect.SetAutoStartHeldOff(true), result.effects)
-        assertEquals(HELD_OFF, result.state)
+        assertEquals(expired + TripEffect.HoldOffAutoStart(nextMorning), result.effects)
+        assertEquals(HELD_OFF.copy(autoStartHeldOffSinceMs = nextMorning), result.state)
     }
 
     // ---- Start pressed while a trip is waiting ------------------------------------------------

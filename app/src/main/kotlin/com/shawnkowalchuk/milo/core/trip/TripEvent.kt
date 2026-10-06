@@ -10,8 +10,9 @@ package com.shawnkowalchuk.milo.core.trip
  *
  * @property atMs wall-clock time of the event. Every event is also a look at the clock, but a
  * deadline that has passed closes a trip only on an event that brings a fresh reading of the
- * truck: [TruckConnection], [ManualStart] or [ManualEnd]. [Moved] and [AndroidAutoConnection] know
- * nothing new about the truck, so they leave an overdue trip for the reading that
+ * truck: [TruckConnection], [TruckLinkConnected], [ManualStart] or [ManualEnd]. [Moved] and
+ * [AndroidAutoConnection] know nothing new about the truck, and [TruckAppeared] cannot be
+ * trusted as a reading, so they leave an overdue trip for the reading that
  * [TripStateMachine.nextCheckAtMs] asks for.
  */
 sealed interface TripEvent {
@@ -20,13 +21,31 @@ sealed interface TripEvent {
     /**
      * The truck's Bluetooth link is up or down, to the best of the caller's knowledge (ADR-002,
      * "What counts as the truck is connected"). Sent for:
-     * - a connect or disconnect event that names the truck (trusted as it stands);
+     * - a disconnect event that names the truck (trusted as it stands);
      * - a reconcile at boot, after an update, at launch or when the service restarts, with the
      *   state read from the phone;
      * - a timer set from [TripStateMachine.nextCheckAtMs], again with the state read from the
      *   phone. This is how "read the connection again before closing the trip" is done.
      */
     data class TruckConnection(val connected: Boolean, override val atMs: Long) : TripEvent
+
+    /**
+     * A link-level connect event that names the truck: the Bluetooth ACL connect broadcast. It
+     * says everything `TruckConnection(connected = true)` says, and one thing more: a link has
+     * just formed. A new link can only form after the old one dropped, so this also releases a
+     * hold-off that is older than [TripRules.holdOffNewLinkAfterMs].
+     */
+    data class TruckLinkConnected(override val atMs: Long) : TripEvent
+
+    /**
+     * The companion device "appeared" callback. Like [TruckLinkConnected] it means a new link,
+     * so it releases an old hold-off. But it can also fire when the truck is only nearby, so it
+     * is not a reading of the truck. When idle it starts a trip at once, as ADR-002 requires,
+     * and that trip is a false start unless the connection is confirmed within
+     * [TripRules.startConfirmationMs]. It never changes a trip that is already open: there it
+     * can only release the old hold-off.
+     */
+    data class TruckAppeared(override val atMs: Long) : TripEvent
 
     /** Android Auto is connected or not. It can hold a trip open; it never starts one. */
     data class AndroidAutoConnection(val connected: Boolean, override val atMs: Long) : TripEvent
@@ -59,6 +78,11 @@ sealed interface TripEvent {
  * of event cannot be added without deciding this.
  */
 internal fun TripEvent.readsTheTruck(): Boolean = when (this) {
-    is TripEvent.TruckConnection, is TripEvent.ManualStart, is TripEvent.ManualEnd -> true
-    is TripEvent.AndroidAutoConnection, is TripEvent.Moved -> false
+    is TripEvent.TruckConnection,
+    is TripEvent.TruckLinkConnected,
+    is TripEvent.ManualStart,
+    is TripEvent.ManualEnd,
+    -> true
+
+    is TripEvent.TruckAppeared, is TripEvent.AndroidAutoConnection, is TripEvent.Moved -> false
 }

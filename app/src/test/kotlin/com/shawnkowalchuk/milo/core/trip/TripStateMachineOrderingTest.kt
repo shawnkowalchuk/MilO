@@ -2,8 +2,8 @@ package com.shawnkowalchuk.milo.core.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripEffect.CancelGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.EndTrip
+import com.shawnkowalchuk.milo.core.trip.TripEffect.HoldOffAutoStart
 import com.shawnkowalchuk.milo.core.trip.TripEffect.MarkTruckSeen
-import com.shawnkowalchuk.milo.core.trip.TripEffect.SetAutoStartHeldOff
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartTrip
 import com.shawnkowalchuk.milo.core.trip.TripEvent.AndroidAutoConnection
@@ -55,8 +55,13 @@ class TripStateMachineOrderingTest {
                 ManualEnd(truckConnected = true, T0 + HOUR + 200),
             )
 
+        // One trip is ended. The hold-off is counted from the later press.
         assertEquals(
-            listOf(EndTrip(TripEndReason.MANUAL, T0 + HOUR), SetAutoStartHeldOff(true)),
+            listOf(
+                EndTrip(TripEndReason.MANUAL, T0 + HOUR),
+                HoldOffAutoStart(T0 + HOUR),
+                HoldOffAutoStart(T0 + HOUR + 200),
+            ),
             effects,
         )
     }

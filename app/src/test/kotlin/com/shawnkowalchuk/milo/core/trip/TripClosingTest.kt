@@ -45,6 +45,23 @@ class TripClosingTest {
     }
 
     @Test
+    fun `a false start is discarded whatever distance the phone covered`() {
+        // The companion callback fired as Shawn drove past the yard in another vehicle. In the
+        // seconds before the start was found to be false the phone covered 2 km of fixes.
+        val closed =
+            TripClosing.close(
+                drive,
+                lastPointNotAfterMs = driveEndMs,
+                MINIMUM_METRES,
+                falseStart = true,
+            )
+
+        assertEquals(TripStatus.DISCARDED, closed.status)
+        // The figures are still worked out and stored, so the row shows what was thrown away.
+        assertEquals(2_000.0, closed.distance.metres, 1.0)
+    }
+
+    @Test
     fun `a clock that was fast at the start and corrected later costs the trip nothing`() {
         // The phone's clock runs ten minutes fast for the first 5 km, then it is corrected.
         // Every early fix carries a time later than the trip's end.

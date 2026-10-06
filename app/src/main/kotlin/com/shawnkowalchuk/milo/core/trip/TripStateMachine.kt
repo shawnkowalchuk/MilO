@@ -12,9 +12,13 @@ import kotlin.math.max
  * 2. [settle] then works out what the trip should be doing from what is known. It never asks
  *    "what just happened", only "what is true now", so it gives the same answer however the
  *    events arrived, and running it again changes nothing.
- * 3. A timeout (the grace period, the no-movement limit) closes a trip only on an event that
- *    brings a fresh reading of the truck. What the rules believe about the truck can be out of
- *    date, and ADR-002 has the connection read again before a trip is closed.
+ * 3. A timeout (the grace period, the no-movement limit, the wait for a companion start to be
+ *    confirmed) closes a trip only on an event that brings a fresh reading of the truck. What
+ *    the rules believe about the truck can be out of date, and ADR-002 has the connection read
+ *    again before a trip is closed.
+ *
+ * The rules for an open trip are in [OpenTripRules], and those for the hold-off in
+ * [HoldOffRules].
  */
 object TripStateMachine {
     /** Applies one event. Giving it the same event twice has no further effect. */
@@ -28,8 +32,8 @@ object TripStateMachine {
     /**
      * Rebuilds the state after the process was restarted (ADR-002, "State survives the process").
      *
-     * [storedTrip] and [autoStartHeldOff] come from storage; the two connection readings are
-     * taken fresh. A trip is carried on only if it can still be the same drive:
+     * [storedTrip] and [autoStartHeldOffSinceMs] come from storage; the two connection readings
+     * are taken fresh. A trip is carried on only if it can still be the same drive:
      * - A trip that was recording, whose newest stored point is older than
      *   [TripRules.restartGapLimitMs], is closed at that point. Nobody watched the truck in
      *   between, so yesterday's trip must not swallow today's.
@@ -47,7 +51,7 @@ object TripStateMachine {
     fun restore(
         storedTrip: ActiveTrip?,
         lastRecordedAtMs: Long?,
-        autoStartHeldOff: Boolean,
+        autoStartHeldOffSinceMs: Long?,
         truckConnected: Boolean,
         androidAutoConnected: Boolean,
         atMs: Long,
@@ -63,7 +67,7 @@ object TripStateMachine {
                 trip = null
             }
         }
-        val stored = TripState(trip, truckConnected, androidAutoConnected, autoStartHeldOff)
+        val stored = TripState(trip, truckConnected, androidAutoConnected, autoStartHeldOffSinceMs)
         return TripTransition(settle(stored, atMs, rules, truckWasRead = true, effects), effects)
     }
 
@@ -78,8 +82,13 @@ object TripStateMachine {
     fun nextCheckAtMs(state: TripState, rules: TripRules): Long? {
         val trip = state.trip ?: return null
         return when {
+            trip.confirmByMs != null -> trip.confirmByMs
+
             trip.grace != null -> trip.grace.deadlineMs
-            noMovementGuardApplies(state, trip) -> trip.lastMovementAtMs + rules.noMovementLimitMs
+
+            OpenTripRules.noMovementGuardApplies(state, trip) ->
+                trip.lastMovementAtMs + rules.noMovementLimitMs
+
             else -> null
         }
     }
@@ -92,6 +101,24 @@ object TripStateMachine {
         effects: MutableList<TripEffect>,
     ): TripState = when (event) {
         is TripEvent.TruckConnection -> state.copy(truckConnected = event.connected)
+
+        is TripEvent.TruckLinkConnected ->
+            HoldOffRules
+                .releaseForNewLink(state, event.atMs, rules, effects)
+                .copy(truckConnected = true)
+
+        is TripEvent.TruckAppeared -> {
+            val released = HoldOffRules.releaseForNewLink(state, event.atMs, rules, effects)
+            if (state.trip == null) {
+                startUnconfirmed(released, event.atMs, rules, effects)
+            } else {
+                // With a trip open the callback is not believed (see startUnconfirmed). It
+                // still shows that an old hold-off is out of date, but what is believed about
+                // the truck stands: dropped here, the open trip would start its grace period
+                // on a disconnect nobody saw.
+                released.copy(truckConnected = state.truckConnected)
+            }
+        }
 
         is TripEvent.AndroidAutoConnection -> state.copy(androidAutoConnected = event.connected)
 
@@ -130,7 +157,7 @@ object TripStateMachine {
     ): TripState {
         val informed = state.copy(truckConnected = truckConnected)
         val trip = informed.trip ?: return informed
-        return settleOpenTrip(informed, trip, atMs, rules, truckWasRead = true, effects)
+        return OpenTripRules.settle(informed, trip, atMs, rules, truckWasRead = true, effects)
     }
 
     private fun startByHand(
@@ -169,6 +196,35 @@ object TripStateMachine {
         return state.copy(trip = trip)
     }
 
+    /**
+     * The companion "appeared" callback while idle: ADR-002 has it start a trip at once, because
+     * waiting for proof would miss the start window. The callback can also fire when the truck
+     * is only nearby, so the trip is opened with the truck not yet seen and a deadline to
+     * confirm it by. What happens at the deadline is in [OpenTripRules.settle].
+     *
+     * A trip that is already open is left alone, so the caller does not come here for one:
+     * believing the callback wrongly there would mark the truck as seen in a manual trip, and
+     * the trip would then end on a disconnect that never happened. The signals that can be
+     * trusted bring such a trip up to date.
+     */
+    private fun startUnconfirmed(
+        state: TripState,
+        atMs: Long,
+        rules: TripRules,
+        effects: MutableList<TripEffect>,
+    ): TripState {
+        if (state.autoStartHeldOff) return state
+        effects += TripEffect.StartTrip(TripStartCause.TRUCK, truckSeen = false, atMs)
+        val trip =
+            ActiveTrip(
+                startedBy = TripStartCause.TRUCK,
+                truckSeen = false,
+                lastMovementAtMs = atMs,
+                confirmByMs = atMs + rules.startConfirmationMs,
+            )
+        return state.copy(trip = trip)
+    }
+
     private fun endByHand(
         state: TripState,
         atMs: Long,
@@ -182,11 +238,15 @@ object TripStateMachine {
         }
 
         // The truck is still connected, so the very next look at the connection would start a
-        // new trip. Hold automatic start off until the truck is seen disconnected. This applies
-        // even when no trip was open: End must never be the press that starts one.
-        val holdOff = state.autoStartHeldOff || state.truckConnected
-        if (holdOff != state.autoStartHeldOff) effects += TripEffect.SetAutoStartHeldOff(holdOff)
-        return state.copy(trip = null, autoStartHeldOff = holdOff)
+        // new trip. Hold automatic start off (what releases it is in HoldOffRelease). This
+        // applies even when no trip was open: End must never be the press that starts one. For
+        // the same reason a hold-off that is already set starts again from this press: an old
+        // one could be at its time limit, and the press itself would then start a trip.
+        if (!state.truckConnected || state.autoStartHeldOffSinceMs == atMs) {
+            return state.copy(trip = null)
+        }
+        effects += TripEffect.HoldOffAutoStart(atMs)
+        return state.copy(trip = null, autoStartHeldOffSinceMs = atMs)
     }
 
     /**
@@ -202,17 +262,11 @@ object TripStateMachine {
         truckWasRead: Boolean,
         effects: MutableList<TripEffect>,
     ): TripState {
-        var current = state
-
-        // The hold-off lasts "until the truck next disconnects": seeing it gone releases it.
-        if (current.autoStartHeldOff && !current.truckConnected) {
-            effects += TripEffect.SetAutoStartHeldOff(false)
-            current = current.copy(autoStartHeldOff = false)
-        }
+        var current = HoldOffRules.releaseIfDue(state, atMs, rules, truckWasRead, effects)
 
         val trip = current.trip
         if (trip != null) {
-            current = settleOpenTrip(current, trip, atMs, rules, truckWasRead, effects)
+            current = OpenTripRules.settle(current, trip, atMs, rules, truckWasRead, effects)
         }
 
         // Idle and the truck is connected: a trip starts. This one rule covers a connect event,
@@ -221,77 +275,4 @@ object TripStateMachine {
         val startNow = current.trip == null && current.truckConnected && !current.autoStartHeldOff
         return if (startNow) startTrip(current, TripStartCause.TRUCK, atMs, effects) else current
     }
-
-    private fun settleOpenTrip(
-        state: TripState,
-        openTrip: ActiveTrip,
-        atMs: Long,
-        rules: TripRules,
-        truckWasRead: Boolean,
-        effects: MutableList<TripEffect>,
-    ): TripState {
-        // A grace period that ran out long ago: its timer was lost with a frozen or killed
-        // process, and the trip ended back then. Nothing that is connected now can revive it,
-        // or yesterday's trip would swallow today's. It waits for a reading of the truck, so
-        // that a truck found connected starts the new trip in the same step.
-        val expired = openTrip.grace
-        if (expired != null && atMs > expired.deadlineMs + rules.lateCheckToleranceMs) {
-            if (!truckWasRead) return state
-            effects += TripEffect.EndTrip(TripEndReason.GRACE_EXPIRED, expired.startedAtMs)
-            return state.copy(trip = null)
-        }
-
-        var trip = openTrip
-
-        // The truck joined a manual trip. From here on it ends the way an automatic trip does.
-        if (state.truckConnected && !trip.truckSeen) {
-            effects += TripEffect.MarkTruckSeen
-            trip = trip.copy(truckSeen = true)
-        }
-
-        if (!trip.truckSeen) {
-            // A manual trip the truck never joined has no disconnect to end it, so a forgotten
-            // one would run all night. It ends where the truck last moved.
-            val current = state.copy(trip = trip)
-            val stillFor = atMs - trip.lastMovementAtMs
-            val stoodTooLong =
-                noMovementGuardApplies(current, trip) && stillFor >= rules.noMovementLimitMs
-            if (stoodTooLong && truckWasRead) {
-                effects += TripEffect.EndTrip(TripEndReason.NO_MOVEMENT, trip.lastMovementAtMs)
-                return current.copy(trip = null)
-            }
-            return current
-        }
-
-        // Either connection holds the trip open. Shawn sometimes runs Android Auto over a cable
-        // while Bluetooth drops, and the trip must carry on.
-        if (state.truckConnected || state.androidAutoConnected) {
-            if (trip.grace != null) {
-                effects += TripEffect.CancelGrace
-                trip = trip.copy(grace = null)
-            }
-            return state.copy(trip = trip)
-        }
-
-        // Nothing holds the trip open. Start the grace period unless one is already running: a
-        // repeated disconnect must not push the deadline further away.
-        val grace =
-            trip.grace
-                ?: Grace(startedAtMs = atMs, deadlineMs = atMs + rules.gracePeriodMs).also {
-                    effects += TripEffect.StartGrace(it.startedAtMs, it.deadlineMs)
-                }
-        if (atMs >= grace.deadlineMs && truckWasRead) {
-            // Closed at the moment the truck was found gone, not at the end of the grace period.
-            effects += TripEffect.EndTrip(TripEndReason.GRACE_EXPIRED, grace.startedAtMs)
-            return state.copy(trip = null)
-        }
-        return state.copy(trip = trip.copy(grace = grace))
-    }
-
-    /**
-     * The no-movement guard is for manual trips the truck never joined, and it waits while
-     * Android Auto is connected: a phone plugged into a running head unit is not a forgotten trip.
-     */
-    private fun noMovementGuardApplies(state: TripState, trip: ActiveTrip): Boolean =
-        !trip.truckSeen && !state.androidAutoConnected
 }

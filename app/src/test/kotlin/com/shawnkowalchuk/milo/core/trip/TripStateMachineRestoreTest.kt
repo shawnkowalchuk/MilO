@@ -2,7 +2,6 @@ package com.shawnkowalchuk.milo.core.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripEffect.CancelGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.EndTrip
-import com.shawnkowalchuk.milo.core.trip.TripEffect.SetAutoStartHeldOff
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartTrip
 import org.junit.Assert.assertEquals
@@ -13,7 +12,8 @@ import org.junit.Test
 /**
  * ADR-002, "State survives the process": the open trip is a row in the database, and after any
  * restart the rules pick it up from there with a fresh reading of the connections. A trip is
- * carried on only if it can still be the same drive.
+ * carried on only if it can still be the same drive. The hold-off across a restart is in
+ * [TripStateMachineHoldOffTest].
  */
 class TripStateMachineRestoreTest {
     private val recordingTrip = checkNotNull(RECORDING.trip)
@@ -27,14 +27,14 @@ class TripStateMachineRestoreTest {
         storedTrip: ActiveTrip?,
         truckConnected: Boolean,
         atMs: Long,
-        autoStartHeldOff: Boolean = false,
+        heldOffSinceMs: Long? = null,
         androidAutoConnected: Boolean = false,
         lastRecordedAtMs: Long? = atMs,
         rules: TripRules = RULES,
     ) = TripStateMachine.restore(
         storedTrip,
         lastRecordedAtMs,
-        autoStartHeldOff,
+        heldOffSinceMs,
         truckConnected,
         androidAutoConnected,
         atMs,
@@ -272,25 +272,5 @@ class TripStateMachineRestoreTest {
 
         assertEquals(emptyList<TripEffect>(), result.effects)
         assertNull(result.state.trip)
-    }
-
-    // ---- The hold-off survives the process too -------------------------------------------------
-
-    @Test
-    fun `held off and the truck still connected - no trip starts`() {
-        val result =
-            restore(storedTrip = null, truckConnected = true, autoStartHeldOff = true, atMs = T0)
-
-        assertEquals(emptyList<TripEffect>(), result.effects)
-        assertEquals(HELD_OFF, result.state)
-    }
-
-    @Test
-    fun `held off and the truck gone - the hold-off is released`() {
-        val result =
-            restore(storedTrip = null, truckConnected = false, autoStartHeldOff = true, atMs = T0)
-
-        assertEquals(listOf(SetAutoStartHeldOff(false)), result.effects)
-        assertEquals(IDLE, result.state)
     }
 }
