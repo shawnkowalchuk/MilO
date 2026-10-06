@@ -18,7 +18,7 @@ Each capability is documented with: what it does, who can use it, how it works s
 
 **The app in one line:** MilO is a personal Android app (native Kotlin, one phone, no backend, no accounts, no Play Store) that automatically logs business mileage in Shawn's work truck and produces a monthly PDF to email to accounts.
 
-**Target phone:** Xiaomi POCO X5, Android 14 (HyperOS). Installed from Android Studio on a Mac mini.
+**Target phone:** Xiaomi POCO X5 Pro 5G (global ROM), Android 14, HyperOS 2.0. Installed from Android Studio on a Mac mini.
 
 **Build phases** (stop after each so Shawn can test on the phone):
 1. Truck pairing, trip detection, GPS logging, trip-start sound, manual Start/Stop, Android Auto screen, permission checklist, basic trip list, bare event log. Shawn drives with this for a few days before phase 2.
