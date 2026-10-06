@@ -24,6 +24,15 @@
 
 ### 2026-10-05
 
+**`[FINDING]` First results from the phone (POCO X5 Pro 5G, HyperOS 2.0)**
+Shawn went through Setup on the phone the same evening, everything except pairing the truck, which waits until he is at the truck. Read back over adb afterwards, without changing anything:
+- **All four runtime permissions are granted,** including location "Allow all the time", and MilO is on Android's battery-optimisation exemption list.
+- **Background autostart reads "allow"** through the unofficial app-op (10008), and the same record shows it was rejecting nine minutes earlier. So the read works on HyperOS 2.0 and follows the switch.
+- **A Start press before the permissions were granted was refused cleanly,** with the reasons in the log, and worked once they were granted. The first GPS fix arrived 0.3 seconds after the start.
+- **The trip-start sound is silent in Bedtime mode.** Shawn heard nothing at first; the log showed the sound being played without error both times. His phone was in Bedtime mode, which silences notification-type sounds. With it off, his R2-D2 clip played. That is the behaviour he chose ("respects silent"), but it means a trip that starts while the phone is in Bedtime or Do Not Disturb gives no audible confirmation.
+- **No crash and no error line.**
+- Not yet known: whether each HyperOS button opened the right screen (he reported no problem), the companion consent dialog, and anything involving the truck.
+
 **`[CHANGE]` The first real build is on the phone**
 At 23:07 the build with the reviewed trip engine, the four screens and Shawn's own trip-start sound was installed over the placeholder, in place, signed with the dedicated key. It opened without a crash. That is all that is known: the phone's screen was off, so nothing was seen, and no permission has been granted, no truck paired and no trip recorded on it yet. Everything in `docs/DEVICE_TEST_CHECKLIST.md` is still to run. The first things to learn from Shawn are whether each HyperOS button on the Setup screen opens the right place on HyperOS 2.0, and whether a trip starts by itself in the truck.
 
