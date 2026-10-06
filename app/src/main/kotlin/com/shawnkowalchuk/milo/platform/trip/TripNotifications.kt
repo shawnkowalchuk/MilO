@@ -14,27 +14,42 @@ import com.shawnkowalchuk.milo.core.util.formatKilometres
 const val TRIP_NOTIFICATION_ID = 1
 
 private const val COULD_NOT_START_NOTIFICATION_ID = 2
+private const val DRIVING_ALERT_NOTIFICATION_ID = 3
 
 // Channel ids are stored by Android with the user's choices for the channel. Renaming one
 // creates a new channel and loses those choices.
 private const val TRIP_CHANNEL_ID = "trip_in_progress"
 private const val FAILURE_CHANNEL_ID = "trip_failures"
+private const val DRIVING_CHANNEL_ID = "driving_alert"
 
 /** The source written to the event log for a trip started from the warning notification. */
 private const val COULD_NOT_START_TAP = "tap on the could-not-start notification"
 
+/** The source written to the event log for a trip started from the driving alert. */
+private const val DRIVING_ALERT_TAP = "tap on the driving alert"
+
+// Android tells two tap intents for the same service apart by this number and not by what
+// they carry. With one number for both, the second notification's intent would replace the
+// first one's, and a tap on either would be logged as a tap on the other.
+private const val COULD_NOT_START_TAP_REQUEST = 0
+private const val DRIVING_ALERT_TAP_REQUEST = 1
+
 /**
- * The two notifications of trip recording, each on its own channel.
+ * The three notifications around trip recording, each on its own channel.
  *
  * - **Trip in progress**: low importance, so it never makes a sound or pops up. The trip-start
  *   sound is played by the service itself and not through this channel, because MIUI is reported
  *   to switch channel sounds off (docs/research/2026-10-03-miui-dev-bluetooth-audio.md).
  * - **Could not start this trip**: high importance. It is the only way MilO can tell Shawn that
  *   a trip is not being recorded, and tapping it starts the trip.
+ * - **Driving alert**: high importance. The phone reports driving during the work hours while
+ *   no trip is being recorded and the truck is not connected (`platform/driving/`). Tapping it
+ *   starts a trip exactly as a tap on the warning above does. Posting it never starts one.
  *
  * Posting needs the notification permission on Android 13 and later. Without it Android drops
- * the notification silently, and the trip service still runs. [showCouldNotStart] reports whether
- * notifications are on, so the event log can say that the warning went unseen.
+ * the notification silently, and the trip service still runs. [showCouldNotStart] and
+ * [showDrivingAlert] report whether the notification can be seen, so the event log can say
+ * that it went unseen.
  */
 class TripNotifications(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
@@ -52,6 +67,13 @@ class TripNotifications(private val context: Context) {
             NotificationChannel(
                 FAILURE_CHANNEL_ID,
                 context.getString(R.string.notification_channel_failures),
+                NotificationManager.IMPORTANCE_HIGH,
+            ),
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                DRIVING_CHANNEL_ID,
+                context.getString(R.string.notification_channel_driving),
                 NotificationManager.IMPORTANCE_HIGH,
             ),
         )
@@ -107,7 +129,7 @@ class TripNotifications(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_stat_trip)
                 .setContentTitle(context.getString(R.string.notification_could_not_start_title))
                 .setContentText(context.getString(R.string.notification_could_not_start_text))
-                .setContentIntent(startTrip())
+                .setContentIntent(startTrip(COULD_NOT_START_TAP_REQUEST, COULD_NOT_START_TAP))
                 .setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_ERROR)
                 .build()
@@ -118,6 +140,43 @@ class TripNotifications(private val context: Context) {
     /** Takes the warning away again: a trip is being recorded. */
     fun cancelCouldNotStart() {
         manager.cancel(COULD_NOT_START_NOTIFICATION_ID)
+    }
+
+    /**
+     * Posts the driving alert: "You seem to be driving. No trip is being recorded. Tap to start
+     * one". Posting it starts nothing; only the tap does.
+     *
+     * Posted again while it is still showing, it makes no second sound, so a phone that reports
+     * the same drive twice does not nag.
+     *
+     * @return false if nobody will see it: notifications are switched off for MilO, or this
+     * kind of notification is switched off in the phone's settings.
+     */
+    fun showDrivingAlert(): Boolean {
+        // TODO(debt): the tap runs no preflight, unlike Home's Start button, and before this
+        // tap none has run. With location switched off for the whole phone it starts a trip
+        // that records nothing (FINDINGS_LOG, 2026-10-06, "A tap on the driving alert skips
+        // the preflight").
+        val notification =
+            Notification
+                .Builder(context, DRIVING_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_trip)
+                .setContentTitle(context.getString(R.string.notification_driving_title))
+                .setContentText(context.getString(R.string.notification_driving_text))
+                .setContentIntent(startTrip(DRIVING_ALERT_TAP_REQUEST, DRIVING_ALERT_TAP))
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .setCategory(Notification.CATEGORY_REMINDER)
+                .build()
+        manager.notify(DRIVING_ALERT_NOTIFICATION_ID, notification)
+        val channel = manager.getNotificationChannel(DRIVING_CHANNEL_ID)
+        val channelOn = channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
+        return manager.areNotificationsEnabled() && channelOn
+    }
+
+    /** Takes the driving alert away: a trip is being recorded, or the drive is over. */
+    fun cancelDrivingAlert() {
+        manager.cancel(DRIVING_ALERT_NOTIFICATION_ID)
     }
 
     private fun titleFor(trip: CurrentTrip?): Int = when {
@@ -137,13 +196,17 @@ class TripNotifications(private val context: Context) {
      * A tap starts the trip service directly. A tap on a notification is one of the moments at
      * which Android lets an app start a foreground service and use location from the
      * background, so this works even when the automatic start was refused (ADR-002).
+     *
+     * @param request tells this notification's tap from the other one's.
+     * @param source which notification was tapped, in words, for the event log.
      */
-    private fun startTrip(): PendingIntent = PendingIntent.getForegroundService(
-        context,
-        0,
-        // No time in the intent: the trip starts when the notification is tapped, not when it
-        // was posted.
-        tripServiceIntent(context, TripTrigger.MANUAL_START, COULD_NOT_START_TAP, atMs = null),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    private fun startTrip(request: Int, source: String): PendingIntent =
+        PendingIntent.getForegroundService(
+            context,
+            request,
+            // No time in the intent: the trip starts when the notification is tapped, not when
+            // it was posted.
+            tripServiceIntent(context, TripTrigger.MANUAL_START, source, atMs = null),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 }

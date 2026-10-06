@@ -1,8 +1,10 @@
 package com.shawnkowalchuk.milo.platform.system
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.Process
@@ -28,6 +30,8 @@ enum class AutostartReading { LOOKS_ON, LOOKS_OFF, UNKNOWN }
  * @param exemptFromUnusedAppPause whether "Pause app activity if unused" is off for MilO.
  * @param batterySaverOn the phone-wide Battery Saver, which throttles location and background
  * work for every app.
+ * @param activityRecognitionGranted the Physical activity permission, which the phone's driving
+ * detection needs. Only the driving alert uses it.
  * @param isXiaomi a Xiaomi, Redmi or POCO phone: the HyperOS rows are shown only there.
  * @param autostart read only on a Xiaomi phone; UNKNOWN anywhere else.
  */
@@ -38,6 +42,7 @@ data class SetupFacts(
     val ignoringBatteryOptimizations: Boolean,
     val exemptFromUnusedAppPause: Boolean,
     val batterySaverOn: Boolean,
+    val activityRecognitionGranted: Boolean,
     val isXiaomi: Boolean,
     val autostart: AutostartReading,
 )
@@ -85,6 +90,9 @@ class SetupReader(private val context: Context, private val preflight: TripPrefl
             // activity if unused" being off: the one setting covers both.
             exemptFromUnusedAppPause = context.packageManager.isAutoRevokeWhitelisted,
             batterySaverOn = power.isPowerSaveMode,
+            activityRecognitionGranted =
+                context.checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) ==
+                    PackageManager.PERMISSION_GRANTED,
             isXiaomi = isXiaomi,
             // The app-op exists only on MIUI and HyperOS, so no other phone is asked.
             autostart =

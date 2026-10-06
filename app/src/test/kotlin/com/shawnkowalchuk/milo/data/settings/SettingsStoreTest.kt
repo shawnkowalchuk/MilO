@@ -57,6 +57,19 @@ class SettingsStoreTest {
         // Monday to Friday, 08:00 to 16:30, and a trip outside it is saved as Personal.
         assertEquals(DEFAULT_WORK_SCHEDULE, settings.schedule)
         assertEquals(false, settings.ignoreTripsOutsideSchedule)
+        // The driving alert is part of the brief's safety net, so it starts switched on.
+        assertEquals(true, settings.drivingAlertEnabled)
+    }
+
+    @Test
+    fun `the driving alert's switch survives the process`() {
+        withStore { store -> store.setDrivingAlertEnabled(false) }
+
+        withStore { store -> assertEquals(false, store.current().drivingAlertEnabled) }
+
+        withStore { store -> store.setDrivingAlertEnabled(true) }
+
+        withStore { store -> assertEquals(true, store.current().drivingAlertEnabled) }
     }
 
     @Test
@@ -126,12 +139,14 @@ class SettingsStoreTest {
         withStore { store ->
             store.setTruck("AA:BB:CC:DD:EE:FF", name = "Work truck", associationId = 12)
             store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
+            store.setLastDrivingAlertAtMs(1_791_028_750_000)
         }
 
         withStore { reopened ->
             val settings = reopened.current()
             assertEquals("AA:BB:CC:DD:EE:FF", settings.truckAddress)
             assertEquals(1_791_028_700_000, settings.autoStartHeldOffSinceMs)
+            assertEquals(1_791_028_750_000, settings.lastDrivingAlertAtMs)
         }
     }
 
@@ -214,6 +229,7 @@ class SettingsStoreTest {
         assertRefused { store.setCustomSound("file:/data/sounds/own", name = " ") }
         assertRefused { store.setAutoStartHeldOffSinceMs(-1) }
         assertRefused { store.setLastProcessExitImportedAtMs(-1) }
+        assertRefused { store.setLastDrivingAlertAtMs(-1) }
 
         assertEquals(MiloSettings(), store.current())
     }

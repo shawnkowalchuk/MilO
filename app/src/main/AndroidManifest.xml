@@ -5,7 +5,7 @@
     <!--
         Each permission is added in the change that first needs it, so the manifest never asks
         for more than the code uses. These are the ones trip recording, trip detection, the
-        setup checklist and the address lookup need (ADR-002).
+        setup checklist, the address lookup and the driving alert need (ADR-002).
     -->
 
     <!-- GPS fixes during a trip. Android requires the coarse permission beside the fine one. -->
@@ -34,6 +34,13 @@
         connected. MilO never scans, so it does not ask for the scan permission.
     -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!--
+        "Physical activity", a runtime permission. Without it the phone's driving detection
+        reports nothing to MilO. Only the driving alert uses it, and the alert only notifies:
+        a report of driving never starts a trip.
+    -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <!-- The reconcile after a reboot: the truck may already be connected, and no event says so. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -216,6 +223,17 @@
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"
             android:value="7" />
+
+        <!--
+            Where the phone's driving detection reports that Shawn has entered or left a vehicle
+            (platform/driving/). Declared here so that a report can start MilO's process. It
+            posts a notification at most; it never starts a trip. Not exported and without an
+            intent filter: the report comes through a PendingIntent that MilO makes itself and
+            aims at this class by name, which Android delivers as coming from MilO.
+        -->
+        <receiver
+            android:name=".platform.driving.DrivingReceiver"
+            android:exported="false" />
 
         <!--
             The reconcile after a reboot and after an update of MilO: the two moments at which

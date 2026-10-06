@@ -24,6 +24,12 @@ enum class SetupItem(val required: Boolean, val xiaomiOnly: Boolean = false) {
     /** Recommended: the pause only begins after months in which MilO is never opened. */
     UNUSED_APP_PAUSE(required = false),
     BATTERY_SAVER_OFF(required = true),
+
+    /**
+     * Recommended: only the driving alert needs it, and the alert is a safety net that notifies.
+     * No trip starts by itself, or fails to, because of this permission.
+     */
+    PHYSICAL_ACTIVITY(required = false),
     XIAOMI_AUTOSTART(required = true, xiaomiOnly = true),
     XIAOMI_BATTERY_SAVER(required = true, xiaomiOnly = true),
 
@@ -65,6 +71,9 @@ enum class SetupDetail {
 
     /** The first check of the pairing has not finished. Not a problem yet. */
     TRUCK_NOT_CHECKED_YET,
+
+    /** The driving alert is switched off in Settings, so nothing needs the permission. */
+    DRIVING_ALERT_OFF,
     AUTOSTART_LOOKS_ON,
     AUTOSTART_LOOKS_OFF,
     AUTOSTART_UNREADABLE,

@@ -115,6 +115,17 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[IGNORE_TRIPS_OUTSIDE_SCHEDULE] = ignore }
     }
 
+    /** Switches the driving alert on or off. It only ever notifies; see [MiloSettings]. */
+    suspend fun setDrivingAlertEnabled(enabled: Boolean) {
+        dataStore.edit { it[DRIVING_ALERT_ENABLED] = enabled }
+    }
+
+    /** Stores when the driving alert was posted, for the limit on a second one. */
+    suspend fun setLastDrivingAlertAtMs(atMs: Long) {
+        require(atMs >= 0) { "A timestamp cannot be negative: $atMs ms" }
+        dataStore.edit { it[LAST_DRIVING_ALERT_AT_MS] = atMs }
+    }
+
     /** Pass the time End was pressed to hold automatic start off, null to release it. */
     suspend fun setAutoStartHeldOffSinceMs(sinceMs: Long?) {
         require(sinceMs == null || sinceMs >= 0) { "A timestamp cannot be negative: $sinceMs ms" }
@@ -150,6 +161,9 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             schedule = preferences.readSchedule(),
             ignoreTripsOutsideSchedule =
                 preferences[IGNORE_TRIPS_OUTSIDE_SCHEDULE] ?: defaults.ignoreTripsOutsideSchedule,
+            drivingAlertEnabled =
+                preferences[DRIVING_ALERT_ENABLED] ?: defaults.drivingAlertEnabled,
+            lastDrivingAlertAtMs = preferences[LAST_DRIVING_ALERT_AT_MS],
             autoStartHeldOffSinceMs = preferences[AUTO_START_HELD_OFF_SINCE_MS],
             lastProcessExitImportedAtMs =
                 preferences[LAST_PROCESS_EXIT_IMPORTED_AT_MS]
@@ -177,6 +191,8 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         val CUSTOM_SOUND_NAME = stringPreferencesKey("custom_sound_name")
         val IGNORE_TRIPS_OUTSIDE_SCHEDULE =
             booleanPreferencesKey("ignore_trips_outside_schedule")
+        val DRIVING_ALERT_ENABLED = booleanPreferencesKey("driving_alert_enabled")
+        val LAST_DRIVING_ALERT_AT_MS = longPreferencesKey("last_driving_alert_at_ms")
         val AUTO_START_HELD_OFF_SINCE_MS = longPreferencesKey("auto_start_held_off_since_ms")
         val LAST_PROCESS_EXIT_IMPORTED_AT_MS =
             longPreferencesKey("last_process_exit_imported_at_ms")

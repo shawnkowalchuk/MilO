@@ -201,6 +201,7 @@ fun MiloNavigation(
                                             settings = container.settingsStore,
                                             ownSound = container.ownTripSound,
                                             playSound = container.soundPreview::play,
+                                            armDrivingAlert = container.drivingAlert::arm,
                                             eventLog = container.eventLogRepository,
                                             clock = System::currentTimeMillis,
                                         )

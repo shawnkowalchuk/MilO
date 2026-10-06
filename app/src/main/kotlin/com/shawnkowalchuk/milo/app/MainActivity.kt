@@ -7,9 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 
 /**
- * The only activity. It hosts the Compose UI and says when MilO has been opened, and nothing
- * else: no logic, no system calls. Anything that talks to Android (Bluetooth, location,
- * notifications) belongs in `platform/` and is reached through a ViewModel.
+ * The only activity. It hosts the Compose UI and says when MilO has been opened or has come
+ * back to the front, and nothing else: no logic, no system calls. Anything that talks to
+ * Android (Bluetooth, location, notifications) belongs in `platform/` and is reached through a
+ * ViewModel.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,8 +40,22 @@ class MainActivity : ComponentActivity() {
         container.truckPairing.check(APP_OPENED)
     }
 
+    /**
+     * The driving alert depends on the Physical activity permission, and Android reports no
+     * change of a permission. Here and not in [onStart]: Android's permission dialog only
+     * pauses MilO, so its answer is followed by a resume and by no start. The call asks the
+     * phone for nothing unless the permission or the Settings switch has changed.
+     */
+    override fun onResume() {
+        super.onResume()
+        (application as MiloApplication).container.drivingAlert.arm(IN_FRONT)
+    }
+
     private companion object {
         /** What the event log calls the reconcile and the pairing check at app launch. */
         const val APP_OPENED = "app opened"
+
+        /** What the event log calls the driving alert's look at its permission. */
+        const val IN_FRONT = "MilO in front"
     }
 }

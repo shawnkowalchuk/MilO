@@ -23,7 +23,7 @@ import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatMinutes
 import com.shawnkowalchuk.milo.data.sound.MAX_OWN_SOUND_BYTES
 
-// Three of the cards of the Settings screen. The work schedule's two are in ScheduleCards.kt.
+// Four of the cards of the Settings screen. The work schedule's two are in ScheduleCards.kt.
 
 private const val BYTES_PER_MEGABYTE = 1024 * 1024
 
@@ -111,6 +111,24 @@ internal fun TripRulesCard(state: SettingsUiState.Ready, actions: SettingsAction
                 ),
             supportingText = stringResource(R.string.settings_minimum_detail),
         )
+    }
+}
+
+/**
+ * The switch of the driving alert, and what the alert does and does not do. That it never
+ * starts a trip by itself is said on the card, because a switch about driving in an app that
+ * starts trips by itself would otherwise be read as one more way a trip starts.
+ */
+@Composable
+internal fun DrivingAlertCard(state: SettingsUiState.Ready, actions: SettingsActions) {
+    SectionCard(title = stringResource(R.string.settings_driving_title)) {
+        SwitchRow(
+            label = stringResource(R.string.settings_driving_enabled),
+            checked = state.drivingAlertEnabled,
+            onCheckedChange = actions.onDrivingAlertEnabled,
+        )
+        Quiet(stringResource(R.string.settings_driving_detail))
+        Quiet(stringResource(R.string.settings_driving_needs))
     }
 }
 

@@ -25,7 +25,9 @@ data class EventLogEntry(
 /**
  * What an event is about. These are the kinds of evidence ADR-002 asks for from day one.
  *
- * Stored by name, so a constant can be added freely but never renamed without a migration.
+ * Stored by name, so a constant can be added without a migration but never renamed without
+ * one. A build from before a constant existed cannot read a row that holds it, so an older
+ * build must not be installed over a newer one (ARCHITECTURE, section 6).
  */
 enum class EventCategory {
     /** A process start, and the reason the system recorded for the previous process ending. */
@@ -60,4 +62,10 @@ enum class EventCategory {
 
     /** A lookup of a trip's start and end address: what was found, or why nothing was. */
     ADDRESS,
+
+    /**
+     * The driving alert: whether the phone's driving detection is being watched, each report of
+     * entering or leaving a vehicle, and whether the alert was shown and why.
+     */
+    DRIVING,
 }

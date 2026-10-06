@@ -11,10 +11,11 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does six things only: it owns the [AppContainer], it starts the crash and kill capture,
+ * It does seven things only: it owns the [AppContainer], it starts the crash and kill capture,
  * it has the trip controller look at what the last process left behind, it checks that
- * Android still watches for the truck, it has the addresses of finished trips caught up, and
- * it has the trips that are not sorted into Business or Personal yet sorted.
+ * Android still watches for the truck, it has the addresses of finished trips caught up, it
+ * has the trips that are not sorted into Business or Personal yet sorted, and it has the
+ * driving alert ask the phone again to report driving.
  */
 class MiloApplication : Application() {
     /** Created in [onCreate]. Screens and services reach every shared object through it. */
@@ -62,6 +63,11 @@ class MiloApplication : Application() {
         // nothing of this may fail in there.
         val categories = container.tripCategoryCatchUp
         container.tripController.whenCaughtUp { categories.catchUp(PROCESS_START) }
+
+        // The request to be told about driving does not outlive a reboot or an update of MilO,
+        // and both of those start a new process, so it is made again here. Nothing in it can
+        // start a trip: a report of driving leads to a notification at most.
+        container.drivingAlert.arm(PROCESS_START)
     }
 
     private companion object {

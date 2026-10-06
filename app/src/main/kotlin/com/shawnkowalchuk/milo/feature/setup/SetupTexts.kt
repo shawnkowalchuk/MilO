@@ -28,6 +28,7 @@ internal fun SetupItem.labelRes(): Int = when (this) {
     SetupItem.BATTERY_EXEMPTION -> R.string.setup_item_battery_exemption
     SetupItem.UNUSED_APP_PAUSE -> R.string.setup_item_unused_app_pause
     SetupItem.BATTERY_SAVER_OFF -> R.string.setup_item_battery_saver_off
+    SetupItem.PHYSICAL_ACTIVITY -> R.string.setup_item_physical_activity
     SetupItem.XIAOMI_AUTOSTART -> R.string.setup_item_xiaomi_autostart
     SetupItem.XIAOMI_BATTERY_SAVER -> R.string.setup_item_xiaomi_battery_saver
     SetupItem.XIAOMI_OTHER_PERMISSIONS -> R.string.setup_item_xiaomi_other_permissions
@@ -48,6 +49,7 @@ internal fun SetupRow.detailRes(): Int = when (detail) {
     SetupDetail.TRUCK_NOT_WATCHED -> R.string.setup_detail_truck_not_watched
     SetupDetail.TRUCK_CHECK_FAILED -> R.string.setup_detail_truck_check_failed
     SetupDetail.TRUCK_NOT_CHECKED_YET -> R.string.setup_detail_checking
+    SetupDetail.DRIVING_ALERT_OFF -> R.string.setup_detail_driving_alert_off
     SetupDetail.AUTOSTART_LOOKS_ON -> R.string.setup_detail_autostart_looks_on
     SetupDetail.AUTOSTART_LOOKS_OFF -> R.string.setup_detail_autostart_looks_off
     SetupDetail.AUTOSTART_UNREADABLE -> R.string.setup_detail_autostart_unreadable
@@ -81,6 +83,8 @@ private fun SetupItem.notSetRes(): Int = when (this) {
     SetupItem.UNUSED_APP_PAUSE -> R.string.setup_fix_unused_app_pause
 
     SetupItem.BATTERY_SAVER_OFF -> R.string.setup_fix_battery_saver_off
+
+    SetupItem.PHYSICAL_ACTIVITY -> R.string.setup_fix_physical_activity
 
     SetupItem.XIAOMI_BATTERY_SAVER -> R.string.setup_fix_xiaomi_battery_saver
 

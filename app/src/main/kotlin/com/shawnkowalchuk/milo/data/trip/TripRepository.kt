@@ -36,6 +36,13 @@ class TripRepository(private val dao: TripDao) {
     /** One trip by its id, whatever its status, or null if there is none. */
     suspend fun findTrip(tripId: Long): Trip? = dao.findById(tripId)
 
+    /**
+     * When the trip that ended last ended, or null if no trip has ended yet. A discarded or a
+     * deleted trip counts as well: it was recorded, and it ended. The driving alert asks, to
+     * keep quiet just after a trip.
+     */
+    suspend fun findNewestTripEndMs(): Long? = dao.findNewestEndedAtMs(TripStatus.OPEN)
+
     /** Finished trips, newest first. Discarded and deleted trips are left out. */
     fun observeFinishedTrips(): Flow<List<Trip>> = dao.observeWithStatus(TripStatus.FINISHED)
 

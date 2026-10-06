@@ -30,6 +30,9 @@ import kotlinx.coroutines.sync.withLock
 /** How long the state stays current after the screen stopped watching it (a rotation). */
 private const val KEEP_WATCHING_MS = 5_000L
 
+/** What the event log calls a change of the driving alert's switch. */
+private const val DRIVING_ALERT_SWITCH = "the Settings switch"
+
 /**
  * The Settings screen's link to the stored settings. It keeps no copy of them: what the screen
  * shows is the settings store's own flow, and every press writes to the store.
@@ -40,15 +43,22 @@ private const val KEEP_WATCHING_MS = 5_000L
  * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
  * sorted again because the schedule changed.
  *
+ * The one exception is the driving alert's switch. The alert has no trigger of its own to read
+ * the setting at: it has to ask the phone to report driving, or to stop, when the switch is
+ * pressed, so it is told ([armDrivingAlert]).
+ *
  * @param ownSound copies and checks a picked audio file, and goes back to the built-in sound.
  * @param playSound plays the trip-start sound the way a trip start does, given the stored
  * custom sound or null for the built-in one. Called on the main thread.
+ * @param armDrivingAlert has the driving alert bring its request to the phone in line with the
+ * stored switch. Its argument says what prompted it, for the event log.
  * @param clock wall-clock milliseconds.
  */
 class SettingsViewModel(
     private val settings: SettingsStore,
     private val ownSound: OwnTripSound,
     private val playSound: (customSoundUri: String?) -> Unit,
+    private val armDrivingAlert: (source: String) -> Unit,
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
 ) : ViewModel() {
@@ -119,6 +129,12 @@ class SettingsViewModel(
 
     fun onIgnoreOutsideSchedule(ignore: Boolean) = change {
         settings.setIgnoreTripsOutsideSchedule(ignore)
+    }
+
+    /** Stored first, so that the alert finds the new value when it reads the switch. */
+    fun onDrivingAlertEnabled(enabled: Boolean) = change {
+        settings.setDrivingAlertEnabled(enabled)
+        armDrivingAlert(DRIVING_ALERT_SWITCH)
     }
 
     /** Plays the sound a trip start would play now, whether or not the sound is switched on. */

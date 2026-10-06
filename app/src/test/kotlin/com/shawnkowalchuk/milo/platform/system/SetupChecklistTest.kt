@@ -49,6 +49,7 @@ class SetupChecklistTest {
             ignoringBatteryOptimizations = true,
             exemptFromUnusedAppPause = true,
             batterySaverOn = false,
+            activityRecognitionGranted = true,
             isXiaomi = true,
             autostart = AutostartReading.LOOKS_ON,
         )
@@ -128,6 +129,25 @@ class SetupChecklistTest {
         assertEquals(SetupState.OK, checklist.row(SetupItem.TRUCK).state)
         assertEquals(1, reads)
     }
+
+    @Test
+    fun `the Physical activity row follows the driving alert's switch without a refresh`() =
+        runTest {
+            phone = phone.copy(activityRecognitionGranted = false)
+            val settings = FakeSettingsFile()
+            val checklist = watchedChecklist(settings)
+            checklist.refresh()
+            runCurrent()
+            // Out of the box the alert is on, so the permission it needs is asked for.
+            assertEquals(SetupState.PROBLEM, checklist.row(SetupItem.PHYSICAL_ACTIVITY).state)
+
+            SettingsStore(settings).setDrivingAlertEnabled(false)
+            runCurrent()
+
+            val row = checklist.row(SetupItem.PHYSICAL_ACTIVITY)
+            assertEquals(SetupState.OK to SetupDetail.DRIVING_ALERT_OFF, row.state to row.detail)
+            assertEquals(1, reads)
+        }
 
     @Test
     fun `a confirmation is stored with the time it was given, and can be taken back`() = runTest {
