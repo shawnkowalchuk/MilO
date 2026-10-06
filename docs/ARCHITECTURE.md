@@ -4,7 +4,7 @@
 >
 > **Status:** Living document · **Last updated:** 2026-10-03 · **See also:** ENGINEERING_STANDARDS.md (the rules), APP_ENCYCLOPEDIA.md (how each feature works)
 
-The project skeleton is built: the Gradle build with its quality gates, the design system in `core/designsystem/`, a placeholder home screen and the CI files. No trip feature exists yet. The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
+The project skeleton and the phase 1 foundation are built: the Gradle build with its quality gates, the design system in `core/designsystem/`, a placeholder home screen, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, and crash and kill capture in `platform/diagnostics/`. **Nothing starts or records a trip yet:** there is no permission, service, receiver or trip screen, and nothing calls the trip rules outside their tests. The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
 
 ---
 
@@ -59,7 +59,7 @@ Versions, sources and the reason for each omission are in `docs/adr/ADR-001-stac
            |                            |
         Room                        Bluetooth
         DataStore                   CompanionDeviceManager
-                                    fused location
+        crash files                 fused location
                                     Geocoder
                                     Gmail intent
 ```
@@ -68,7 +68,9 @@ Versions, sources and the reason for each omission are in `docs/adr/ADR-001-stac
 
 The rule names Composables, and the Android Auto screen is not one. A Car App Library screen has its own lifecycle; the research has it collect one app-wide trip state and redraw when that changes, with no ViewModel in between (`docs/research/2026-10-03-android-auto-screen.md`, finding 26). That shared state is the app-wide `TripController` in `platform/trip/`, decided in ADR-002. Phone screens reach it through their ViewModels; the car screen reads it directly.
 
-The system also starts the app when no screen is open: a Bluetooth connect, a reboot, an app update. Those entry points deal with Bluetooth, the companion device and location, so they belong in `platform/`. How they drive trip start and trip end is set out in `docs/adr/ADR-002-trip-detection.md`: every entry point calls one idempotent function on the `TripController`, and the trip rules are a pure Kotlin state machine in `core/trip/`.
+The system also starts the app when no screen is open: a Bluetooth connect, a reboot, an app update. Those entry points deal with Bluetooth, the companion device and location, so they belong in `platform/`. How they drive trip start and trip end is set out in `docs/adr/ADR-002-trip-detection.md`: every entry point calls one idempotent function on the `TripController`, and the trip rules are a pure Kotlin state machine in `core/trip/`. The state machine exists; the `TripController` and the entry points do not yet.
+
+**How the shared objects are made.** `app/MiloApplication` is the first code to run in the process, however it was started. It creates one `app/AppContainer`, which builds the databases, the repositories and the settings store (each lazily, on first use) and owns the application-wide coroutine scope. The container decides nothing about storage: it calls the `build...` functions in `data/`, which own every file name and folder. Everything else is handed what it needs through its constructor. There is no Hilt and no global singleton: to see what a class depends on, read its constructor; to see what it is given, read `AppContainer`.
 
 ---
 
@@ -97,37 +99,113 @@ The shared trip logic is placed by ADR-002: the pure rules (state machine, dista
 One Gradle module, `:app`. Packages under `com.shawnkowalchuk.milo`:
 
 ```
-app/                 # navigation host and the AppContainer
+app/                 # MiloApplication, the AppContainer, MainActivity, the navigation host
 feature/<name>/      # one package per feature: its Composable screens, its ViewModel,
                      #   its feature-only logic
 core/designsystem/   # theme tokens (colour, spacing, typography, shape) and the shared
                      #   base components
-core/util/           # pure Kotlin helpers with unit tests (distance, time, formatting)
-data/                # Room database, DAOs, repositories, DataStore:
-                     #   the only layer that touches storage
+core/trip/           # the trip rules: state machine, point filter, distance, trip closing.
+                     #   Pure Kotlin, no Android imports, unit tested (ADR-002)
+core/util/           # pure Kotlin helpers with unit tests (time, formatting)
+data/                # the only layer that touches storage. The two Room databases, and one
+                     #   sub-package per kind of data, each with its entity, DAO and repository:
+                     #   trip/, point/, eventlog/, settings/ (DataStore), crash/ (crash files)
 platform/            # the only layer that touches Android system services: Bluetooth,
                      #   companion device, location, notifications, audio, Android Auto
+platform/diagnostics/  # crash and kill capture into the event log
 ```
 
-The Android entry points (`MainActivity`, and the `Application` class when it arrives) live in `app/`. No class sits in the root package. Features never import from each other. Shared code moves to `core/` or `data/`. Kotlin files are PascalCase and named after their main class. No file over about 300 lines, no Composable over about 200. (STANDARDS §3.)
+The other `platform/` sub-packages named in ADR-002 (`trip/`, `bluetooth/`, `car/`, `system/`) arrive with the code that fills them.
+
+The Android entry points (`MiloApplication` and `MainActivity`) live in `app/`. No class sits in the root package. Features never import from each other. Shared code moves to `core/` or `data/`. Kotlin files are PascalCase and named after their main class. No file over about 300 lines, no Composable over about 200. (STANDARDS §3.)
 
 ---
 
-## 6. Data model (overview)
+## 6. Data model
 
-What the app will store, at the level of shape only. Nothing here is built. Entity names, tables and columns are not decided: they are settled in the phase that builds each one, and the fields below are read off the required behaviour in APP_ENCYCLOPEDIA.md.
+What phase 1 stores is built and described here exactly. Later phases add to it, each change as a Room migration: the phone holds real trips from phase 1 on, so no table is ever dropped and rebuilt. The source of truth for the tables is the schema Room exports to `app/schemas/` at every build; those files are committed.
 
-| Stored data | Key fields | Relationships |
+Conventions that hold everywhere: times are wall-clock milliseconds since 1970 unless a column says otherwise; distances are metres (kilometres exist only on screen); a column that holds one of a fixed set of values stores the Kotlin enum's name as text, so a constant can be added freely but never renamed without a migration.
+
+### Main database: `milo.db` (`data/MiloDatabase`, version 1)
+
+**`trips`** (`data/trip/Trip`): one row per trip, open or closed.
+
+| Column | Type | Meaning |
 |---|---|---|
-| Trips | start and end time, start and end location and address, distance in km, Business or Personal, manual or edited flag | Each trip has many raw GPS points |
-| Raw GPS points | trip id, time, latitude, longitude, accuracy | Each belongs to one trip. **Stored in a separate database file** |
-| Event log | time, event type, detail | None |
-| Monthly submission status | month, submitted date, whether it is a revision | Covers the Business trips of one month |
-| Settings (DataStore, not a table) | truck device, grace period, minimum trip distance, trip-start sound, schedule, report header fields, reminder day | None |
+| `id` | integer, key | Assigned by the database |
+| `startedAtMs` | integer | When the trip started |
+| `endedAtMs` | integer, null while open | When it ended: the time of its last recorded point |
+| `status` | text | `OPEN`, `FINISHED`, or `DISCARDED` (under the minimum distance; the row is kept, not deleted) |
+| `startedBy` | text | `TRUCK` or `MANUAL` |
+| `truckSeen` | integer 0/1 | Whether the truck was connected at any point during the trip. A manual trip the truck never joined ends by different rules |
+| `graceStartedAtMs` | integer, null | When the truck was found gone. Null while something holds the trip open |
+| `graceDeadlineMs` | integer, null | When the grace period runs out. Set and cleared together with the column above |
+| `distanceMetres` | real | Written when the trip closes; 0 while open |
+| `startLatitude`, `startLongitude`, `endLatitude`, `endLongitude` | real, null | Written when the trip closes; null if no usable GPS fix was recorded |
 
-**Two database files.** Raw GPS points live in their own database file, kept out of cloud backup. Android Auto Backup is capped at 25 MB per app and is all-or-nothing: over the cap nothing is backed up, and no error is shown. By the research estimate, points recorded every few seconds would cross the cap within about a year and take the small, valuable trip data down with them. Backup is switched off entirely until phase 4 writes the backup rules. Source for the split and the cap: `docs/research/2026-10-03-pdf-email-backup.md`.
+At most one trip is `OPEN`. The repository enforces it: starting a trip while one is open returns the open one. Not here yet, and added by the phase that builds each: Business or Personal, addresses, the manual or edited flag.
 
-One consequence is an inference, not a research finding: a raw point can refer to its trip only by id, because a SQLite foreign key cannot point into another database file. If that holds, deleting a trip has to delete its points in code. It is checked when the two databases are built.
+**`event_log`** (`data/eventlog/EventLogEntry`), indexed on `atMs`.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `id` | integer, key | Assigned by the database |
+| `atMs` | integer | When the event happened. A crash or a kill is written at the next start but dated when it happened, so the log is ordered by this column |
+| `category` | text | `PROCESS`, `CRASH`, `ERROR` (a failure that was caught), `TRIGGER`, `SERVICE`, `GRACE`, `ANDROID_AUTO`, `TRIP`. Only the first three are written so far |
+| `message` | text | One short line |
+| `detail` | text, null | Anything longer, such as a stack trace |
+
+### Raw points database: `points.db` (`data/PointsDatabase`, version 1)
+
+**`raw_points`** (`data/point/RawPoint`), indexed on `tripId`. Every fix is stored, including the ones the distance calculation rejects.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `id` | integer, key | Assigned in the order fixes arrive; the order points are read back in |
+| `tripId` | integer | The trip the fix belongs to. Not a foreign key (see below) |
+| `wallClockMs` | integer | Time of day of the fix |
+| `elapsedRealtimeMs` | integer | Time since the phone booted. It never jumps, so it is the clock used for the speed between two fixes |
+| `latitude`, `longitude` | real | Degrees |
+| `accuracyMetres` | real, null | The phone's 68 % accuracy radius; null if it gave none |
+| `speedMetresPerSecond` | real, null | The phone's own speed reading; null if it gave none. Stored for later tuning, not used yet |
+
+### Settings: DataStore Preferences file `settings` (`data/settings/SettingsStore`)
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `truck_address`, `truck_name`, `truck_association_id` | text, text, integer | none | The paired truck and its companion device association. Written and cleared together |
+| `grace_period_seconds` | integer | 120 | How long a trip waits after the truck disconnects |
+| `minimum_trip_distance_metres` | integer | 300 | A shorter trip is discarded |
+| `sound_enabled` | boolean | true | Whether the trip-start sound plays |
+| `custom_sound_uri` | text | none | The audio file Shawn chose; absent means the bundled chirp |
+| `auto_start_held_off` | boolean | false | ADR-002's hold-off: set when a trip is ended by hand with the truck still connected, cleared when the truck is next seen disconnected |
+| `last_process_exit_imported_at_ms` | integer | 0 | The newest process-exit record already copied into the event log |
+
+The last two are not settings Shawn chooses. They are small pieces of state that must outlive the process.
+
+The store is built by `buildSettingsStore` in the same package, with no corruption handler: an unreadable file makes every read throw, and is never replaced by empty settings (that would drop the truck pairing without a trace).
+
+### Crash files: `no_backup/crashes/` (`data/crash/CrashFileStore`)
+
+One small text file per uncaught exception, named `crash-<time>.txt`: the time, the thread, a one-line summary and the stack trace. Written while the process dies, copied into `event_log` at the next start and then deleted. At most 20 wait at once. The folder is under the app's no-backup files, so Android never backs it up or transfers it.
+
+### Not built yet
+
+| Stored data | Key fields | Phase |
+|---|---|---|
+| Monthly submission status | month, submitted date, whether it is a revision | 3 |
+| More settings | schedule, report header fields, reminder day | 2 to 4 |
+
+### Two database files
+
+Raw GPS points live in their own database file, to be kept out of cloud backup. Android Auto Backup is capped at 25 MB per app and is all-or-nothing: over the cap nothing is backed up, and no error is shown. By the research estimate, points recorded every few seconds would cross the cap within about a year and take the small, valuable trip data down with them. Backup is switched off entirely until phase 4 writes the backup rules. Source for the split and the cap: `docs/research/2026-10-03-pdf-email-backup.md`.
+
+Both files are in the app's standard databases folder. Room keeps three more files beside a database, seen on the emulator for `milo.db`: `-wal`, `-shm` and `.lck`. For the points database that means `points.db-wal`, `points.db-shm` and `points.db.lck`, and phase 4's backup rules must name the points database together with them.
+
+**A raw point refers to its trip by id only.** SQLite cannot enforce a foreign key across database files, so `tripId` is a plain indexed column. Nothing deletes a trip today (a short trip is marked `DISCARDED`). Any later code that does delete one must delete its points itself, through `RawPointRepository`.
+
+**Repositories are the only way in.** `TripRepository`, `RawPointRepository`, `EventLogRepository`, `SettingsStore` and `CrashFileStore` are the API the rest of the app uses; the DAOs, the DataStore and the files are not touched, or even located, from outside `data/`. Every write to a trip is safe to repeat, and a write to a trip that is no longer open changes nothing.
 
 ---
 
@@ -167,7 +245,7 @@ No Sentry, no analytics, no API keys.
 
 There is one environment because there is no backend to separate (STANDARDS §13). The build on the phone holds real trip data, so an uninstall is data loss.
 
-Build and release path: a pull request runs CI (gitleaks, then `./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug`). After merge the build is installed on the phone, and the device test checklist (`docs/DEVICE_TEST_CHECKLIST.md`, written in phase 1) is run before a phase is handed over. GitHub Free cannot block a merge on a red build in a private repo, so not merging red is a rule Shawn follows by hand.
+Build and release path: a pull request runs CI (gitleaks, then `./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug`). After merge the build is installed on the phone, and the device test checklist (`docs/DEVICE_TEST_CHECKLIST.md`, which grows with each work package) is run before a phase is handed over. GitHub Free cannot block a merge on a red build in a private repo, so not merging red is a rule Shawn follows by hand.
 
 ---
 

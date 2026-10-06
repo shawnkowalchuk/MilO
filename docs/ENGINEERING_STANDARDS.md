@@ -76,18 +76,20 @@ Use a **feature-first** layout, not a type-first one. Group by *what it does*, n
 
 ```
 com.shawnkowalchuk.milo   # one Gradle module, ':app'
-  app/                    # navigation host and the AppContainer
+  app/                    # MiloApplication, the AppContainer, MainActivity, navigation host
   feature/<name>/         # one package per feature: its screens, its ViewModel, its own logic
   core/designsystem/      # theme tokens and the shared base components
-  core/util/              # pure Kotlin helpers with unit tests (distance, time, formatting)
-  data/                   # Room, DAOs, repositories, DataStore: the only layer that touches storage
+  core/trip/              # the trip rules (ADR-002): pure Kotlin with unit tests
+  core/util/              # pure Kotlin helpers with unit tests (time, formatting)
+  data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
+                          #   touches storage
   platform/               # the only layer that touches Android system services: Bluetooth,
                           #   companion device, location, notifications, audio, Android Auto
 ```
 
 **Rules:**
 - **Flow:** Composable → ViewModel → repository or platform class. Composables never call system services or DAOs directly.
-- **The Android entry points live in `app/`:** `MainActivity`, and the `Application` class when it arrives. No class sits in the root package.
+- **The Android entry points live in `app/`:** `MiloApplication` and `MainActivity`. No class sits in the root package.
 - Features never import from each other. Shared code moves to `core/` or `data/`. This keeps features deletable. Kotlin cannot enforce it inside one module; review does.
 - **No file over ~300 lines, no Composable over ~200.** When a file gets fat, split it. Checked in review.
 
@@ -199,7 +201,7 @@ Code isn't "done" until **all** are true:
 - **Unit test the trip rules** — grace period, minimum distance, point filtering, Business or Personal by schedule. Written as pure Kotlin so they run as plain JVM tests.
 - **No Robolectric.** Its current release needs Java 21 to simulate API 36 and 37, and the Mac has only JDK 17. Behaviour that needs Android is tested on the phone.
 - **Skip trivial UI tests.**
-- **Device test checklist** — `docs/DEVICE_TEST_CHECKLIST.md`, run on the POCO X5 before each phase is handed over. Bluetooth triggers, background starts and HyperOS limits cannot be tested anywhere else. The file does not exist yet: it is written in phase 1, with the first behaviour that can only be tested on the phone.
+- **Device test checklist** — `docs/DEVICE_TEST_CHECKLIST.md`, run on the POCO X5 before each phase is handed over. Bluetooth triggers, background starts and HyperOS limits cannot be tested anywhere else. Every change that adds behaviour only the phone can prove adds its checks to that file in the same change.
 - Tools: JUnit 4, kotlinx-coroutines-test, Turbine (`./gradlew testDebugUnitTest`).
 
 The bar: *would a bug here lose a trip, or put a wrong number on the report accounts reads?* If yes, test it.
@@ -298,13 +300,13 @@ Do these *before* writing a single product feature. Left out on purpose (reasons
 - [x] Private GitHub repo created, `.gitignore` in place (build output, `local.properties`, keystores)
 - [x] Gradle project builds: one `:app` module, AGP 9.4.1, Kotlin 2.4.20, wrapper 9.8.0 with `distributionSha256Sum`
 - [x] Quality gates on: Kotlin `allWarningsAsErrors`, Android Lint `warningsAsErrors` + `abortOnError`, Spotless + ktlint
-- [ ] `.githooks/pre-commit` (gitleaks, then `spotlessCheck`); `core.hooksPath` set; gitleaks installed — *the hook is written; gitleaks is not installed on the Mac yet, so the hook is not switched on*
+- [x] `.githooks/pre-commit` (gitleaks, then `spotlessCheck`); `core.hooksPath` set; gitleaks installed
 - [x] Latest **stable** deps pinned as exact versions in `gradle/libs.versions.toml`
 - [ ] Dependabot enabled (weekly; minor and patch grouped, majors separate) — *config is in the first PR; it takes effect when that merges*
-- [ ] Package structure (§3) scaffolded; `AppContainer` created by the `Application` class — *packages exist; the `Application` class and `AppContainer` arrive with the first phase 1 code*
+- [x] Package structure (§3) scaffolded; `AppContainer` created by the `Application` class
 - [x] Design tokens + base component library started in `core/designsystem/` (§8)
-- [ ] CI pipeline on PRs (gitleaks, then `spotlessCheck lintDebug testDebugUnitTest assembleDebug`) — *written; tick when the first PR's run is green*
-- [ ] Android Studio updated, SDK platform 37 installed, debug build installs on the POCO X5 — *platform 37 is installed; Android Studio and the phone install are Shawn's*
+- [x] CI pipeline on PRs (gitleaks, then `spotlessCheck lintDebug testDebugUnitTest assembleDebug`)
+- [ ] Android Studio updated, SDK platform 37 installed, debug build installs on the POCO X5 — *Android Studio is on 2026.2 and platform 37 is installed; the phone install is still to do*
 - [x] All four docs created in the repo: STANDARDS, ARCHITECTURE, APP_ENCYCLOPEDIA, FINDINGS_LOG
 - [x] First ADR written: "ADR-001: Stack selection"
 
