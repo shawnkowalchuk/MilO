@@ -17,11 +17,14 @@ import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
+import java.io.IOException
+import java.time.ZoneId
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -32,16 +35,25 @@ import kotlinx.coroutines.yield
  * databases, the settings file, the truck, the clock and the trip service. The storage outlives
  * a controller, so a test can "kill the process" by building a second controller on the same
  * world.
+ *
+ * @param settingsFile the settings file. A test passes one that cannot be read to see what the
+ * controller does without its settings.
  */
-class FakeWorld {
+class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
     val trips = FakeTripDao()
     val points = FakeRawPointDao()
     val log = FakeEventLogDao()
-    val settings = SettingsStore(FakeSettingsFile())
+    val settings = SettingsStore(settingsFile)
     val truck = FakeTruck()
 
-    /** The phone's clock. Tests move it by hand. */
+    /** The phone's clock. Tests move it by hand. It starts at 2026-10-03 12:00 UTC. */
     var nowMs = 1_791_028_800_000L
+
+    /**
+     * The phone's time zone. A trip is sorted into Business or Personal by the day and the time
+     * of day it started in this zone; the clock above starts on a Saturday noon in it.
+     */
+    var zone: ZoneId = ZoneId.of("UTC")
 
     /** A controller as a fresh process would build it, and the service that goes with it. */
     fun newProcess(scope: CoroutineScope): Pair<TripController, FakeService> {
@@ -55,6 +67,7 @@ class FakeWorld {
                 truck = truck,
                 starter = service,
                 clock = { nowMs },
+                zone = { zone },
                 scope = scope,
             )
         service.controller = controller
@@ -200,6 +213,15 @@ class FakeSettingsFile : DataStore<Preferences> {
     override suspend fun updateData(
         transform: suspend (t: Preferences) -> Preferences,
     ): Preferences = transform(stored.value).also { stored.value = it }
+}
+
+/** A settings file whose every read and write fails, as a damaged one does. */
+object UnreadableSettingsFile : DataStore<Preferences> {
+    override val data: Flow<Preferences> = flow { throw IOException("the file is damaged") }
+
+    override suspend fun updateData(
+        transform: suspend (t: Preferences) -> Preferences,
+    ): Preferences = throw IOException("the file is damaged")
 }
 
 /** A controller as a fresh process would build it, its worker running in the test's scheduler. */

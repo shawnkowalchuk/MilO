@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.trips
 
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -37,6 +38,9 @@ class TripMonthLeftOutTest {
             startedBy = TripStartCause.TRUCK,
             truckSeen = true,
             distanceMetres = metres,
+            // Every trip here is a Business one: the totals these tests read are the Business
+            // totals. Mixed months are in TripMonthCategoryTest.
+            category = TripCategory.BUSINESS,
         )
     }
 
@@ -57,7 +61,7 @@ class TripMonthLeftOutTest {
 
         val month = summary(listOf(kept, deleted))
 
-        assertEquals(12_300.0, month.totalMetres, 0.0)
+        assertEquals(12_300.0, month.totals.business.metres, 0.0)
         assertEquals(1, month.tripCount)
         assertEquals(listOf(kept.id), month.days.single().trips.map { it.id })
         assertEquals(1, month.hiddenLeftOut)
@@ -83,7 +87,7 @@ class TripMonthLeftOutTest {
         )
         // Listing them changes nothing about what is counted.
         for (month in listOf(hidden, shown)) {
-            assertEquals(12_300.0, month.totalMetres, 0.0)
+            assertEquals(12_300.0, month.totals.business.metres, 0.0)
             assertEquals(1, month.tripCount)
         }
     }
@@ -104,7 +108,7 @@ class TripMonthLeftOutTest {
             )
 
         assertEquals(2, month.tripCount)
-        assertEquals(8_450.0, month.totalMetres, 0.0)
+        assertEquals(8_450.0, month.totals.business.metres, 0.0)
         assertEquals(0, month.hiddenLeftOut)
     }
 

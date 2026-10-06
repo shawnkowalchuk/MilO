@@ -23,6 +23,8 @@ import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 /** The kind of file the picker offers for the trip-start sound. */
 private const val ANY_AUDIO = "audio/*"
@@ -36,12 +38,28 @@ internal class SettingsActions(
     val onPlaySound: () -> Unit,
     val onPickOwnSound: () -> Unit,
     val onUseBuiltInSound: () -> Unit,
+    val schedule: ScheduleActions,
 )
 
 /**
- * The settings of phase 1: which truck, how long a trip waits for it to reconnect, how short a
- * trip may be, and the sound of a trip start. Schedule, report and reminder settings arrive
- * with the phases that build them.
+ * What the two cards of the work schedule can ask for.
+ *
+ * @param onDayStart and [onDayEnd] carry the time picker's answer: an hour from 0 to 23 and a
+ * minute.
+ */
+internal class ScheduleActions(
+    val onDayTracked: (DayOfWeek, Boolean) -> Unit,
+    val onDayStart: (DayOfWeek, hour: Int, minute: Int) -> Unit,
+    val onDayEnd: (DayOfWeek, hour: Int, minute: Int) -> Unit,
+    val onCopyHours: (DayOfWeek) -> Unit,
+    val onIgnoreOutside: (Boolean) -> Unit,
+)
+
+/**
+ * The settings: which truck, how long a trip waits for it to reconnect, how short a trip may
+ * be, the work schedule that makes a trip Business or Personal, what becomes of a trip outside
+ * it, and the sound of a trip start. Report and reminder settings arrive with the phases that
+ * build them.
  *
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
@@ -79,6 +97,14 @@ fun SettingsScreen(
                 }
             },
             onUseBuiltInSound = viewModel::onUseBuiltInSound,
+            schedule =
+                ScheduleActions(
+                    onDayTracked = viewModel::onDayTracked,
+                    onDayStart = viewModel::onDayStart,
+                    onDayEnd = viewModel::onDayEnd,
+                    onCopyHours = viewModel::onCopyHours,
+                    onIgnoreOutside = viewModel::onIgnoreOutsideSchedule,
+                ),
         )
     SettingsContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 }
@@ -121,6 +147,8 @@ private fun SettingsContent(
                 }
                 TruckCard(state, actions)
                 TripRulesCard(state, actions)
+                ScheduleCard(state, actions.schedule)
+                OutsideScheduleCard(state, actions.schedule)
                 SoundCard(state, actions)
             }
         }
@@ -145,13 +173,26 @@ private fun SettingsPreview() {
             usesOwnSound = true,
             ownSoundName = "r2d2.mp3",
             copyingSound = false,
+            schedule =
+                DayOfWeek.entries.map { day ->
+                    ScheduleDay(
+                        day = day,
+                        tracked = day < DayOfWeek.SATURDAY,
+                        start = LocalTime.of(if (day == DayOfWeek.FRIDAY) 7 else 8, 0),
+                        end = LocalTime.of(16, 30),
+                        canCopy = day < DayOfWeek.SATURDAY,
+                        hoursRefused = false,
+                    )
+                },
+            ignoreOutsideSchedule = false,
             problem = SettingsProblem.SOUND_NOT_PLAYABLE,
         )
+    val schedule = ScheduleActions({ _, _ -> }, { _, _, _ -> }, { _, _, _ -> }, {}, {})
     MiloTheme {
         Surface {
             SettingsContent(
                 state = state,
-                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}),
+                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, schedule),
                 onBack = {},
             )
         }

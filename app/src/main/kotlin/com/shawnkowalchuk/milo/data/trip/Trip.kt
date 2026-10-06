@@ -4,12 +4,13 @@ import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 
 /**
- * One trip, open or closed. Business or Personal and the edited flag arrive with the phases
- * that build them, each as a migration (the first one is in `data/MiloMigrations.kt`).
+ * One trip, open or closed. The edited flag arrives with the phase that builds it, as a
+ * migration (the steps so far are in `data/MiloMigrations.kt`).
  *
  * A row is never removed. A trip under the minimum distance is kept as discarded, and one that
  * Shawn deletes is kept as deleted; both are a matter of [status] alone, so each can be undone.
@@ -38,6 +39,19 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
  * `MAX_ADDRESS_ATTEMPTS` (`platform/address/AddressRetry.kt`) the trip is no longer asked about.
  * @param addressLastAttemptAtMs when the addresses were last looked up, or null if never. The
  * next attempt waits a while after it.
+ * @param category Business or Personal. Null while the trip is open, and for a closed trip
+ * that has not been sorted yet: one recorded before MilO had a work schedule, until the
+ * catch-up at the next process start reaches it. Written when the trip is finalised, from the
+ * schedule as it is then, and afterwards only by Shawn's own hand.
+ * @param categorySetByHand true once Shawn has chosen [category] himself on the Trips screen.
+ * Nothing but another choice of his changes the category of such a trip.
+ * @param ranPastSchedule true if the schedule made this a Business trip and it ended after the
+ * end time of the day it started on. It is a fact about the trip and the schedule at the moment
+ * it was sorted, and is kept when Shawn changes the category; the screens show it only while the
+ * trip is Business.
+ * @param ignoredOutsideSchedule true if the trip was stored as discarded for one reason only:
+ * it turned out Personal while trips outside the schedule were set to be ignored. It says why a
+ * discarded trip was discarded, and means nothing once the trip is counted after all.
  */
 // The index is for the Trips screen, which reads the trips that started in a span of time.
 @Entity(tableName = "trips", indices = [Index("startedAtMs")])
@@ -61,4 +75,10 @@ data class Trip(
     // (ALTER TABLE needs one for a NOT NULL column) is the same as a table made new.
     @ColumnInfo(defaultValue = "0") val addressAttempts: Int = 0,
     val addressLastAttemptAtMs: Long? = null,
+    val category: TripCategory? = null,
+    // Declared to SQLite for the same reason as the attempts above: the migration from
+    // version 2 adds these three with ALTER TABLE, which needs a default for the stored rows.
+    @ColumnInfo(defaultValue = "0") val categorySetByHand: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val ranPastSchedule: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val ignoredOutsideSchedule: Boolean = false,
 )

@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripDao
@@ -22,6 +23,9 @@ class FakeTripDao : TripDao {
 
     /** Set to make the next change of a trip's status fail once, the same way. */
     var failNextStatusChange: Exception? = null
+
+    /** Set to make the next write of Business or Personal to a closed trip fail once. */
+    var failNextCategoryWrite: Exception? = null
 
     override suspend fun insert(trip: Trip): Long {
         failNextInsert?.let { failure ->
@@ -65,6 +69,9 @@ class FakeTripDao : TripDao {
         startLongitude: Double?,
         endLatitude: Double?,
         endLongitude: Double?,
+        category: TripCategory?,
+        ranPastSchedule: Boolean,
+        ignoredOutsideSchedule: Boolean,
         open: TripStatus,
     ): Int = change(tripId, open) {
         it.copy(
@@ -77,6 +84,9 @@ class FakeTripDao : TripDao {
             endLongitude = endLongitude,
             graceStartedAtMs = null,
             graceDeadlineMs = null,
+            category = category,
+            ranPastSchedule = ranPastSchedule,
+            ignoredOutsideSchedule = ignoredOutsideSchedule,
         )
     }
 
@@ -116,9 +126,50 @@ class FakeTripDao : TripDao {
         return change(tripId, from) { it.copy(status = to) }
     }
 
+    // The three conditions are written out here as the SQL has them, and not taken from
+    // needsSorting(): a test compares the two, so that the rule in Kotlin and the query's
+    // conditions cannot drift apart unnoticed.
+    private fun unsorted(trip: Trip, open: TripStatus): Boolean =
+        trip.status != open && trip.category == null && !trip.categorySetByHand
+
+    override suspend fun findUnsorted(open: TripStatus): List<Trip> =
+        rows.filter { unsorted(it, open) }.sortedBy { it.id }
+
+    override suspend fun sortUnsorted(
+        tripId: Long,
+        category: TripCategory,
+        ranPastSchedule: Boolean,
+        open: TripStatus,
+    ): Int {
+        failNextCategoryWrite?.let { failure ->
+            failNextCategoryWrite = null
+            throw failure
+        }
+        return changeIf(tripId, { unsorted(it, open) }) {
+            it.copy(category = category, ranPastSchedule = ranPastSchedule)
+        }
+    }
+
+    override suspend fun setCategoryByHand(
+        tripId: Long,
+        category: TripCategory,
+        finished: TripStatus,
+    ): Int {
+        failNextCategoryWrite?.let { failure ->
+            failNextCategoryWrite = null
+            throw failure
+        }
+        return changeIf(tripId, { it.status == finished && it.category != category }) {
+            it.copy(category = category, categorySetByHand = true)
+        }
+    }
+
     /** Like the real queries: only a row with the expected status is changed. */
-    private fun change(tripId: Long, status: TripStatus, update: (Trip) -> Trip): Int {
-        val index = rows.indexOfFirst { it.id == tripId && it.status == status }
+    private fun change(tripId: Long, status: TripStatus, update: (Trip) -> Trip): Int =
+        changeIf(tripId, { it.status == status }, update)
+
+    private fun changeIf(tripId: Long, matches: (Trip) -> Boolean, update: (Trip) -> Trip): Int {
+        val index = rows.indexOfFirst { it.id == tripId && matches(it) }
         if (index < 0) return 0
         rows[index] = update(rows[index])
         return 1

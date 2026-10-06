@@ -27,7 +27,9 @@ import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleAction
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
+import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
@@ -94,6 +96,7 @@ private fun HomeContent(
     modifier: Modifier = Modifier,
 ) {
     val trip = activity.trip
+    val twentyFourHour = rememberTwentyFourHourClock()
     Column(
         modifier =
             modifier
@@ -116,7 +119,7 @@ private fun HomeContent(
         if (setupNeedsAttention) SetupWarningCard(actions.onOpenSetup)
 
         SectionCard(title = stringResource(R.string.home_trip_title)) {
-            if (trip == null) IdleTrip() else TripInProgress(trip)
+            if (trip == null) IdleTrip() else TripInProgress(trip, twentyFourHour)
         }
 
         activity.startFailure?.let { StartFailureCard(it) }
@@ -137,7 +140,12 @@ private fun HomeContent(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        TodayCard(today = today, tripInProgress = trip != null, zone = ZoneId.systemDefault())
+        TodayCard(
+            today = today,
+            tripInProgress = trip != null,
+            zone = ZoneId.systemDefault(),
+            twentyFourHour = twentyFourHour,
+        )
     }
 }
 
@@ -155,8 +163,9 @@ private fun IdleTrip() {
 }
 
 @Composable
-private fun TripInProgress(trip: CurrentTrip) {
+private fun TripInProgress(trip: CurrentTrip, twentyFourHour: Boolean) {
     val locale = LocalConfiguration.current.locales[0]
+    val zone = ZoneId.systemDefault()
     Text(
         text = stringResource(R.string.distance_km, formatKilometres(trip.distanceMetres, locale)),
         style = MaterialTheme.typography.headlineSmall,
@@ -176,7 +185,7 @@ private fun TripInProgress(trip: CurrentTrip) {
         text =
             stringResource(
                 R.string.trip_started_at,
-                formatTimeOfDay(trip.startedAtMs, ZoneId.systemDefault(), locale),
+                formatTimeOfDay(trip.startedAtMs, zone, locale, twentyFourHour),
             ),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -253,6 +262,11 @@ private fun HomeIdlePreview() {
 @PreviewLightDark
 @Composable
 private fun HomeRecordingPreview() {
+    val sessions =
+        listOf(
+            TodaySession(2, 1_791_020_000_000, 1_791_021_500_000, 24_900.0, TripCategory.BUSINESS),
+            TodaySession(1, 1_791_010_000_000, 1_791_011_200_000, 8_300.0, TripCategory.PERSONAL),
+        )
     MiloTheme {
         Surface {
             HomeContent(
@@ -267,13 +281,7 @@ private fun HomeRecordingPreview() {
                                 waitingForTruck = false,
                             ),
                     ),
-                today =
-                    TodayTrips(
-                        listOf(
-                            TodaySession(2, 1_791_020_000_000, 1_791_021_500_000, 24_900.0),
-                            TodaySession(1, 1_791_010_000_000, 1_791_011_200_000, 8_300.0),
-                        ),
-                    ),
+                today = TodayTrips(sessions),
                 setupNeedsAttention = false,
                 actions = HomeActions({}, {}, {}, {}),
             )

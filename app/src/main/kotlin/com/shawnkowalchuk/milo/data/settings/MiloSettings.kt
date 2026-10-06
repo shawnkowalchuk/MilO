@@ -1,5 +1,8 @@
 package com.shawnkowalchuk.milo.data.settings
 
+import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+
 /** ADR-002: a trip waits 2 minutes for the truck to reconnect before it is closed. */
 const val DEFAULT_GRACE_PERIOD_SECONDS = 120
 
@@ -43,6 +46,11 @@ enum class ConfirmedStep(val key: String) {
  * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
  * @param customSoundName what the file he picked was called, for display only. Null with no
  * custom sound, and when the phone gave no name for the file.
+ * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
+ * starts inside it is saved as Business. It is read when a trip is finalised and never before:
+ * it has no say in whether a trip starts.
+ * @param ignoreTripsOutsideSchedule what becomes of a trip that started outside the schedule:
+ * false saves it as Personal, true has it stored as discarded when it is finalised.
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -60,6 +68,8 @@ data class MiloSettings(
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
     val customSoundName: String? = null,
+    val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
+    val ignoreTripsOutsideSchedule: Boolean = false,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

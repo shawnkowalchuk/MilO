@@ -9,24 +9,33 @@ import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
+import com.shawnkowalchuk.milo.core.designsystem.text.categoryWordsRes
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
+import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.TodaySession
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import java.time.ZoneId
 import java.util.Locale
 
 /**
- * Today's finished trips: how far and how long in all, how many, and each one with its times
- * and its kilometres, newest first. The trip in progress is not among them: it has the card
- * above, and is added here when it ends.
+ * Today's finished trips. The Business figures come first and large: how far, how many trips
+ * and how long. Personal follows in a quieter line of its own, never added to Business. Then
+ * each trip with its times, what it is saved as and its kilometres, newest first. The trip in
+ * progress is not among them: it has the card above, and is added here when it ends.
  *
  * @param today null while the trips are being read.
  * @param tripInProgress adds a line saying that the trip being recorded is not counted yet.
+ * @param twentyFourHour whether the phone is set to write times with 24 hours.
  */
 @Composable
-internal fun TodayCard(today: TodayTrips?, tripInProgress: Boolean, zone: ZoneId) {
+internal fun TodayCard(
+    today: TodayTrips?,
+    tripInProgress: Boolean,
+    zone: ZoneId,
+    twentyFourHour: Boolean,
+) {
     val locale = LocalConfiguration.current.locales[0]
     SectionCard(title = stringResource(R.string.home_today_title)) {
         when {
@@ -43,21 +52,33 @@ internal fun TodayCard(today: TodayTrips?, tripInProgress: Boolean, zone: ZoneId
                 )
 
             else -> {
+                val totals = today.totals
                 Text(
-                    text = kilometres(today.totalMetres, locale),
+                    text = stringResource(R.string.trip_business),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = kilometres(totals.business.metres, locale),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
                     text =
                         pluralStringResource(
                             R.plurals.home_today_summary,
-                            today.count,
-                            today.count,
-                            durationText(today.driveTimeMs),
+                            totals.business.count,
+                            totals.business.count,
+                            durationText(today.businessDriveTimeMs),
                         ),
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                for (session in today.sessions) SessionRow(session, zone, locale)
+                Apart(R.plurals.trips_personal_total, totals.personal, locale)
+                // Only while there is such a trip, which in ordinary use is never.
+                if (totals.unsorted.count > 0) {
+                    Apart(R.plurals.trips_unsorted_total, totals.unsorted, locale)
+                }
+                for (session in today.sessions) {
+                    SessionRow(session, zone, locale, twentyFourHour)
+                }
             }
         }
         if (tripInProgress) {
@@ -70,23 +91,50 @@ internal fun TodayCard(today: TodayTrips?, tripInProgress: Boolean, zone: ZoneId
     }
 }
 
-/** One finished trip: "08:14 – 08:39" and its kilometres, as the Trips screen writes them. */
+/** A total that is not Business, in a quieter line: "Personal: 5.0 km · 1 trip". */
 @Composable
-private fun SessionRow(session: TodaySession, zone: ZoneId, locale: Locale) {
-    val start = formatTimeOfDay(session.startedAtMs, zone, locale)
+private fun Apart(plural: Int, tally: Tally, locale: Locale) {
+    Text(
+        text =
+            pluralStringResource(
+                plural,
+                tally.count,
+                tally.count,
+                kilometres(tally.metres, locale),
+            ),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * One finished trip: "08:14 – 08:39", what it is saved as, and its kilometres, as the Trips
+ * screen writes them.
+ */
+@Composable
+private fun SessionRow(
+    session: TodaySession,
+    zone: ZoneId,
+    locale: Locale,
+    twentyFourHour: Boolean,
+) {
+    val start = formatTimeOfDay(session.startedAtMs, zone, locale, twentyFourHour)
     // A finished trip has an end; the start alone is the fallback for a row that storage should
     // never produce.
-    val end = session.endedAtMs?.let { formatTimeOfDay(it, zone, locale) }
+    val end = session.endedAtMs?.let { formatTimeOfDay(it, zone, locale, twentyFourHour) }
     FigureRow(figure = kilometres(session.distanceMetres, locale)) {
         Text(
-            text = if (end ==
-                null
-            ) {
-                start
-            } else {
-                stringResource(R.string.trips_time_range, start, end)
-            },
+            text =
+                if (end == null) {
+                    start
+                } else {
+                    stringResource(R.string.trips_time_range, start, end)
+                },
             style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(categoryWordsRes(session.category, session.ranPastSchedule)),
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

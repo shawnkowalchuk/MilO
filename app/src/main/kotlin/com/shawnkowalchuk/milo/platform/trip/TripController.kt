@@ -9,6 +9,7 @@ import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
+import java.time.ZoneId
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -34,6 +35,8 @@ import kotlinx.coroutines.launch
  * attaches to a Bluetooth broadcast is measured in seconds.
  *
  * @param clock wall-clock milliseconds.
+ * @param zone the phone's time zone. It is asked for at one moment only, when a trip is closed
+ * and sorted into Business or Personal by the day and time of day it started.
  * @param scope the application scope. The worker runs in it for the life of the process.
  */
 class TripController(
@@ -44,13 +47,14 @@ class TripController(
     truck: TruckConnectionSource,
     private val starter: RecordingStarter,
     private val clock: () -> Long,
+    zone: () -> ZoneId,
     scope: CoroutineScope,
 ) {
     private val inbox = Channel<TripWork>(Channel.UNLIMITED)
 
     private val worker =
         TripWorker(
-            ledger = TripLedger(trips, points, settings),
+            ledger = TripLedger(trips, points, settings, zone),
             eventLog = eventLog,
             settings = settings,
             truck = truck,

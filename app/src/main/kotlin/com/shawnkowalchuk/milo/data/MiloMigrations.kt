@@ -39,5 +39,35 @@ internal val MIGRATION_1_2: Migration =
         }
     }
 
-/** Every step, in order. `buildMiloDatabase` hands them to Room. */
-internal val MILO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+/**
+ * Version 2 to 3: Business or Personal.
+ *
+ * Four columns are added to `trips`. On every existing row `category` is empty, which means
+ * "not sorted yet", and the three flags are 0: not set by hand, not past the schedule, not
+ * ignored. No stored trip is sorted here. A migration cannot read the settings, where the
+ * schedule is, and must not fail for a reason that has nothing to do with the tables; the
+ * catch-up at the same process start sorts them (`data/trip/TripCategoryCatchUp.kt`).
+ *
+ * The exported `app/schemas/.../3.json` is the reference.
+ */
+internal val MIGRATION_2_3: Migration =
+    object : Migration(2, 3) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE trips ADD COLUMN category TEXT")
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN categorySetByHand INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN ranPastSchedule INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN ignoredOutsideSchedule INTEGER NOT NULL DEFAULT 0",
+            )
+        }
+    }
+
+/**
+ * Every step, in order. `buildMiloDatabase` hands them to Room, which runs them one after the
+ * other for a database that is more than one version behind.
+ */
+internal val MILO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

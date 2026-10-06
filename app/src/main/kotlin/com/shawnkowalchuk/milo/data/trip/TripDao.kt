@@ -4,6 +4,7 @@ import androidx.room3.Dao
 import androidx.room3.Insert
 import androidx.room3.Query
 import androidx.room3.Transaction
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import kotlinx.coroutines.flow.Flow
 
@@ -16,6 +17,11 @@ import kotlinx.coroutines.flow.Flow
  * trip match on a status the same way: [recordAddressLookup] on "finished", writing nothing but
  * the four address columns, and [changeStatus] on the status it is given, writing nothing but
  * the status.
+ *
+ * Business or Personal is written in three places and no other. [close] stores what the
+ * schedule made of the trip in the same update that closes it. [sortUnsorted] does the same
+ * for a closed trip that has no category yet, and for no other. [setCategoryByHand] is Shawn's
+ * own choice for a finished trip, and the only one that marks the row as set by hand.
  */
 @Dao
 interface TripDao {
@@ -66,7 +72,9 @@ interface TripDao {
             "distanceMetres = :distanceMetres, " +
             "startLatitude = :startLatitude, startLongitude = :startLongitude, " +
             "endLatitude = :endLatitude, endLongitude = :endLongitude, " +
-            "graceStartedAtMs = NULL, graceDeadlineMs = NULL " +
+            "graceStartedAtMs = NULL, graceDeadlineMs = NULL, " +
+            "category = :category, ranPastSchedule = :ranPastSchedule, " +
+            "ignoredOutsideSchedule = :ignoredOutsideSchedule " +
             "WHERE id = :tripId AND status = :open",
     )
     suspend fun close(
@@ -78,6 +86,9 @@ interface TripDao {
         startLongitude: Double?,
         endLatitude: Double?,
         endLongitude: Double?,
+        category: TripCategory?,
+        ranPastSchedule: Boolean,
+        ignoredOutsideSchedule: Boolean,
         open: TripStatus,
     ): Int
 
@@ -123,4 +134,48 @@ interface TripDao {
      */
     @Query("UPDATE trips SET status = :to WHERE id = :tripId AND status = :from")
     suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int
+
+    /**
+     * The closed trips that have never been sorted into Business or Personal, oldest first:
+     * every status but [open], no category, and not set by hand. The same three conditions
+     * guard [sortUnsorted], and `needsSorting` in `TripCategoryCatchUp.kt` is the rule in
+     * Kotlin.
+     */
+    @Query(
+        "SELECT * FROM trips WHERE status != :open AND category IS NULL " +
+            "AND categorySetByHand = 0 ORDER BY id",
+    )
+    suspend fun findUnsorted(open: TripStatus): List<Trip>
+
+    /**
+     * Gives a closed trip that has no category yet the one the schedule makes of it. A trip
+     * that has a category by now, or that Shawn has set by hand, is not matched, so the
+     * catch-up can never undo a choice of his, however late its write arrives. Nothing but the
+     * two columns is touched; the status above all is left alone.
+     */
+    @Query(
+        "UPDATE trips SET category = :category, ranPastSchedule = :ranPastSchedule " +
+            "WHERE id = :tripId AND status != :open AND category IS NULL " +
+            "AND categorySetByHand = 0",
+    )
+    suspend fun sortUnsorted(
+        tripId: Long,
+        category: TripCategory,
+        ranPastSchedule: Boolean,
+        open: TripStatus,
+    ): Int
+
+    /**
+     * Shawn's own choice of Business or Personal for a trip with [finished] status. It writes
+     * the category and marks it as set by hand, and nothing else: the status is not touched, so
+     * a kept trip marked Personal stays a kept trip whatever the setting for trips outside the
+     * schedule says. A trip that already has [category] is not matched, so a second press
+     * changes nothing.
+     */
+    @Query(
+        "UPDATE trips SET category = :category, categorySetByHand = 1 " +
+            "WHERE id = :tripId AND status = :finished " +
+            "AND (category IS NULL OR category != :category)",
+    )
+    suspend fun setCategoryByHand(tripId: Long, category: TripCategory, finished: TripStatus): Int
 }

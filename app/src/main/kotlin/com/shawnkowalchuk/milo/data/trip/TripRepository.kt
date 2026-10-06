@@ -1,5 +1,8 @@
 package com.shawnkowalchuk.milo.data.trip
 
+import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.schedule.TripClassification
+import com.shawnkowalchuk.milo.core.schedule.TripFiling
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
@@ -13,10 +16,12 @@ import kotlinx.coroutines.flow.Flow
  * that is no longer open changes nothing. The functions that change an open trip return false
  * in that case, so the caller can write the surprise to the event log.
  *
- * Two writes are made to a trip that has closed. [recordAddressLookup] is the one write that is
- * not safe to repeat: every call counts as a lookup of its own. [correct] is Shawn's own change
- * to a trip (delete, restore, count after all); it changes the status and nothing else, and a
- * second call changes nothing.
+ * Four writes are made to a trip that has closed. [recordAddressLookup] is the one write that
+ * is not safe to repeat: every call counts as a lookup of its own. [correct] is Shawn's own
+ * change to a trip (delete, restore, count after all); it changes the status and nothing else,
+ * and a second call changes nothing. [sortUnsorted] gives a trip recorded before there was a
+ * work schedule its Business or Personal, once. [setCategoryByHand] is Shawn's own choice of
+ * the two, and nothing but another choice of his changes it afterwards.
  */
 class TripRepository(private val dao: TripDao) {
     /** The trip being recorded or waiting out its grace period, or null when idle. */
@@ -57,20 +62,30 @@ class TripRepository(private val dao: TripDao) {
         dao.setGrace(tripId, startedAtMs = null, deadlineMs = null, TripStatus.OPEN) == 1
 
     /**
-     * Closes the trip with the result worked out by `core/trip/TripClosing`. A trip under the
-     * minimum distance is marked discarded, not deleted: its row and its raw points stay.
+     * Closes the trip with the result worked out by `core/trip/TripClosing`, and stores in the
+     * same update what the work schedule made of it ([filing]), so a trip is never closed
+     * without having been sorted. A trip under the minimum distance is marked discarded, not
+     * deleted: its row and its raw points stay.
+     *
+     * A trip that the trip rules kept and [filing] says to ignore is stored as discarded too,
+     * with everything that was measured, and marked as ignored. Nothing is lost: it is listed
+     * with the discarded trips and can be counted after all.
      */
-    suspend fun closeTrip(tripId: Long, closed: ClosedTrip): Boolean = dao.close(
-        tripId = tripId,
-        closedStatus = closed.status,
-        endedAtMs = closed.endedAtMs,
-        distanceMetres = closed.distance.metres,
-        startLatitude = closed.start?.latitude,
-        startLongitude = closed.start?.longitude,
-        endLatitude = closed.end?.latitude,
-        endLongitude = closed.end?.longitude,
-        open = TripStatus.OPEN,
-    ) == 1
+    suspend fun closeTrip(tripId: Long, closed: ClosedTrip, filing: TripFiling): Boolean =
+        dao.close(
+            tripId = tripId,
+            closedStatus = if (filing.ignored) TripStatus.DISCARDED else closed.status,
+            endedAtMs = closed.endedAtMs,
+            distanceMetres = closed.distance.metres,
+            startLatitude = closed.start?.latitude,
+            startLongitude = closed.start?.longitude,
+            endLatitude = closed.end?.latitude,
+            endLongitude = closed.end?.longitude,
+            category = filing.classification?.category,
+            ranPastSchedule = filing.classification?.ranPastSchedule == true,
+            ignoredOutsideSchedule = filing.ignored,
+            open = TripStatus.OPEN,
+        ) == 1
 
     /**
      * The finished trips that still lack a start or an end address and have had fewer than
@@ -126,6 +141,45 @@ class TripRepository(private val dao: TripDao) {
             TripCorrectionOutcome.Done(trip)
         } else {
             TripCorrectionOutcome.Refused(found = trip?.status)
+        }
+    }
+
+    /**
+     * The closed trips that have no Business or Personal yet, oldest first: the ones recorded
+     * before MilO had a work schedule, whatever their status. A trip Shawn has set by hand is
+     * never among them.
+     */
+    suspend fun findUnsortedTrips(): List<Trip> = dao.findUnsorted(TripStatus.OPEN)
+
+    /**
+     * Gives an unsorted closed trip what the schedule makes of it. Only the category and the
+     * ran-past-schedule flag are written; the status is never changed here, so a trip is never
+     * discarded after the fact.
+     *
+     * @return false if the trip was not an unsorted closed trip any more, for example because
+     * Shawn marked it by hand in the meantime. Nothing was written then.
+     */
+    suspend fun sortUnsorted(tripId: Long, classification: TripClassification): Boolean =
+        dao.sortUnsorted(
+            tripId = tripId,
+            category = classification.category,
+            ranPastSchedule = classification.ranPastSchedule,
+            open = TripStatus.OPEN,
+        ) == 1
+
+    /**
+     * Shawn's own choice of Business or Personal for a finished trip. From then on the trip is
+     * marked as set by hand. Whether the choice may be made is decided by the update itself,
+     * like [correct]: the trip must be a finished one that does not have [category] already.
+     */
+    suspend fun setCategoryByHand(tripId: Long, category: TripCategory): CategoryChangeOutcome {
+        val before = dao.findById(tripId)
+        val changed = dao.setCategoryByHand(tripId, category, TripStatus.FINISHED) == 1
+        val after = dao.findById(tripId)
+        return if (changed && after != null) {
+            CategoryChangeOutcome.Done(trip = after, was = before?.category)
+        } else {
+            CategoryChangeOutcome.Refused(found = after)
         }
     }
 }

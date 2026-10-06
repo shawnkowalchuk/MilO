@@ -11,9 +11,10 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does five things only: it owns the [AppContainer], it starts the crash and kill capture,
+ * It does six things only: it owns the [AppContainer], it starts the crash and kill capture,
  * it has the trip controller look at what the last process left behind, it checks that
- * Android still watches for the truck, and it has the addresses of finished trips caught up.
+ * Android still watches for the truck, it has the addresses of finished trips caught up, and
+ * it has the trips that are not sorted into Business or Personal yet sorted.
  */
 class MiloApplication : Application() {
     /** Created in [onCreate]. Screens and services reach every shared object through it. */
@@ -52,6 +53,15 @@ class MiloApplication : Application() {
         // so that it is watching before the controller publishes anything.
         val addresses = container.tripAddresses
         container.tripController.whenCaughtUp { addresses.catchUp(PROCESS_START) }
+
+        // Trips recorded before MilO had a work schedule have no Business or Personal yet. They
+        // are sorted now, by the schedule as it is. The pass waits for the reconcile like the
+        // address pass, so that a process started by a trip trigger does the trigger's work
+        // first; a trip the reconcile closes is sorted by the controller itself as it closes.
+        // Built here and not in the callback, which runs on the trip controller's own worker:
+        // nothing of this may fail in there.
+        val categories = container.tripCategoryCatchUp
+        container.tripController.whenCaughtUp { categories.catchUp(PROCESS_START) }
     }
 
     private companion object {
