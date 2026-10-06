@@ -4,8 +4,8 @@
 
     <!--
         Each permission is added in the change that first needs it, so the manifest never asks
-        for more than the code uses. These are the ones trip recording, trip detection and the
-        setup checklist need (ADR-002).
+        for more than the code uses. These are the ones trip recording, trip detection, the
+        setup checklist and the address lookup need (ADR-002).
     -->
 
     <!-- GPS fixes during a trip. Android requires the coarse permission beside the fine one. -->
@@ -50,6 +50,14 @@
     <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
     <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+
+    <!--
+        Lets the address lookup ask whether the phone is online before it asks the geocoder,
+        so that a trip which ended somewhere without signal does not use up its lookup attempts
+        on failures. Granted at install, with no dialog. MilO still has no INTERNET permission
+        and opens no connection itself: the lookup is done by the phone's own geocoder service.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
         Lets the setup checklist show Android's own dialog that exempts MilO from battery

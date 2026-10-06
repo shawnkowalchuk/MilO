@@ -10,6 +10,9 @@ import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.platform.address.GeocoderAddressLookup
+import com.shawnkowalchuk.milo.platform.address.NetworkStatus
+import com.shawnkowalchuk.milo.platform.address.TripAddresses
 import com.shawnkowalchuk.milo.platform.bluetooth.BluetoothTruckConnection
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedTruck
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
@@ -159,6 +162,23 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             truck = truckConnection,
             starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
+            clock = System::currentTimeMillis,
+            scope = applicationScope,
+        )
+    }
+
+    /**
+     * Finds the start and end address of each trip. It watches the trip controller and writes
+     * only the address columns of finished trips, so nothing here can hold a trip up.
+     */
+    val tripAddresses: TripAddresses by lazy {
+        TripAddresses(
+            trips = tripRepository,
+            eventLog = eventLogRepository,
+            crashFileStore = crashFileStore,
+            lookup = GeocoderAddressLookup(appContext),
+            isOnline = NetworkStatus(appContext)::isOnline,
+            tripActivity = tripController.activity,
             clock = System::currentTimeMillis,
             scope = applicationScope,
         )

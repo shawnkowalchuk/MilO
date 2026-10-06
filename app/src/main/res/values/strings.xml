@@ -195,4 +195,20 @@
     <!-- The arguments are two times of day from formatTimeOfDay(): the start and the end. -->
     <string name="trips_time_range">%1$s – %2$s</string>
     <string name="trips_discarded_note">Discarded: too short, or a start that was never confirmed. Not counted.</string>
+    <!--
+        Trips: where a trip went, under its times. The arguments are the start and the end:
+        two addresses such as 12 Shop Rd, Edmonton, or one of the two phrases below standing
+        in for an address.
+    -->
+    <string name="trips_from_to">%1$s → %2$s</string>
+    <string name="trips_place_looking_up">looking up the address…</string>
+    <string name="trips_place_not_found">no address found</string>
+    <!-- Trips: in place of the line above when neither address is known. -->
+    <string name="trips_addresses_looking_up">Looking up the addresses…</string>
+    <string name="trips_addresses_not_found">No address found for this trip.</string>
+    <!-- Trips: where the trip in progress started. The argument is an address. -->
+    <string name="trips_from">From %1$s</string>
+    <string name="trips_start_looking_up">Looking up where it started…</string>
+    <string name="trips_start_not_found">No address found for where it started.</string>
+    <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
 </resources>

@@ -3,6 +3,9 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.address.MAX_ADDRESS_ATTEMPTS
+import com.shawnkowalchuk.milo.platform.address.OpenTripStart
+import com.shawnkowalchuk.milo.platform.address.TripPlace
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -47,7 +50,9 @@ class TripMonthTest {
         showDiscarded: Boolean = false,
         liveTripId: Long? = null,
         liveDistanceMetres: Double? = null,
-    ): MonthSummary = monthSummary(trips, edmonton, showDiscarded, liveTripId, liveDistanceMetres)
+        liveStart: OpenTripStart? = null,
+    ): MonthSummary =
+        monthSummary(trips, edmonton, showDiscarded, liveTripId, liveDistanceMetres, liveStart)
 
     // ---- Totals -----------------------------------------------------------------------------------
 
@@ -206,6 +211,56 @@ class TripMonthTest {
         // No figure, rather than another trip's figure or the 0 the stored row holds.
         assertNull(anotherTripIsLive.inProgress?.distanceMetres)
         assertNull(nothingIsLive.inProgress?.distanceMetres)
+    }
+
+    // ---- Where the trips went ---------------------------------------------------------------------
+
+    @Test
+    fun `a finished trip's line carries what its row says about both ends`() {
+        val found =
+            trip("2026-10-05T14:00:00Z", metres = 12_300.0)
+                .copy(startAddress = "12 Shop Rd, Edmonton", endAddress = "48 Main St, Leduc")
+        val waiting =
+            trip("2026-10-05T16:00:00Z", metres = 8_200.0)
+                .copy(startLatitude = 53.5, startLongitude = -113.5)
+        val givenUp = waiting.copy(id = nextId++, addressAttempts = MAX_ADDRESS_ATTEMPTS)
+
+        val lines = summary(listOf(found, waiting, givenUp)).days.single().trips
+
+        val byId = lines.associateBy { it.id }
+        assertEquals(TripPlace.Known("12 Shop Rd, Edmonton"), byId.getValue(found.id).from)
+        assertEquals(TripPlace.Known("48 Main St, Leduc"), byId.getValue(found.id).to)
+        assertEquals(TripPlace.LookingUp, byId.getValue(waiting.id).from)
+        assertEquals(TripPlace.NotFound, byId.getValue(givenUp.id).from)
+        // No position was stored for the end of either: there is nothing to look up.
+        assertEquals(TripPlace.NotFound, byId.getValue(waiting.id).to)
+    }
+
+    @Test
+    fun `a discarded trip's line says nothing about places`() {
+        val discarded =
+            trip("2026-10-05T14:00:00Z", metres = 120.0, status = TripStatus.DISCARDED)
+                .copy(startLatitude = 53.5, startLongitude = -113.5)
+
+        val line = summary(listOf(discarded), showDiscarded = true).days.single().trips.single()
+
+        assertNull(line.from)
+        assertNull(line.to)
+    }
+
+    @Test
+    fun `a trip in progress shows the start the lookup found for it, and for no other trip`() {
+        val open = trip("2026-10-05T14:00:00Z", metres = 0.0, status = TripStatus.OPEN)
+        val start = OpenTripStart(open.id, 53.5, -113.5, TripPlace.Known("12 Shop Rd, Edmonton"))
+
+        val own = summary(listOf(open), liveStart = start).inProgress
+        val stale = summary(listOf(open), liveStart = start.copy(tripId = open.id + 1)).inProgress
+        val none = summary(listOf(open)).inProgress
+
+        assertEquals(TripPlace.Known("12 Shop Rd, Edmonton"), own?.from)
+        assertNull(stale?.from)
+        assertNull(none?.from)
+        assertNull(own?.to)
     }
 
     // ---- Which month may be shown -----------------------------------------------------------------

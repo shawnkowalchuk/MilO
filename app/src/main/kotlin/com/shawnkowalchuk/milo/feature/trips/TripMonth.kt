@@ -3,6 +3,10 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.address.OpenTripStart
+import com.shawnkowalchuk.milo.platform.address.TripPlace
+import com.shawnkowalchuk.milo.platform.address.endPlace
+import com.shawnkowalchuk.milo.platform.address.startPlace
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -31,6 +35,9 @@ enum class TripKind {
  *
  * @param endedAtMs null while the trip is in progress.
  * @param distanceMetres null for a trip in progress whose running distance is not known.
+ * @param from where it started, as far as that is known. Null for a discarded trip, whose
+ * addresses are never looked up, and for a trip in progress that has no position yet.
+ * @param to where it ended. Null unless the trip is a finished one.
  */
 data class TripLine(
     val id: Long,
@@ -38,6 +45,8 @@ data class TripLine(
     val endedAtMs: Long?,
     val distanceMetres: Double?,
     val kind: TripKind,
+    val from: TripPlace? = null,
+    val to: TripPlace? = null,
 )
 
 /** The trips that started on one calendar day, newest first. */
@@ -85,6 +94,8 @@ fun canStepForward(shown: YearMonth, current: YearMonth): Boolean = shown < curr
  * @param liveTripId the trip the trip controller is recording right now, or null.
  * @param liveDistanceMetres that trip's running distance. The stored row holds 0 until the trip
  * closes, so the list shows this figure, and only for the trip it belongs to.
+ * @param liveStart where the trip in progress started, from the address lookup. The stored row
+ * has no position either until the trip closes. Used only for the trip it belongs to.
  */
 fun monthSummary(
     trips: List<Trip>,
@@ -92,6 +103,7 @@ fun monthSummary(
     showDiscarded: Boolean,
     liveTripId: Long?,
     liveDistanceMetres: Double?,
+    liveStart: OpenTripStart?,
 ): MonthSummary {
     val finished = trips.filter { it.status == TripStatus.FINISHED }
     val discarded = trips.filter { it.status == TripStatus.DISCARDED }
@@ -110,6 +122,7 @@ fun monthSummary(
                     endedAtMs = null,
                     distanceMetres = liveDistanceMetres.takeIf { open.id == liveTripId },
                     kind = TripKind.IN_PROGRESS,
+                    from = liveStart?.takeIf { it.tripId == open.id }?.place,
                 )
             },
         days =
@@ -127,4 +140,7 @@ private fun Trip.toLine(kind: TripKind): TripLine = TripLine(
     endedAtMs = endedAtMs,
     distanceMetres = distanceMetres,
     kind = kind,
+    // A discarded trip is never looked up, so its row says nothing about places.
+    from = if (kind == TripKind.COUNTED) startPlace() else null,
+    to = if (kind == TripKind.COUNTED) endPlace() else null,
 )

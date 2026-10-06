@@ -148,7 +148,9 @@ class TripController(
     /**
      * Calls [done] once everything handed to the controller before this call has been dealt
      * with. A manifest receiver keeps its broadcast open until then, so that Android does not
-     * freeze the process between `onReceive` returning and the worker reading the truck.
+     * freeze the process between `onReceive` returning and the worker reading the truck. The
+     * address lookup's pass at process start is asked for through it too, so that it reads the
+     * trips after the reconcile has closed what the last process left open.
      */
     fun whenCaughtUp(done: () -> Unit) {
         inbox.trySend(TripWork.CaughtUp(done))

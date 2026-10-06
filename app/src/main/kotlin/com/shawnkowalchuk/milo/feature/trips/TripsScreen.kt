@@ -27,6 +27,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.SwitchRow
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
+import com.shawnkowalchuk.milo.platform.address.TripPlace
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -174,7 +175,15 @@ private fun TripsPreview() {
         MonthSummary(
             totalMetres = 48_300.0,
             tripCount = 2,
-            inProgress = TripLine(4, morning + 9_000_000, null, 3_200.0, TripKind.IN_PROGRESS),
+            inProgress =
+                TripLine(
+                    4,
+                    morning + 9_000_000,
+                    null,
+                    3_200.0,
+                    TripKind.IN_PROGRESS,
+                    from = TripPlace.Known("12 Shop Rd, Edmonton"),
+                ),
             days =
                 listOf(
                     TripDay(
@@ -186,6 +195,8 @@ private fun TripsPreview() {
                                 morning + 5_400_000,
                                 24_900.0,
                                 TripKind.COUNTED,
+                                from = TripPlace.Known("48 Main St, Leduc"),
+                                to = TripPlace.LookingUp,
                             ),
                             TripLine(
                                 2,
@@ -194,7 +205,15 @@ private fun TripsPreview() {
                                 120.0,
                                 TripKind.DISCARDED,
                             ),
-                            TripLine(1, morning, morning + 1_500_000, 23_400.0, TripKind.COUNTED),
+                            TripLine(
+                                1,
+                                morning,
+                                morning + 1_500_000,
+                                23_400.0,
+                                TripKind.COUNTED,
+                                from = TripPlace.Known("12 Shop Rd, Edmonton"),
+                                to = TripPlace.Known("48 Main St, Leduc"),
+                            ),
                         ),
                     ),
                 ),

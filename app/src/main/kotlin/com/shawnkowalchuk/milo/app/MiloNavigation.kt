@@ -42,6 +42,9 @@ data object SetupKey : NavKey
 @Serializable
 data object LogKey : NavKey
 
+/** What the event log calls the address lookup that the Trips screen asks for. */
+private const val TRIPS_SCREEN = "the Trips screen came to the front"
+
 /** The truck pairing screen. Not in the bottom bar: it is opened from Setup. */
 @Serializable
 data object PairingKey : NavKey
@@ -150,6 +153,10 @@ fun MiloNavigation(
                                         TripsViewModel(
                                             trips = container.tripRepository,
                                             tripActivity = container.tripController.activity,
+                                            openTripStart = container.tripAddresses.openTripStart,
+                                            lookUpAddresses = {
+                                                container.tripAddresses.catchUp(TRIPS_SCREEN)
+                                            },
                                             clock = System::currentTimeMillis,
                                             zone = ZoneId::systemDefault,
                                         )
