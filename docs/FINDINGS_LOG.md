@@ -24,6 +24,9 @@
 
 ### 2026-10-05
 
+**`[CHANGE]` The first real build is on the phone**
+At 23:07 the build with the reviewed trip engine, the four screens and Shawn's own trip-start sound was installed over the placeholder, in place, signed with the dedicated key. It opened without a crash. That is all that is known: the phone's screen was off, so nothing was seen, and no permission has been granted, no truck paired and no trip recorded on it yet. Everything in `docs/DEVICE_TEST_CHECKLIST.md` is still to run. The first things to learn from Shawn are whether each HyperOS button on the Setup screen opens the right place on HyperOS 2.0, and whether a trip starts by itself in the truck.
+
 **`[FIX]` What the review of the screens found (work package 3)**
 Two reviewers read the package before it was committed. Their findings and what was done about each. **Nothing here has run on a phone or an emulator either:** every fix is proven by the build and unit tests only, and the checks that must prove it on the phone are named.
 - **The device checklist offered a command that takes the permissions away from every app on the phone.** `adb shell pm reset-permissions` was written with MilO's name after it, but the command takes no app name. Replaced by one `adb shell pm revoke` line per permission, each naming MilO, and a warning against the other one.
