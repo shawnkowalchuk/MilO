@@ -38,7 +38,7 @@ data class OpenTripStart(
  * **It only watches.** It reads the trip controller's published state and the stored trips, and
  * writes nothing but a finished trip's address columns. Ending a trip never waits for it, and
  * whatever goes wrong here leaves the trip as it was: the worst outcome is a trip with no
- * address.
+ * address. An address Shawn typed, or emptied, is never asked about and never written to.
  *
  * **When it looks.** A pass over the trips that are due ([isDueForLookup]) is asked for with
  * [catchUp]: at process start (after the trip controller has dealt with what the last process
@@ -212,6 +212,7 @@ class TripAddresses(
         forStartOf: Trip?,
     ): PlaceOutcome {
         if (known is TripPlace.Known) return PlaceOutcome.AlreadyStored
+        if (known == TripPlace.LeftBlank) return PlaceOutcome.LeftBlankByHand
         if (latitude == null || longitude == null) return PlaceOutcome.NoPosition
         val remembered = mutableOpenTripStart.value
         if (forStartOf != null &&

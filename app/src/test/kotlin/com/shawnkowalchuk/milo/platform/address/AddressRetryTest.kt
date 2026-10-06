@@ -184,4 +184,28 @@ class AddressRetryTest {
         assertEquals(TripPlace.NotFound, nowhere.startPlace())
         assertEquals(TripPlace.NotFound, nowhere.endPlace())
     }
+
+    @Test
+    fun `an address left empty by hand is said to be that, with or without a position`() {
+        val emptied = trip(endAddress = "48 Main St, Leduc").copy(startAddressByHand = true)
+        val typedIn =
+            trip(hasPositions = false).copy(startAddressByHand = true, endAddressByHand = true)
+
+        // Never "looking up": MilO keeps away from an address that is Shawn's own.
+        assertEquals(TripPlace.LeftBlank, emptied.startPlace())
+        assertEquals(TripPlace.LeftBlank, typedIn.startPlace())
+        assertEquals(TripPlace.LeftBlank, typedIn.endPlace())
+        assertFalse(isDueForLookup(emptied, now))
+        assertFalse(isDueForLookup(typedIn, now))
+    }
+
+    @Test
+    fun `an address typed by hand is shown like any other`() {
+        val typed = trip(startAddress = "Home").copy(startAddressByHand = true)
+
+        assertEquals(TripPlace.Known("Home"), typed.startPlace())
+        // The other end is still the lookup's to find.
+        assertEquals(TripPlace.LookingUp, typed.endPlace())
+        assertTrue(isDueForLookup(typed, now))
+    }
 }

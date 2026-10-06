@@ -3,9 +3,13 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.localDateOf
+import com.shawnkowalchuk.milo.core.util.monthOf
+import com.shawnkowalchuk.milo.data.trip.ByHandMark
 import com.shawnkowalchuk.milo.data.trip.CategoryTotals
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
+import com.shawnkowalchuk.milo.data.trip.byHandMark
+import com.shawnkowalchuk.milo.data.trip.canBeEdited
 import com.shawnkowalchuk.milo.data.trip.categoriesOffered
 import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.data.trip.correctionOffered
@@ -76,6 +80,9 @@ enum class TripKind(val status: TripStatus) {
  * the work schedule while such trips were set to be ignored.
  * @param markableAs what Shawn can mark the trip as: for a counted trip, the categories it does
  * not have; for every other trip, nothing.
+ * @param mark whether the trip was added by hand, or edited by hand since it was recorded. The
+ * row says so, because its figures are Shawn's and not MilO's.
+ * @param editable whether the edit screen can be opened for it: a counted trip, and no other.
  */
 data class TripLine(
     val id: Long,
@@ -89,6 +96,8 @@ data class TripLine(
     val ranPastSchedule: Boolean = false,
     val ignored: Boolean = false,
     val markableAs: List<TripCategory> = emptyList(),
+    val mark: ByHandMark? = null,
+    val editable: Boolean = false,
 )
 
 /**
@@ -137,6 +146,15 @@ fun stepMonth(shown: YearMonth, months: Long, current: YearMonth): YearMonth =
 
 /** Whether there is a later month to step to. */
 fun canStepForward(shown: YearMonth, current: YearMonth): Boolean = shown < current
+
+/**
+ * The month shown after a trip was saved on the edit screen: the month the trip is in now,
+ * which is the month it starts in. A trip that was added for, or moved to, another month than
+ * the one on screen would otherwise be stored out of sight, and look as if it had not been
+ * saved. Never past [current], like every other way of choosing a month.
+ */
+fun monthOfSavedTrip(startedAtMs: Long, zone: ZoneId, current: YearMonth): YearMonth =
+    minOf(monthOf(startedAtMs, zone), current)
 
 /**
  * Sums and groups the trips of one month.
@@ -220,16 +238,19 @@ private fun Trip.toLine(kind: TripKind): TripLine = TripLine(
     ranPastSchedule = ranPastScheduleShown,
     ignored = kind == TripKind.DISCARDED && ignoredOutsideSchedule,
     markableAs = categoriesOffered(status, category),
+    mark = byHandMark,
+    editable = canBeEdited,
 )
 
 /**
  * What a row may say about one end of a trip. A finished trip says everything, "still looking"
- * included. A deleted trip shows an address it already had, which helps to recognise it, and
- * nothing else: it is not looked up while it is deleted, so "still looking" would not be true.
- * A discarded trip is never looked up, so its row says nothing about places.
+ * included. A deleted trip shows an address it already had, which helps to recognise it, or
+ * that Shawn left the address empty himself, and nothing else: it is not looked up while it is
+ * deleted, so "still looking" would not be true. A discarded trip is never looked up, so its
+ * row says nothing about places.
  */
 private fun placeShown(kind: TripKind, place: TripPlace): TripPlace? = when (kind) {
     TripKind.COUNTED -> place
-    TripKind.DELETED -> place as? TripPlace.Known
+    TripKind.DELETED -> place.takeIf { it is TripPlace.Known || it == TripPlace.LeftBlank }
     TripKind.DISCARDED, TripKind.IN_PROGRESS -> null
 }

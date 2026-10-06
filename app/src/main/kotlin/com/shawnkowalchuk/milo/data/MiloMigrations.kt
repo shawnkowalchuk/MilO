@@ -67,7 +67,40 @@ internal val MIGRATION_2_3: Migration =
     }
 
 /**
+ * Version 3 to 4: trips added or edited by hand.
+ *
+ * Seven columns are added to `trips`. On every existing row the four marks are 0 (not added by
+ * hand, not edited, neither address typed by hand) and the three "recorded" columns are empty,
+ * which is how "never edited" is stored: the row's own times and distance are what MilO
+ * recorded, and they are copied into those columns by the first edit, not here. No stored
+ * value is read or rewritten by this step.
+ *
+ * The exported `app/schemas/.../4.json` is the reference.
+ */
+internal val MIGRATION_3_4: Migration =
+    object : Migration(3, 4) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN addedByHand INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN editedByHand INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN startAddressByHand INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL(
+                "ALTER TABLE trips ADD COLUMN endAddressByHand INTEGER NOT NULL DEFAULT 0",
+            )
+            connection.execSQL("ALTER TABLE trips ADD COLUMN recordedStartedAtMs INTEGER")
+            connection.execSQL("ALTER TABLE trips ADD COLUMN recordedEndedAtMs INTEGER")
+            connection.execSQL("ALTER TABLE trips ADD COLUMN recordedDistanceMetres REAL")
+        }
+    }
+
+/**
  * Every step, in order. `buildMiloDatabase` hands them to Room, which runs them one after the
  * other for a database that is more than one version behind.
  */
-internal val MILO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+internal val MILO_MIGRATIONS: Array<Migration> =
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

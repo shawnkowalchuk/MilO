@@ -46,6 +46,7 @@ import java.util.Locale
  * other two are made at once.
  * @param onMark "Mark as Business" or "Mark as Personal" was pressed. Made at once: the other
  * button undoes it.
+ * @param onEdit "Edit trip" was pressed: the edit screen is opened for the trip.
  */
 internal class TripRowContext(
     val zone: ZoneId,
@@ -54,6 +55,7 @@ internal class TripRowContext(
     val onToggle: (Long) -> Unit,
     val onAsk: (TripLine, TripCorrection) -> Unit,
     val onMark: (TripLine, TripCategory) -> Unit,
+    val onEdit: (TripLine) -> Unit,
 )
 
 /** The trip being recorded, set apart from the finished ones and marked as not yet counted. */
@@ -111,8 +113,12 @@ internal fun DayCard(day: TripDay, context: TripRowContext) {
  * A trip's start and end time, where it went, what it is saved as and its distance, with what
  * can be done about it.
  *
- * A finished trip is pressed to bring up its buttons (mark as Business or Personal, delete), so
- * that a list of counted trips is not a list of buttons. A deleted or a discarded trip says
+ * A trip that was added by hand, or edited since it was recorded, carries an asterisk after its
+ * times and a line that says which: its figures are Shawn's own, and the monthly report will
+ * mark the same trips the same way.
+ *
+ * A finished trip is pressed to bring up its buttons (edit, mark as Business or Personal,
+ * delete), so that a list of counted trips is not a list of buttons. A deleted or a discarded trip says
  * that it is not counted and shows its button (Restore, Count this trip) straight away: those
  * rows are only listed on request, and the button is what they are looked at for.
  */
@@ -155,13 +161,29 @@ private fun TripRow(trip: TripLine, context: TripRowContext) {
             modifier = if (counted) Modifier.minimumInteractiveComponentSize() else Modifier,
             counted = counted,
         ) {
+            val times = trip.timesText(context.zone, locale, context.twentyFourHour)
+            val byHand = trip.byHandNoteRes()
             Text(
-                text = trip.timesText(context.zone, locale, context.twentyFourHour),
+                text =
+                    if (byHand ==
+                        null
+                    ) {
+                        times
+                    } else {
+                        stringResource(R.string.trips_time_marked, times)
+                    },
                 style = MaterialTheme.typography.bodyLarge,
             )
             trip.placesText()?.let { PlacesLine(it) }
             trip.categoryNoteRes()?.let { words ->
                 Text(text = stringResource(words), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (byHand != null) {
+                Text(
+                    text = stringResource(byHand),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             trip.leftOutNoteRes()?.let { note ->
                 Text(
@@ -186,6 +208,10 @@ private fun TripRow(trip: TripLine, context: TripRowContext) {
                 }
             }
             // What changes least comes first, and Delete stays the lowest button of a row.
+            // Edit opens a screen of its own and changes nothing until that screen is saved.
+            if (trip.editable) {
+                RowButton(R.string.trips_action_edit) { context.onEdit(trip) }
+            }
             for (category in trip.markableAs) {
                 RowButton(category.markLabelRes()) { context.onMark(trip, category) }
             }

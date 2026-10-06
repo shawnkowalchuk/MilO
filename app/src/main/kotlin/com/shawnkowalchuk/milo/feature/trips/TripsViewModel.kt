@@ -138,6 +138,14 @@ class TripsViewModel(
         choice.update { it.copy(shown = stepMonth(it.shown, months = 1, current = it.current)) }
     }
 
+    /**
+     * A trip was saved on the edit screen and starts at [startedAtMs] now: its month is shown,
+     * so that the trip is in the list Shawn comes back to, whichever month he left.
+     */
+    fun onTripSaved(startedAtMs: Long) {
+        choice.update { it.copy(shown = monthOfSavedTrip(startedAtMs, it.zone, it.current)) }
+    }
+
     fun onShowLeftOut(show: Boolean) {
         choice.update { it.copy(showLeftOut = show) }
     }

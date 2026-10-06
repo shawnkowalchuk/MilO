@@ -77,7 +77,7 @@ class MiloMigrationsTest {
     fun `there is one step for every version the database has had`() {
         val current = schemas.listFiles { file -> file.extension == "json" }.orEmpty().size
 
-        assertEquals("One schema file per version, and no gaps", current, 3)
+        assertEquals("One schema file per version, and no gaps", current, 4)
         // In order and without a gap, so a database that is two versions behind is taken
         // through both steps, one after the other.
         assertEquals(
@@ -125,10 +125,17 @@ class MiloMigrationsTest {
 
     @Test
     fun `a new column that may not be empty has a default for the rows already stored`() {
+        // How many columns each step adds: the addresses, Business or Personal, and the marks
+        // and kept figures of a trip that was added or edited by hand.
+        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7)
         for (step in MILO_MIGRATIONS) {
             val added = statementsOf(step).filter { it.contains(" ADD COLUMN ") }
 
-            assertEquals("Columns added from version ${step.startVersion}", 4, added.size)
+            assertEquals(
+                "Columns added from version ${step.startVersion}",
+                columnsAdded[step.startVersion],
+                added.size,
+            )
             for (statement in added.filter { it.contains("NOT NULL") }) {
                 // Without a default SQLite refuses the statement on a table that has rows.
                 assertTrue(statement, statement.contains(" DEFAULT "))
@@ -151,6 +158,27 @@ class MiloMigrationsTest {
             )
         }
         assertEquals(4, statements.size)
+    }
+
+    @Test
+    fun `the step from 3 to 4 leaves every stored trip unmarked, with nothing kept apart`() {
+        val statements = statementsOf(MIGRATION_3_4)
+
+        // No stored trip was added by hand or edited, and no stored address was typed.
+        val marks = listOf("addedByHand", "editedByHand", "startAddressByHand", "endAddressByHand")
+        for (mark in marks) {
+            assertTrue(
+                mark,
+                "ALTER TABLE trips ADD COLUMN $mark INTEGER NOT NULL DEFAULT 0" in statements,
+            )
+        }
+        // Empty on every stored row, which is how "never edited" is stored: the row's own times
+        // and distance are what was recorded, and the first edit copies them here. The step
+        // itself copies nothing, so it cannot get a stored value wrong.
+        assertTrue("ALTER TABLE trips ADD COLUMN recordedStartedAtMs INTEGER" in statements)
+        assertTrue("ALTER TABLE trips ADD COLUMN recordedEndedAtMs INTEGER" in statements)
+        assertTrue("ALTER TABLE trips ADD COLUMN recordedDistanceMetres REAL" in statements)
+        assertEquals(7, statements.size)
     }
 }
 
