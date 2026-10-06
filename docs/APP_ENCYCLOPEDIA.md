@@ -18,6 +18,8 @@ Each capability is documented with: what it does, who can use it, how it works s
 
 **Added by work package 4:** each finished trip gets a start and an end address, looked up with the phone's own geocoder and shown on the Trips screen as "from → to" (see [GPS recording and distance](#gps-recording-and-distance) and [Trip log](#trip-log-home-day-and-month-views)). It was pulled forward from phase 2 on its own; the day view, Business/Personal and editing are still phase 2. Run on an emulator, not on the phone.
 
+**Added on 2026-10-05, the last piece of phase 1:** the [Android Auto screen](#android-auto-screen). It has never been drawn either, not on the truck and not in Google's desktop emulator of a car display, and Google's documentation says a build installed from Android Studio is not expected to appear on a real truck at all. Device checks 88 to 100.
+
 **The app in one line:** MilO is a personal Android app (native Kotlin, one phone, no backend, no accounts, no Play Store) that automatically logs business mileage in Shawn's work truck and produces a monthly PDF to email to accounts.
 
 **Target phone:** Xiaomi POCO X5 Pro 5G (global ROM), Android 14, HyperOS 2.0. Installed from Android Studio on a Mac mini.
@@ -94,7 +96,7 @@ Designed in `docs/adr/ADR-002-trip-detection.md`. First pairing, then what tells
 - No truck paired, no Bluetooth on the phone, or Bluetooth switched off: not connected.
 
 *The path of a trigger*
-- Everything that can prompt a trip calls one function, `TripController.onTrigger(trigger, source)`. The callers are the Bluetooth receiver, the companion service, the reconcile receiver, `MiloApplication` (a reconcile at every process start), `MainActivity` (a reconcile every time MilO comes to the front), `HomeViewModel` (the Start and End buttons), `TruckPairing` (a truck was just stored) and the trip service (its timers).
+- Everything that can prompt a trip calls one function, `TripController.onTrigger(trigger, source)`. The callers are the Bluetooth receiver, the companion service, the reconcile receiver, `MiloApplication` (a reconcile at every process start), `MainActivity` (a reconcile every time MilO comes to the front), `HomeViewModel` (the Start and End buttons), the Android Auto screen (its one button, `platform/car/TripStatusScreen`), `TruckPairing` (a truck was just stored) and the trip service (its timers).
 - The controller puts the trigger in an inbox. One coroutine (`TripWorker`) works the inbox off in order, so triggers on different threads cannot interleave.
 - For each trigger the worker reads the truck's connection if the trigger calls for it (`TripEvidence`), asks the trip rules what should happen, and then: writes a line to the event log with the source and the state before and after; writes each effect to storage (`TripLedger`) and logs it; and only then tells the service and the screens.
 - **The service comes first.** If the outcome is an open trip and the trip service is not in the foreground, nothing is stored. The controller runs the preflight (precise location, "Allow all the time", location switched on, battery not "Restricted", Nearby devices allowed) and asks Android for the service, with the trigger in the start intent. The service's first statement is `startForeground`; once that has succeeded it hands the trigger back, and the trip is opened. A connect or a press of Start asks for the service straight from the thread the trigger fired on, without waiting for the worker, because Android's allowance for such a start lasts seconds.
@@ -310,25 +312,85 @@ Catches the case where Bluetooth never connects at all.
 **How it works today**
 The home screen has one button. With no trip open it says "Start trip" and sends the `MANUAL_START` trigger; with a trip open it says "End trip" and sends `MANUAL_END`. Both go through `HomeViewModel` to `TripController.onTrigger`, the same function every other trigger calls, so a manual trip is recorded, closed and logged exactly like an automatic one. Each press reads the truck's connection first; if it cannot be read, the press goes by what was last believed. A manual trip the truck never joins ends on End trip, or after 30 minutes without movement.
 
+The [Android Auto screen](#android-auto-screen) has the same button, under the same words, and sends the same two triggers. A trip started there is the same kind of manual trip. In the event log the two are told apart by the source: "Start button" and "End button" on the phone, "Android Auto Start button" and "Android Auto End button" on the car.
+
 **Where the code lives**
-`feature/home/HomeScreen.kt` and `HomeViewModel.kt`. The rules for a manual trip are in `core/trip/` (see [Truck pairing and trip detection](#truck-pairing-and-trip-detection)).
+`feature/home/HomeScreen.kt` and `HomeViewModel.kt`; on the car, `platform/car/TripStatusScreen.kt` and `CarAction` in `platform/car/CarScreenContent.kt`. The rules for a manual trip are in `core/trip/` (see [Truck pairing and trip detection](#truck-pairing-and-trip-detection)).
 
 ---
 
 ## Android Auto screen
 
-**Status:** Planned (phase 1) · **Platforms:** Android Auto (projected from the phone) · **Last updated:** 2026-10-03
+**Status:** In progress (phase 1): built, and **never run anywhere**. Not on the truck, not in Google's desktop emulator of a car display (the Desktop Head Unit, which is not installed on the Mac), not on an emulator. It is proven by the build and by unit tests of everything it decides · **Platforms:** Android Auto (projected from the phone) · **Last updated:** 2026-10-05
 
 **What it does**
-Shows MilO on the truck's Android Auto display, built with the Car App Library (`androidx.car.app:app-projected`). Shawn asked for it so he can see more easily that the app is running, and override it without touching the phone. It is in phase 1 because that visibility matters most during the first test drives.
+Shows MilO on the truck's Android Auto display, built with the Car App Library (`androidx.car.app`). Shawn asked for it so he can see more easily that the app is running, and override it without touching the phone. It is in phase 1 because that visibility matters most during the first test drives.
 
 **Required behaviour**
 - Shows tracking status, the current trip's km and duration, and today's session count and total km.
 - Start Trip and End Trip buttons act as a manual override. They drive the same trip logic as the phone's Start/Stop button, and a trip started here still respects the schedule (the schedule itself arrives in phase 2).
 
+**The known risk, before anything else**
+Google's documentation says two things. Android Auto's "Unknown sources" developer setting covers media apps, messaging notifications and parked apps, and "doesn't apply to apps built using the Android for Cars App Library". And to test an app in a real vehicle, "you must install it from a trusted source such as Google Play". MilO is installed from Android Studio. So by Google's own words this screen is expected to show in the desktop emulator of a car display and **not on the truck**. Reports from other people conflict, and one unanswered report says sideloaded apps do not show on a POCO X5 Pro. Shawn tests it on the truck (device checks 88 to 100). If MilO is not listed there, there are three choices:
+1. **A private Google Play install.** Play's "internal app sharing" or an internal test track delivers MilO to the phone with no review and no public listing, and Android Auto then treats it as trusted. It needs a Play Console account (25 US dollars once, with identity verification). Play signs its copy with its own key, so that copy and a build from Android Studio cannot update each other: changing over means uninstalling, which deletes the trips unless they are exported first. It also ends "never on the Play Store".
+2. **A media-app style entry.** "Unknown sources" does allow a sideloaded media app on a real car. MilO would appear as a media app, with the status as its "now playing" text and Start and End as its buttons. A workaround, and not the screen that was asked for.
+3. **Dropping the screen.** Everything else works without it: the rule "do not end the trip while Android Auto is connected" does not depend on it, and the phone's notification still shows the trip.
+Unofficial tools that pretend an app came from Play exist. They are untrusted software from strangers and the reports on them are mixed, so they are not one of the choices. Source for all of this: `docs/research/2026-10-03-android-auto-screen.md`, findings 8 to 12.
+
+**How it works today**
+1. **One screen, never another.** A car allows an app five steps and then closes it. A redraw is a harmless "refresh", and not a step, only while the header's title, the number of rows and every row's title stay exactly the same. So the screen is one pane with the header "MilO" and always three rows, titled **Status**, **This trip** and **Today**. Whatever changes is written under a title, never into it, and nothing is ever opened on top of this screen.
+2. **Status** is one line. The first of these that applies is shown:
+
+   | The line | When |
+   |---|---|
+   | Truck disconnected. Waiting for it to reconnect | A trip is open and in its grace period |
+   | Recording. Truck not connected | A trip is open and the trip rules believe the truck's Bluetooth is not connected: a trip started by hand that the truck has not joined, or one that Android Auto alone is holding open |
+   | Recording | A trip is open |
+   | Could not start: (why) | No trip, and the last attempt to start one was refused. The reason is the first thing the preflight found (location permission, "Allow all the time", location switched off, battery set to Restricted, Nearby devices), or "Android did not allow it" |
+   | Not recording. MilO's setup is incomplete | No trip, and a required row of the setup checklist is not in order (the home screen's rule, `needsAttention`) |
+   | Not recording. Truck not connected | No trip, and the trip rules believe the truck is not connected |
+   | Not recording | No trip, and nothing above applies: ended by hand with the truck still connected, or MilO has only just started |
+
+3. **This trip** shows the kilometres to one decimal and the time since the trip started in whole minutes ("12.4 km · 23 min", or "12.4 km · 1 h 5 min"), and "No trip in progress" when there is none.
+4. **Today** shows the finished trips that started today and their total ("3 trips · 41.2 km"), by the rule of the Trips screen: a discarded trip is not counted, and the trip in progress is not counted until it ends. "No trips yet" before the first; "Not available" until storage has answered, or if it could not be read.
+5. **One button.** "Start trip" while no trip is open, "End trip" while one is, the grace period included. It sends `MANUAL_START` or `MANUAL_END` to `TripController.onTrigger`, exactly as the phone's button does. It works while the truck is moving: it is an ordinary button, not one of the library's parked-only ones. A press does what the button said when it was drawn.
+6. **Where it reads from.** The screen has no ViewModel and decides nothing. It follows four things: `TripController.activity` (the trip, why the last start failed, and what the trip rules believe about the truck), the trips that started today (`TripRepository`), the shared setup checklist, and the clock. One pure function, `carScreenContent`, turns them into what is shown.
+7. **When it redraws.** Only while the car is showing the screen, and only when what is printed has changed: kilometres are compared after rounding to one decimal and the time after rounding down to whole minutes. The running figures of a trip are redrawn at most every 15 seconds. Everything else (the status, the button, a trip starting or ending, today's totals) is drawn at once.
+8. **A start that is refused** changes the Status line to "Could not start: (why)", which stays until a trip does start. If it happens while the screen is showing, the car also shows a short message, "MilO could not start this trip". The reason is in the event log twice: the trip controller's own `SERVICE` line ("Could not start recording for Android Auto Start button: MANUAL_START: BACKGROUND_LOCATION_MISSING"), and an `ANDROID_AUTO` line saying that the car screen said so. The phone gets its "could not start this trip" notification as for any other start.
+9. **Who may connect.** Android Auto reaches the screen through a service that has to be open to other apps. What it lets in is checked by the fingerprint of the app's signing certificate against the list the Car App Library ships: Android Auto itself, and Google's host for cars that run Android themselves. Any other app is turned away. The same list is used in every build.
+10. **What it writes to the event log,** all as `ANDROID_AUTO` lines: "car app service created, a host is connecting"; "session created by (the host's package name), Car API level (the level agreed)"; "shown on the car's display"; "no longer shown"; "session destroyed"; "car app service destroyed"; and "said that the trip could not start". Each press of the button is the trip controller's own `TRIGGER` line, with "Android Auto Start button" or "Android Auto End button" as its source and the state before and after in its detail.
+11. **If the screen's own code fails,** the failure is written to the log as an `ERROR` line and MilO closes itself on the car's display. An exception left alone would end the whole process, and that is the process recording the trip.
+
+**Where the code lives**
+- `platform/car/MiloCarAppService.kt`: the service Android Auto binds, and the check of who may connect.
+- `platform/car/MiloCarSession.kt`: one visit of Android Auto. Builds the screen and writes the session's lines to the log.
+- `platform/car/TripStatusScreen.kt`: the screen. Follows the four sources, redraws, builds the pane.
+- `platform/car/CarScreenContent.kt`: `carScreenContent` (what is shown, from the controller's state and today's trips), `todayTrips` (what counts as today), `CarStatus`, `CarAction`, and `differsOnlyInTripFigures` (which changes wait for the 15 seconds). Pure functions.
+- `platform/trip/TripActivity.kt`: `truckConnected`, added for this screen.
+- `core/util/TimeSpan.kt`: `daySpan`, today as a span of stored time.
+- The manifest declares the service (category `androidx.car.app.category.IOT`), the car app descriptor `res/xml/automotive_app_desc.xml` (a "template" app) and the lowest Car API level the screen works with, 7. The words are in `strings.xml` under "The Android Auto screen".
+- Tests: `app/src/test/.../platform/car/CarScreenContentTest.kt` (every state: no trip, recording, the grace period, truck not connected, setup incomplete, each kind of refused start; the figures; what counts as today; the button), `CarScreenRefreshTest.kt` (what is redrawn at once and what waits), `MiloCarSessionTest.kt` (the session's log line), `app/src/test/.../platform/trip/TripActivityTest.kt` (what is reported about the truck) and `app/src/test/.../core/util/TimeSpanTest.kt` (a day). The service, the session and the screen themselves have no tests: they need a car, and there is no Robolectric (STANDARDS §11).
+
+**Depends on**
+`androidx.car.app:app` and `app-projected` 1.7.0, and `androidx.lifecycle:lifecycle-runtime`. The Android Auto app on the phone, which is what draws the screen and decides the Car API level. The trip controller, the trip repository and the setup checklist.
+
 **Edge cases & gotchas**
-- **At risk.** Google's documentation says Android Auto's "Unknown sources" setting does not apply to Car App Library apps: on a real head unit they must be installed from a trusted store such as Google Play (a private internal-sharing link counts). A build installed from Android Studio is expected to show in the desktop head-unit emulator but may not appear in the truck. Community reports conflict, so it gets tested on Shawn's truck in phase 1. If it does not appear, the choices are a private Play internal-sharing install, a media-app style workaround, or dropping the screen. See `docs/research/2026-10-03-android-auto-screen.md`.
-- The rule "do not end the trip while Android Auto is connected" does not depend on this screen and works either way. That rule is built: `platform/car/AndroidAutoWatcher.kt` watches `CarConnection` during a trip (see [Truck pairing and trip detection](#truck-pairing-and-trip-detection), rule 13). The screen itself is not built.
+- **Nothing here has been run.** Whether the pane looks right, whether the car accepts it, whether the button reacts, whether the lines appear in the log: all unknown until device checks 88 to 100.
+- **"Truck not connected" is what the trip rules believe, not a fresh look at the truck.** While no trip is open nothing reads the truck's connection unless a Bluetooth event arrives or MilO is opened on the phone. If MilO missed the truck connecting, the car says "Not recording. Truck not connected" while the truck is connected. That is the moment the button is for: a press of Start trip reads the truck first. Opening MilO on the car's display does not make the trip controller read the truck, the way opening it on the phone does; whether it should is Shawn's to decide (FINDINGS_LOG, 2026-10-05).
+- For up to 15 seconds after the companion service alone has started a trip, the line is "Recording. Truck not connected": the truck is not confirmed yet.
+- **The lowest Car API level is 7.** The header is built with the library's current `Header` class, which needs level 7. The level belongs to the Android Auto app on the phone, not to the truck, and Google does not publish which level which version speaks. An Android Auto too old for level 7 would not open MilO at all; the log would then show "car app service created" with no "session created" after it. A host that failed the certificate check leaves the same trace; the library's own Logcat lines (their tags begin with `CarApp`) tell the two apart.
+- If Google changes Android Auto's signing certificate, the list in a pinned library goes out of date and MilO is turned away until the library is updated.
+- **The library is one release behind a security fix.** The release notes of 1.8.0-rc01 say it includes one, without naming it, and tell every lower version to update. It is a release candidate, so 1.7.0 stays until 1.8.0 is stable, and 1.8.0 is then to be taken at once. It matters here because the check of who may connect (9 above) is the library's code, and the service behind it is open to every app on the phone (FINDINGS_LOG, 2026-10-05, `[DEBT]`).
+- **A refused start that repeats exactly** (the same reason again) shows no second message: the Status line already says it and does not change.
+- A Status line that says "Could not start" stays after the cause was put right, until the next trip starts. The phone's home screen does the same.
+- **Android Auto decides how long the screen lives.** Google's own reference host drops an app about three minutes after the driver leaves it; what Android Auto does on this phone is not documented, and the log lines are how it will be learned. Nothing depends on the session: the trip is recorded by the trip service whether or not the screen exists.
+- **Being shown on the car does not count as being in front for location.** A trip started from the car's button is started like one started by the truck: it needs "Allow all the time", and battery use unrestricted or the companion association. Without them the start is refused, and the screen says so.
+- Opening MilO on the car when its process is dead starts the process, which reads the truck as every process start does. Whether HyperOS lets Android Auto start a dead MilO with Autostart off is unknown (device check 99).
+- The setup checklist is read each time the car shows the screen. A setting changed while the screen stays up shows only after one of MilO's phone screens has read it again.
+- The button has no icon and there is one button, not two. Google's design guide prefers an icon on every button and frowns on a button that changes its label; one button was the brief.
+- The category `IOT` is the least wrong of the library's categories (none is for logging trips). It decides which rules Google would review the app against, and nothing is reviewed for an app that is not on Play.
+- `todayTrips` lives in `platform/car/` because the car screen is its only user. When the home screen's "today's sessions" is built, it must use this function (moved to shared code), not a second copy.
+- The rule "do not end the trip while Android Auto is connected" does not depend on this screen and works either way: `platform/car/AndroidAutoWatcher.kt` watches `CarConnection` during a trip (see [Truck pairing and trip detection](#truck-pairing-and-trip-detection), rule 13).
 
 ---
 
@@ -426,7 +488,7 @@ Shows what was recorded and lets Shawn correct it.
 - There is no purpose or note field. Dropped at kickoff.
 
 **How it works today**
-*Home* (`feature/home/HomeScreen.kt`). While the setup checklist needs attention, a card "Setup needs attention" with a button to Setup (see [Permission checklist](#permission-checklist)). Then one card, "Current trip": with no trip open, "No trip in progress"; with one, the distance so far, "Trip in progress" (or that it is waiting for the truck to reconnect) and the time it started. It reads `TripController.activity` through `HomeViewModel` and keeps no copy. Below the card, if the last start failed, a second card lists why. Then the Start trip / End trip button. Today's sessions are not built.
+*Home* (`feature/home/HomeScreen.kt`). While the setup checklist needs attention, a card "Setup needs attention" with a button to Setup (see [Permission checklist](#permission-checklist)). Then one card, "Current trip": with no trip open, "No trip in progress"; with one, the distance so far, "Trip in progress" (or that it is waiting for the truck to reconnect) and the time it started. It reads `TripController.activity` through `HomeViewModel` and keeps no copy. Below the card, if the last start failed, a second card lists why. Then the Start trip / End trip button. Today's sessions are not built on the phone. The count and the total km of today's finished trips already exist for the [Android Auto screen](#android-auto-screen) (`todayTrips` in `platform/car/CarScreenContent.kt`, `daySpan` in `core/util/TimeSpan.kt`): the home screen is to use them, not rebuild them.
 
 *Trips* (`feature/trips/`), the second button of the bottom bar. Shawn asked for it by name on 2026-10-05: "a trip button to view previous and current months trips".
 1. It opens on the current month, every time it is entered. At the top, one card: the month's name and year, the total km, the number of trips, and two buttons, Previous month and Next month. Next month is greyed out on the current month: the screen never goes past it. Back is one month at a time, without limit.
@@ -512,9 +574,9 @@ Produces the monthly reimbursement report and hands it to Gmail.
    - `TRIP`: a trip starting; the truck being seen in it; a trip finishing or being discarded, with the distance, the reason and the fix counts; the hold-off being set and released, with the reason.
    - `GRACE`: the grace period starting and being cancelled. Its running out is the `TRIP` line "ended by GRACE_EXPIRED".
    - `SERVICE`: the service reaching the foreground and for which trigger; a start that failed and why, with the exception; the service being destroyed; a service lost in mid-trip, and the trip being dropped from memory when Android will not start it again; MilO being removed from the recent apps; the trip-start sound playing or failing.
-   - `ANDROID_AUTO`: every change `CarConnection` reports, with the raw value, and the state before and after.
+   - `ANDROID_AUTO`: every change `CarConnection` reports, with the raw value, and the state before and after. Also the life of the Android Auto screen: its service created and destroyed, each session created (with the host's package name and the Car API level agreed) and destroyed, the screen shown and no longer shown, and each time it told the driver that a trip could not start (see [Android Auto screen](#android-auto-screen)). A press of the car's button is a `TRIGGER` line, like the phone's.
    - `LOCATION`: fixes being requested and stopped, the time to the first fix and its accuracy, and location being lost for 10 seconds or more and coming back. A shorter loss is not logged: the emulator reports one around every fix.
-   - `ERROR`: a failure inside the controller, with its stack trace; an unreadable settings file.
+   - `ERROR`: a failure inside the controller, with its stack trace; an unreadable settings file; a failure of the Android Auto screen (its own code, today's trips unreadable, or a call the car answered with an error).
    - `PAIRING`: the truck being paired or adopted, a pairing that failed and why, and every check of the pairing with its result. While no truck is armed, the line also lists the phone's paired devices with their addresses, names an association that was not adopted, and says if the phone has no companion device support.
    - `ADDRESS`: every lookup of a trip's start and end address with what happened to each end and, if it failed, which attempt of four it was; a lookup for a trip in progress; a pass put off because the phone had no network. These are not written through the trip controller's inbox, so they are dated when written and can sit minutes or days after the trip they name. They name no address and no position.
 

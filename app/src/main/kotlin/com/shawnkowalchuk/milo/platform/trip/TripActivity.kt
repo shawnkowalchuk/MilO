@@ -12,8 +12,16 @@ import com.shawnkowalchuk.milo.platform.system.PreflightProblem
  * @param startFailure why the last attempt to start recording failed, or null. It is cleared
  * when a trip starts. The same failure is shown as a notification, but notifications can be
  * switched off, so the screen has to be able to say it too.
+ * @param truckConnected what the trip rules believe about the truck's Bluetooth connection, or
+ * null before the stored state has been picked up. The Android Auto screen shows it. It is a
+ * belief, not a fresh reading: while no trip is open nothing reads the truck unless an event
+ * arrives or MilO is opened on the phone.
  */
-data class TripActivity(val trip: CurrentTrip? = null, val startFailure: StartFailure? = null)
+data class TripActivity(
+    val trip: CurrentTrip? = null,
+    val startFailure: StartFailure? = null,
+    val truckConnected: Boolean? = null,
+)
 
 /**
  * The trip in progress.
@@ -56,7 +64,10 @@ internal fun tripActivityOf(
     startFailure: StartFailure?,
 ): TripActivity {
     val trip = known?.trip
-    if (open == null || trip == null) return TripActivity(startFailure = startFailure)
+    val truckConnected = known?.truckConnected
+    if (open == null || trip == null) {
+        return TripActivity(startFailure = startFailure, truckConnected = truckConnected)
+    }
     return TripActivity(
         trip =
             CurrentTrip(
@@ -69,5 +80,6 @@ internal fun tripActivityOf(
                 startLongitude = open.progress.distance.firstAccepted?.longitude,
             ),
         startFailure = startFailure,
+        truckConnected = truckConnected,
     )
 }

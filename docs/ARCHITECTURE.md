@@ -4,7 +4,7 @@
 >
 > **Status:** Living document · **Last updated:** 2026-10-05 · **See also:** ENGINEERING_STANDARDS.md (the rules), APP_ENCYCLOPEDIA.md (how each feature works)
 
-Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing (`TruckPairing`, which the pairing screen calls); and the lookup of each trip's start and end address in `platform/address/`. The phone UI has five screens behind a bottom navigation bar (`app/MiloNavigation.kt`): Home (the trip in progress, one Start trip / End trip button, and a warning while setup is incomplete), Trips (one month at a time), Setup (the permission checklist, in `feature/setup/` with its rules in `platform/system/`), the truck pairing screen opened from Setup, and Log (the event log). **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. **The screens other than Home and Trips have never been drawn anywhere:** they were built and proven with the build and unit tests only (`docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79). Trips and the address lookup ran on an emulator, not on the phone (checks 80 to 86). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
+Built so far: the Gradle build with its quality gates, the design system in `core/designsystem/`, the CI files, the two databases, the settings store and the crash files in `data/`, the trip rules as pure Kotlin in `core/trip/`, crash and kill capture in `platform/diagnostics/`, the recording core in `platform/trip/` (the `TripController`, the foreground `TripService`, GPS recording, the two notifications, the trip-start sound and the watch on Android Auto), and the triggers in `platform/bluetooth/`: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing (`TruckPairing`, which the pairing screen calls); and the lookup of each trip's start and end address in `platform/address/`. The phone UI has five screens behind a bottom navigation bar (`app/MiloNavigation.kt`): Home (the trip in progress, one Start trip / End trip button, and a warning while setup is incomplete), Trips (one month at a time), Setup (the permission checklist, in `feature/setup/` with its rules in `platform/system/`), the truck pairing screen opened from Setup, and Log (the event log). **The triggers have never met a real Bluetooth connection or this phone:** they are covered by unit tests, and in part by an emulator with no truck. **The screens other than Home and Trips have never been drawn anywhere:** they were built and proven with the build and unit tests only (`docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79). Trips and the address lookup ran on an emulator, not on the phone (checks 80 to 86). The Android Auto screen is built too, in `platform/car/`: a `CarAppService`, a session and one screen. **It has never run anywhere either,** and by Google's documentation a build installed from Android Studio is not expected to appear on a real truck (section 10; checks 88 to 100). The rest of this document describes the structure the code must follow and the constraints already known from research. Required behaviour is in APP_ENCYCLOPEDIA.md.
 
 ---
 
@@ -66,7 +66,7 @@ Versions, sources and the reason for each omission are in `docs/adr/ADR-001-stac
 
 **The hard rule:** Composable → ViewModel → repository or platform class. Composables never call system services or DAOs directly. `data/` is the only layer that touches storage. `platform/` is the only layer that touches Android system services. This keeps the trip rules testable on the JVM and stops the two UI surfaces from growing separate logic.
 
-The rule names Composables, and the Android Auto screen is not one. A Car App Library screen has its own lifecycle; the research has it collect one app-wide trip state and redraw when that changes, with no ViewModel in between (`docs/research/2026-10-03-android-auto-screen.md`, finding 26). That shared state is the app-wide `TripController` in `platform/trip/`, decided in ADR-002: its `activity` flow says what trip is in progress and why the last start failed. Phone screens reach it through their ViewModels; the car screen will read it directly.
+The rule names Composables, and the Android Auto screen is not one. A Car App Library screen has its own lifecycle; the research has it collect one app-wide trip state and redraw when that changes, with no ViewModel in between (`docs/research/2026-10-03-android-auto-screen.md`, finding 26). That shared state is the app-wide `TripController` in `platform/trip/`, decided in ADR-002: its `activity` flow says what trip is in progress, why the last start failed, and what the trip rules believe about the truck's connection. Phone screens reach it through their ViewModels; the car screen (`platform/car/TripStatusScreen`) reads it directly.
 
 The system also starts the app when no screen is open: a Bluetooth connect, a reboot, an app update. Those entry points deal with Bluetooth, the companion device and location, so they belong in `platform/`. How they drive trip start and trip end is set out in `docs/adr/ADR-002-trip-detection.md`: every entry point calls one function, `TripController.onTrigger`, and the trip rules are a pure Kotlin state machine in `core/trip/`. The entry points:
 
@@ -78,6 +78,7 @@ The system also starts the app when no screen is open: a Bluetooth connect, a re
 | Process start | `app/MiloApplication` | "Read the truck" |
 | MilO coming to the front | `app/MainActivity.onStart` | "Read the truck" |
 | Start and End | `feature/home/HomeViewModel` | The press |
+| Start trip and End trip on the car's display | `platform/car/TripStatusScreen` | The press, as the same two triggers |
 | A truck picked on the pairing screen | `platform/bluetooth/TruckPairing`, called by `feature/pairing/PairingViewModel` | "Read the truck", once the truck is stored |
 
 A broadcast or a callback names a device, and the receiver decides on the spot whether it is the truck (`platform/bluetooth/TruckSignals`, plain functions). That needs the truck's address, which is in the settings file, so `PairedTruck` reads it while `onReceive` waits, for one second at most. "Read the truck" is `TruckConnectionSource.read()`, which answers connected, not connected or unknown, with how it found out.
@@ -136,7 +137,7 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 
 **The setup checklist is shared, like the trip state.** `platform/system/SetupChecklist` holds the rows of the checklist as one flow. The Setup screen shows the rows; the home screen only asks `needsAttention` of them. What the phone reports is read when a screen asks; Shawn's confirmations (the settings store) and the truck's pairing (`TruckPairing.status`) arrive by themselves. The five facts that stop a trip from being recorded are read by `TripPreflight.facts()`, which the trip service's starter also uses.
 
-One exception, because Android gives no other way. The components Android creates itself have no constructor MilO can call: `TripService`, `TruckCompanionService`, `TruckBluetoothReceiver` and `TruckReconcileReceiver`. Each fetches the container from the application object (`(application as MiloApplication).container`). `TripNotifications` names `MainActivity` as the screen a tap on the trip notification opens. Those are the only places where `platform/` imports `app/`, and no other class may reach for the container this way.
+One exception, because Android gives no other way. The components Android creates itself have no constructor MilO can call: `TripService`, `TruckCompanionService`, `TruckBluetoothReceiver`, `TruckReconcileReceiver` and `MiloCarAppService` (the Android Auto screen's service). Each fetches the container from the application object (`(application as MiloApplication).container`). `TripNotifications` names `MainActivity` as the screen a tap on the trip notification opens. Those are the only places where `platform/` imports `app/`, and no other class may reach for the container this way.
 
 ---
 
@@ -156,7 +157,34 @@ MilO has one platform and two UI surfaces. Both show the same trips and drive th
 
 **Rule:** everything that isn't presentation is shared. Two copies of trip logic *will* drift. (See STANDARDS §9.)
 
-The shared trip logic is placed by ADR-002: the pure rules (state machine, distance, point filter) in `core/trip/`, and the `TripController`, the foreground service and location recording in `platform/trip/`. The Car App Library classes live in `platform/car/`; so far that is the `CarConnection` watcher, and the screen is not built.
+The shared trip logic is placed by ADR-002: the pure rules (state machine, distance, point filter) in `core/trip/`, and the `TripController`, the foreground service and location recording in `platform/trip/`. The Car App Library classes live in `platform/car/`: the `CarConnection` watcher, and the screen.
+
+**How the car screen is put together.**
+
+```
+ Android Auto (the app on the phone)
+        |  binds, when MilO is opened on the car's display
+[ MiloCarAppService ]    checks who is connecting
+        |
+[ MiloCarSession ]       one per visit; writes its life to the event log
+        |
+[ TripStatusScreen ]     while the car shows it, follows:
+        |                    TripController.activity    (platform/trip)
+        |                    today's trips              (data/trip)
+        |                    SetupChecklist.rows        (platform/system)
+        |                    the clock
+        |
+  carScreenContent()     pure: decides what is shown
+        |
+  one pane: Status / This trip / Today, and one button
+        |
+  the button  ->  TripController.onTrigger
+```
+
+- **The service runs in MilO's one process,** the same one as the trip service. Being shown on a car does not make an app "in front" for location, so the car screen records nothing: it shows what the trip service records.
+- **The screen holds no state of its own** beyond what it last drew. Android Auto creates and destroys sessions as it likes, and each new one builds itself from the shared objects.
+- **`carScreenContent` is the only place that decides what is shown.** Its result is already rounded to what is printed, so "has anything changed?" is a plain comparison, and the screen redraws only then.
+- **Three fixed row titles and no second screen.** A car counts a redraw as a harmless refresh only while the header's title, the number of rows and every row's title stay the same; anything else uses up one of five steps, after which the car closes the app. This is why the changing words are under the titles and never in them.
 
 ---
 
@@ -186,7 +214,9 @@ platform/address/    # the start and end address of each trip: the geocoder, the
                      #   form of an address
 platform/bluetooth/  # the triggers: the Bluetooth receiver, the companion service, the boot and
                      #   update receiver; the reading "is the truck connected?"; pairing
-platform/car/        # so far only the watch on Android Auto's connection
+platform/car/        # the Android Auto screen (its service, session, screen, and the pure
+                     #   function that decides what it shows) and the watch on Android Auto's
+                     #   connection
 platform/system/     # what the phone's permissions and settings say: the preflight check
                      #   before the service is started, the setup checklist's facts, rules
                      #   and shared rows, and the opening of the phone's settings screens
@@ -315,7 +345,7 @@ None of these is a service of our own. Each is a system or Google component alre
 | Fused location (Play services) | GPS fixes during a trip | `platform/trip/LocationRecorder` | Built. A fix every 5 seconds, no cached first position |
 | Geocoder (system) | Start and end addresses | `platform/address/GeocoderAddressLookup` | Built; ran on an emulator. Needs network, takes no key, has no availability guarantee. A failed lookup is tried again at the next occasion, four times at most. The one place a position leaves the phone |
 | ConnectivityManager (system) | Whether the phone is online, asked before the geocoder is | `platform/address/NetworkStatus` | Needs `ACCESS_NETWORK_STATE`. MilO has no INTERNET permission and opens no connection itself |
-| Android Auto (Car App Library) | The in-truck screen; `CarConnection` keeps a trip open | `platform/car/` | `CarConnection` is built; the screen is not. Distribution risk (section 10) |
+| Android Auto (Car App Library) | The in-truck screen; `CarConnection` keeps a trip open | `platform/car/` | Both are built. The screen has never run anywhere, and may not be listed on the truck at all: distribution risk (section 10) |
 | Activity recognition (Play services) | The phase 2 driving alert | `platform/` | Alert only. It never starts a trip |
 | Gmail | Sending the monthly PDF | `platform/` | An intent opens the draft and Shawn taps send. The app cannot learn whether it was sent |
 | The phone's settings screens | The buttons of the setup checklist and the pairing screen | `platform/system/SystemScreens` | Android's own screens, and three HyperOS ones known only from other apps' source. Each is tried inside a try/catch and falls back on Android's page for MilO. Never run on the phone |
@@ -361,7 +391,11 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 - Installing from Android Studio needs two Xiaomi-only developer switches ("Install via USB" and "USB debugging (Security settings)") and a confirmation on the phone at each install. (`2026-10-03-miui-dev-bluetooth-audio.md`)
 
 **Android Auto**
-- Distribution risk: Google's documentation says the "Unknown sources" developer option does not apply to Car App Library apps, which must come from a trusted store to show on a real head unit. A sideloaded MilO should appear in the desktop head-unit emulator but may not appear in the truck. **Unverified on the truck and still being researched;** community reports conflict. (`2026-10-03-android-auto-screen.md`, `2026-10-03-location-and-car.md`)
+- Distribution risk: Google's documentation says the "Unknown sources" developer option does not apply to Car App Library apps, which must come from a trusted store to show on a real head unit. A sideloaded MilO should appear in the desktop head-unit emulator but is not expected to appear in the truck. The screen was built knowing this. **Unverified on the truck;** community reports conflict. If it does not appear, the choices are a private Google Play install, a media-app style workaround, or dropping the screen (APP_ENCYCLOPEDIA, Android Auto screen). (`2026-10-03-android-auto-screen.md`, `2026-10-03-location-and-car.md`)
+- The car screen's service is exported with no permission, because Android has none for Android Auto's binding on a phone. What protects it is the Car App Library's host check, set to the library's own list of Android Auto's signing certificates in every build type. If Google changes that certificate, MilO's screen is refused until the library is updated. (`2026-10-03-android-auto-screen.md`, findings 15 and 16)
+- That host check is the library's own code, so it is only as sound as the pinned library, and the pinned library, 1.7.0, is one release behind a security fix. The release notes of 1.8.0-rc01 say it includes one, without naming it, and tell every lower version to update. A release candidate is not taken (the stable-only rule), so the fix is knowingly missing. **1.8.0 is to be taken the day it is stable.** (`2026-10-03-android-auto-screen.md`, finding 3; FINDINGS_LOG, 2026-10-05, `[DEBT]`)
+- The screen needs Car API level 7 (the library's current `Header` class). The level is a property of the Android Auto app on the phone, and which level which version speaks is not documented. The session writes the level it was given to the event log.
+- Android Auto, not MilO, decides how long a car session lives, and being shown on the car is not "in front" for location or for starting the trip service. A trip started from the car's button therefore needs what an automatic start needs: "Allow all the time", and battery use unrestricted or the companion association. (`2026-10-03-android-auto-screen.md`, findings 23 to 25)
 - `CarConnection` only reports while the app is already running. It can hold a trip open but cannot start one. (`2026-10-03-location-and-car.md`)
 
 **Data safety**

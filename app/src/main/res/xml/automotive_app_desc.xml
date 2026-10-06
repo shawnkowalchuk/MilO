@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Tells Android Auto what kind of car app MilO is. "template" means a Car App Library app: its
+    screen (platform/car/) is built from the library's templates and drawn by the car. The
+    manifest points here from the "com.google.android.gms.car.application" entry.
+-->
+<automotiveApp>
+    <uses name="template" />
+</automotiveApp>

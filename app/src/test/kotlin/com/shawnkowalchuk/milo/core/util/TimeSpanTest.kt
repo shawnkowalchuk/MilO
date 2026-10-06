@@ -60,6 +60,26 @@ class TimeSpanTest {
     }
 
     @Test
+    fun `a day runs from local midnight to the next local midnight`() {
+        val today = daySpan(LocalDate.of(2026, 10, 5), edmonton)
+        val tomorrow = daySpan(LocalDate.of(2026, 10, 6), edmonton)
+
+        assertEquals(utc("2026-10-05T06:00:00Z"), today.fromMs)
+        assertEquals(utc("2026-10-06T06:00:00Z"), today.untilMs)
+        // Nothing between two days, and nothing in both.
+        assertEquals(today.untilMs, tomorrow.fromMs)
+    }
+
+    @Test
+    fun `the day the clocks change is an hour longer or shorter`() {
+        val clocksGoBack = daySpan(LocalDate.of(2026, 11, 1), edmonton)
+        val clocksGoForward = daySpan(LocalDate.of(2026, 3, 8), edmonton)
+
+        assertEquals(DAY_MS + HOUR_MS, clocksGoBack.untilMs - clocksGoBack.fromMs)
+        assertEquals(DAY_MS - HOUR_MS, clocksGoForward.untilMs - clocksGoForward.fromMs)
+    }
+
+    @Test
     fun `a time belongs to the local day and month, not the UTC one`() {
         // 23:30 on 31 October in Edmonton is already 1 November in UTC.
         val lateOnTheLast = utc("2026-11-01T05:30:00Z")

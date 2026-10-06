@@ -1,0 +1,196 @@
+package com.shawnkowalchuk.milo.platform.car
+
+import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.system.PreflightProblem
+import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
+import com.shawnkowalchuk.milo.platform.trip.StartFailure
+import com.shawnkowalchuk.milo.platform.trip.TripActivity
+import com.shawnkowalchuk.milo.platform.trip.TripTrigger
+import java.util.Locale
+
+// What the Android Auto screen shows, decided from the trip controller's state and today's
+// trips. Plain values and pure functions, so every state is tested without a car. Only the
+// choice of words is made here: the words themselves are in strings.xml.
+//
+// Every figure is already rounded to what the screen prints (kilometres to one decimal, time to
+// whole minutes). Two contents are therefore equal exactly when the screen would look the same,
+// which is how the screen knows that there is nothing to redraw.
+
+private const val MS_PER_MINUTE = 60_000L
+private const val MINUTES_PER_HOUR = 60L
+
+/**
+ * The line of the Status row. Each constant is one sentence in strings.xml.
+ *
+ * @param startRefused true for the lines that say the last attempt to start a trip was refused.
+ */
+enum class CarStatus(val textRes: Int, val startRefused: Boolean = false) {
+    /** A trip is being recorded, and nothing says the truck is not connected. */
+    RECORDING(R.string.car_status_recording),
+
+    /**
+     * A trip is being recorded while the trip rules believe the truck's Bluetooth is not
+     * connected: a trip started by hand that the truck has not joined, or one that Android Auto
+     * alone is holding open.
+     */
+    RECORDING_WITHOUT_TRUCK(R.string.car_status_recording_without_truck),
+
+    /** The grace period: the truck has gone and the trip ends unless it comes back. */
+    WAITING_FOR_TRUCK(R.string.car_status_waiting_for_truck),
+
+    /** No trip, and nothing known that explains it (ended by hand, or not yet read). */
+    NOT_RECORDING(R.string.car_status_not_recording),
+
+    /** No trip, and the trip rules believe the truck's Bluetooth is not connected. */
+    TRUCK_NOT_CONNECTED(R.string.car_status_truck_not_connected),
+
+    /** No trip, and the setup checklist says a trip may not start by itself. */
+    SETUP_INCOMPLETE(R.string.car_status_setup_incomplete),
+
+    REFUSED_LOCATION_PERMISSION(R.string.car_status_refused_location_permission, true),
+    REFUSED_BACKGROUND_LOCATION(R.string.car_status_refused_background_location, true),
+    REFUSED_LOCATION_OFF(R.string.car_status_refused_location_off, true),
+    REFUSED_BATTERY_RESTRICTED(R.string.car_status_refused_battery_restricted, true),
+    REFUSED_BLUETOOTH_PERMISSION(R.string.car_status_refused_bluetooth_permission, true),
+
+    /** The preflight passed and Android still refused the foreground service. */
+    REFUSED_BY_ANDROID(R.string.car_status_refused_by_android, true),
+}
+
+/**
+ * The screen's one button. It is the same manual override as the phone's Start trip / End trip
+ * button and sends the same triggers, so a trip started here is the same kind of manual trip.
+ * The labels are the phone's own strings, so the two surfaces cannot word it differently.
+ *
+ * @param source what the event log calls a press. The trip controller writes it into the
+ * trigger's line, which is how every press on the car screen ends up in the log.
+ */
+enum class CarAction(val labelRes: Int, val trigger: TripTrigger, val source: String) {
+    START_TRIP(R.string.home_start_trip, TripTrigger.MANUAL_START, "Android Auto Start button"),
+    END_TRIP(R.string.home_end_trip, TripTrigger.MANUAL_END, "Android Auto End button"),
+}
+
+/**
+ * The trip in progress as the "This trip" row prints it.
+ *
+ * @param kilometres the number only, with one decimal, from [formatKilometres].
+ * @param hours and [minutes] the time since the trip started, in whole minutes.
+ */
+data class TripFigures(val kilometres: String, val hours: Long, val minutes: Long)
+
+/** Today's finished trips as the "Today" row prints them. */
+data class TodayFigures(val tripCount: Int, val kilometres: String)
+
+/**
+ * Everything the screen shows that can change. The three row titles and the header are not
+ * here: they never change, which is what lets the car treat every redraw as a refresh.
+ *
+ * @param trip null when no trip is open.
+ * @param today null while today's trips have not been read, or could not be.
+ */
+data class CarScreenContent(
+    val status: CarStatus,
+    val trip: TripFigures?,
+    val today: TodayFigures?,
+    val action: CarAction,
+)
+
+/**
+ * Today's finished trips as stored: how many, and how far in metres.
+ *
+ * Added up in metres and rounded once, when shown, like the month totals of the Trips screen.
+ */
+data class TodayTrips(val count: Int, val totalMetres: Double)
+
+/**
+ * What counts as "today", by the rule of the Trips screen: finished trips only. A discarded trip
+ * is left out, and the trip in progress is not counted until it ends (it has a row of its own).
+ *
+ * @param startedToday every trip that started today, whatever its status.
+ */
+fun todayTrips(startedToday: List<Trip>): TodayTrips {
+    val finished = startedToday.filter { it.status == TripStatus.FINISHED }
+    return TodayTrips(count = finished.size, totalMetres = finished.sumOf { it.distanceMetres })
+}
+
+/**
+ * The screen's content for one moment.
+ *
+ * @param today today's finished trips, or null if they are not known.
+ * @param setupNeedsAttention the home screen's rule (`needsAttention`): a required row of the
+ * setup checklist is not in order.
+ * @param locale decides the decimal separator of the kilometre figures.
+ */
+fun carScreenContent(
+    activity: TripActivity,
+    today: TodayTrips?,
+    setupNeedsAttention: Boolean,
+    nowMs: Long,
+    locale: Locale,
+): CarScreenContent {
+    val trip = activity.trip
+    return CarScreenContent(
+        status = carStatus(activity, setupNeedsAttention),
+        trip = trip?.let { tripFigures(it, nowMs, locale) },
+        today = today?.let { TodayFigures(it.count, formatKilometres(it.totalMetres, locale)) },
+        // One button, because exactly one of the two makes sense at any moment. End is offered
+        // for as long as a trip is open, the grace period included, as on the phone.
+        action = if (trip == null) CarAction.START_TRIP else CarAction.END_TRIP,
+    )
+}
+
+/**
+ * Whether [next] differs from this content only in the running figures of a trip that is open
+ * in both. Such a change waits for the gap between refreshes; any other change (the status, the
+ * button, a trip starting or ending, today's totals) is drawn at once.
+ */
+fun CarScreenContent?.differsOnlyInTripFigures(next: CarScreenContent): Boolean =
+    this != null && trip != null && next.trip != null && trip != next.trip &&
+        copy(trip = next.trip) == next
+
+/**
+ * One line, so the most telling thing wins. An open trip comes first: while one is recording,
+ * what stood in the way earlier no longer matters. With no trip, a refused start is the most
+ * exact explanation, then a setup that is not in order, then the truck.
+ */
+private fun carStatus(activity: TripActivity, setupNeedsAttention: Boolean): CarStatus {
+    val trip = activity.trip
+    val failure = activity.startFailure
+    return when {
+        trip != null && trip.waitingForTruck -> CarStatus.WAITING_FOR_TRUCK
+        trip != null && activity.truckConnected == false -> CarStatus.RECORDING_WITHOUT_TRUCK
+        trip != null -> CarStatus.RECORDING
+        failure != null -> refusalStatus(failure)
+        setupNeedsAttention -> CarStatus.SETUP_INCOMPLETE
+        activity.truckConnected == false -> CarStatus.TRUCK_NOT_CONNECTED
+        else -> CarStatus.NOT_RECORDING
+    }
+}
+
+/**
+ * The row has room for one reason, so the first thing the preflight found is named. The phone's
+ * home screen lists them all.
+ */
+private fun refusalStatus(failure: StartFailure): CarStatus =
+    when (failure.problems.firstOrNull()) {
+        PreflightProblem.LOCATION_PERMISSION_MISSING -> CarStatus.REFUSED_LOCATION_PERMISSION
+        PreflightProblem.BACKGROUND_LOCATION_MISSING -> CarStatus.REFUSED_BACKGROUND_LOCATION
+        PreflightProblem.LOCATION_SWITCHED_OFF -> CarStatus.REFUSED_LOCATION_OFF
+        PreflightProblem.BACKGROUND_RESTRICTED -> CarStatus.REFUSED_BATTERY_RESTRICTED
+        PreflightProblem.BLUETOOTH_PERMISSION_MISSING -> CarStatus.REFUSED_BLUETOOTH_PERMISSION
+        null -> CarStatus.REFUSED_BY_ANDROID
+    }
+
+private fun tripFigures(trip: CurrentTrip, nowMs: Long, locale: Locale): TripFigures {
+    // Whole minutes, rounded down, as a stopwatch counts them. Never negative: the phone's clock
+    // can be set back while a trip is open.
+    val wholeMinutes = (nowMs - trip.startedAtMs).coerceAtLeast(0) / MS_PER_MINUTE
+    return TripFigures(
+        kilometres = formatKilometres(trip.distanceMetres, locale),
+        hours = wholeMinutes / MINUTES_PER_HOUR,
+        minutes = wholeMinutes % MINUTES_PER_HOUR,
+    )
+}

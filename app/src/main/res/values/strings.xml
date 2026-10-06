@@ -211,4 +211,40 @@
     <string name="trips_start_looking_up">Looking up where it started…</string>
     <string name="trips_start_not_found">No address found for where it started.</string>
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
+
+    <!--
+        The Android Auto screen. Its header is app_name, its button uses home_start_trip and
+        home_end_trip, and "This trip" says trip_status_idle when there is none, so the car and
+        the phone cannot word those differently.
+
+        The three row titles must never change and never carry a figure: the car counts a redraw
+        as a harmless refresh only while every row title stays the same. Each line under a title
+        is kept short, because the car cuts long text off while driving.
+    -->
+    <string name="car_row_status">Status</string>
+    <string name="car_row_this_trip">This trip</string>
+    <string name="car_row_today">Today</string>
+    <!-- The Status row. -->
+    <string name="car_status_recording">Recording</string>
+    <string name="car_status_recording_without_truck">Recording. Truck not connected</string>
+    <string name="car_status_waiting_for_truck">Truck disconnected. Waiting for it to reconnect</string>
+    <string name="car_status_not_recording">Not recording</string>
+    <string name="car_status_truck_not_connected">Not recording. Truck not connected</string>
+    <string name="car_status_setup_incomplete">Not recording. MilO\'s setup is incomplete</string>
+    <string name="car_status_refused_location_permission">Could not start: location permission is missing</string>
+    <string name="car_status_refused_background_location">Could not start: location is not set to \"Allow all the time\"</string>
+    <string name="car_status_refused_location_off">Could not start: location is switched off</string>
+    <string name="car_status_refused_battery_restricted">Could not start: battery use is set to Restricted</string>
+    <string name="car_status_refused_bluetooth_permission">Could not start: \"Nearby devices\" is not allowed</string>
+    <string name="car_status_refused_by_android">Could not start: Android did not allow it</string>
+    <!-- The This trip row: kilometres from formatKilometres(), then whole hours and minutes. -->
+    <string name="car_trip_minutes">%1$s km · %2$d min</string>
+    <string name="car_trip_hours_minutes">%1$s km · %2$d h %3$d min</string>
+    <!-- The Today row: the finished trips that started today, and their kilometres. -->
+    <plurals name="car_today">
+        <item quantity="one">%1$d trip · %2$s km</item>
+        <item quantity="other">%1$d trips · %2$s km</item>
+    </plurals>
+    <string name="car_today_none">No trips yet</string>
+    <string name="car_today_unknown">Not available</string>
 </resources>
