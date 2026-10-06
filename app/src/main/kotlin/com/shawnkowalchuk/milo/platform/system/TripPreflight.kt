@@ -59,18 +59,22 @@ fun preflightProblems(facts: PreflightFacts): List<PreflightProblem> = buildList
  * permission is required for every start for the same reason.
  */
 class TripPreflight(private val context: Context) {
-    fun problems(): List<PreflightProblem> = preflightProblems(
-        PreflightFacts(
-            fineLocationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION),
-            // Asked for by name: the fine-location check also passes when location is allowed
-            // only while the app is in use.
-            backgroundLocationGranted = isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-            locationSwitchedOn =
-                context.getSystemService(LocationManager::class.java).isLocationEnabled,
-            backgroundRestricted =
-                context.getSystemService(ActivityManager::class.java).isBackgroundRestricted,
-            bluetoothGranted = isGranted(Manifest.permission.BLUETOOTH_CONNECT),
-        ),
+    fun problems(): List<PreflightProblem> = preflightProblems(facts())
+
+    /**
+     * What the phone says right now. The setup checklist shows the same five facts as rows, so
+     * it reads them here and the two can never disagree about what stops a trip.
+     */
+    fun facts(): PreflightFacts = PreflightFacts(
+        fineLocationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION),
+        // Asked for by name: the fine-location check also passes when location is allowed
+        // only while the app is in use.
+        backgroundLocationGranted = isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+        locationSwitchedOn =
+            context.getSystemService(LocationManager::class.java).isLocationEnabled,
+        backgroundRestricted =
+            context.getSystemService(ActivityManager::class.java).isBackgroundRestricted,
+        bluetoothGranted = isGranted(Manifest.permission.BLUETOOTH_CONNECT),
     )
 
     private fun isGranted(permission: String): Boolean =

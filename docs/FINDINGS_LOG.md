@@ -24,6 +24,76 @@
 
 ### 2026-10-05
 
+**`[FIX]` What the review of the screens found (work package 3)**
+Two reviewers read the package before it was committed. Their findings and what was done about each. **Nothing here has run on a phone or an emulator either:** every fix is proven by the build and unit tests only, and the checks that must prove it on the phone are named.
+- **The device checklist offered a command that takes the permissions away from every app on the phone.** `adb shell pm reset-permissions` was written with MilO's name after it, but the command takes no app name. Replaced by one `adb shell pm revoke` line per permission, each naming MilO, and a warning against the other one.
+- **A screen did not notice the quick settings.** Setup, Home and the pairing screen read the phone again only when they resumed, and the quick settings panel covers MilO without pausing it: Location switched off there left Setup green. The screens now also read again when MilO's window gets the focus back. One shared effect does both, `CameToFrontEffect` in the design system, and Trips uses it too. Whether HyperOS's panel takes the focus the way stock Android's does is untested (device check 59).
+- **Bluetooth that was still switching on read as "switched off", for good.** Switching it on takes the phone a second or two, and Back from the Bluetooth settings is quicker. The pairing screen now reads the paired devices once more when Android reports that Bluetooth has finished switching on or off (`platform/bluetooth/BluetoothSwitch.kt`, a receiver that is registered only while the pairing screen is on the back stack). Device check 70.
+- **A consent dialog that failed by itself was shown as "closed without allowing".** From Android 13 the dialog has results other than "allowed", "closed" and "refused": Android gave up looking for the device, or failed inside. Those are now "Pairing failed", with `TruckPairing`'s reason; only results 0 and 1 are Shawn's own doing (`consentWasDeclined`).
+- **The pairing screen's Back arrow could crash MilO.** A screen that is closing stays on the display for the length of the transition, and so does its arrow. A second tap closed Setup as well, and a third emptied the back stack, on which Navigation 3 throws; the process that dies is the one the trip service runs in. The arrow now closes the pairing screen only while it is on top, and Back never closes the last screen (`closeIfOnTop`, `closeTop` in `app/MiloNavigation.kt`).
+- **Words that pointed at something the phone does not have.** The battery row told Shawn to choose "Unrestricted", which HyperOS does not offer; on a Xiaomi phone it now names Battery saver, "No restrictions" (a second sentence, `BATTERY_RESTRICTED_HYPEROS`). The truck row said "Pair it again" beside a button labelled "Change truck"; the button now says "Pair truck" whenever there is no pairing to change.
+- **The device checklist could not be followed in order.** Check 66 expected "Everything MilO needs is set" two checks before the truck is paired. That expectation moved to check 68, and "Before the first check" now gives the order for a phone that has never been set up.
+- **Statements this package had made false** were corrected: ADR-002 on `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (amendment 25), ARCHITECTURE on pairing having no screen, the encyclopedia on nothing reading the settings yet, and the three debts this package closed, which are now marked closed where they were logged.
+- **Sending to the accountant** was recorded as deferred by decision. It is not Shawn's decision yet: see the entry below, now marked as waiting for him.
+- **Tests:** 13 new, 439 in all.
+- **Under `platform/bluetooth/`,** which another change has open: one new file, `BluetoothSwitch.kt`, and its test. No existing file there was touched, so the three stale comments named below are still stale.
+
+**`[CHANGE]` The screens for the first test drive (work package 3)**
+Until now MilO was one screen with one button. Everything below is new, and **none of it has run on a phone or an emulator**: this package was built and proven with the build and unit tests only (see the finding below).
+- **Navigation** (`app/MiloNavigation.kt`, `app/MiloApp.kt`): Navigation 3 with a Material 3 bottom bar of four screens: Home, Trips, Setup, Log. The pairing screen is opened from Setup.
+- **Truck pairing screen** (`feature/pairing/`): the phone's paired Bluetooth devices, a Pair button on each, Android's consent dialog, and the result in plain words. It asks for Nearby devices, and says what to do when Bluetooth or location is off, nothing is paired, or the dialog was closed. Picking another device changes the truck. It calls `TruckPairing` as it was; no existing file under `platform/bluetooth/` changed (the review above added one new file there).
+- **Setup screen** (`feature/setup/`, rules in `platform/system/`): nine Android rows and, on a Xiaomi, Redmi or POCO phone, four HyperOS rows. Each row has its state and a button to the place to fix it. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is now declared, for the battery row.
+- **Home**: a warning card that leads to Setup while a required row is not in order.
+- **Event log screen** (`feature/eventlog/`): newest first, time to the second in local time, detail on a press, 200 entries at a time.
+- **Trips screen** (`feature/trips/`): one month at a time, opening on the current one.
+- **Design system**: `StatusRow` has four states and up to two buttons; new `MiloNavigationBar`, `ScreenTitle`, `SwitchRow` and `MiloIcons`; two new status colours.
+- **Storage**: the confirmation dates of the checklist are four new keys in the settings file. `TripDao.observeStartedBetween` reads the trips of a span of time. **No table changed**: both exported schema files are byte for byte the same.
+- **Dependencies added,** each checked against its live Maven metadata today: `navigation3-runtime` and `navigation3-ui` 1.2.0 (1.3.0 is an alpha), `lifecycle-viewmodel-navigation3` and `lifecycle-runtime-compose` 2.11.0 (2.12.0 is an alpha), `kotlinx-serialization-json` 1.11.0 (1.12.0 is a release candidate), and the Kotlin serialization plugin 2.4.20.
+- **Tests:** 94 new, 426 in all.
+- **Closes three debts** logged below: "A truck can only be paired over adb", "Permissions have to be granted by hand", and "`StatusRow` has two states".
+- **Left stale on purpose:** three comments in `platform/bluetooth/` still say there is no pairing screen (`TruckPairing.kt`, twice, and `PairingStatus.kt`). Another change was open on that package, so it was not touched. One line was added to a test stand-in under `platform/trip/` (`FakeTripDao`), because the DAO gained a query.
+
+**`[DECISION]` Points the documents did not settle, decided while building the screens**
+All are Shawn's to change.
+- **Which rows are required.** A row is required if an automatic trip can fail to start, or be cut short, without it. Recommended only: "Pause app activity if unused" (it matters after months without opening MilO) and the HyperOS "Other permissions" (they govern screens, and MilO starts a service). Everything else is required, including notifications (the "could not start this trip" warning is one) and Battery Saver being off. The home screen's warning follows the required rows only.
+- **On the POCO the warning stays until two rows are confirmed by hand:** Battery saver "No restrictions" and the lock in recents. MilO cannot read either, so the only honest "OK" is Shawn's own word, stored with its date.
+- **Autostart is believed as far as it can be read, and no further.** "Looks on" and "looks off" are shown as read. A confirmation by hand is offered only when the phone gives no reading at all, and it never overrides "looks off": the reading is the same question HyperOS itself asks before it starts an app.
+- **A confirmed row is drawn as OK, with "You confirmed this on (date). MilO cannot check it."** The work order named four states for `StatusRow`; a fifth, "confirmed by you", was not added.
+- **One battery row for Android's three settings.** "Restricted" (which blocks the trip service and was already in the preflight) and "not exempt" are two states of one row, with different buttons.
+- **A row in order has no button,** except the truck row (the pairing screen is where the truck is changed) and the Autostart row (its reading is not certain).
+- **Telling a permission dialog that never appeared from one that was refused.** Android stops showing a dialog after two refusals and does not say so. The usual test is used: if Android's "should the app explain?" answer is "no" both before and after, no dialog appeared, and the settings page is opened in its place. A first dialog dismissed without an answer is misread the same way; the settings page is harmless there.
+- **Settings screens are opened from the application context, as a task of their own,** so the ViewModel can open them and no Composable calls Android. Every way of opening a screen is tried in order, down to Android's own page for MilO, and a fallback is written to the event log as an `ERROR` line: on this phone nobody would otherwise learn that a HyperOS screen is missing. No new event category.
+- **The bottom bar keeps Home at the bottom of the back stack.** Back from Trips, Setup or Log leads to Home, and Back from Home leaves MilO. Each screen's ViewModel lives as long as the screen is on the back stack, so Trips opens on the current month every time.
+- **The Trips screen.** The trip in progress is shown apart and is not in the total until it ends; its running distance comes from the trip controller, because the stored row holds 0 while a trip is open. Within a day the newest trip is first, like the days. A month whose only trips were discarded says how many are hidden. A trip belongs to the month of its start even when it is still recording at the turn of the month.
+- **`kotlinx-serialization-json` is the declared serialization library,** as ADR-001 pins it, although the code only needs its core (the `@Serializable` annotation on the screen keys). Navigation 3 alone would bring core 1.7.3; this pins 1.11.0.
+- **`lifecycle-runtime-compose` was added** for `LifecycleEventEffect`, which is how a screen re-reads the phone each time it comes to the front. It was already on the classpath through Compose; it is declared because the code uses it directly.
+- **The event log's time is `2026-10-05 08:14:03`** in every language: sortable, 24-hour, with the date on every line.
+
+**`[FINDING]` What work package 3 has never been run on**
+Another change was using the emulators and the phone, so this package touched neither. What is proven: it compiles with warnings as errors, lint passes, and the unit tests cover the checklist's rules, the pairing screen's state, the month logic and the back stack. **What has never run anywhere:**
+- **Every screen.** Not one Composable of this package has been drawn. Layout, wording that does not fit, a crash on opening a screen: all untested. The icons were written as path data by hand; a test proves each one parses, not that it looks right.
+- **Navigation 3 at run time:** the bottom bar, Back, the saved back stack after Android has put MilO away.
+- **Every permission dialog,** and what HyperOS shows in place of Android's own.
+- **Android's consent dialog for the companion association,** which has never been shown by any build of MilO. This was already the biggest unknown of the triggers.
+- **Every button that opens a settings screen.** The HyperOS component names come from the research, which found no test of them on this phone's HyperOS 2.
+- **The Autostart reading.** The reflection call is the one the research describes; whether it answers on this phone is unknown.
+- **`isPowerSaveMode` and `isAutoRevokeWhitelisted` on HyperOS:** whether they follow Xiaomi's own Battery saver mode and its "Pause app activity if unused" switch.
+All of it is in `docs/DEVICE_TEST_CHECKLIST.md`, checks 52 to 79.
+
+**`[FINDING]` An index on the trips' start time would help, and was not added**
+The Trips screen asks for the trips that started in a span of time, and `trips` has no index on `startedAtMs`, so SQLite reads the whole table. At a few thousand rows a year that takes milliseconds. An index is a schema change, there is real data on the phone and no migration exists yet, so it was left out. Add it with the first migration.
+
+**`[DECISION]` Shawn's requests after seeing the first build on the emulator**
+The emulator build showed only a Start trip button, and Shawn named three things he needs: a way to pair to a vehicle, a Trips button to view the current and previous months' trips, and a way to send to the accountant for a specific month or a date range.
+- **Pairing** was already in this package.
+- **Trips by month is pulled forward into this package.** It had been deferred until after the first test drive to save time; he asked for it by name. It shows times and km only. Addresses, Business/Personal and editing still arrive in phase 2.
+- **Sending to the accountant is not in this build, and that is not Shawn's decision yet.** He asked for it by name ("a way to send to a accountant. be able to pick specific month or date range"). The assistant left it in phase 3, because the report as briefed needs the phase 2 pieces first (Business/Personal and the from/to addresses), and widened its scope to a custom date range as well as a whole month. **Pending his confirmation:** nobody asked him whether waiting is acceptable. Until he answers, the Trips screen has no send, share or export of any kind. What he has to settle if he wants it sooner:
+  - a reduced report now (times and km of every finished trip, no addresses, no Business/Personal), or the full report once phase 2 is in;
+  - the file: the PDF of the brief, or a CSV first;
+  - how it is sent: a Gmail draft to a stored accounts address (nothing stores one yet, and there is no settings screen), or Android's share sheet;
+  - what a date-range report does to a month's Submitted status.
+- **The Android Auto screen moves to after the first test drive.** Proposed by the assistant when Shawn said the build was taking very long; Google's rules make it unlikely to appear on the truck, and it is not needed to prove trip detection. Pending his objection.
+
 **`[CHANGE]` Shawn's own R2-D2 clip is the trip-start sound in his builds**
 Shawn dropped `r2d2.mp3` (4.5 seconds, 9 KB) into the project folder. It is copyrighted film audio, so it must not be committed, but it is his to use on his own phone. Android lets a build type override a resource: a file at `app/src/debug/res/raw/trip_start_chirp.mp3` replaces `main`'s `trip_start_chirp.wav` in debug builds, and debug is what gets installed on the phone. Both that folder and `/r2d2.mp3` are git-ignored. Checked: the built APK contains the mp3 and not the wav, and a trip started on the emulator played it with no player error. Not checked: how it sounds on the phone's speaker, and silent mode. This needed no code change, which is why it was done before the in-app sound picker; the picker is still planned with the settings screen. If MilO is ever built on another machine, the clip has to be copied there by hand or the build falls back to the synthesized chirp.
 
@@ -130,6 +200,7 @@ To be read before the first drive. All of it is in `docs/DEVICE_TEST_CHECKLIST.m
 
 **`[DEBT]` A truck can only be paired over adb**
 There is no pairing screen. Until it exists the truck is paired by making the association over adb and letting MilO adopt it. Since the review above, another truck is paired the same way: remove the stored truck's association, make the new one, open MilO. On a phone that does not report companion device support there is nothing to adopt, and no truck can be stored at all. Cost to fix: none beyond building the screen, which calls `TruckPairing` as it is. No code tag: there is no line to hang it on.
+**Closed 2026-10-05 (work package 3):** the pairing screen exists and changes the truck, and on a phone without companion device support it stores the truck without an association. It has not run on the phone yet.
 
 ### 2026-10-03
 
@@ -185,6 +256,7 @@ The grace period, the 15-second confirmation and the once-a-minute reading are c
 
 **`[DEBT]` Permissions have to be granted by hand**
 MilO declares the location and notification permissions but never asks for them: that belongs to the permission checklist, which is not built. Until then a fresh install records nothing until the permissions are set in the phone's settings or with `adb`; the home screen says what is missing. Cost to fix: none beyond building the checklist. No code tag: there is no line of code to hang it on.
+**Closed 2026-10-05 (work package 3):** the Setup screen asks for every permission. It has not run on the phone yet.
 
 **`[CHANGE]` Pre-commit hook switched on; CI proven on GitHub**
 Shawn installed gitleaks 8.30.1 and `core.hooksPath` now points at `.githooks`, so every commit runs the staged-secret scan and then `spotlessCheck`. The two commits made before the hook existed were scanned afterwards across all branches: no leaks. The CI workflow's first run, on the skeleton PR, passed. Android Studio is updated to 2026.2; the project has not been opened in it yet.
@@ -316,6 +388,7 @@ The `OldTargetApi` lint check is disabled, and Dependabot updates libraries and 
 
 **`[DEBT]` `StatusRow` has two states; the permission checklist needs more**
 `StatusRow` takes a Boolean: met or not met. The checklist also needs "looks on / looks off / unknown" for Autostart and "confirm you set this" for settings the app cannot read (APP_ENCYCLOPEDIA, Permission checklist). It was left at two states because nothing uses the others yet, and they need new icons, colours and strings, which is a deliberate design-system addition. Cost to fix: small. Replace the Boolean with a status type when the checklist is built in phase 1. Tagged `TODO(debt)` in `StatusRow.kt`.
+**Closed 2026-10-05 (work package 3):** `StatusRow` takes a `RowStatus` with four states, and the tag is gone from the code.
 
 **`[DECISION]` Stack and tooling fixed for native Kotlin (ADR-001)**
 Kotlin 2.4.20 on AGP 9.4.1, Gradle 9.8.0 and JDK 17. One `:app` module. Compose with Material 3, Navigation 3, Room 3, DataStore, and manual dependency injection through an `AppContainer`. Quality gates: Kotlin warnings as errors, Android Lint with warnings as errors, Spotless driving ktlint, and a plain `.githooks/` pre-commit script (gitleaks, then `spotlessCheck`). Left out on purpose, each with its reason in the ADR: detekt, Robolectric, Hilt, Sentry, staging and prod, a Gradle lockfile, dependency verification. ENGINEERING_STANDARDS and ARCHITECTURE were rewritten to match, which finishes the rewrite the "Standards to be rewritten" entry below left open. Three points that are easy to miss:

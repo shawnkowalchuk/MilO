@@ -14,9 +14,13 @@ import com.shawnkowalchuk.milo.platform.bluetooth.BluetoothTruckConnection
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedTruck
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckPairing
+import com.shawnkowalchuk.milo.platform.bluetooth.bluetoothSwitchChanges
 import com.shawnkowalchuk.milo.platform.bluetooth.buildTruckPairing
 import com.shawnkowalchuk.milo.platform.diagnostics.ProcessExitReader
 import com.shawnkowalchuk.milo.platform.diagnostics.StartupDiagnostics
+import com.shawnkowalchuk.milo.platform.system.SetupChecklist
+import com.shawnkowalchuk.milo.platform.system.SetupReader
+import com.shawnkowalchuk.milo.platform.system.SystemScreens
 import com.shawnkowalchuk.milo.platform.system.TripPreflight
 import com.shawnkowalchuk.milo.platform.trip.TripController
 import com.shawnkowalchuk.milo.platform.trip.TripNotifications
@@ -25,6 +29,7 @@ import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 
 /**
  * The app's manual dependency injection: the one place where the long-lived objects are created
@@ -101,6 +106,43 @@ class AppContainer(context: Context) {
         )
     }
 
+    /**
+     * Says when the phone's Bluetooth has finished switching on or off. The pairing screen then
+     * reads the paired devices again. Nothing listens until the flow is collected.
+     */
+    val bluetoothSwitched: Flow<Unit> by lazy { bluetoothSwitchChanges(appContext) }
+
+    /**
+     * What stands in the way of recording, read from the phone. The trip service's starter asks
+     * it before every start, and the setup checklist shows the same facts as rows.
+     */
+    val tripPreflight: TripPreflight by lazy { TripPreflight(appContext) }
+
+    /**
+     * The setup checklist, shared by the Setup screen (which shows its rows) and the home
+     * screen (which warns while a required row is not in order).
+     */
+    val setupChecklist: SetupChecklist by lazy {
+        SetupChecklist(
+            readFacts = SetupReader(appContext, tripPreflight)::read,
+            settings = settingsStore,
+            pairing = truckPairing.status,
+            eventLog = eventLogRepository,
+            clock = System::currentTimeMillis,
+            scope = applicationScope,
+        )
+    }
+
+    /** Opens the screens of the phone's settings that the checklist's buttons lead to. */
+    val systemScreens: SystemScreens by lazy {
+        SystemScreens(
+            context = appContext,
+            eventLog = eventLogRepository,
+            clock = System::currentTimeMillis,
+            scope = applicationScope,
+        )
+    }
+
     /** Shared by the trip service and its starter, so the two notification channels exist once. */
     val tripNotifications: TripNotifications by lazy { TripNotifications(appContext) }
 
@@ -116,7 +158,7 @@ class AppContainer(context: Context) {
             eventLog = eventLogRepository,
             settings = settingsStore,
             truck = truckConnection,
-            starter = TripServiceStarter(appContext, TripPreflight(appContext), tripNotifications),
+            starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
             clock = System::currentTimeMillis,
             scope = applicationScope,
         )

@@ -26,6 +26,18 @@ interface TripDao {
     fun observeWithStatus(status: TripStatus): Flow<List<Trip>>
 
     /**
+     * Every trip that started in the half-open range from [fromMs] up to, not including,
+     * [untilMs], whatever its status, newest first. The trips table has no index on
+     * `startedAtMs`, so this reads the whole table; at a few thousand rows a year that takes
+     * milliseconds.
+     */
+    @Query(
+        "SELECT * FROM trips WHERE startedAtMs >= :fromMs AND startedAtMs < :untilMs " +
+            "ORDER BY startedAtMs DESC, id DESC",
+    )
+    fun observeStartedBetween(fromMs: Long, untilMs: Long): Flow<List<Trip>>
+
+    /**
      * Inserts [trip] unless a trip is already open, in which case that one is returned. The check
      * and the insert share a transaction, so two triggers firing together cannot both insert.
      */

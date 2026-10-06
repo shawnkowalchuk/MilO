@@ -14,7 +14,7 @@ Each capability is documented with: what it does, who can use it, how it works s
 
 **Most entries are still `Planned`.** They record the founder's brief of 2026-10-03 plus the answers given at kickoff, so they describe required behaviour, not code. An entry marked `In progress` has a "How it works today" and a "Where the code lives" section. Those two sections describe only what exists; everything under "Required behaviour" that they do not mention is not built.
 
-**What exists after the triggers (work package 2, part B):** storage, the trip rules as tested pure code, crash and kill capture, everything that records a trip once one is started (the trip controller, the foreground service, GPS recording, the notifications, the trip-start sound, the watch on Android Auto), and everything that starts and ends one by itself: the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, and pairing with the truck. **None of the automatic part has met a real Bluetooth connection or the POCO X5 yet.** It is covered by unit tests, and parts of it ran on an emulator without a truck. Two screens are still missing: pairing (until then the truck is paired over adb) and the permission checklist (until then the location, Nearby devices and notification permissions are granted by hand). Both are described in `docs/DEVICE_TEST_CHECKLIST.md`.
+**What exists after the screens (work package 3):** storage, the trip rules as tested pure code, crash and kill capture, everything that records a trip once one is started (the trip controller, the foreground service, GPS recording, the notifications, the trip-start sound, the watch on Android Auto), everything that starts and ends one by itself (the Bluetooth receiver, the companion service, the boot and update receiver, the reading of the truck's connection, pairing with the truck), and five screens behind a bottom navigation bar: Home, Trips (one month at a time), Setup (the permission checklist, with the truck pairing screen opened from it) and Log (the event log). **None of the automatic part has met a real Bluetooth connection or the POCO X5 yet, and the screens of work package 3 have never been drawn anywhere:** they were built and proven with the build and unit tests only. What the phone has to prove is in `docs/DEVICE_TEST_CHECKLIST.md`.
 
 **The app in one line:** MilO is a personal Android app (native Kotlin, one phone, no backend, no accounts, no Play Store) that automatically logs business mileage in Shawn's work truck and produces a monthly PDF to email to accounts.
 
@@ -35,7 +35,7 @@ Each capability is documented with: what it does, who can use it, how it works s
 - [Trip-start sound](#trip-start-sound) — phase 1
 - [Safety net: manual button and driving alert](#safety-net-manual-button-and-driving-alert) — phases 1 and 2
 - [Android Auto screen](#android-auto-screen) — phase 1
-- [Permission checklist](#permission-checklist) — phase 1
+- [Permission checklist](#permission-checklist) — phase 1 (the Setup screen)
 - [Schedule and Business/Personal](#schedule-and-businesspersonal) — phase 2
 - [Trip log: home, day and month views](#trip-log-home-day-and-month-views) — phases 1 and 2
 - [Monthly PDF and submission](#monthly-pdf-and-submission) — phase 3
@@ -48,7 +48,7 @@ Each capability is documented with: what it does, who can use it, how it works s
 
 ## Truck pairing and trip detection
 
-**Status:** In progress (phase 1): built except for the pairing screen, and not yet run against a real truck or on the phone · **Platforms:** Android · **Last updated:** 2026-10-05
+**Status:** In progress (phase 1): built, and not yet run against a real truck or on the phone; the pairing screen has never been drawn · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
 Starts a trip automatically when the phone connects to the truck over Bluetooth and ends it after the truck disconnects. This is the most important capability in the app: the mileage app Shawn uses today often fails to start trips even when the phone is clearly connected, so **reliability is the number one requirement**.
@@ -65,11 +65,16 @@ Starts a trip automatically when the phone connects to the truck over Bluetooth 
 Designed in `docs/adr/ADR-002-trip-detection.md`. First pairing, then what tells MilO about the truck, then the path a trigger takes, then the rules.
 
 *Pairing*
-- There is no pairing screen yet. `TruckPairing` is what it will call: `pairedDevices()` lists the phone's paired Bluetooth devices; `associate(device, activity)` asks Android for a companion device association with the chosen one (an address filter, single-device mode, no device profile: the one combination that finds an already-paired device without a scan); Android answers with a consent dialog for the screen to launch, delivered through `progress`; `onConsentResult` takes the dialog's result.
+- **The pairing screen** (`feature/pairing/`) is opened from the Setup screen's truck row. It shows three cards. "Your truck": the stored truck and, in plain words, whether Android is watching for it, followed by how the attempt just made went. "Before you can pick the truck", only when something is in the way. "Paired with this phone": the phone's paired Bluetooth devices, named, each with its own button (Pair; Pair again on the stored truck; Use this one on another device once a truck is stored).
+- **What can be in the way,** one at a time and in this order: Nearby devices is not allowed (the card's button asks for it with Android's dialog); the phone has no Bluetooth; Bluetooth is switched off (a button to the Bluetooth settings); location is switched off (a button to the Location settings; the devices are listed but their buttons are greyed out, because Android needs location on to make the association); nothing is paired with the phone (the Bluetooth settings again). The screen reads the phone again every time it comes to the front, which includes the quick settings panel closing over it (see [Design system](#design-system), `CameToFrontEffect`). It reads once more when Android reports that Bluetooth has finished switching on or off (`bluetoothSwitchChanges`): switching on takes the phone a second or two, and Shawn is back on the screen sooner than that.
+- **Picking a device** calls `TruckPairing.associate` with the screen's Activity. Android hands back its consent dialog, which the screen shows once (the ViewModel remembers which one it showed, so a rotation does not show it twice), and the dialog's result goes to `TruckPairing.onConsentResult`. The screen then says one of: "Paired with (name)" and, above it, that Android is watching for the truck; "Not paired. Android's dialog was closed without allowing. Nothing was changed."; or "Pairing failed", with `TruckPairing`'s own reason word for word and what to try. "Not paired" is shown only when Shawn himself closed the dialog (result 0) or pressed "Don't allow" (result 1). From Android 13 the dialog can also end because Android gave up looking for the device or failed inside; every such result is "Pairing failed" (`consentWasDeclined` in `PairingUiState.kt`).
+- **Changing the truck** is picking another device. `TruckPairing` stores the new truck and removes every other association, the old truck's among them.
+- What the screen shows is decided by one pure function, `pairingUiState`, from the phone's device list, whether location is on, the stored truck, `TruckPairing.status` and `TruckPairing.progress`. `progress` belongs to the whole app and outlives the screen, so the result of an attempt made on an earlier visit is not shown.
+- `TruckPairing` is what the screen calls: `pairedDevices()` lists the phone's paired Bluetooth devices; `associate(device, activity)` asks Android for a companion device association with the chosen one (an address filter, single-device mode, no device profile: the one combination that finds an already-paired device without a scan); Android answers with a consent dialog for the screen to launch, delivered through `progress`; `onConsentResult` takes the dialog's result.
 - When the association exists, the truck's address (in capitals), name and association id are stored in the settings, every other association MilO holds is removed, and Android is asked to observe the truck: from then on it binds MilO's companion service whenever the truck connects. The trip controller is then asked to read the truck, because Android does not always report a truck that is already connected.
 - `check()` runs at every process start and every time MilO comes to the front. It compares the stored truck with the associations Android lists and asks Android again to observe (asking twice changes nothing). The result is one of: armed, no truck, association missing (it was removed in the phone's settings), not supported (a truck is stored, but the phone has no companion device support), failed. It is logged as a `PAIRING` line each time. While no truck is armed the line also lists the phone's paired devices, and says so if the phone has no companion device support.
-- An association with no truck stored for it is adopted as the truck, if it is the only one and its device is paired with the phone. That is how the truck is paired until the screen exists: the association is made over adb (`docs/DEVICE_TEST_CHECKLIST.md`). An association for an address that is not among the phone's paired devices is turned down, and the `PAIRING` line says so.
-- The same adoption replaces a stored truck whose own association is gone. It is the way back from a wrong truck, and the way to pair another one, until the screen exists: remove the association over adb, make the right one, open MilO. A stored truck that still has its association is never replaced.
+- An association with no truck stored for it is adopted as the truck, if it is the only one and its device is paired with the phone. That is how a truck can still be paired over adb if the screen fails: the association is made over adb (`docs/DEVICE_TEST_CHECKLIST.md`). An association for an address that is not among the phone's paired devices is turned down, and the `PAIRING` line says so.
+- The same adoption replaces a stored truck whose own association is gone. Over adb it is the way back from a wrong truck, and the way to pair another one if the screen fails: remove the association, make the right one, open MilO. A stored truck that still has its association is never replaced by adoption.
 
 *What tells MilO about the truck*
 - **The Bluetooth receiver** (`TruckBluetoothReceiver`, in the manifest and exported) hears four broadcasts for every Bluetooth device: the link going up, the link going down, and the hands-free and the audio profile changing state. It looks the truck up in the settings and compares addresses. For another device it writes one "Ignored" line to the event log and does nothing else. For the truck: the classic link going up is a "link connected" trigger and going down a "disconnected" trigger, both trusted as they stand; a profile reaching "connected" or "disconnected", and a low-energy link to the truck's address, are prompts to read the truck's connection.
@@ -122,11 +127,12 @@ Designed in `docs/adr/ADR-002-trip-detection.md`. First pairing, then what tells
 - `core/trip/`: `TripStateMachine.kt` (the rules), `OpenTripRules.kt` (what an open trip should be doing), `HoldOffRules.kt` (when the hold-off ends), `TripState.kt`, `TripEvent.kt`, `TripEffect.kt`, `TripClosing.kt`, `TripStatus.kt`, `TripStartCause.kt`, `LostDisconnectDetector.kt` (two readings in a row), `PollPacer.kt` (when the minute reading is due, by timer or by GPS fix), `AndroidAutoHoldGuard.kt` (the 12 hours).
 - `platform/trip/`: `TripController.kt` (the entry point and the inbox), `TripWorker.kt` (one trigger at a time: rules, storage, log, service), `TripEvidence.kt` (turns a trigger into what the rules are told, and decides which readings count), `TripRuleSettings.kt` (the settings the rules run with), `TripLedger.kt` (carries the effects out in storage), `TripServiceLink.kt` (what the service was last told), `TripTrigger.kt` (the triggers, and the two interfaces between controller and service), `TripActivity.kt` (what the screens show), `TripLogText.kt` (the wording of the event-log lines), `TripService.kt`, `TripServiceIntent.kt` (how a trigger rides in the service's start intent), `TripServiceStarter.kt`.
 - `platform/system/TripPreflight.kt`: the check before the service is started.
-- `platform/bluetooth/`: `TruckBluetoothReceiver.kt` (the four broadcasts, in the manifest and in the trip service), `TruckCompanionService.kt` (the three shapes of companion callback), `TruckReconcileReceiver.kt` (boot and update), `TruckSignals.kt` (what each broadcast and callback means, and whether it is about the truck: plain functions), `Truck.kt` (the stored truck, and `PairedTruck`, which looks it up for a trigger), `TruckConnectionSource.kt` (the question "is the truck connected right now?" and the reading it returns), `BluetoothTruckConnection.kt` and `ProfileProxy.kt` (the answer), `TruckPairing.kt` and `PairingStatus.kt` (pairing), `TruckPairingCheck.kt` (the check that it is still armed, and adoption), `CompanionLink.kt` (everything asked of Android's companion device manager, with the differences between Android versions), `PairedDevices.kt` (the phone's paired devices).
+- `feature/pairing/`: `PairingScreen.kt` and `PairingCards.kt` (the screen), `PairingViewModel.kt`, `PairingUiState.kt` (what the screen shows and the function that decides it). The buttons to the phone's settings go through `platform/system/SystemScreens.kt`.
+- `platform/bluetooth/`: `TruckBluetoothReceiver.kt` (the four broadcasts, in the manifest and in the trip service), `TruckCompanionService.kt` (the three shapes of companion callback), `TruckReconcileReceiver.kt` (boot and update), `TruckSignals.kt` (what each broadcast and callback means, and whether it is about the truck: plain functions), `Truck.kt` (the stored truck, and `PairedTruck`, which looks it up for a trigger), `TruckConnectionSource.kt` (the question "is the truck connected right now?" and the reading it returns), `BluetoothTruckConnection.kt` and `ProfileProxy.kt` (the answer), `TruckPairing.kt` and `PairingStatus.kt` (pairing), `TruckPairingCheck.kt` (the check that it is still armed, and adoption), `CompanionLink.kt` (everything asked of Android's companion device manager, with the differences between Android versions), `PairedDevices.kt` (the phone's paired devices), `BluetoothSwitch.kt` (says when the phone's Bluetooth has finished switching on or off, for the pairing screen).
 - `platform/car/AndroidAutoWatcher.kt`: the watch on `CarConnection`.
 - `data/trip/`: `Trip.kt` (the table), `TripDao.kt`, `TripRepository.kt`. The hold-off is in `data/settings/SettingsStore.kt`.
 - `app/AppContainer.kt` builds the controller, the reading and the pairing; `app/MiloApplication.kt` sends the reconcile and the pairing check at process start, and `app/MainActivity.kt` both again each time MilO comes to the front. The manifest declares the two services, the two receivers and the permissions they need.
-- Tests: `app/src/test/.../core/trip/TripStateMachine*Test.kt` (the rules in ADR-002's order, how a grace period ends, the buttons, the hold-off, the companion start, awkward orderings, random sequences, restarts), `TripClosingTest.kt`, `LostDisconnectDetectorTest.kt`, `PollPacerTest.kt`, `AndroidAutoHoldGuardTest.kt`; `app/src/test/.../platform/trip/TripController*Test.kt`, which run the controller against stand-ins for storage, the truck and the service (`TripControllerReadingTest.kt` for the triggers and for a truck that cannot be read, `TripControllerPollTest.kt` for which readings of "not connected" count, `TripControllerRestartTest.kt` for a lost process, a lost service and failing storage); and `app/src/test/.../platform/bluetooth/`: `TruckSignalsTest.kt`, `TruckTest.kt`, `BluetoothTruckConnectionTest.kt` (what is made of the two profiles' answers), `TruckPairingTest.kt` and `TruckPairingCheckTest.kt` (against a stand-in for Android's companion device manager, in `TruckPairingFakes.kt`). The receivers, the companion service and the calls into Android's Bluetooth have no unit tests: there is no Robolectric (STANDARDS §11).
+- Tests: `app/src/test/.../core/trip/TripStateMachine*Test.kt` (the rules in ADR-002's order, how a grace period ends, the buttons, the hold-off, the companion start, awkward orderings, random sequences, restarts), `TripClosingTest.kt`, `LostDisconnectDetectorTest.kt`, `PollPacerTest.kt`, `AndroidAutoHoldGuardTest.kt`; `app/src/test/.../platform/trip/TripController*Test.kt`, which run the controller against stand-ins for storage, the truck and the service (`TripControllerReadingTest.kt` for the triggers and for a truck that cannot be read, `TripControllerPollTest.kt` for which readings of "not connected" count, `TripControllerRestartTest.kt` for a lost process, a lost service and failing storage); `app/src/test/.../platform/bluetooth/`: `TruckSignalsTest.kt`, `TruckTest.kt`, `BluetoothTruckConnectionTest.kt` (what is made of the two profiles' answers), `TruckPairingTest.kt` and `TruckPairingCheckTest.kt` (against a stand-in for Android's companion device manager, in `TruckPairingFakes.kt`) and `BluetoothSwitchTest.kt`; and `app/src/test/.../feature/pairing/PairingUiStateTest.kt` (what the pairing screen shows for each thing the phone and `TruckPairing` can report, and which results of the consent dialog count as declined). The receivers, the companion service, the calls into Android's Bluetooth and the screen itself have no unit tests: there is no Robolectric (STANDARDS §11).
 - What only the phone can prove is in `docs/DEVICE_TEST_CHECKLIST.md`.
 
 **Depends on**
@@ -149,11 +155,17 @@ Bluetooth permissions, companion device association, the foreground service, and
 - The companion "disappeared" callback is trusted as a disconnect. Should Android send one while the truck is still connected, the trip goes into its grace period and the next reading (within a minute) cancels it. With no trip open it releases a hold-off, and the truck then starts a trip at the next reading.
 - A hands-free or audio profile that connects while the hold-off is set does not release it and does not start a trip: it is not a new link. A profile that drops is another matter. Its broadcast prompts a reading, and if it was the only profile connected (the usual case with Android Auto on a cable, where only hands-free is up), the reading says "not connected". That releases the hold-off, and the profile coming back starts a trip, although the link never dropped and Shawn never left the truck. Left that way on purpose: any reading of "not connected" releases the hold-off, because a missed trip is worse than an unwanted restart (ADR-002, amendment 24). Device check 47 shows whether this truck does it.
 - On Android 15 and 16, asking Android to observe a truck that is already connected binds the companion service but sends no "appeared". Seen on the emulator. The reading taken each time the companion service is created covers it; this phone runs Android 14, which does send it.
-- Until the pairing screen exists, another truck is paired the way the first was: over adb. Remove the stored truck's association, make one for the new truck, and open MilO; the lone association is adopted in place of the stored truck. While the stored truck still has its association, nothing replaces it.
-- On a phone that does not report companion device support, no truck can be stored before the pairing screen exists: there is no association to adopt. The `PAIRING` line says so. Whether HyperOS reports the feature is not known until tried.
+- Over adb, another truck is paired the way the first is: remove the stored truck's association, make one for the new truck, and open MilO; the lone association is adopted in place of the stored truck. While the stored truck still has its association, adoption replaces nothing. The pairing screen has no such limit.
+- On a phone that does not report companion device support there is no association to adopt, and the `PAIRING` line says so. Only the pairing screen can store a truck there: it stores it without an association, so that the Bluetooth receiver knows which device to listen for. Whether HyperOS reports the feature is not known until tried.
+- **Android's consent dialog has never been shown by any build of MilO,** and the pairing screen has never been drawn. Device checks 67 to 72 are the first time.
+- The pairing screen cannot remove the truck without pairing another. Nothing asked for that.
+- Changing the truck while a trip is being recorded is not prevented. The trip controller is told that the truck changed and reads the new truck's connection, and the trip rules go by the new truck from then on. What that does to a trip the old truck was holding open has not been tried.
+- If Android never answers a request to pair, the screen stays on "Waiting for Android" and no device can be picked. Leaving the pairing screen and opening it again lets Shawn pick again.
+- The pairing screen's Back arrow closes that screen and nothing else, however often it is tapped while the screen slides away (`closeIfOnTop`). Before, a second tap closed Setup too and a third crashed MilO.
+- The receiver that hears Bluetooth being switched on or off is registered only while the pairing screen is on the back stack. It has never received a broadcast: device check 70.
+- A failed pairing is shown with `TruckPairing`'s reason as it is written for the event log, in English and with the exception's name where there is one. It is exact, not pretty.
 - Pairing a truck again makes a second association on some Android versions. MilO keeps the one with the highest id and removes the others.
 - On Android 12 the association is not reported through a callback, only through the result of the consent dialog. If Android has not listed it by the time MilO looks, pairing fails with "lists no association" and has to be repeated. Never seen; this phone runs Android 14.
-- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is not declared yet. Nothing asks for the exemption until the permission checklist is built.
 - The timers of a trip (grace period, confirmation, the minute) are coroutines in the service and can fire late while the phone sleeps. A GPS fix stands in for a late timer: for a deadline once it is 10 seconds overdue, for the minute reading 70 seconds after the last one. The overdue deadline is dealt with before that fix is counted, so the first fix after a long silence closes a forgotten manual trip where it last moved; it does not count as new movement. With no fixes arriving (indoors) a trip can stay open, and the service running, past its grace period until the phone next wakes. A trip that runs out of grace is still cut at the right moment; only its closing is late. A disconnect that was never reported is different: the trip is cut when the second reading is taken, so late readings mean a late cut.
 - The process killed (or frozen) while a trip is open: the next morning's connect does not join yesterday's trip. A trip in grace is closed by its stored deadline, restart or not. After a restart, a trip that was recording is closed at its newest point if that is more than 30 minutes old; up to 30 minutes it carries on, and the gap is counted as a straight line. A restart also closes a trip that stored no point for 30 minutes for any other reason, such as location switched off. A process that stays alive through a lost disconnect relies on the once-a-minute reading (rule 11).
 - The 30 seconds and the 30 minutes are constants in `TripState.kt` (`LATE_CHECK_TOLERANCE_MS`, `RESTART_GAP_LIMIT_MS`). They were chosen in review without Shawn and are his to change (ADR-002, Amendments).
@@ -301,20 +313,65 @@ Shows MilO on the truck's Android Auto display, built with the Car App Library (
 
 ## Permission checklist
 
-**Status:** Planned (phase 1) · **Platforms:** Android · **Last updated:** 2026-10-05
+**Status:** In progress (phase 1): built as the Setup screen; never run on a phone or an emulator · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
-One screen showing every requirement as green or red, each with a button that takes Shawn to the place to fix it.
+One screen, Setup, showing every requirement with its state, each with a button that takes Shawn to the place to fix it. The home screen warns while a required one is not in order.
 
 **Required behaviour**
 - Items: precise location, background location ("Allow all the time"), notifications, Bluetooth connect, companion background permissions, battery optimisation exemption, Physical activity (for the driving alert).
 - Xiaomi items for this phone: Background autostart, Battery saver "No restrictions", "Pause app activity if unused" off, the "Other permissions" switches (Show on Lock screen, Start in background, Permanent notification), and MilO locked in recents. Each has a button that opens the right HyperOS screen.
 - The screen is honest about what it can verify. Autostart can only be read through an unofficial check, so it shows as "looks on", "looks off" or "unknown". The Battery saver profile and the recents lock cannot be read at all, so they are "confirm you set this" steps.
 
-**What exists today**
-The screen is not built, and MilO asks for no permission by itself. What exists is the preflight that runs before the trip service is started (`platform/system/TripPreflight.kt`): precise location granted, location set to "Allow all the time", location switched on, battery use not "Restricted", Nearby devices (the Bluetooth permission) granted. When it fails, the home screen lists what is missing and a notification says the trip could not start. Until the checklist is built the permissions are granted by hand: in the phone's settings (Apps, MilO, Permissions: Location "Allow all the time" with precise location on; Nearby devices allowed; Notifications allowed), or with `adb shell pm grant`.
+**How it works today**
+1. **The rows.** `setupRows` in `platform/system/SetupRules.kt` is a pure function: given what the phone reports (`SetupFacts`), the state of the truck's pairing and Shawn's confirmations, it returns every row with its state (OK, problem, unknown, needs confirmation), which sentence to show and what its button does. `SetupReader` reads the facts from Android. The five facts that stop a trip from being recorded are read by `TripPreflight.facts()`, the same code that checks them before the trip service is started, so the checklist and the preflight cannot disagree.
+2. **The nine Android rows,** on every phone:
 
-Also built, for the checklist to show later: `TruckPairing.status` says whether the companion association exists and is observed (armed, no truck, association missing, not supported, failed). The companion permissions are granted at install and need no prompt. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is not in the manifest yet; it arrives with the checklist's battery item.
+   | Row | In order when | Its button |
+   |---|---|---|
+   | Precise location | The precise location permission is granted | Android's permission dialog |
+   | Location: Allow all the time | The background location permission is granted | Asks for it, which makes Android open its own location page. No button until precise location is granted: Android ignores the request before that, and the row says so |
+   | Notifications | MilO's notifications are shown | The permission dialog (Android 13 and later), or the notification settings |
+   | Nearby devices (Bluetooth) | The Bluetooth permission is granted | The permission dialog |
+   | Location switched on | Location is on for the whole phone | The phone's Location settings |
+   | Truck paired and watched | The pairing check says "armed" | MilO's pairing screen. The button is always there: "Pair truck" while nothing is paired or Android has dropped the association (the sentence then says "pair it again"), "Change truck" otherwise |
+   | Battery use: unrestricted | MilO is exempt from battery optimisation, and not "Restricted" | Android's dialog that asks for the exemption (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is declared for it); for "Restricted", MilO's page in the settings. On a Xiaomi phone that page is HyperOS's "App info", which has no "Unrestricted", so the sentence names its Battery saver choice "No restrictions" there |
+   | Not paused when unused | "Pause app activity if unused" is off for MilO | The page with that switch |
+   | Battery Saver off | The phone-wide Battery Saver is off | The Battery Saver settings |
+
+3. **The four HyperOS rows,** only on a Xiaomi, Redmi or POCO phone (`isXiaomiFamily`, from the manufacturer and the brand the phone reports):
+   - **Background autostart.** Read through the unofficial check the research describes: `AppOpsManager.checkOpNoThrow` with MIUI's app-op 10008, reached by reflection. Mode 0 is shown as "Looks on", any other mode as "Looks off", and a call that fails as "MilO could not read this setting". Each sentence says that it is not a certainty. Only when there is no reading does the row offer "I have set this".
+   - **Battery saver: No restrictions,** **Other permissions** (Show on Lock screen, starting or opening windows in the background, Permanent notification, as one row) and **Locked in recent apps.** MilO cannot read any of them. Each shows an empty ring and the instruction until Shawn presses "I have set this"; then it is green and says "You confirmed this on (date). MilO cannot check it." "Not set any more" takes the confirmation back. The dates are in the settings store.
+   - Their buttons open the HyperOS screens the research found: the Autostart list (`com.miui.securitycenter`'s `AutoStartManagementActivity`, then the action `miui.intent.action.OP_AUTO_START`), MilO's Battery saver choices (`com.miui.powerkeeper`'s `HiddenAppsConfigActivity`), and MilO's permission editor (`miui.intent.action.APP_PERM_EDITOR`). The recents lock has no button: it is a gesture on MilO's card.
+4. **Required and recommended.** A row is required if an automatic trip can fail to start, or be cut short, without it. Two rows are only recommended: "Not paused when unused" and "Other permissions". Their sentences begin with "Recommended".
+5. **Opening a settings screen** (`platform/system/SystemScreens.kt`). Each screen has a list of ways to open it, best first, and the last is always Android's own page for MilO. They are tried in order inside a try/catch, so a screen this build of HyperOS does not have is never a crash. When a fallback was used, or nothing opened, an `ERROR` line in the event log says which screen and why.
+6. **Asking for a permission.** The button shows Android's dialog. After two refusals Android stops showing it and answers "refused" at once; MilO then opens the settings page that holds the permission, so the button always leads somewhere (`androidDidNotAsk`).
+7. **Re-reading.** Android sends no event when a permission or a setting changes. The Setup and Home screens ask the shared `SetupChecklist` to read the phone again every time they come to the front: coming back from a settings screen, one of Android's dialogs closing, and the quick settings panel closing over MilO. The first two resume the screen; the panel does not, so MilO's window getting the focus back counts as well (`CameToFrontEffect`, see [Design system](#design-system)). The truck row and the confirmations update by themselves.
+8. **The home screen's warning.** While any required row is not OK, Home shows a card "Setup needs attention" with a button to Setup. The rule is `needsAttention`, and the Setup screen's count at the top uses the same one. No truck paired is one of the required rows.
+
+**Where the code lives**
+- `feature/setup/`: `SetupScreen.kt`, `SetupViewModel.kt`, `SetupTexts.kt` (which words each row shows).
+- `platform/system/`: `SetupRow.kt` (the rows, their states and what a button can do), `SetupRules.kt` (`setupRows`, `needsAttention`), `SetupFacts.kt` (what is read from the phone, `SetupReader`, the Autostart reading, `isXiaomiFamily`), `SetupChecklist.kt` (the rows as a flow, shared by Setup and Home), `SystemScreen.kt` (the ways of opening each settings screen, as plain values), `SystemScreens.kt` (opens them), `PermissionAsk.kt` (`androidDidNotAsk`), `TripPreflight.kt` (the five facts shared with the trip service).
+- `data/settings/`: the confirmation dates (`ConfirmedStep`, `SettingsStore.setConfirmedAtMs`).
+- The warning card is in `feature/home/HomeScreen.kt`.
+- Tests: `app/src/test/.../platform/system/` (`SetupRulesTest.kt`, `SetupAttentionTest.kt`, `SetupFactsTest.kt`, `SetupChecklistTest.kt`, `SystemScreenTest.kt`, `PermissionAskTest.kt`, `TripPreflightTest.kt`) and `app/src/test/.../feature/setup/SetupTextsTest.kt` (the truck button's words, and the battery sentence for each kind of phone).
+
+**Depends on**
+`TruckPairing.status` (see [Truck pairing and trip detection](#truck-pairing-and-trip-detection)), the settings store, and the HyperOS findings in `docs/research/2026-10-03-miui-background-limits.md` (4, 16 to 20 and 27 to 33).
+
+**Edge cases & gotchas**
+- **Nothing here has run on a phone.** Whether the Autostart reading answers on this phone, whether each HyperOS button finds its screen on HyperOS 2, and whether `isPowerSaveMode` and the "pause if unused" reading follow Xiaomi's own switches are device checks 54 to 66.
+- Whether HyperOS's quick settings panel takes the focus from MilO's window, as stock Android's does, is untested. If it does not, a setting changed there shows only after MilO is left and opened again (device check 59).
+- Whether Android's "Restricted" can be reached on HyperOS at all, and whether Battery saver "No restrictions" is what lifts it, is unknown (device checks 22 and 61). The sentence names the one battery setting the HyperOS app page has.
+- **Two rows of the brief are not there.** Physical activity belongs to the driving alert (phase 2), and nothing uses it yet. The companion background permissions are granted at install and cannot be taken away, so they have no row; what can go wrong with the companion association is the truck row.
+- The Autostart reading is known to say "on" for a switch that is off on some phones, and always says "on" while MIUI optimisation is disabled. "Looks on" therefore proves nothing; the with and without Autostart drive (device checks 36 to 43) does.
+- A confirmation by hand never overrides an Autostart that reads as off. If the reading were wrong in that direction on this phone, the warning could not be cleared; that would be a finding to act on.
+- The confirmations are Shawn's word, and HyperOS is reported to reset these settings after updates and reboots. A confirmation does not expire. The date is shown so that an old one can be doubted.
+- On the POCO the home screen's warning stays until the Battery saver row and the recents lock are confirmed, even with every permission granted.
+- Android's battery exemption and HyperOS's "No restrictions" are treated as two settings. The research could not settle whether either sets the other.
+- If the settings file cannot be read, the rows are still shown, without the confirmations, and an `ERROR` line is logged.
+- If Android refuses one of the readings, an `ERROR` line with the exception is logged and the rows stay as they were. Should that happen at the very first reading, Setup stays on "Reading the phone's settings…"; the Log says why.
+- The settings screens open as a task of their own. Back returns to MilO.
 
 ---
 
@@ -335,7 +392,7 @@ Decides whether a trip is Business or Personal from when it started.
 
 ## Trip log: home, day and month views
 
-**Status:** In progress: the home screen shows the trip in progress and nothing else yet (basic list in phase 1, the rest in phase 2) · **Platforms:** Android · **Last updated:** 2026-10-03
+**Status:** In progress: the home screen shows the trip in progress, and the Trips screen lists one month at a time (times and km only). Never run on a phone. The rest is phase 2 · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
 Shows what was recorded and lets Shawn correct it.
@@ -348,19 +405,47 @@ Shows what was recorded and lets Shawn correct it.
 - There is no purpose or note field. Dropped at kickoff.
 
 **How it works today**
-The home screen (`feature/home/HomeScreen.kt`) shows one card, "Current trip": with no trip open, "No trip in progress"; with one, the distance so far, "Trip in progress" (or that it is waiting for the truck to reconnect) and the time it started. It reads `TripController.activity` through `HomeViewModel` and keeps no copy. Below the card, if the last start failed, a second card lists why. Then the Start trip / End trip button. Today's sessions, the trip list and the day and month views are not built; finished trips are in the database and can be read as `docs/DEVICE_TEST_CHECKLIST.md` describes.
+*Home* (`feature/home/HomeScreen.kt`). While the setup checklist needs attention, a card "Setup needs attention" with a button to Setup (see [Permission checklist](#permission-checklist)). Then one card, "Current trip": with no trip open, "No trip in progress"; with one, the distance so far, "Trip in progress" (or that it is waiting for the truck to reconnect) and the time it started. It reads `TripController.activity` through `HomeViewModel` and keeps no copy. Below the card, if the last start failed, a second card lists why. Then the Start trip / End trip button. Today's sessions are not built.
+
+*Trips* (`feature/trips/`), the second button of the bottom bar. Shawn asked for it by name on 2026-10-05: "a trip button to view previous and current months trips".
+1. It opens on the current month, every time it is entered. At the top, one card: the month's name and year, the total km, the number of trips, and two buttons, Previous month and Next month. Next month is greyed out on the current month: the screen never goes past it. Back is one month at a time, without limit.
+2. Under it a switch, "Show discarded trips", off by default.
+3. Then the trips, one card per day, newest day first and newest trip first within a day. Each trip shows its start time, its end time and its km.
+4. **What is counted.** The total and the number of trips are of the finished trips only. A trip discarded as too short (or as a false start) is left out of the list and the totals; a line says how many are hidden. With the switch on they are listed in their day, marked "Discarded … Not counted" with their km greyed, and the totals do not change. This is how a real trip that was wrongly discarded can be spotted during testing.
+5. **A trip in progress** is shown in a card of its own above the days, "In progress", with its start time and its running distance, and is not in the total until it ends. The running distance comes from the trip controller, because the stored row holds 0 while a trip is open; if the controller is not recording that trip, no figure is shown.
+6. **Which day and month a trip belongs to.** The day and the month it started in, in the phone's time zone. A trip that runs past midnight is listed once, under the day it started.
+7. An empty month says "No trips in (month and year)."
+8. **Reading.** Only the month on screen is read: `TripRepository.observeTripsStartedBetween` takes a span of time, and `monthSpan` in `core/util/TimeSpan.kt` gives the span of a month in a time zone (from local midnight on the 1st up to, not including, local midnight on the next 1st, so a month in which the clocks change is an hour longer or shorter). The list follows the database: a trip that closes while the screen is open appears by itself. Which month is the current one is worked out again each time the screen comes to the front.
+9. The sums and the grouping are pure functions in `feature/trips/TripMonth.kt` (`monthSummary`, `stepMonth`, `canStepForward`).
+
+**Where the code lives**
+- `feature/home/HomeScreen.kt` and `HomeViewModel.kt`.
+- `feature/trips/`: `TripsScreen.kt` and `TripRows.kt` (the screen), `TripsViewModel.kt`, `TripMonth.kt` (what is counted and how it is grouped).
+- `core/util/TimeSpan.kt` (a month as a span of time; the day and month of a stored time) and `TimeFormat.kt` (the month heading, the day heading, the time of day).
+- `data/trip/TripDao.kt` and `TripRepository.kt` (the query by span of time).
+- Tests: `app/src/test/.../feature/trips/TripMonthTest.kt`, `app/src/test/.../core/util/TimeSpanTest.kt` and `TimeFormatTest.kt`.
+
+**Edge cases & gotchas**
+- **The Trips screen has never been drawn.** Device checks 76 to 79.
+- **The Trips screen has no send, share or export.** Sending a month or a date range to the accountant is [Monthly PDF and submission](#monthly-pdf-and-submission), which is not built.
+- Addresses, Business/Personal, the day view, editing, deleting and adding a trip are phase 2. Until then every finished trip counts, whatever the time of day.
+- The `trips` table has no index on the start time, so the query reads the whole table. At a few thousand rows a year that takes milliseconds. The index is a schema change and waits for the first migration (FINDINGS_LOG, 2026-10-05).
+- A trip still recording at the turn of the month is shown in the month it started in, not in the new current month.
+- The total is added up in metres and rounded once. The km of the single trips, each rounded to one decimal, can therefore add up to 0.1 more or less than the total shown.
+- If the phone's time zone changes, the days and months are worked out again in the new zone the next time the screen comes to the front. A trip near midnight can then move to the neighbouring day.
+- A trip whose stored start is later than its end (the clock was corrected during it, see [GPS recording and distance](#gps-recording-and-distance)) is listed as stored.
 
 ---
 
 ## Monthly PDF and submission
 
-**Status:** Planned (phase 3) · **Platforms:** Android · **Last updated:** 2026-10-03
+**Status:** Planned (phase 3), **not built: nothing in the app creates or sends a report.** Shawn asked for it again on 2026-10-05. Leaving it in phase 3 is the assistant's proposal and waits for his confirmation (FINDINGS_LOG, 2026-10-05) · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **What it does**
 Produces the monthly reimbursement report and hands it to Gmail.
 
 **Required behaviour**
-- Shawn picks any month, not only the current one, and generates a PDF of that month's Business trips. Built with Android's own `PdfDocument`, no third-party PDF library.
+- Shawn picks a specific month or a custom date range, not only the current month, and generates a PDF of the Business trips in it. The date range was added on 2026-10-05 ("be able to pick specific month or date range"). Built with Android's own `PdfDocument`, no third-party PDF library.
 - Header: name, company, vehicle, month, generated date.
 - One table per day with columns **Start, End, From, To, km**, then a daily subtotal. A month total km at the end.
 - **No rate and no amount owed.** Accounts works the money out, so the report shows km only.
@@ -369,16 +454,18 @@ Produces the monthly reimbursement report and hands it to Gmail.
 - Manual or edited trips carry an asterisk, with a legend.
 - Send button opens Gmail with the accounts address, the subject "Mileage – [Month Year] – [Name]", and the PDF attached. Shawn taps send himself.
 - After sending, the month is marked Submitted with the date. Each month shows submitted or not submitted. Resubmitting a month warns first, is allowed, and is labelled a revision.
-- CSV export for any month.
+- CSV export for any month or date range.
+- **Open, to settle at phase 3 kickoff:** how a date-range report counts toward a month's Submitted status (for example a range that covers half a month, or spans two).
 
 **Edge cases & gotchas**
 - Android cannot tell the app whether the email was really sent, so marking a month Submitted needs Shawn's confirmation.
+- Already built, for the report to use and not rebuild: `TripRepository.observeTripsStartedBetween` reads the trips of any span of time, a month or a custom range alike, and `monthSpan` in `core/util/TimeSpan.kt` turns a month into such a span (see [Trip log](#trip-log-home-day-and-month-views)).
 
 ---
 
 ## Diagnostics and reminders
 
-**Status:** In progress (phase 1): the event log is stored; crashes and process kills are captured into it at every start, and trip recording writes its evidence to it. There is no screen to read it on yet. The rest is phase 4 · **Platforms:** Android · **Last updated:** 2026-10-05
+**Status:** In progress (phase 1): the event log is stored; crashes and process kills are captured into it at every start, trip recording writes its evidence to it, and the Log screen shows it (never run on a phone). The rest is phase 4 · **Platforms:** Android · **Last updated:** 2026-10-05
 
 **Required behaviour**
 - A bare event log (the stored events and a plain list screen) ships in phase 1, because without it a missed trip start during the test drives cannot be diagnosed. Phase 4 finishes it.
@@ -405,15 +492,23 @@ Produces the monthly reimbursement report and hands it to Gmail.
    - `ERROR`: a failure inside the controller, with its stack trace; an unreadable settings file.
    - `PAIRING`: the truck being paired or adopted, a pairing that failed and why, and every check of the pairing with its result. While no truck is armed, the line also lists the phone's paired devices with their addresses, names an association that was not adopted, and says if the phone has no companion device support.
 
-Checked on an emulator (Android 16) on 2026-10-03: an induced crash, a force stop and a background kill each appeared in the log at the next start, once. On 2026-10-05 the same emulator showed the trigger lines of the companion service, the boot and update reconcile and the pairing check (FINDINGS_LOG). Not yet run on the POCO X5.
+7. **The Log screen** (`feature/eventlog/`), the last button of the bottom bar: the stored log, newest first.
+   - Each line shows its time as `2026-10-05 08:14:03` (to the second, 24-hour, in the phone's own time zone, the same form in every language), its category by its stored name (`CRASH` and `ERROR` in red) and its message.
+   - A line that has a detail says "Tap for details". Pressing it opens the detail under the line: the state before and after a trigger, a stack trace. Pressing again closes it. One line is open at a time.
+   - **It is never read whole.** The newest 200 entries are read, through the index on the time. "Show older entries" at the bottom adds 200 more each time. The list is drawn lazily, so only the lines on screen are laid out. It opens as fast with ten thousand entries as with ten.
+   - It follows the log: a line written while the screen is open appears at the top.
+   - A setup button that could not open its HyperOS screen writes an `ERROR` line here (see [Permission checklist](#permission-checklist)).
+
+Checked on an emulator (Android 16) on 2026-10-03: an induced crash, a force stop and a background kill each appeared in the log at the next start, once. On 2026-10-05 the same emulator showed the trigger lines of the companion service, the boot and update reconcile and the pairing check (FINDINGS_LOG). Not yet run on the POCO X5. The Log screen has not been run anywhere.
 
 **Where the code lives**
+- `feature/eventlog/`: `EventLogScreen.kt`, `EventLogViewModel.kt`. The time format is `formatLogTime` in `core/util/TimeFormat.kt`.
 - `platform/diagnostics/`: `CrashHandler.kt`, `ProcessExitReader.kt`, `ProcessExit.kt`, `StartupDiagnostics.kt`.
 - `data/crash/`: `CrashFileStore.kt` (the crash files and where they are kept).
 - `data/eventlog/`: `EventLogEntry.kt` (the table and the categories), `EventLogDao.kt`, `EventLogRepository.kt`.
 - `app/MiloApplication.kt` starts both; `app/AppContainer.kt` builds them.
 - The trip lines are written by `platform/trip/TripWorker.kt` and worded in `platform/trip/TripLogText.kt` and `TripLedger.kt`. The source of a Bluetooth or companion trigger is worded in `platform/bluetooth/TruckSignals.kt`, and the pairing lines in `platform/bluetooth/TruckPairing.kt` and `TruckPairingCheck.kt`.
-- Tests: `app/src/test/.../platform/diagnostics/` and `app/src/test/.../data/crash/`.
+- Tests: `app/src/test/.../platform/diagnostics/`, `app/src/test/.../data/crash/` and `app/src/test/.../feature/eventlog/EventLogPageTest.kt`.
 - What can only be checked on the phone is in `docs/DEVICE_TEST_CHECKLIST.md`.
 
 **Edge cases & gotchas**
@@ -421,9 +516,12 @@ Checked on an emulator (Android 16) on 2026-10-03: an induced crash, a force sto
 - Android keeps only a small number of exit records per app. If MilO is not started for a long time while being killed repeatedly, the oldest records are gone before they are imported.
 - A crash produces two entries: the `CRASH` entry with the stack trace, and the system's `PROCESS` entry saying the process ended by crashing.
 - Nothing trims the event log yet. It must be trimmed before phase 4 switches backup on, because it shares the backed-up database with the trips (`[DEBT]` in FINDINGS_LOG). A day of driving now adds a few dozen lines per trip.
-- The lines are in English and are not translated: the log is evidence, not a screen.
+- The lines are in English and are not translated, on the Log screen too: the log is evidence.
+- The Log screen has no search and no filter by category, and the log cannot be copied or exported from it. For that, the database is read on the Mac (`docs/DEVICE_TEST_CHECKLIST.md`).
+- Entries are ordered by the time they describe. A crash or a kill is written at the next start but dated when it happened, so it appears further down than the lines around its writing.
+- During the hour that is repeated when the clocks go back, two lines an hour apart show the same time. Their order is still right.
 - If the event log cannot be written while the trip controller is handling a failure, the process crashes on purpose, which leaves a crash file. A failure must not vanish.
-- An unreadable settings file is never reset: a silent reset would lose the truck pairing without a trace. It also no longer crashes the start (that was a crash at every start, with no way out but clearing the app's data, trips included). The start-up import logs an `ERROR` entry and carries on, and the exit records are not imported while the file stays unreadable. Whatever reads the settings next has to deal with the failure itself. The trip controller logs it once and runs with the defaults. The pairing check reports `FAILED`. The Bluetooth receiver cannot tell whose broadcast it is, so it asks for a reading of the truck in place of trusting the event; that reading comes back unknown for the same reason. The companion service acts on its callback all the same, because Android only calls it for MilO's own association. The permission checklist is not built yet.
+- An unreadable settings file is never reset: a silent reset would lose the truck pairing without a trace. It also no longer crashes the start (that was a crash at every start, with no way out but clearing the app's data, trips included). The start-up import logs an `ERROR` entry and carries on, and the exit records are not imported while the file stays unreadable. Whatever reads the settings next has to deal with the failure itself, and each one that exists does. The trip controller logs it once and runs with the defaults. The pairing check reports `FAILED` with the reason, in its `PAIRING` line. The setup checklist logs an `ERROR` line and shows its rows without the confirmations. The Bluetooth receiver cannot tell whose broadcast it is, so it asks for a reading of the truck in place of trusting the event; that reading comes back unknown for the same reason. The companion service acts on its callback all the same, because Android only calls it for MilO's own association.
 - If neither the event log nor the crash folder can be written, start-up does crash: there is nowhere left to record the failure.
 
 ---
@@ -456,9 +554,9 @@ The two database files exist: `milo.db` (trips and the event log) and `points.db
 **How it works today**
 `SettingsStore` in `data/settings/` keeps the settings in a DataStore Preferences file and is the only way to read or write them. `settings` is a flow of `MiloSettings` that delivers the current values and every change; `current()` reads them once. A value never written reads as its default. Each setter refuses a value that cannot be right: a negative duration, distance or time, and a blank address, name or URI. "No truck name" and "no custom sound" are passed as null. If the file cannot be read, every read throws: the store never replaces it with empty settings.
 
-Stored now: the truck's Bluetooth address, name and companion association id; the grace period (default 120 s); the minimum trip distance (default 300 m); the trip-start sound on or off (default on) and an optional custom sound; and two values that are not Shawn's to choose but must outlive the process (the hold-off after a manual end, stored as the time End was pressed, and how far the process-exit records have been imported). Schedule, report and reminder settings are not stored yet.
+Stored now: the truck's Bluetooth address, name and companion association id; the grace period (default 120 s); the minimum trip distance (default 300 m); the trip-start sound on or off (default on) and an optional custom sound; and values that are not Shawn's to choose but must outlive the process: the hold-off after a manual end, stored as the time End was pressed; how far the process-exit records have been imported; and the time at which he confirmed each step of the setup checklist that MilO cannot read (`ConfirmedStep`: HyperOS Autostart, Battery saver, Other permissions, the recents lock). A step that is not stored is not confirmed. Schedule, report and reminder settings are not stored yet.
 
-Read today: the trip controller reads the grace period and the minimum trip distance at every trigger, so a changed value applies from the next event. It reads the stored hold-off only when it picks the state up from storage (after a process start, or after it dropped what it held in memory); from then on it keeps the hold-off in memory and writes every change; the trip service reads the two sound settings at each trip start. Besides the hold-off, the truck's three values are written, by `TruckPairing`. They are read by the Bluetooth receiver and the companion service at every event (to tell whether it is about the truck) and by every reading of the truck's connection. Nothing else is written yet, because there is no settings screen.
+Read today: the trip controller reads the grace period and the minimum trip distance at every trigger, so a changed value applies from the next event. It reads the stored hold-off only when it picks the state up from storage (after a process start, or after it dropped what it held in memory); from then on it keeps the hold-off in memory and writes every change; the trip service reads the two sound settings at each trip start. Besides the hold-off, the truck's three values are written, by `TruckPairing` (from the pairing screen, or when it adopts an association), and the confirmations, by the setup checklist. The truck's values are read by the Bluetooth receiver and the companion service at every event (to tell whether it is about the truck) and by every reading of the truck's connection. Nothing else is written yet, because there is no settings screen: the truck is changed on the pairing screen, which is reached from Setup.
 
 **Where the code lives**
 `data/settings/SettingsStore.kt` and `MiloSettings.kt` (the values and their defaults). Test: `app/src/test/.../data/settings/SettingsStoreTest.kt`.
@@ -467,19 +565,35 @@ Read today: the trip controller reads the grace period and the minimum trip dist
 
 ## Design system
 
-**Status:** Live · **Surfaces:** Phone · **Last updated:** 2026-10-03
+**Status:** Live · **Surfaces:** Phone · **Last updated:** 2026-10-05
 
 **What it does**
 The one place colours, spacing, type and shapes are defined, and the shared components every phone screen is composed from. Check here before building any UI: reuse what exists, and add to it deliberately when something is missing (STANDARDS §8).
 
 **What exists**
-- Tokens in `core/designsystem/theme/`: `Color.kt` (light and dark schemes plus the ok/problem status colours), `MiloSpacing.kt` (4, 8, 16, 24, 32 dp steps), `Type.kt`, `Shape.kt`. `MiloTheme` applies them and exposes `MiloTheme.spacing` and `MiloTheme.statusColors`.
-- Components in `core/designsystem/component/`: `PrimaryButton` (the main action on a screen), `SectionCard` (a titled group of content), `StatusRow` (a label with a met / not-met indicator and an optional action button; its icons are in `StatusIcons.kt`).
+- Tokens in `core/designsystem/theme/`: `Color.kt` (light and dark schemes plus the four status colours), `MiloSpacing.kt` (4, 8, 16, 24, 32 dp steps), `Type.kt`, `Shape.kt`. `MiloTheme` applies them and exposes `MiloTheme.spacing` and `MiloTheme.statusColors`.
+- **Status colours** (`MiloTheme.statusColors`): `ok` (green), `problem` (red, the scheme's error colour), `attention` (amber: Shawn has to do or confirm something MilO cannot check) and `unknown` (grey, the colour of secondary text: MilO could not find out). `attention` and `unknown` were added on 2026-10-05 for the setup checklist.
+- Components in `core/designsystem/component/`:
+  - `PrimaryButton`: the main action on a screen.
+  - `SectionCard`: a titled group of content.
+  - `StatusRow`: one requirement and its state. An indicator, a label, an optional second line, and up to two text buttons on a line of their own under the text. **Four states** (`RowStatus`), each with its own shape as well as its own colour: `OK` (green tick), `PROBLEM` (red warning), `UNKNOWN` (grey question mark), `NEEDS_CONFIRMATION` (amber empty ring). The icons are in `StatusIcons.kt`. A setting that Shawn has confirmed by hand is drawn as `OK`, and its second line says that it is his word.
+  - `MiloNavigationBar`: the bottom bar, Material 3's navigation bar with one entry per top-level screen, each with an icon and its name. Added on 2026-10-05, with navigation.
+  - `ScreenTitle`: the heading every screen starts with. Given an `onBack`, it shows a back arrow before the title; only a screen opened from another one (pairing) has it.
+  - `SwitchRow`: a labelled on/off switch. The whole row is the target.
+  - `MiloIcons`: the icons a screen may use: Home, Trips, Setup, Log, Back.
+  - `CameToFrontEffect`: draws nothing. It calls the screen's ViewModel when the screen is first shown and every time Shawn is looking at it again, on either of two signs: the screen resumes (it is entered, or MilO returns from a settings screen, another app or one of Android's dialogs), or MilO's window gets the focus back (the quick settings panel or the notification shade closing, which resumes nothing). Returning from a settings screen gives both signs, so what it calls must be safe to call twice. The rule for the second sign is a plain function with a unit test (`focusRegained`); the effect itself cannot be tested off the phone. Added on 2026-10-05, after the review of the screens.
+- **Patterns the screens share,** to be followed by the next ones:
+  - A screen starts with `ScreenTitle` and pads its content with `MiloTheme.spacing.medium`. A screen of fixed content is a scrolling `Column` of `SectionCard`s; a screen of stored rows (Log, Trips) is a `LazyColumn`.
+  - While a screen's first read is under way it shows one line of text ("Reading…"), and an empty list says so in a sentence. Neither is a component.
+  - A problem and the way to fix it is a `StatusRow` with a button, on Home, Setup and the pairing screen alike.
+  - A screen that shows something Android reports no changes of (a permission, a setting, the paired devices, which month is the current one) reads it again through `CameToFrontEffect`, never through a lifecycle effect of its own.
+  - A ViewModel is handed plain functions for navigation; a feature never imports another feature.
 
 **Edge cases & gotchas**
 - No colour, dp or sp value may be written outside `core/designsystem/`. The only exceptions are the two launcher-icon drawables, which the launcher reads before Compose exists, and `drawable/ic_stat_trip.xml`, the notification icon, which Android draws itself outside Compose.
 - Notifications are not Compose and cannot use these components. Their text is in `strings.xml`.
-- `StatusRow` has two states today. The permission checklist needs more ("looks on", "looks off", "unknown", "confirm you set this"). Logged as `[DEBT]`; fix it when the checklist is built.
+- The icons are built from path data in `MiloIcons.kt` and `StatusIcons.kt`, not taken from the material-icons library, which is frozen. A unit test proves that each one parses. **None of the icons added on 2026-10-05 has been seen on a screen:** device check 52.
+- The bottom bar is always visible, on the pairing screen too.
 - The Android Auto screen cannot use these components. It is drawn by the car from Car App Library templates.
 
 ---

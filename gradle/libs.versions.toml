@@ -10,7 +10,7 @@
 # Build toolchain. AGP, Gradle (gradle/wrapper/gradle-wrapper.properties) and Kotlin move together:
 # read the compatibility tables before merging an update to any of them.
 agp = "9.4.1"
-# Kotlin, the Compose compiler plugin and (later) the serialization plugin share this one version
+# Kotlin, the Compose compiler plugin and the serialization plugin share this one version
 # because the compiler plugins are released with, and only work with, the matching compiler.
 kotlin = "2.4.20"
 # KSP runs Room's code generator. Since KSP 2.3 its version is no longer tied to the Kotlin version.
@@ -28,10 +28,15 @@ coroutines = "1.11.0"
 datastore = "1.2.1"
 junit = "4.13.2"
 lifecycle = "2.11.0"
+# Navigation 3: the back stack of screens and the display that shows its top entry.
+navigation3 = "1.2.0"
 # Google Play services' fused location provider: the GPS fixes of a trip.
 playServicesLocation = "21.4.0"
 # Room's runtime, its KSP compiler and its Gradle plugin are released together under one version.
 room = "3.0.3"
+# The runtime of kotlinx.serialization. Navigation 3 saves its back stack through it, so every
+# screen key is @Serializable. Pinned here because Navigation 3 alone would bring a much older one.
+serializationJson = "1.11.0"
 # The SQLite build Room 3 runs on. It is compiled into the app, so the database engine is the
 # same on every Android version and does not change under the stored trips after a system update.
 sqlite = "2.7.1"
@@ -59,8 +64,15 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
+# LifecycleEventEffect: how a screen learns that it has come to the front again.
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 # viewModel() for Compose: how a screen gets its ViewModel.
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+# Gives each screen on the Navigation 3 back stack its own ViewModel, cleared when it is popped.
+androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
+
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 
 # Room 3 lives in the androidx.room3 group. WorkManager will later bring the old androidx.room
 # group in as well, so imports must always come from androidx.room3.
@@ -72,6 +84,8 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 # Tests only: a clock and a scheduler the test controls, for code that runs in coroutines.
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
+
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -82,5 +96,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 # the change to the tables shows up in the diff.
 androidx-room3 = { id = "androidx.room3", version.ref = "room" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Generates the serializers for the @Serializable screen keys of the navigation back stack.
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

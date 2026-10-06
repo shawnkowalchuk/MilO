@@ -20,6 +20,17 @@ class TripRepository(private val dao: TripDao) {
     /** Finished trips, newest first. Discarded trips are left out. */
     fun observeFinishedTrips(): Flow<List<Trip>> = dao.observeWithStatus(TripStatus.FINISHED)
 
+    /**
+     * The trips that started in a span of time, newest first, and again each time one of them
+     * changes. Open, finished and discarded trips are all included: the caller decides what to
+     * show and what to count. The span is half-open, so a month is asked for as "from its first
+     * instant up to the first instant of the next month" and no trip can fall in two months.
+     */
+    fun observeTripsStartedBetween(fromMs: Long, untilMs: Long): Flow<List<Trip>> {
+        require(fromMs <= untilMs) { "The span ends ($untilMs) before it starts ($fromMs)" }
+        return dao.observeStartedBetween(fromMs, untilMs)
+    }
+
     /** Opens a trip, or returns the one that is already open. There is never a second open trip. */
     suspend fun startTrip(startedAtMs: Long, startedBy: TripStartCause, truckSeen: Boolean): Trip =
         dao.insertUnlessOneIsOpen(

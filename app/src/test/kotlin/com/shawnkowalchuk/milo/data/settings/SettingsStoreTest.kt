@@ -170,4 +170,56 @@ class SettingsStoreTest {
             }
         assertTrue("the value was accepted, or refused without saying why", refused)
     }
+
+    @Test
+    fun `a confirmed setup step is stored with its time and can be taken back`() =
+        withStore { store ->
+            store.setConfirmedAtMs(ConfirmedStep.XIAOMI_BATTERY_SAVER, 1_791_028_800_000)
+            store.setConfirmedAtMs(ConfirmedStep.XIAOMI_RECENTS_LOCK, 1_791_028_900_000)
+
+            assertEquals(
+                mapOf(
+                    ConfirmedStep.XIAOMI_BATTERY_SAVER to 1_791_028_800_000,
+                    ConfirmedStep.XIAOMI_RECENTS_LOCK to 1_791_028_900_000,
+                ),
+                store.current().confirmedAtMs,
+            )
+
+            store.setConfirmedAtMs(ConfirmedStep.XIAOMI_BATTERY_SAVER, null)
+
+            assertEquals(
+                mapOf(ConfirmedStep.XIAOMI_RECENTS_LOCK to 1_791_028_900_000),
+                store.current().confirmedAtMs,
+            )
+        }
+
+    @Test
+    fun `confirmations survive the process`() {
+        withStore { store ->
+            store.setConfirmedAtMs(ConfirmedStep.XIAOMI_AUTOSTART, 1_791_028_800_000)
+        }
+
+        withStore { reopened ->
+            assertEquals(
+                mapOf(ConfirmedStep.XIAOMI_AUTOSTART to 1_791_028_800_000),
+                reopened.current().confirmedAtMs,
+            )
+        }
+    }
+
+    @Test
+    fun `the names the confirmations are stored under never change`() {
+        // These are written to the settings file on the phone. A changed name would silently
+        // take back a confirmation Shawn gave.
+        assertEquals(
+            mapOf(
+                ConfirmedStep.XIAOMI_AUTOSTART to "confirmed_xiaomi_autostart_at_ms",
+                ConfirmedStep.XIAOMI_BATTERY_SAVER to "confirmed_xiaomi_battery_saver_at_ms",
+                ConfirmedStep.XIAOMI_OTHER_PERMISSIONS to
+                    "confirmed_xiaomi_other_permissions_at_ms",
+                ConfirmedStep.XIAOMI_RECENTS_LOCK to "confirmed_xiaomi_recents_lock_at_ms",
+            ),
+            ConfirmedStep.entries.associateWith { it.key },
+        )
+    }
 }

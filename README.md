@@ -51,7 +51,7 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 
 The build on the phone holds the real trip data. Never uninstall it to fix a problem: uninstalling deletes the trips.
 
-MilO does not ask for its permissions yet (the permission checklist is not built). After the first install, grant location ("Allow all the time", precise), Nearby devices (Bluetooth) and notifications by hand, as `docs/DEVICE_TEST_CHECKLIST.md` describes, or no trip can be recorded. There is no pairing screen yet either: the same file says how to tell MilO which paired device is the truck.
+After the first install, open MilO and go to **Setup**. The checklist there asks for every permission, opens each phone setting that has to be changed (including the HyperOS ones), and leads to the screen where the truck is picked from the phone's paired Bluetooth devices. Until every required row is in order, the home screen shows a warning and a trip may not start by itself. `docs/DEVICE_TEST_CHECKLIST.md` lists what to check on the phone.
 
 ---
 

@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -20,49 +22,64 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /**
- * The button at the end of a [StatusRow]. The label and the click handler travel together so a
- * row can never show a button that does nothing, or carry a handler with no button.
+ * What a [StatusRow] says about its requirement. Four states, because MilO cannot read every
+ * setting it depends on and must not pretend to.
+ */
+enum class RowStatus {
+    /** Met. A green tick. */
+    OK,
+
+    /** Not met. A red warning. */
+    PROBLEM,
+
+    /** MilO tried to find out and could not. A grey question mark. */
+    UNKNOWN,
+
+    /** MilO cannot read this at all: the user sets it and says so. An amber empty ring. */
+    NEEDS_CONFIRMATION,
+}
+
+/**
+ * A button of a [StatusRow]. The label and the click handler travel together so a row can never
+ * show a button that does nothing, or carry a handler with no button.
  */
 @Immutable
 data class StatusRowAction(val label: String, val onClick: () -> Unit)
 
 /**
- * One requirement and whether it is met: a green tick or a red warning, a label, and an optional
- * button that takes the user to the place where it can be fixed.
+ * One requirement and its state: an indicator, a label, an optional second line, and up to two
+ * buttons.
  *
- * It has two states only, which is not enough for the permission checklist: that screen also
- * needs "unknown" and "confirm you set this" for the settings the app cannot read.
+ * The buttons sit on a line of their own, under the text and at its end. The second line is
+ * often an instruction a sentence or two long, and a button beside it would squeeze it into a
+ * narrow column.
  *
  * @param supportingText a second, quieter line: what the requirement is for, or how to fix it.
- * @param action shown at the end of the row; usually only passed while [isOk] is false.
+ * @param action the main button: usually the one that takes the user to the place to fix it.
+ * @param secondaryAction a second button, shown before [action]: for example "Open settings"
+ * beside "I have set this".
  */
 @Composable
 fun StatusRow(
     label: String,
-    // TODO(debt): replace this Boolean with a status type (ok, problem, unknown, needs
-    // confirmation) when the permission checklist is built in phase 1. See FINDINGS_LOG.
-    isOk: Boolean,
+    status: RowStatus,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     action: StatusRowAction? = null,
+    secondaryAction: StatusRowAction? = null,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             // Read the indicator and both lines as one sentence ("Needs attention, Location,
-            // ...") instead of three separate stops. The button stays its own stop.
-            modifier = Modifier.weight(1f).semantics(mergeDescendants = true) {},
+            // ...") instead of three separate stops. Each button stays its own stop.
+            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
             horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = if (isOk) StatusIcons.Ok else StatusIcons.Problem,
-                contentDescription =
-                    stringResource(if (isOk) R.string.status_ok else R.string.status_problem),
-                tint = if (isOk) MiloTheme.statusColors.ok else MiloTheme.statusColors.problem,
+                imageVector = status.icon(),
+                contentDescription = stringResource(status.descriptionRes()),
+                tint = status.tint(),
             )
             Column {
                 Text(text = label, style = MaterialTheme.typography.bodyLarge)
@@ -75,12 +92,41 @@ fun StatusRow(
                 }
             }
         }
-        if (action != null) {
-            TextButton(onClick = action.onClick) {
-                Text(text = action.label)
+        if (action != null || secondaryAction != null) {
+            Row(
+                modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
+            ) {
+                for (button in listOfNotNull(secondaryAction, action)) {
+                    TextButton(onClick = button.onClick) {
+                        Text(text = button.label)
+                    }
+                }
             }
         }
     }
+}
+
+private fun RowStatus.icon(): ImageVector = when (this) {
+    RowStatus.OK -> StatusIcons.Ok
+    RowStatus.PROBLEM -> StatusIcons.Problem
+    RowStatus.UNKNOWN -> StatusIcons.Unknown
+    RowStatus.NEEDS_CONFIRMATION -> StatusIcons.NeedsConfirmation
+}
+
+private fun RowStatus.descriptionRes(): Int = when (this) {
+    RowStatus.OK -> R.string.status_ok
+    RowStatus.PROBLEM -> R.string.status_problem
+    RowStatus.UNKNOWN -> R.string.status_unknown
+    RowStatus.NEEDS_CONFIRMATION -> R.string.status_needs_confirmation
+}
+
+@Composable
+private fun RowStatus.tint(): Color = when (this) {
+    RowStatus.OK -> MiloTheme.statusColors.ok
+    RowStatus.PROBLEM -> MiloTheme.statusColors.problem
+    RowStatus.UNKNOWN -> MiloTheme.statusColors.unknown
+    RowStatus.NEEDS_CONFIRMATION -> MiloTheme.statusColors.attention
 }
 
 // Sample text is written inline because a preview is never shown to a user or shipped in a
@@ -91,12 +137,25 @@ private fun StatusRowPreview() {
     MiloTheme {
         Surface {
             Column {
-                StatusRow(label = "Notifications", isOk = true)
+                StatusRow(label = "Notifications", status = RowStatus.OK)
                 StatusRow(
                     label = "Background location",
-                    isOk = false,
+                    status = RowStatus.PROBLEM,
                     supportingText = "Set to \"Allow all the time\"",
                     action = StatusRowAction(label = "Fix", onClick = {}),
+                )
+                StatusRow(
+                    label = "Background autostart",
+                    status = RowStatus.UNKNOWN,
+                    supportingText = "MilO could not read this setting.",
+                    action = StatusRowAction(label = "Open", onClick = {}),
+                )
+                StatusRow(
+                    label = "Battery saver",
+                    status = RowStatus.NEEDS_CONFIRMATION,
+                    supportingText = "Set it to \"No restrictions\", then confirm here.",
+                    action = StatusRowAction(label = "I have set this", onClick = {}),
+                    secondaryAction = StatusRowAction(label = "Open", onClick = {}),
                 )
             }
         }
