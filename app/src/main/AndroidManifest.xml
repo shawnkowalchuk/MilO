@@ -170,6 +170,46 @@
         </receiver>
 
         <!--
+            The Android Auto screen (platform/car/). Android Auto binds this service when MilO is
+            opened on the car's display. The action is the Car App Library's. The category has to
+            be one of the library's own, and none is for logging trips: IOT ("see the state of
+            a device, switch something on or off with one touch") is the nearest to a status
+            screen with a Start and End button.
+
+            Exported with no permission, because the binding comes from the Android Auto app and
+            Android has no permission for it on a phone. What protects it is the check in
+            MiloCarAppService.createHostValidator, which lets only Android Auto itself in. Lint's
+            ExportedService warning is switched off for that reason, as Google's guide says to.
+
+            It has no android:process of its own on purpose: it must run in the same process as
+            the trip service, which is where the GPS recording and the trip controller live.
+        -->
+        <service
+            android:name=".platform.car.MiloCarAppService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.IOT" />
+            </intent-filter>
+        </service>
+
+        <!-- Where Android Auto reads what kind of car app MilO is: a template (Car App Library) app. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+        <!--
+            The oldest Car API level MilO's screen works with. 7, because the screen's header is
+            built with the library's current Header class, which needs it. The level is a property
+            of the Android Auto app on the phone, not of the truck. Without this entry the library
+            refuses the connection.
+        -->
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="7" />
+
+        <!--
             The reconcile after a reboot and after an update of MilO: the two moments at which
             the truck can already be connected with no event to say so. Not exported: both
             broadcasts come from Android's core.

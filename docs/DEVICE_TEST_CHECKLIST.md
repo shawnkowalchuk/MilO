@@ -4,7 +4,7 @@
 >
 > **How it grows.** A change that adds behaviour only the phone can prove adds its checks here, in the same change. A check is removed only when the behaviour it covers is removed.
 >
-> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG. The screens of work package 3 (checks 52 to 79) have run nowhere at all, except Trips, which was drawn on an emulator with work package 4. The addresses and the database migration of work package 4 (checks 80 to 86) ran on an emulator only.
+> **Status:** Living document · **Started:** 2026-10-03 · Nothing below has been run on the phone yet. What was run on an emulator is in FINDINGS_LOG. The screens of work package 3 (checks 52 to 79) have run nowhere at all, except Trips, which was drawn on an emulator with work package 4. The addresses and the database migration of work package 4 (checks 80 to 86) ran on an emulator only. The Android Auto screen (checks 88 to 100) has run nowhere at all.
 
 ---
 
@@ -34,7 +34,8 @@ Without Nearby devices no trip starts at all, not even with the Start trip butto
 5. Checks 10 to 30: a trip started by hand. Keep the truck switched off or out of range, except in the checks that name it (17 and 29): now that it is paired, connecting to it starts a trip by itself.
 6. Checks 31 to 51: the truck starts and ends a trip. Checks 36 to 43 switch Autostart off on purpose; switch it back on afterwards.
 7. Checks 69 to 79, in any order.
-8. Check 80 before the build with the addresses is installed, the rest of 80 to 86 after it.
+8. Check 80 before the build with the addresses is installed, the rest of 80 to 87 after it.
+9. Checks 88 to 100, the Android Auto screen, once the truck has started a trip by itself at least once (check 31). They need the truck.
 
 ## Reading the event log
 
@@ -341,6 +342,56 @@ To put the copy of check 80 back (done once on the emulator, never on the phone,
 | 86 | If a trip ever ends somewhere with no address (a field road, a remote site): read its row and the Log over the next two days. | First "(address) → looking up the address…" and a log line "end address none (the geocoder knows no address there). Failed attempt 1 of 4; the next one is at least 2 min away." The later attempts come no sooner than 2 minutes, 1 hour and 1 day apart, each only when a trip ends, MilO starts or Trips is opened. After the fourth: "(address) → no address found" and "this trip is not looked up again." Write down what the geocoder does give for such a place ("Unnamed Road" is an address to it). | not run |
 | 87 | With data on, start a trip by hand and move more than 300 m. Force-stop MilO in mid-trip (Settings, Apps, MilO, Force stop) and leave it for 35 minutes. Open MilO, **do not open Trips**, wait ten seconds, open Log. | `TRIGGER` "process start: picked up the stored state…", `TRIP` "Trip N: finished, … m; ended by STALE_AT_RESTART; …", and straight after it `ADDRESS` "Trip N: start address found; end address found." The pass at process start waits for the trip controller, so the trip is already finished when it looks. Run on stand-ins only (a unit test); never on a phone or an emulator in this form. | not run |
 
+## Phase 1: the Android Auto screen
+
+**Nothing in this section has run anywhere:** not on the truck, not on an emulator, and not in Google's desktop emulator of a car display, which is not installed on the Mac (FINDINGS_LOG, 2026-10-05).
+
+**Expect check 90 to fail.** Google's documentation says that an app built with the Car App Library, as MilO's screen is, must come from a trusted store such as Google Play to appear on a real car, and that Android Auto's "Unknown sources" setting does not change that. MilO is installed from Android Studio. Other people's reports conflict, so the truck decides. A failure of check 90 is a result, not a fault in the build: write it down and go to "If MilO is not on the truck's display".
+
+### Before: Android Auto's developer mode and "Unknown sources"
+
+Once, on the phone, in this order. The names are Google's; on HyperOS they may differ.
+
+1. **First install the build that has the Android Auto screen,** open MilO on the phone once, and have Setup say "Everything MilO needs is set". The build put on the phone on 2026-10-05 does not have the screen, and both builds call themselves 0.1.0. Android Auto cannot list a screen that is not installed, so checks 89 and 90 done before this step say nothing about Google's rule.
+2. Update the Android Auto app from the Play Store.
+3. Open Android Auto's own settings: the phone's Settings, Apps, Android Auto, then "Additional settings in the app".
+4. Scroll to the bottom. Tap "Version", then tap "Version and permission info" ten times, and answer OK to "Allow development settings?".
+5. Open the menu with the three dots at the top right, then "Developer settings". Switch on "Unknown sources".
+6. Close Android Auto's settings and open them again, so that the list is not one drawn before step 1 or step 5. Then open "Customize launcher".
+
+To be sure of step 1, from the Mac: `adb shell dumpsys package com.shawnkowalchuk.milo | grep MiloCarAppService` prints at least one line when the installed build has the screen, and nothing when it does not.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 88 | Steps 2 to 5. | The developer settings exist and "Unknown sources" can be switched on. **Write down the path on HyperOS if it differs, and Android Auto's version number.** | not run |
+| 89 | Step 6, with the build of step 1 installed: read the list under "Customize launcher". | **Whether MilO is in the list.** By Google's documentation it is not. If it is, tick it. Write it down either way. | not run |
+
+### On the truck
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| 90 | Connect the phone to the truck's Android Auto the usual way. Look through all the apps on the truck's display. | **The main question: is MilO's icon there?** If it is, go on. If it is not, open the Log on the phone: with no `ANDROID_AUTO` line "Android Auto screen: car app service created" Android Auto never tried to open MilO, which is what Google documents. Checks 91 to 100 cannot be run on the truck then. | not run |
+| 91 | Open MilO on the truck's display. | A header "MilO", three rows titled Status, This trip and Today, and one button. Log, in this order: `ANDROID_AUTO` "Android Auto screen: car app service created, a host is connecting"; "session created by com.google.android.projection.gearhead, Car API level N"; "shown on the car's display". **Write down the host and N.** If the display shows an error, write down its words. If the log has "car app service created" and no "session created", Android Auto was turned away (its certificate is not on the library's list) or does not speak Car API level 7: on the Mac, `adb logcat -d \| grep CarApp` says which. Write those lines down. | not run |
+| 92 | With the trip the truck started still recording, look at the screen now and then for a few minutes of driving. | Status "Recording". This trip shows km and minutes, such as "12.4 km · 23 min"; the km change no more often than about every 15 seconds, the minutes once a minute. Today shows "No trips yet", or the finished trips of today and their km, the same as today's trips on the phone's Trips screen. The button says End trip. **Write down anything cut off, overlapping or hard to read.** | not run |
+| 93 | In Android Auto's developer settings switch on "Enable debug overlay". Open MilO on the display and drive five minutes. | The overlay shows the step count, and it stays at 1 while the figures change. **If it climbs with the figures, the car will close MilO after five steps: write that down.** It would mean this car does not count MilO's redraws as refreshes, and the screen must then redraw far less often. | not run |
+| 94 | Parked, with the phone locked and in a pocket: press End trip on the display. | At once: Status "Not recording", the button says Start trip, and Today counts the trip (if it was over 300 m). Log: `TRIGGER` "Android Auto End button: End pressed, truck connected", `TRIP` "Trip N: finished…; ended by MANUAL" and "Automatic start held off: ended with the truck connected". | not run |
+| 95 | Still locked: press Start trip. | The chirp from the phone. Within a second or two Status "Recording" and This trip "0.0 km · 0 min". Log: `TRIGGER` "Android Auto Start button: MANUAL_START: asked Android for the trip service", `SERVICE` "Trip service in the foreground (Android Auto Start button: MANUAL_START)", `TRIP` "Trip N started by MANUAL". **This start is made from the background, with the phone locked, and has never been tried.** If Status says "Could not start: Android did not allow it", write down the `SERVICE` line "Could not start recording…" and its detail. | not run |
+| 96 | With the truck moving (a passenger does this): press End trip, then Start trip. | Both react while moving. The button is not greyed out, and the car does not say the action is unavailable while driving. | not run |
+| 97 | With no trip open (press End trip first), set MilO's location permission on the phone to "Allow only while using the app". Android closes MilO when a permission is taken away, so open MilO on the truck's display again. Press Start trip. Then press it once more. | First press: a short message on the display, "MilO could not start this trip", and Status "Could not start: location is not set to "Allow all the time"". MilO stays on the display. The phone shows its "could not start this trip" notification. Log: `SERVICE` "Could not start recording for Android Auto Start button: MANUAL_START: BACKGROUND_LOCATION_MISSING" and `ANDROID_AUTO` "Android Auto screen: said that the trip could not start (REFUSED_BACKGROUND_LOCATION)". Second press: the Status line stays, with no second message (expected; APP_ENCYCLOPEDIA). Set the permission back to "Allow all the time" and press Start trip: a trip starts and the line is gone. | not run |
+| 98 | During a trip, leave MilO for the map for at least five minutes, then open MilO again. | On leaving, log "Android Auto screen: no longer shown"; some time later perhaps "session destroyed" and "car app service destroyed". On coming back, "shown on the car's display" (after a new "session created" if the old one was destroyed), and the figures are current within a second or two. The trip recorded all the while: no gap in its fixes. **Write down the seconds between "no longer shown" and "session destroyed":** that is how long Android Auto keeps MilO's session, which nobody documents. | not run |
+| 99 | With no trip open and the truck connected, press Home on the phone and run `adb shell am kill com.shawnkowalchuk.milo` (check with `adb shell pidof com.shawnkowalchuk.milo` that nothing is printed). Open MilO on the truck's display. Do it once with Autostart **on** for MilO and once with it **off**. | MilO opens: log `PROCESS` "started", then the lines of check 91. Because a process start reads the truck, a trip may start by itself at that moment (not if End trip was pressed before, which holds automatic start off). **Unknown with Autostart off, and the point of the check:** the research expects HyperOS to refuse to start a dead app for another app. MilO then does not open, or the display shows an error. Write both results down. | not run |
+| 100 | The other Status lines, with Android Auto on the cable and no trip open. (a) Switch the phone's Battery Saver on and open MilO on the display. (b) Switch Battery Saver off, switch the phone's Bluetooth off, leave MilO for the map and open it again. (c) Press Start trip. (d) Switch Bluetooth on again and wait for the truck to reconnect. End the trip. | (a) "Not recording. MilO's setup is incomplete". (b) "Not recording. Truck not connected". If it says only "Not recording", MilO did not hear the truck go: the line shows what the trip rules last believed, not a fresh look (APP_ENCYCLOPEDIA). Write down which. (c) "Recording. Truck not connected": the press reads the truck. (d) "Recording". **Write down any line that contradicts what the phone's home screen and Setup screen say at that moment.** | not run |
+
+### If MilO is not on the truck's display
+
+Nothing about the screen has been proven or disproven then, only that Android Auto does not list an app installed from Android Studio. Everything else in MilO works without the screen: a trip is still held open while Android Auto is connected (check 29), and the phone's notification still shows it. The choices, each Shawn's to make (APP_ENCYCLOPEDIA, Android Auto screen, has the detail):
+
+1. **A private Google Play install** (internal app sharing or an internal test track): no review and no public listing, and Android Auto then trusts the app. It needs a Play Console account (25 US dollars once, with identity verification). Play signs its copy with its own key, so changing over means uninstalling the copy from Android Studio, which deletes the trips unless they are exported first.
+2. **A media-app style entry:** MilO shown as a media app, which "Unknown sources" does allow on a real car, with the status as its text and Start and End as its buttons. A workaround, to be built.
+3. **Dropping the screen.**
+
+**To prove the screen itself at the desk first,** there is Google's emulator of a car display, the Desktop Head Unit. It is the one place Google documents an app installed from Android Studio to show. It is not installed on the Mac; installing it (Android Studio, SDK Manager, SDK Tools, "Android Auto Desktop Head Unit Emulator") is Shawn's decision. The steps are in `docs/research/2026-10-03-android-auto-screen.md`, findings 28 and 29. Checks 91 to 97 can be run in it; its command `restrict all` stands in for a moving truck in check 96.
+
 ## Later work packages
 
-The Android Auto screen on the truck adds its checks here when it is built.
+Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

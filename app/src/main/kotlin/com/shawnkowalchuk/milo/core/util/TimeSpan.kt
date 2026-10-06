@@ -28,6 +28,16 @@ fun monthSpan(month: YearMonth, zone: ZoneId): TimeSpan = TimeSpan(
     untilMs = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli(),
 )
 
+/**
+ * The span of time a calendar day covers in [zone]: from local midnight to the next local
+ * midnight. A day on which the clocks change is an hour shorter or longer than 24 hours, which
+ * is why the end is worked out from the next day and not by adding 24 hours.
+ */
+fun daySpan(day: LocalDate, zone: ZoneId): TimeSpan = TimeSpan(
+    fromMs = day.atStartOfDay(zone).toInstant().toEpochMilli(),
+    untilMs = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
+)
+
 /** The calendar day a stored time falls on in [zone]. */
 fun localDateOf(epochMs: Long, zone: ZoneId): LocalDate =
     Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDate()

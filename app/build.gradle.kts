@@ -227,6 +227,12 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.car.app)
 
+    // The Android Auto screen (platform/car/). "app-projected" is what makes a Car App Library
+    // screen an Android Auto app; the screen itself is written against "app", above. The
+    // lifecycle runtime lets it follow the trip only while the car is showing it.
+    implementation(libs.androidx.car.app.projected)
+    implementation(libs.androidx.lifecycle.runtime)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

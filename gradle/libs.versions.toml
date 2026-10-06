@@ -20,8 +20,12 @@ ktlint = "1.8.0"
 
 # Libraries.
 activityCompose = "1.13.0"
-# The Car App Library. Only CarConnection is used so far: it tells the trip service whether
-# Android Auto is connected. The in-truck screen will use the same artifact.
+# The Car App Library: the Android Auto screen, and CarConnection, which tells the trip service
+# whether Android Auto is connected. 1.7.0 is the newest stable release; 1.8.0 is still a release
+# candidate and must not be taken before it is stable.
+# TODO(debt): the release notes of 1.8.0-rc01 say it includes a security fix (not named) and tell
+# every lower version to update, and MilO's car service is exported. Take 1.8.0 the day it is
+# stable, without waiting for the weekly round of updates (FINDINGS_LOG, 2026-10-05).
 carApp = "1.7.0"
 composeBom = "2026.09.00"
 coroutines = "1.11.0"
@@ -52,6 +56,9 @@ ktlint-cli = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlint
 
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-car-app = { module = "androidx.car.app:app", version.ref = "carApp" }
+# What makes the Car App Library screen an Android Auto app (projected from the phone). It does
+# not bring "app" in for compiling, so both are declared, as Google's own setup does.
+androidx-car-app-projected = { module = "androidx.car.app:app-projected", version.ref = "carApp" }
 
 # The BOM pins every androidx.compose artifact below to versions tested together, which is why
 # those entries carry no version of their own.
@@ -64,6 +71,9 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
+# repeatOnLifecycle: the Android Auto screen follows the trip only while the car shows it. The
+# Car App Library alone would bring a much older lifecycle (2.2.0), which does not have it.
+androidx-lifecycle-runtime = { module = "androidx.lifecycle:lifecycle-runtime", version.ref = "lifecycle" }
 # LifecycleEventEffect: how a screen learns that it has come to the front again.
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 # viewModel() for Compose: how a screen gets its ViewModel.
