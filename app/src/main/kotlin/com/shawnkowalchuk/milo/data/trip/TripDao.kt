@@ -38,6 +38,13 @@ interface TripDao {
     @Query("SELECT * FROM trips WHERE id = :tripId")
     suspend fun findById(tripId: Long): Trip?
 
+    /**
+     * The latest end time among the trips that have closed, whatever became of them: every
+     * status but [open]. Null if no trip has closed yet. A read only, of a column that exists.
+     */
+    @Query("SELECT MAX(endedAtMs) FROM trips WHERE status != :open")
+    suspend fun findNewestEndedAtMs(open: TripStatus): Long?
+
     @Query("SELECT * FROM trips WHERE status = :status ORDER BY startedAtMs DESC")
     fun observeWithStatus(status: TripStatus): Flow<List<Trip>>
 

@@ -24,6 +24,7 @@ internal val allGood =
         ignoringBatteryOptimizations = true,
         exemptFromUnusedAppPause = true,
         batterySaverOn = false,
+        activityRecognitionGranted = true,
         isXiaomi = false,
         autostart = AutostartReading.UNKNOWN,
     )
@@ -38,6 +39,8 @@ internal fun rows(
     facts: SetupFacts = allGood,
     pairing: PairingState? = PairingState.ARMED,
     confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),
-): List<SetupRow> = setupRows(facts, pairing, truckName = "Work truck", confirmedAtMs)
+    drivingAlertEnabled: Boolean = true,
+): List<SetupRow> =
+    setupRows(facts, pairing, truckName = "Work truck", confirmedAtMs, drivingAlertEnabled)
 
 internal fun List<SetupRow>.row(item: SetupItem): SetupRow = single { it.item == item }

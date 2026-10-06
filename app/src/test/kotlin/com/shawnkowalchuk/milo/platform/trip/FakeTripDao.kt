@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripDao
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -27,6 +28,12 @@ class FakeTripDao : TripDao {
     /** Set to make the next write of Business or Personal to a closed trip fail once. */
     var failNextCategoryWrite: Exception? = null
 
+    /**
+     * Set to hold every close of a trip back until it is completed, as a slow write to the
+     * database would: whatever else is ready to run gets its turn while the close waits.
+     */
+    var holdCloseUntil: CompletableDeferred<Unit>? = null
+
     override suspend fun insert(trip: Trip): Long {
         failNextInsert?.let { failure ->
             failNextInsert = null
@@ -41,6 +48,9 @@ class FakeTripDao : TripDao {
         rows.lastOrNull { it.status == status }
 
     override suspend fun findById(tripId: Long): Trip? = rows.firstOrNull { it.id == tripId }
+
+    override suspend fun findNewestEndedAtMs(open: TripStatus): Long? =
+        rows.filter { it.status != open }.mapNotNull { it.endedAtMs }.maxOrNull()
 
     override fun observeWithStatus(status: TripStatus): Flow<List<Trip>> =
         flowOf(rows.filter { it.status == status })
@@ -73,21 +83,24 @@ class FakeTripDao : TripDao {
         ranPastSchedule: Boolean,
         ignoredOutsideSchedule: Boolean,
         open: TripStatus,
-    ): Int = change(tripId, open) {
-        it.copy(
-            status = closedStatus,
-            endedAtMs = endedAtMs,
-            distanceMetres = distanceMetres,
-            startLatitude = startLatitude,
-            startLongitude = startLongitude,
-            endLatitude = endLatitude,
-            endLongitude = endLongitude,
-            graceStartedAtMs = null,
-            graceDeadlineMs = null,
-            category = category,
-            ranPastSchedule = ranPastSchedule,
-            ignoredOutsideSchedule = ignoredOutsideSchedule,
-        )
+    ): Int {
+        holdCloseUntil?.await()
+        return change(tripId, open) {
+            it.copy(
+                status = closedStatus,
+                endedAtMs = endedAtMs,
+                distanceMetres = distanceMetres,
+                startLatitude = startLatitude,
+                startLongitude = startLongitude,
+                endLatitude = endLatitude,
+                endLongitude = endLongitude,
+                graceStartedAtMs = null,
+                graceDeadlineMs = null,
+                category = category,
+                ranPastSchedule = ranPastSchedule,
+                ignoredOutsideSchedule = ignoredOutsideSchedule,
+            )
+        }
     }
 
     // The condition is written out as the SQL has it, and not taken from startPlace() and

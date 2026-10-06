@@ -88,7 +88,8 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
   data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
                           #   touches storage
   platform/               # the only layer that touches Android system services: Bluetooth,
-                          #   companion device, location, notifications, audio, Android Auto
+                          #   companion device, location, driving detection, notifications, audio,
+                          #   Android Auto
 ```
 
 **Rules:**

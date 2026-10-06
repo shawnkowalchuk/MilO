@@ -11,8 +11,9 @@ import org.junit.Test
 
 /**
  * How each row of the setup checklist is decided from what the phone reports. Which rows are
- * required, and when the home screen warns, is in `SetupAttentionTest`. Reading the phone
- * itself, and what the buttons open, can only be tested on the phone.
+ * required, and when the home screen warns, is in `SetupAttentionTest`; the row of the driving
+ * alert's permission is in `PhysicalActivityRowTest`. Reading the phone itself, and what the
+ * buttons open, can only be tested on the phone.
  */
 class SetupRulesTest {
     // ---- The Android rows -------------------------------------------------------------------------
@@ -26,11 +27,11 @@ class SetupRulesTest {
     }
 
     @Test
-    fun `a stock Android phone has the nine Android rows and no Xiaomi row`() {
+    fun `a stock Android phone has the ten Android rows and no Xiaomi row`() {
         val items = rows().map { it.item }
 
         assertEquals(SetupItem.entries.filterNot { it.xiaomiOnly }, items)
-        assertEquals(9, items.size)
+        assertEquals(10, items.size)
     }
 
     @Test

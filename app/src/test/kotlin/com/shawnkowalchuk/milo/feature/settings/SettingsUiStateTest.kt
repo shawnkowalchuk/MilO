@@ -38,6 +38,12 @@ class SettingsUiStateTest {
     }
 
     @Test
+    fun `the driving alert is on out of the box, and the switch shows what is stored`() {
+        assertTrue(shown().drivingAlertEnabled)
+        assertFalse(shown(MiloSettings(drivingAlertEnabled = false)).drivingAlertEnabled)
+    }
+
+    @Test
     fun `at the defaults both numbers can go either way`() {
         val state = shown()
 

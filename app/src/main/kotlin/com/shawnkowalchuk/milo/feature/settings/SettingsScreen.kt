@@ -38,6 +38,7 @@ internal class SettingsActions(
     val onPlaySound: () -> Unit,
     val onPickOwnSound: () -> Unit,
     val onUseBuiltInSound: () -> Unit,
+    val onDrivingAlertEnabled: (Boolean) -> Unit,
     val schedule: ScheduleActions,
 )
 
@@ -58,8 +59,8 @@ internal class ScheduleActions(
 /**
  * The settings: which truck, how long a trip waits for it to reconnect, how short a trip may
  * be, the work schedule that makes a trip Business or Personal, what becomes of a trip outside
- * it, and the sound of a trip start. Report and reminder settings arrive with the phases that
- * build them.
+ * it, the driving alert, and the sound of a trip start. Report and reminder settings arrive
+ * with the phases that build them.
  *
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
@@ -97,6 +98,7 @@ fun SettingsScreen(
                 }
             },
             onUseBuiltInSound = viewModel::onUseBuiltInSound,
+            onDrivingAlertEnabled = viewModel::onDrivingAlertEnabled,
             schedule =
                 ScheduleActions(
                     onDayTracked = viewModel::onDayTracked,
@@ -149,6 +151,7 @@ private fun SettingsContent(
                 TripRulesCard(state, actions)
                 ScheduleCard(state, actions.schedule)
                 OutsideScheduleCard(state, actions.schedule)
+                DrivingAlertCard(state, actions)
                 SoundCard(state, actions)
             }
         }
@@ -185,6 +188,7 @@ private fun SettingsPreview() {
                     )
                 },
             ignoreOutsideSchedule = false,
+            drivingAlertEnabled = true,
             problem = SettingsProblem.SOUND_NOT_PLAYABLE,
         )
     val schedule = ScheduleActions({ _, _ -> }, { _, _, _ -> }, { _, _, _ -> }, {}, {})
@@ -192,7 +196,7 @@ private fun SettingsPreview() {
         Surface {
             SettingsContent(
                 state = state,
-                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, schedule),
+                actions = SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule),
                 onBack = {},
             )
         }

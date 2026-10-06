@@ -76,12 +76,16 @@
     <string name="start_problem_bluetooth_permission">Bluetooth permission is missing. Allow \"Nearby devices\" for MilO in the phone\'s settings.</string>
     <string name="start_problem_refused">Android did not allow recording to start. Open MilO and press Start trip.</string>
 
-    <!-- Notifications. The two channel names appear in the phone's notification settings. -->
+    <!-- Notifications. The three channel names appear in the phone's notification settings. -->
     <string name="notification_channel_trip">Trip in progress</string>
     <string name="notification_channel_failures">Trip problems</string>
+    <string name="notification_channel_driving">Driving alert</string>
     <string name="notification_trip_starting">Starting a trip</string>
     <string name="notification_could_not_start_title">MilO could not start this trip</string>
     <string name="notification_could_not_start_text">Tap to start</string>
+    <!-- The driving alert. Tapping it starts a trip; nothing starts until it is tapped. -->
+    <string name="notification_driving_title">You seem to be driving</string>
+    <string name="notification_driving_text">No trip is being recorded. Tap to start one.</string>
 
     <!-- Setup: the permission checklist. -->
     <string name="setup_title">Setup</string>
@@ -105,6 +109,7 @@
     <string name="setup_item_battery_exemption">Battery use: unrestricted</string>
     <string name="setup_item_unused_app_pause">Not paused when unused</string>
     <string name="setup_item_battery_saver_off">Battery Saver off</string>
+    <string name="setup_item_physical_activity">Physical activity</string>
     <string name="setup_item_xiaomi_autostart">Background autostart</string>
     <string name="setup_item_xiaomi_battery_saver">Battery saver: No restrictions</string>
     <string name="setup_item_xiaomi_other_permissions">Other permissions</string>
@@ -129,12 +134,14 @@
     <string name="setup_fix_battery_exemption">Android may stop MilO to save battery. Allow it to run without battery optimisation.</string>
     <string name="setup_fix_unused_app_pause">Recommended. Switch off \"Pause app activity if unused\" for MilO, or Android stops it after months without being opened.</string>
     <string name="setup_fix_battery_saver_off">Battery Saver is on. It limits location and background work, so a trip can be missed or cut short.</string>
+    <string name="setup_fix_physical_activity">Recommended. The driving alert needs this: it is how the phone tells MilO that you are driving. MilO only sends a notification then, and never starts a trip by itself.</string>
     <string name="setup_fix_xiaomi_battery_saver">MilO cannot read this setting. On MilO\'s app page, set Battery saver to \"No restrictions\", then confirm it here.</string>
     <string name="setup_fix_xiaomi_other_permissions">Recommended. MilO cannot read these. Under \"Other permissions\", switch on \"Show on Lock screen\", the permission to start or open windows in the background, and \"Permanent notification\". Then confirm it here.</string>
     <string name="setup_fix_xiaomi_recents_lock">MilO cannot read this. Open the recent apps, press and hold MilO\'s card and tap the padlock, so the cleaners leave MilO alone. Then confirm it here.</string>
 
     <!-- Setup: lines for a particular state of a row. -->
     <string name="setup_detail_checking">Checking…</string>
+    <string name="setup_detail_driving_alert_off">Not needed: the driving alert is switched off in Settings.</string>
     <string name="setup_detail_precise_location_first">Allow precise location first, in the row above.</string>
     <string name="setup_detail_battery_restricted">Battery use for MilO is set to Restricted, which blocks trip recording. Change it to Unrestricted on MilO\'s app page.</string>
     <!-- The same state on a Xiaomi phone. HyperOS has no "Unrestricted": its setting is Battery saver, with "No restrictions". -->
@@ -396,6 +403,11 @@
     <string name="settings_minimum_detail">A shorter trip is discarded, such as moving the truck around the yard. A discarded trip can still be counted on the Trips screen.</string>
     <string name="settings_minimum_less">Count shorter trips</string>
     <string name="settings_minimum_more">Count only longer trips</string>
+    <!-- Settings: the driving alert. -->
+    <string name="settings_driving_title">Driving alert</string>
+    <string name="settings_driving_enabled">Tell me when I drive without a trip</string>
+    <string name="settings_driving_detail">During your work hours, if the phone notices that you are driving while no trip is being recorded and the truck is not connected, MilO sends a notification. Tap it to start a trip. MilO never starts one from this by itself: the phone cannot tell the truck from any other vehicle.</string>
+    <string name="settings_driving_needs">It needs the Physical activity permission, which the Setup screen asks for. The phone can take a minute or more to notice that you are driving.</string>
     <string name="settings_sound_title">Trip-start sound</string>
     <string name="settings_sound_enabled">Play a sound when a trip starts</string>
     <string name="settings_sound_built_in">Sound in use: the built-in sound</string>

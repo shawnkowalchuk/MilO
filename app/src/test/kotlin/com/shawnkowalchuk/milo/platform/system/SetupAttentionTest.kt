@@ -15,9 +15,23 @@ class SetupAttentionTest {
     @Test
     fun `the required rows are the ones an automatic trip depends on`() {
         assertEquals(
-            setOf(SetupItem.UNUSED_APP_PAUSE, SetupItem.XIAOMI_OTHER_PERMISSIONS),
+            setOf(
+                SetupItem.UNUSED_APP_PAUSE,
+                SetupItem.PHYSICAL_ACTIVITY,
+                SetupItem.XIAOMI_OTHER_PERMISSIONS,
+            ),
             SetupItem.entries.filterNot { it.required }.toSet(),
         )
+    }
+
+    @Test
+    fun `the driving alert's permission missing raises no warning on the home screen`() {
+        // The alert is a safety net that notifies. No trip starts by itself, or fails to,
+        // because of it, so it must not sit beside "a trip may not start by itself".
+        val rows = rows(allGood.copy(activityRecognitionGranted = false))
+
+        assertEquals(SetupState.PROBLEM, rows.row(SetupItem.PHYSICAL_ACTIVITY).state)
+        assertFalse(needsAttention(rows))
     }
 
     @Test

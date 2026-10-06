@@ -24,6 +24,8 @@ import com.shawnkowalchuk.milo.platform.bluetooth.bluetoothSwitchChanges
 import com.shawnkowalchuk.milo.platform.bluetooth.buildTruckPairing
 import com.shawnkowalchuk.milo.platform.diagnostics.ProcessExitReader
 import com.shawnkowalchuk.milo.platform.diagnostics.StartupDiagnostics
+import com.shawnkowalchuk.milo.platform.driving.DrivingAlert
+import com.shawnkowalchuk.milo.platform.driving.PlayServicesDrivingDetection
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.SetupReader
 import com.shawnkowalchuk.milo.platform.system.SystemScreens
@@ -155,7 +157,10 @@ class AppContainer(context: Context) {
         )
     }
 
-    /** Shared by the trip service and its starter, so the two notification channels exist once. */
+    /**
+     * Shared by the trip service, its starter and the driving alert, so the notification
+     * channels exist once.
+     */
     val tripNotifications: TripNotifications by lazy { TripNotifications(appContext) }
 
     /**
@@ -171,6 +176,32 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             truck = truckConnection,
             starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
+            clock = System::currentTimeMillis,
+            zone = ZoneId::systemDefault,
+            scope = applicationScope,
+        )
+    }
+
+    /**
+     * The driving alert: a notification when the phone reports driving during the work hours
+     * with no trip being recorded and the paired truck not connected. It is handed two questions
+     * about the stored trips ("is one open?" and "when did the last one end?"), what the trip
+     * controller publishes and the controller's "tell me when you have caught up", and neither
+     * the controller nor the trip storage itself: nothing in it can start a trip.
+     */
+    val drivingAlert: DrivingAlert by lazy {
+        DrivingAlert(
+            detection = PlayServicesDrivingDetection(appContext),
+            showAlert = tripNotifications::showDrivingAlert,
+            withdrawAlert = tripNotifications::cancelDrivingAlert,
+            settings = settingsStore,
+            truck = truckConnection,
+            openTripStored = { tripRepository.findOpenTrip() != null },
+            lastTripEndedAtMs = tripRepository::findNewestTripEndMs,
+            tripActivity = tripController.activity,
+            whenTripsCaughtUp = tripController::whenCaughtUp,
+            eventLog = eventLogRepository,
+            crashFileStore = crashFileStore,
             clock = System::currentTimeMillis,
             zone = ZoneId::systemDefault,
             scope = applicationScope,

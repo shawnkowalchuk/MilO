@@ -33,7 +33,7 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * The last three fields are not settings Shawn chooses. They are small pieces of state that must
+ * The last four fields are not settings Shawn chooses. They are small pieces of state that must
  * outlive the process, and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
@@ -47,10 +47,17 @@ enum class ConfirmedStep(val key: String) {
  * @param customSoundName what the file he picked was called, for display only. Null with no
  * custom sound, and when the phone gave no name for the file.
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
- * starts inside it is saved as Business. It is read when a trip is finalised and never before:
- * it has no say in whether a trip starts.
+ * starts inside it is saved as Business. It sorts a trip when the trip is finalised and never
+ * before, and it has no say in whether a trip starts. The driving alert reads it too, to keep
+ * quiet outside the work hours.
  * @param ignoreTripsOutsideSchedule what becomes of a trip that started outside the schedule:
  * false saves it as Personal, true has it stored as discarded when it is finalised.
+ * @param drivingAlertEnabled whether MilO sends a notification when the phone reports driving
+ * during the work hours with no trip being recorded and the truck not connected. The alert only
+ * notifies: a trip starts when the notification is tapped, never by itself.
+ * @param lastDrivingAlertAtMs when the driving alert was last posted, or null if it never was.
+ * No second alert is posted for a while after it, and that must hold when MilO's process was
+ * restarted in between.
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -70,6 +77,8 @@ data class MiloSettings(
     val customSoundName: String? = null,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,
+    val drivingAlertEnabled: Boolean = true,
+    val lastDrivingAlertAtMs: Long? = null,
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

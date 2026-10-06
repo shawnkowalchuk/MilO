@@ -45,7 +45,15 @@ class SetupChecklist(
     /** The rows, or null until the phone has been read for the first time. */
     val rows: StateFlow<List<SetupRow>?> =
         combine(facts, readableSettings(), pairing) { read, stored, checked ->
-            read?.let { setupRows(it, checked?.state, stored.truckName, stored.confirmedAtMs) }
+            read?.let {
+                setupRows(
+                    facts = it,
+                    pairing = checked?.state,
+                    truckName = stored.truckName,
+                    confirmedAtMs = stored.confirmedAtMs,
+                    drivingAlertEnabled = stored.drivingAlertEnabled,
+                )
+            }
         }.stateIn(scope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), initialValue = null)
 
     /**

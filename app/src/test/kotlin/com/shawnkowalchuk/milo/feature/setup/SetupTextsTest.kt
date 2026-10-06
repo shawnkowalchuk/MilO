@@ -46,6 +46,22 @@ class SetupTextsTest {
     }
 
     @Test
+    fun `the Physical activity row says why it is not asked for while the alert is off`() {
+        fun physicalActivity(state: SetupState, detail: SetupDetail) =
+            SetupRow(SetupItem.PHYSICAL_ACTIVITY, state, detail)
+
+        assertEquals(
+            R.string.setup_detail_driving_alert_off,
+            physicalActivity(SetupState.OK, SetupDetail.DRIVING_ALERT_OFF).detailRes(),
+        )
+        assertEquals(
+            R.string.setup_fix_physical_activity,
+            physicalActivity(SetupState.PROBLEM, SetupDetail.NOT_SET).detailRes(),
+        )
+        assertEquals(R.string.setup_item_physical_activity, SetupItem.PHYSICAL_ACTIVITY.labelRes())
+    }
+
+    @Test
     fun `a Restricted battery setting is worded for the phone it is on`() {
         fun restricted(detail: SetupDetail) = SetupRow(
             SetupItem.BATTERY_EXEMPTION,

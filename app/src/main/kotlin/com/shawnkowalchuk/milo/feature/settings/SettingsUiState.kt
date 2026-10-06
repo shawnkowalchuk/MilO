@@ -75,6 +75,8 @@ sealed interface SettingsUiState {
      * @param schedule the seven days, Monday first.
      * @param ignoreOutsideSchedule true if "Ignore them" is chosen for the trips that start
      * outside the schedule, false for "Save as Personal".
+     * @param drivingAlertEnabled whether MilO notifies when the phone reports driving during
+     * the work hours with no trip being recorded.
      * @param problem the last press that did not work, until the next one.
      */
     data class Ready(
@@ -92,6 +94,7 @@ sealed interface SettingsUiState {
         val copyingSound: Boolean,
         val schedule: List<ScheduleDay>,
         val ignoreOutsideSchedule: Boolean,
+        val drivingAlertEnabled: Boolean,
         val problem: SettingsProblem?,
     ) : SettingsUiState
 }
@@ -135,6 +138,7 @@ fun settingsUiState(
             )
         },
     ignoreOutsideSchedule = settings.ignoreTripsOutsideSchedule,
+    drivingAlertEnabled = settings.drivingAlertEnabled,
     problem = problem,
 )
 

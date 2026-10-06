@@ -27,12 +27,15 @@ fun needsAttention(rows: List<SetupRow>): Boolean = rows.any { it.needsAttention
  *
  * @param pairing the state of the truck's pairing, or null before its first check has finished.
  * @param confirmedAtMs when Shawn confirmed each step MilO cannot read.
+ * @param drivingAlertEnabled the Settings switch of the driving alert. While it is off, the
+ * Physical activity permission is not asked for.
  */
 fun setupRows(
     facts: SetupFacts,
     pairing: PairingState?,
     truckName: String?,
     confirmedAtMs: Map<ConfirmedStep, Long>,
+    drivingAlertEnabled: Boolean,
 ): List<SetupRow> = buildList {
     add(preciseLocationRow(facts.preflight))
     add(backgroundLocationRow(facts.preflight))
@@ -43,6 +46,7 @@ fun setupRows(
     add(batteryExemptionRow(facts))
     add(unusedAppPauseRow(facts))
     add(batterySaverRow(facts))
+    add(physicalActivityRow(facts, drivingAlertEnabled))
     if (facts.isXiaomi) {
         add(autostartRow(facts.autostart, confirmedAtMs[ConfirmedStep.XIAOMI_AUTOSTART]))
         add(
@@ -206,6 +210,30 @@ private fun batterySaverRow(facts: SetupFacts): SetupRow = simpleRow(
     !facts.batterySaverOn,
     SetupFix.Open(SystemScreen.BATTERY_SAVER),
 )
+
+/**
+ * The one permission only the driving alert needs. With the alert switched off in Settings
+ * nothing needs it, so the row is in order and asks for nothing: a row that asked for a
+ * permission no feature would use is how a checklist stops being believed.
+ */
+private fun physicalActivityRow(facts: SetupFacts, drivingAlertEnabled: Boolean): SetupRow = when {
+    facts.activityRecognitionGranted ->
+        SetupRow(SetupItem.PHYSICAL_ACTIVITY, SetupState.OK, SetupDetail.FINE)
+
+    !drivingAlertEnabled ->
+        SetupRow(SetupItem.PHYSICAL_ACTIVITY, SetupState.OK, SetupDetail.DRIVING_ALERT_OFF)
+
+    else ->
+        SetupRow(
+            SetupItem.PHYSICAL_ACTIVITY,
+            SetupState.PROBLEM,
+            SetupDetail.NOT_SET,
+            SetupFix.AskPermission(
+                listOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                ifNotAsked = SystemScreen.APP_DETAILS,
+            ),
+        )
+}
 
 /**
  * Autostart keeps its button in every state, because none of the states is certain. A reading
