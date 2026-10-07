@@ -184,8 +184,8 @@ private const val MILLIS_PER_SECOND = 1000L
 internal fun gpsForDrivingText(ageMs: Long, forMs: Long): String {
     val minutes = (forMs + MILLIS_PER_MINUTE - 1) / MILLIS_PER_MINUTE
     return "The phone reports getting into a vehicle ${ageMs / MILLIS_PER_SECOND} s ago: the " +
-        "parked truck's position is read for the next $minutes min, and a trip starts if it " +
-        "drives off"
+        "parked truck's position is read every 5 s for the next $minutes min, and a trip " +
+        "starts if it drives off"
 }
 
 /** The line for the end of a wait beside the parked truck, with the reason. */

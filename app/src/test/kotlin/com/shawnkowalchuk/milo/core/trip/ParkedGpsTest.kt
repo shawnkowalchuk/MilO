@@ -36,4 +36,26 @@ class ParkedGpsTest {
         assertNull(parkedGpsUntilMs(since, null, sensorWatching = false))
         assertNull(parkedGpsUntilMs(since, since + 5 * 60 * minute, sensorWatching = false))
     }
+
+    @Test
+    fun `GPS is read every 5 s for ten minutes after a report, and not otherwise`() {
+        val reportAt = since + 5 * 60 * minute
+
+        assertEquals(
+            ParkedGps(untilMs = reportAt + 10 * minute, fastUntilMs = reportAt + 10 * minute),
+            parkedGps(since, reportAt, sensorWatching = true),
+        )
+        assertEquals(ParkedGps(untilMs = since + 60 * minute), parkedGps(since, null, true))
+    }
+
+    @Test
+    fun `without the motion sensor a report still makes the reading fast`() {
+        // GPS runs for the whole wait then; a report can only have come before it was lost.
+        val reportAt = since + 2 * minute
+
+        assertEquals(
+            ParkedGps(untilMs = null, fastUntilMs = reportAt + 10 * minute),
+            parkedGps(since, reportAt, sensorWatching = false),
+        )
+    }
 }

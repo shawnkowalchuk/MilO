@@ -8,11 +8,13 @@ import android.os.IBinder
 import android.os.SystemClock
 import com.shawnkowalchuk.milo.app.MiloApplication
 import com.shawnkowalchuk.milo.core.trip.POLL_INTERVAL_MS
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.PollPacer
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckBluetoothReceiver
 import com.shawnkowalchuk.milo.platform.car.AndroidAutoWatcher
+import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -81,15 +83,20 @@ class TripService :
     private var session: Job? = null
     private val checkTimer = TripCheckTimer(scope) { controller.onCheckDue(it) }
 
-    /** Beside the parked truck: when GPS goes off, or null to keep it on (see [watchParked]). */
-    private var parkedGpsUntilMs: Long? = null
+    /** Beside the parked truck: how GPS is read (see [watchParked]). */
+    private var parkedGps = ParkedGps()
 
     /** True once GPS has gone off beside the parked truck, until it is turned on again. */
     private var parkedGpsOff = false
 
-    /** Runs out at [parkedGpsUntilMs]. A fix that arrives after it stands in when it is late. */
+    /**
+     * Runs out at the next change of how GPS is read beside the parked truck. A fix that
+     * arrives after it stands in when it is late.
+     */
     private val parkedGpsTimer =
-        TripCheckTimer(scope) { mainExecutor.execute { parkedGpsInLine() } }
+        TripCheckTimer(scope) { dueMs ->
+            mainExecutor.execute { parkedGpsInLine(max(System.currentTimeMillis(), dueMs)) }
+        }
     private var androidAutoConnected = false
     private val pollPacer = PollPacer()
 
@@ -163,13 +170,12 @@ class TripService :
         }
     }
 
-    override fun watchParked(checkAtMs: Long?, gpsUntilMs: Long?) {
+    override fun watchParked(checkAtMs: Long?, gps: ParkedGps) {
         mainExecutor.execute {
             if (destroyed) return@execute
             turnTo(Work.WATCHING_PARKED)
             checkTimer.set(checkAtMs)
-            parkedGpsUntilMs = gpsUntilMs
-            parkedGpsTimer.set(gpsUntilMs)
+            parkedGps = gps
             parkedGpsInLine()
         }
     }
@@ -235,23 +241,30 @@ class TripService :
     }
 
     /**
-     * Beside the parked truck, GPS is read until [parkedGpsUntilMs] and is off after it: the
-     * phone's motion sensor watches then, and its report of getting into a vehicle reaches the
-     * controller, which gives a later time. Called with each order, when the time comes, and
-     * with each fix, which stands in for a timer that runs late while the phone sleeps.
+     * Beside the parked truck, GPS is read every 5 seconds until [ParkedGps.fastUntilMs], every
+     * 30 until [ParkedGps.untilMs], and not at all after it: the phone's motion sensor watches
+     * then, and its report of getting into a vehicle reaches the controller, which gives later
+     * times. Called with each order, when the timer runs out, and with each fix, which stands
+     * in for a timer that runs late while the phone sleeps.
      */
-    private fun parkedGpsInLine() {
+    private fun parkedGpsInLine(nowMs: Long = System.currentTimeMillis()) {
         if (work != Work.WATCHING_PARKED) return
-        val untilMs = parkedGpsUntilMs
-        if (untilMs == null || System.currentTimeMillis() < untilMs) {
+        val fast = parkedGps.fastUntilMs?.let { nowMs < it } ?: false
+        val on = parkedGps.untilMs?.let { nowMs < it } ?: true
+        if (fast || on) {
             parkedGpsOff = false
-            location.start(FixRate.WATCHING_PARKED)
+            location.start(if (fast) FixRate.RECORDING else FixRate.WATCHING_PARKED)
         } else if (!parkedGpsOff) {
             // Also when it never came on: a service that Android restarted after the hour.
             parkedGpsOff = true
             location.stop()
             controller.note(EventCategory.LOCATION, PARKED_GPS_OFF)
         }
+        val nextChangeMs =
+            listOfNotNull(parkedGps.fastUntilMs, parkedGps.untilMs).filter {
+                it > nowMs
+            }.minOrNull()
+        parkedGpsTimer.set(nextChangeMs)
     }
 
     /** Recording has really begun: the moment for the trip-start sound, once per trip. */

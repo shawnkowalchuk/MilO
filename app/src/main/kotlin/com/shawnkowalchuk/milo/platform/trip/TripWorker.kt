@@ -1,13 +1,14 @@
 package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.trip.GPS_AFTER_VEHICLE_REPORT_MS
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TripEffect
 import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStateMachine
 import com.shawnkowalchuk.milo.core.trip.TripTransition
-import com.shawnkowalchuk.milo.core.trip.parkedGpsUntilMs
+import com.shawnkowalchuk.milo.core.trip.parkedGps
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.point.RawPoint
@@ -101,16 +102,16 @@ internal class TripWorker(
             is TripWork.Note -> eventLog.add(work.atMs, work.category, work.message, work.detail)
             is TripWork.CaughtUp -> work.done()
         }
-        service.sync(known, rules, parkedGpsUntil())
+        service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
     }
 
     /**
-     * Until when GPS is read beside the parked truck ([parkedGpsUntilMs]), or null while MilO
-     * is not watching a parked truck or reads GPS for the whole wait.
+     * How GPS is read beside the parked truck ([parkedGps]), or null while MilO is not
+     * watching a parked truck.
      */
-    private fun parkedGpsUntil(): Long? {
+    private fun parkedGpsNow(): ParkedGps? {
         val parked = known?.takeIf { it.waitingToMove }?.parked ?: return null
-        return parkedGpsUntilMs(parked.sinceMs, vehicleEnteredAtMs, motionSensorWatching())
+        return parkedGps(parked.sinceMs, vehicleEnteredAtMs, motionSensorWatching())
     }
 
     /**
@@ -134,7 +135,7 @@ internal class TripWorker(
     private suspend fun readStorageAgain() {
         try {
             onTrigger(StartRequest(TripTrigger.RECONCILE, AFTER_FAILURE, clock()))
-            service.sync(known, rules, parkedGpsUntil())
+            service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (again: Exception) {
@@ -234,17 +235,17 @@ internal class TripWorker(
     }
 
     /**
-     * The phone reported getting into a vehicle. Beside the parked truck GPS is read again for a
-     * while ([GPS_AFTER_VEHICLE_REPORT_MS]): the next [service] sync passes the new time on.
-     * The driving alert writes a line for every report; this one is written only for a report
-     * that turns GPS on beside the parked truck.
+     * The phone reported getting into a vehicle. Beside the parked truck GPS is read every 5
+     * seconds for a while ([GPS_AFTER_VEHICLE_REPORT_MS]): the next [service] sync passes the
+     * new times on. The driving alert writes a line for every report; this one is written only
+     * for a report that changes how GPS is read beside the parked truck.
      */
     private suspend fun onVehicleEntered(atMs: Long) {
         vehicleEnteredAtMs = max(atMs, vehicleEnteredAtMs ?: atMs)
-        val untilMs = parkedGpsUntil() ?: return
+        val fastUntilMs = parkedGpsNow()?.fastUntilMs ?: return
         val nowMs = clock()
-        if (untilMs <= nowMs) return
-        val line = gpsForDrivingText(ageMs = nowMs - atMs, forMs = untilMs - nowMs)
+        if (fastUntilMs <= nowMs) return
+        val line = gpsForDrivingText(ageMs = nowMs - atMs, forMs = fastUntilMs - nowMs)
         eventLog.add(nowMs, EventCategory.LOCATION, line)
     }
 

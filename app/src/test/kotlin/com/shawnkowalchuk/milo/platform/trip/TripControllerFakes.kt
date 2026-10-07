@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.platform.trip
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TrackPoint
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.trip.driveNorth
@@ -147,6 +148,9 @@ class FakeService :
     /** Beside the parked truck: when the controller last said GPS goes off, or null for never. */
     var gpsUntilMs: Long? = null
 
+    /** And until when it said GPS is read every 5 seconds, or null. */
+    var fastGpsUntilMs: Long? = null
+
     @Synchronized
     override fun start(request: StartRequest): StartFailure? {
         startRequests += request
@@ -173,11 +177,12 @@ class FakeService :
     }
 
     @Synchronized
-    override fun watchParked(checkAtMs: Long?, gpsUntilMs: Long?) {
+    override fun watchParked(checkAtMs: Long?, gps: ParkedGps) {
         recording = false
         watchingParked = true
         this.checkAtMs = checkAtMs
-        this.gpsUntilMs = gpsUntilMs
+        gpsUntilMs = gps.untilMs
+        fastGpsUntilMs = gps.fastUntilMs
     }
 
     @Synchronized

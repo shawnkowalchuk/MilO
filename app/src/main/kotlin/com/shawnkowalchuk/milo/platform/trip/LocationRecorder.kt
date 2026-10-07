@@ -21,7 +21,10 @@ import com.shawnkowalchuk.milo.data.point.RawPoint
  * @param intervalMs the time between two fixes.
  */
 enum class FixRate(val intervalMs: Long) {
-    /** During a trip: a fix every 5 seconds, as the brief asks. */
+    /**
+     * During a trip: a fix every 5 seconds, as the brief asks. Beside a parked truck too, for
+     * ten minutes after the phone reports getting into a vehicle (`ParkedGps.fastUntilMs`).
+     */
     RECORDING(5_000L),
 
     /**
@@ -32,9 +35,9 @@ enum class FixRate(val intervalMs: Long) {
      * driven off once a fix shows it away from its place at 15 km/h or more, which is within
      * about half a minute, and the trip then starts where it was parked.
      *
-     * Since 2026-10-07 they run for the first hour of the wait only, and for ten minutes after
-     * each report of getting into a vehicle (`parkedGpsUntilMs`), as long as the phone reports
-     * driving to MilO at all. Without such reports they run for the whole wait, which ends
+     * Since 2026-10-07 they run for the first hour of the wait only, as long as the phone reports
+     * driving to MilO at all (`parkedGpsUntilMs`); for ten minutes after each report of getting
+     * into a vehicle they run at the recording rate instead. Without such reports they run for the whole wait, which ends
      * after three days at the latest (`WAITING_LIMIT_MS`); what a night of them costs the
      * battery has not been measured on the phone (device check 271).
      */

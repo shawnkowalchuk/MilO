@@ -69,12 +69,50 @@ class TripControllerParkedGpsTest {
         runCurrent()
 
         assertEquals(noticedAt + GPS_AFTER_VEHICLE_REPORT_MS, scene.service.gpsUntilMs)
+        // Every 5 seconds for those ten minutes (Shawn's choice of 2026-10-07).
+        assertEquals(noticedAt + GPS_AFTER_VEHICLE_REPORT_MS, scene.service.fastGpsUntilMs)
         assertEquals(
             "The phone reports getting into a vehicle 40 s ago: the parked truck's position is " +
-                "read for the next 10 min, and a trip starts if it drives off",
+                "read every 5 s for the next 10 min, and a trip starts if it drives off",
             world.logged(EventCategory.LOCATION).single(),
         )
     }
+
+    @Test
+    fun `within the first hour a report makes the reading fast, and GPS stays on for the hour`() =
+        runTest {
+            val scene = ParkedScene(this, world)
+            scene.driveAndPark()
+            val waitBegan = world.nowMs
+            world.nowMs += 5 * 60_000
+
+            scene.controller.onVehicleEntered(world.nowMs)
+            runCurrent()
+
+            assertEquals(waitBegan + PARKED_GPS_MS, scene.service.gpsUntilMs)
+            assertEquals(world.nowMs + GPS_AFTER_VEHICLE_REPORT_MS, scene.service.fastGpsUntilMs)
+        }
+
+    @Test
+    fun `a report as the truck pulls out, before its trip is closed, makes the wait fast`() =
+        runTest {
+            // As at 11:13 on 2026-10-07: the report came four seconds before the parked rule
+            // closed the trip.
+            val scene = ParkedScene(this, world)
+            scene.connect()
+            drive(world, scene.controller, fixCount = 21, metresPerFix = 100.0)
+            for (second in STOPPED_AT_SECOND + 5..STOPPED_AT_SECOND + 595 step 5) {
+                scene.fix(northMetres = DRIVEN_METRES + second % 3, second = second)
+            }
+            val reportedAt = world.nowMs
+            scene.controller.onVehicleEntered(reportedAt)
+            runCurrent()
+
+            scene.timerRunsOut()
+
+            assertTrue(scene.service.watchingParked)
+            assertEquals(reportedAt + GPS_AFTER_VEHICLE_REPORT_MS, scene.service.fastGpsUntilMs)
+        }
 
     @Test
     fun `the drive the report announces starts its trip where the truck was parked`() = runTest {
@@ -134,6 +172,7 @@ class TripControllerParkedGpsTest {
         // A trip is being recorded: GPS is on anyway, and nothing is written.
         assertTrue(scene.service.recording)
         assertNull(scene.service.gpsUntilMs)
+        assertNull(scene.service.fastGpsUntilMs)
         assertTrue(world.logged(EventCategory.LOCATION).isEmpty())
     }
 }

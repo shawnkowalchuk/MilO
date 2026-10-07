@@ -18,11 +18,12 @@ import kotlin.math.max
 const val PARKED_GPS_MS = 60L * 60L * 1000L
 
 /**
- * After the phone reports entering a vehicle, a wait reads GPS again for this long. The first
- * fixes decide: a truck that is driven off is seen moving at 15 km/h or more
- * ([DRIVING_OFF_KMH]), and the trip starts. Ten minutes leave room for a slow first fix and for
- * the traffic lights of a yard's exit; a report that was wrong, or a drive in another vehicle,
- * costs no more than that.
+ * After the phone reports entering a vehicle, a wait reads GPS again for this long, every 5
+ * seconds ([ParkedGps.fastUntilMs]). The first fixes decide: a truck that is driven off is seen
+ * moving at 15 km/h or more ([DRIVING_OFF_KMH]), and the trip starts. Ten minutes leave room
+ * for a slow first fix, for the engine running before the truck moves (on 2026-10-07 the report
+ * came two minutes before a hop at 12:18) and for the traffic lights of a yard's exit; a report
+ * that was wrong, or a drive in another vehicle, costs no more than that.
  */
 const val GPS_AFTER_VEHICLE_REPORT_MS = 10L * 60L * 1000L
 
@@ -54,3 +55,32 @@ fun parkedGpsUntilMs(
     val afterReport = vehicleEnteredAtMs?.plus(GPS_AFTER_VEHICLE_REPORT_MS) ?: return firstHour
     return max(firstHour, afterReport)
 }
+
+/**
+ * How a wait beside the parked truck reads GPS.
+ *
+ * @param untilMs when GPS goes off ([parkedGpsUntilMs]), or null to keep it on.
+ * @param fastUntilMs until when it is read every 5 seconds, the rate of a trip, instead of
+ * every 30: [GPS_AFTER_VEHICLE_REPORT_MS] after the phone last reported getting into a vehicle,
+ * or null without such a report (Shawn's choice of 2026-10-07: "Yes, every 5 s"). The trip then
+ * starts within seconds of pulling out, with its real start and the road's distance. At one
+ * fix every 30 seconds, the hop of 2026-10-07 at 12:18 fell between two fixes and was recorded
+ * as a straight line, dated when the truck had already arrived; and under the speed rule
+ * (amendment 31) such a hop, never seen moving fast, starts no trip of its own at all.
+ */
+data class ParkedGps(val untilMs: Long? = null, val fastUntilMs: Long? = null)
+
+/**
+ * How a wait that began at [waitingSinceMs] reads GPS now: see [parkedGpsUntilMs] and
+ * [ParkedGps.fastUntilMs]. A report from before the wait counts too: one that comes as the
+ * truck pulls out, in the very moment the parked rule closes its trip, makes the wait's first
+ * minutes fast.
+ */
+fun parkedGps(
+    waitingSinceMs: Long,
+    vehicleEnteredAtMs: Long?,
+    sensorWatching: Boolean,
+): ParkedGps = ParkedGps(
+    untilMs = parkedGpsUntilMs(waitingSinceMs, vehicleEnteredAtMs, sensorWatching),
+    fastUntilMs = vehicleEnteredAtMs?.plus(GPS_AFTER_VEHICLE_REPORT_MS),
+)
