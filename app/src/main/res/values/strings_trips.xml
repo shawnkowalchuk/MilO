@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The words that came with the Trips screen's own layout (2026-10-07), as the owner's
+        design draws it. They are in a file of their own, beside strings.xml, because other
+        screens were being laid out at the same time and each kept out of the others' files.
+        The Trips screen's older words are still in strings.xml.
+    -->
+
+    <!-- The month's accent tile. The argument is a month, such as October 2026. -->
+    <string name="trips_month_business">%1$s · Business</string>
+    <!--
+        The pill on that tile, for a month whose report has been sent. For one whose report
+        has not, it says report_not_submitted. When it was sent stands in a line of its own.
+    -->
+    <string name="trips_pill_submitted">Submitted</string>
+    <!--
+        What a screen reader says the pill is. The arguments are the pill's own words and the
+        month: Not submitted. Report for the accountant, October 2026.
+    -->
+    <string name="trips_pill_spoken">%1$s. Report for the accountant, %2$s</string>
+    <!-- Spoken by the screen reader for what a press on the pill does. -->
+    <string name="trips_pill_press">open the report for this month</string>
+    <!--
+        The Personal tile's value: the distance and the number of trips, such as 22.0 km · 3.
+        A screen reader is read trips_personal_total in its place.
+    -->
+    <string name="trips_personal_value">%1$s · %2$d</string>
+    <!-- A month whose only trips are deleted or discarded ones that are not shown. -->
+    <string name="trips_empty_counted">No counted trips in %1$s.</string>
+
+    <!-- A day's heading. The argument is the day, such as Tue, Oct 6. -->
+    <string name="trips_day_today">Today · %1$s</string>
+    <!--
+        Added to a day's second line while the switch lists deleted and discarded trips. The
+        argument is how many of them the day has. The words are the same for one and for
+        several in English; another language may need two.
+    -->
+    <plurals name="trips_day_not_counted">
+        <item quantity="one">%d not counted</item>
+        <item quantity="other">%d not counted</item>
+    </plurals>
+    <!-- Spoken by the screen reader for what a press on a day's heading does. -->
+    <string name="trips_day_press_open">show this day\'s trips</string>
+    <string name="trips_day_press_close">hide this day\'s trips</string>
+
+    <!--
+        A trip's grey line: its times, what it is saved as, and its notes, each after this
+        middle dot. The quotation marks keep the two spaces.
+    -->
+    <string name="trips_note_separator">" · "</string>
+    <!-- A trip whose times, addresses or distance are typed in and not recorded. -->
+    <string name="trips_note_added">added by hand</string>
+    <string name="trips_note_edited">edited</string>
+
+    <!-- The words drawn on a trip's buttons. Business and Personal are trip_business and trip_personal. -->
+    <string name="trips_button_edit">Edit</string>
+    <string name="trips_button_delete">Delete</string>
+
+    <!--
+        The shared tile that opens (core/designsystem/component/ExpandableTile.kt), which a
+        day is: what a screen reader says of it besides its heading.
+    -->
+    <string name="tile_state_expanded">Expanded</string>
+    <string name="tile_state_collapsed">Collapsed</string>
+</resources>

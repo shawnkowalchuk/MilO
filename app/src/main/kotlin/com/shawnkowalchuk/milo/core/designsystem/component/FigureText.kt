@@ -5,10 +5,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import kotlin.math.roundToInt
 
 /** How large a [FigureText] is. Each is one of the design's pairs of a figure and its unit. */
 enum class FigureSize {
@@ -20,6 +22,12 @@ enum class FigureSize {
 
     /** 56 with a unit of 18: the kilometres of the trip being recorded, on the accent tile. */
     HERO,
+
+    /**
+     * 44 with a unit of 16: a month's total, on the accent tile. It takes up exactly the
+     * height of its figure, as the design draws it (see [FigureText]).
+     */
+    TOTAL,
 }
 
 /**
@@ -29,6 +37,14 @@ enum class FigureSize {
  *
  * It is one piece of text, so a screen reader reads "48.2 km" and the unit stands on the
  * figure's own line whatever the font size is.
+ *
+ * **How high it is.** The design sets its largest figures on a line exactly as high as the
+ * figure (44 for 44), and the theme's styles say the same. Compose does not go by that for a
+ * single line: it never makes a text lower than its typeface asks for, which for Sora is 1.26
+ * times the size. The month's total ([FigureSize.TOTAL]) is therefore told to take up the
+ * figure's own height, with the text standing in the middle of it; a digit is lower than that,
+ * so nothing is cut off. The 56 of the trip being recorded ([FigureSize.HERO]) is still as high
+ * as Compose makes it, about 14 dp more than drawn: Home was laid out with it so.
  *
  * @param figure the number as it is to be read, already rounded and written for the language.
  * @param unit the unit alone: "km".
@@ -58,9 +74,14 @@ fun FigureText(
             figureStyle = typography.displayLarge
             unitStyle = MiloTheme.textStyles.rowFigure
         }
+
+        FigureSize.TOTAL -> {
+            figureStyle = typography.displayMedium
+            unitStyle = typography.titleMedium
+        }
     }
     val unitColor =
-        if (size == FigureSize.HERO) {
+        if (size == FigureSize.HERO || size == FigureSize.TOTAL) {
             LocalContentColor.current
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
@@ -80,7 +101,19 @@ fun FigureText(
                     append(" $unit")
                 }
             },
-        modifier = modifier,
+        modifier = if (size == FigureSize.TOTAL) modifier.asHighAs(figureStyle) else modifier,
         style = figureStyle,
     )
+}
+
+/**
+ * Takes up the height [style] names for a line, and stands the text, which Compose measures
+ * higher, in the middle of it. Both of the style's values are of the theme, in sp and in em,
+ * so the height grows with the phone's font size.
+ */
+private fun Modifier.asHighAs(style: TextStyle): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val line = (style.fontSize.toPx() * style.lineHeight.value).roundToInt()
+    val height = minOf(line, placeable.height)
+    layout(placeable.width, height) { placeable.place(0, (height - placeable.height) / 2) }
 }

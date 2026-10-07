@@ -365,16 +365,15 @@
     </plurals>
     <string name="trips_previous_month">Previous month</string>
     <string name="trips_next_month">Next month</string>
-    <string name="trips_show_left_out">Show deleted and discarded trips</string>
+    <string name="trips_show_left_out">Show deleted and discarded</string>
     <!-- The argument is a month from formatMonthAndYear(), such as October 2026. -->
     <string name="trips_empty">No trips in %1$s.</string>
     <plurals name="trips_hidden_left_out">
         <item quantity="one">%d deleted or discarded trip is not shown.</item>
         <item quantity="other">%d deleted or discarded trips are not shown.</item>
     </plurals>
-    <string name="trips_press_hint">Tap a trip to edit it, mark it Business or Personal, or delete it.</string>
     <!-- Trips: the way to the edit screen, empty, for a trip MilO did not record. -->
-    <string name="trips_action_add">Add a missed trip</string>
+    <string name="trips_action_add">Add missed trip</string>
     <!-- Trips: spoken by the screen reader for what a tap on a finished trip does. -->
     <string name="trips_row_press">show or hide what can be done with this trip</string>
     <string name="trips_in_progress_title">In progress</string>
@@ -386,14 +385,9 @@
     <!-- Trips: a trip left out because Settings says to ignore trips outside the work hours. -->
     <string name="trips_ignored_note">Left out: it started outside your work hours, and Settings says to ignore such trips. Not counted.</string>
     <!--
-        Trips: a trip whose times, addresses or distance are typed in and not recorded. The
-        asterisk stands after the trip's times (the argument), and one of the two lines under
-        the trip says what it means. The report for the accountant marks the same trips with it.
+        Trips: what can be done with a trip, as a screen reader names each button. The words
+        drawn on the buttons are shorter, and are in strings_trips.xml.
     -->
-    <string name="trips_time_marked">%1$s *</string>
-    <string name="trips_mark_added">* Added by hand</string>
-    <string name="trips_mark_edited">* Edited by hand</string>
-    <!-- Trips: what can be done with a trip. -->
     <string name="trips_action_edit">Edit trip</string>
     <string name="trips_action_mark_business">Mark as Business</string>
     <string name="trips_action_mark_personal">Mark as Personal</string>
@@ -411,7 +405,7 @@
     <string name="trips_delete_confirm">Delete</string>
     <string name="trips_change_failed">That trip could not be changed. The Log screen says why.</string>
     <!--
-        Trips: where a trip went, under its times. The arguments are the start and the end:
+        Trips and Home: where a trip went. The arguments are the start and the end:
         two addresses such as 12 Shop Rd, Edmonton, or one of the two phrases below standing
         in for an address.
     -->
@@ -429,10 +423,13 @@
     <string name="trips_start_looking_up">Looking up where it started…</string>
     <string name="trips_start_not_found">No address found for where it started.</string>
     <string name="trips_start_not_known_yet">Where it started is not known yet.</string>
-    <!-- Trips: the way from the month's card to the Report screen, for the month on screen. -->
+    <!--
+        Trips: the button under the warning below, which leads to the Report screen for the
+        month on screen.
+    -->
     <string name="trips_action_report">Report for the accountant</string>
     <!--
-        Trips: on the card of a submitted month whose Business trips are not what the newest
+        Trips: the warning for a submitted month whose Business trips are not what the newest
         report held. The arguments are that report's trips and distance, then the month's now:
         11 trips, 330.1 km, 12 trips, 345.6 km.
     -->

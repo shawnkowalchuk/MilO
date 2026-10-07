@@ -143,7 +143,7 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 **How a trip is changed or added by hand.** The edit screen stands after the recording too, and beside the lookup:
 
 ```
-[ Trips screen ] --Edit trip, Add a missed trip--> [ edit screen ]   feature/tripedit
+[ Trips screen ] --Edit, Add missed trip---------> [ edit screen ]   feature/tripedit
                                                          |  TripEditViewModel holds the form
                                                          |  until Save is pressed
                                                [ TripEditing ]  checks the form (pure), then

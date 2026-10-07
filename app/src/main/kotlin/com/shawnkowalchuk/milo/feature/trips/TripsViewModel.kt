@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.trips
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.report.ChangedSinceSent
@@ -15,6 +16,7 @@ import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,9 +43,12 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  * What the Trips screen shows.
  *
  * @param month the month on screen.
+ * @param today the day it is, for the heading of today's tile.
  * @param zone the time zone the month and its days are worked out in.
  * @param canStepForward false on the current month: there is nothing later to show.
  * @param showLeftOut whether the deleted and the discarded trips are listed.
+ * @param openDays the days whose trips are showing. Every day starts closed, today too, and a
+ * press on its heading opens or closes it (`OpenDays.kt`).
  * @param changeFailed true after a change to a trip that was not made: a delete, a restore, a
  * "count this trip", or a marking as Business or Personal. The list shows what is stored either
  * way; this only says that the press did nothing.
@@ -55,6 +60,7 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  */
 data class TripsUiState(
     val month: YearMonth,
+    val today: LocalDate,
     val zone: ZoneId,
     val canStepForward: Boolean,
     val showLeftOut: Boolean,
@@ -62,12 +68,17 @@ data class TripsUiState(
     val summary: MonthSummary?,
     val submission: MonthSubmission? = null,
     val changedSinceSent: ChangedSinceSent? = null,
+    val openDays: Set<LocalDate> = emptySet(),
 )
 
 /**
  * The Trips screen's link to the stored trips. It opens on the current month and steps one
  * month at a time. Only the month on screen is read from storage, by its span of time, so a
  * year of trips costs no more than a week of them.
+ *
+ * It also keeps which days are open. That is why an open day is still open after the phone is
+ * turned and after a visit to the edit screen, which both leave this object alive, and why
+ * every day is closed again when Trips is entered anew.
  *
  * @param corrections makes Shawn's changes to a closed trip, and logs them.
  * @param tripActivity the trip controller's state, for the running distance of a trip in
@@ -91,14 +102,20 @@ class TripsViewModel(
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
 ) : ViewModel() {
-    /** What Shawn has chosen, and the month and zone it is measured against. */
+    /** What Shawn has chosen, and the month, day and zone it is measured against. */
     private data class Choice(
         val shown: YearMonth,
         val current: YearMonth,
+        val today: LocalDate,
         val zone: ZoneId,
         val showLeftOut: Boolean = false,
         val changeFailed: Boolean = false,
-    )
+        val openDays: Set<LocalDate> = emptySet(),
+    ) {
+        /** With [month] on screen. Any other month than the one shown starts all closed. */
+        fun showing(month: YearMonth): Choice =
+            copy(shown = month, openDays = openDaysIn(month, was = shown, open = openDays))
+    }
 
     /** The trips of one month, labelled with the month and zone they were read for. */
     private data class MonthTrips(val month: YearMonth, val zone: ZoneId, val trips: List<Trip>)
@@ -150,19 +167,32 @@ class TripsViewModel(
         )
 
     fun onPreviousMonth() {
-        choice.update { it.copy(shown = stepMonth(it.shown, months = -1, current = it.current)) }
+        choice.update { it.showing(stepMonth(it.shown, months = -1, current = it.current)) }
     }
 
     fun onNextMonth() {
-        choice.update { it.copy(shown = stepMonth(it.shown, months = 1, current = it.current)) }
+        choice.update { it.showing(stepMonth(it.shown, months = 1, current = it.current)) }
+    }
+
+    /** A day's heading was pressed: its trips are shown, or put away again. */
+    fun onToggleDay(day: LocalDate) {
+        choice.update { it.copy(openDays = dayToggled(it.openDays, day)) }
     }
 
     /**
-     * A trip was saved on the edit screen and starts at [startedAtMs] now: its month is shown,
-     * so that the trip is in the list Shawn comes back to, whichever month he left.
+     * A trip was saved on the edit screen and starts at [startedAtMs] now: its month is shown
+     * and its day is opened, so that the trip is in the list Shawn comes back to, whichever
+     * month he left. The days that were open stay open if the month is still the same.
      */
     fun onTripSaved(startedAtMs: Long) {
-        choice.update { it.copy(shown = monthOfSavedTrip(startedAtMs, it.zone, it.current)) }
+        choice.update {
+            val month = monthOfSavedTrip(startedAtMs, it.zone, it.current)
+            val savedDay = localDateOf(startedAtMs, it.zone)
+            it.copy(
+                shown = month,
+                openDays = openDaysAfterSave(month, was = it.shown, it.openDays, savedDay),
+            )
+        }
     }
 
     fun onShowLeftOut(show: Boolean) {
@@ -194,33 +224,43 @@ class TripsViewModel(
     }
 
     /**
-     * Works out again which month is the current one; the month on screen stays where it is.
-     * Also has the missing addresses looked up: this screen is where they are read, and the
-     * phone may have had no network when the trips ended.
+     * Works out again which month is the current one and which day is today; the month on
+     * screen stays where it is. Also has the missing addresses looked up: this screen is where
+     * they are read, and the phone may have had no network when the trips ended.
      */
     fun onCameToFront() {
         lookUpAddresses(CAME_TO_FRONT)
         val now = openingChoice()
         choice.update {
-            it.copy(current = now.current, zone = now.zone, shown = minOf(it.shown, now.current))
+            it
+                .copy(current = now.current, today = now.today, zone = now.zone)
+                .showing(minOf(it.shown, now.current))
         }
     }
 
     private fun openingChoice(): Choice {
         val zoneNow = zone()
-        val current = monthOf(clock(), zoneNow)
-        return Choice(shown = current, current = current, zone = zoneNow)
+        val timeNow = clock()
+        val current = monthOf(timeNow, zoneNow)
+        return Choice(
+            shown = current,
+            current = current,
+            today = localDateOf(timeNow, zoneNow),
+            zone = zoneNow,
+        )
     }
 
     private fun Choice.toUiState(summary: MonthSummary?, submission: MonthSubmission?) =
         TripsUiState(
             month = shown,
+            today = today,
             zone = zone,
             canStepForward = canStepForward(shown, current),
             showLeftOut = showLeftOut,
             changeFailed = changeFailed,
             summary = summary,
             submission = submission,
+            openDays = openDays,
             // The month's Business figures are the report's own (the same trips, added up the
             // same way), so they can be held against what the newest report listed.
             changedSinceSent =

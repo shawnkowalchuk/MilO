@@ -225,7 +225,7 @@ Either way there is no sound, and the trip is the "Last trip" on Home and a row 
 
 After three days of standing MilO stops watching, to spare the battery, and the truck's tile on Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
 
-**If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add a missed trip".
+**If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add missed trip".
 
 **If MilO has stopped noticing the truck.** Once a day MilO asks itself whether a trip has been started. On a work day (a day that is switched on in the work schedule) that has none by 12:00 noon, it posts one notification: "No trip recorded today". If the truck has not been driven that day, there is nothing to do. If it has, tap the notification: MilO opens on Home, which says "Setup needs attention" if something it needs is switched off. The time and the switch are in Settings, on the card "Daily check"; a trip you add by hand does not count. Built on 2026-10-06 and seen on an emulator only: whether this phone lets MilO wake up for it at noon is one of the things still to be tried.
 
@@ -234,8 +234,8 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | What | Where |
 |---|---|
 | Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
-| Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button (a list) |
-| The report for the accountant | Trips, the month's card, **Report for the accountant** |
+| Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
+| The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
 | Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders at the top of Home |
 | The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |

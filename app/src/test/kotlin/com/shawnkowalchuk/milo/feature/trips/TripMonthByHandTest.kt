@@ -124,9 +124,9 @@ class TripMonthByHandTest {
         assertNull(line(recorded).mark)
         assertNull(line(recorded).byHandNoteRes())
         assertEquals(ByHandMark.EDITED, line(edited).mark)
-        assertEquals(R.string.trips_mark_edited, line(edited).byHandNoteRes())
+        assertEquals(R.string.trips_note_edited, line(edited).byHandNoteRes())
         assertEquals(ByHandMark.ADDED, line(added).mark)
-        assertEquals(R.string.trips_mark_added, line(added).byHandNoteRes())
+        assertEquals(R.string.trips_note_added, line(added).byHandNoteRes())
     }
 
     @Test
@@ -147,7 +147,7 @@ class TripMonthByHandTest {
         val deleted = line(added.copy(status = TripStatus.DELETED), showLeftOut = true)
 
         assertEquals(TripKind.DELETED, deleted.kind)
-        assertEquals(R.string.trips_mark_added, deleted.byHandNoteRes())
+        assertEquals(R.string.trips_note_added, deleted.byHandNoteRes())
     }
 
     @Test

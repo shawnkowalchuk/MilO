@@ -215,10 +215,11 @@ data class MiloLogTagColors(
  *
  * **In use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and [chip], and since
  * Home was laid out as the design draws it, [quietFill], [idleOutline], [idleIcon], [linkGlint]
- * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]). The
- * others ([logText], [accentPressed], [danger], [logTags]) are the design's colours for parts
- * that come with the other screens' own layouts. They are named here so that those parts find
- * them; nothing uses them yet, and what is said of each below is what the design draws with it.
+ * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]),
+ * and since Trips was, [danger]. The others ([logText], [accentPressed], [logTags]) are the
+ * design's colours for parts that come with the other screens' own layouts. They are named here
+ * so that those parts find them; nothing uses them yet, and what is said of each below is what
+ * the design draws with it.
  *
  * @param control a control sitting on a tile: a small button, a stepper's button, a switch's
  * track when it is off.
@@ -230,7 +231,9 @@ data class MiloLogTagColors(
  * @param idleOutline a dashed or idle outline: decoration, not something to be read.
  * @param idleIcon an icon that is idle, beside something that is switched off. Too faint to be
  * the only sign of a button that cannot be pressed (2.1 to 1 on a control), which is why
- * `SquareIconButton` greys its icon with the colour of secondary text instead.
+ * `SquareIconButton` greys its icon with the colour of secondary text instead. The one place it
+ * greys a button is the title's "next" square on the page, as drawn on Trips: there it is
+ * 2.5 to 1, and a screen reader is told that the button is switched off.
  * @param logText running text in the event log, a little softer than the main text.
  * @param accentPressed the accent while a link is pressed.
  * @param linkGlint the light that runs along the line between the phone and the truck while

@@ -2,15 +2,10 @@ package com.shawnkowalchuk.milo.feature.trips
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,25 +15,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
-import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
-import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
-import com.shawnkowalchuk.milo.core.designsystem.component.SwitchRow
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
  * What the Trips screen can ask for.
  *
+ * @param onToggleDay a day's heading was pressed: its trips are shown, or put away again.
  * @param onEdit opens the edit screen for a finished trip, and [onAdd] opens it empty, for a
  * trip MilO missed. Both lead to another screen, so both are the app's to carry out.
  * @param onReport opens the Report screen for a month, on the same terms.
@@ -47,6 +37,7 @@ internal class TripsActions(
     val onPreviousMonth: () -> Unit,
     val onNextMonth: () -> Unit,
     val onShowLeftOut: (Boolean) -> Unit,
+    val onToggleDay: (LocalDate) -> Unit,
     val onCorrect: (Long, TripCorrection) -> Unit,
     val onMark: (Long, TripCategory) -> Unit,
     val onEdit: (Long) -> Unit,
@@ -55,9 +46,15 @@ internal class TripsActions(
 )
 
 /**
- * One month of trips: the month's name, its Business total and, apart from it, its Personal
- * total at the top, then the trips grouped by day, newest first. It opens on the current month
- * and steps back and forth one month at a time, never past the current one.
+ * One month of trips, laid out as the owner's design draws it: the title with the two buttons
+ * that step to the month before and the month after; the accent tile with the month's Business
+ * kilometres and the pill that leads to its report; "Personal" and "Add missed trip" side by
+ * side; the switch that lists the deleted and the discarded trips; then one tile per day,
+ * newest first. It opens on the current month and never steps past it.
+ *
+ * **Every day starts closed, today too.** A closed day shows what it adds up to; a press on
+ * its heading shows its trips, and another puts them away (the owner's own addition to his
+ * drawing, 2026-10-06).
  *
  * A finished trip can be marked Business or Personal here, whatever the work schedule made of
  * it.
@@ -70,7 +67,8 @@ internal class TripsActions(
  * trip MilO missed is typed in there too.
  *
  * @param savedTripStartMs when a trip that was just saved on that screen starts, or null. The
- * month it is in is then shown, and [onSavedTripShown] says that this has been done.
+ * month it is in is then shown and its day is opened, and [onSavedTripShown] says that this has
+ * been done.
  * @param onEditTrip opens that screen for the trip with this id, and [onAddTrip] opens it
  * empty. Navigation belongs to the app, not the feature.
  * @param onOpenReport opens the Report screen, where the month's report for the accountant is
@@ -107,6 +105,7 @@ fun TripsScreen(
                 onPreviousMonth = viewModel::onPreviousMonth,
                 onNextMonth = viewModel::onNextMonth,
                 onShowLeftOut = viewModel::onShowLeftOut,
+                onToggleDay = viewModel::onToggleDay,
                 onCorrect = viewModel::onCorrect,
                 onMark = viewModel::onMark,
                 onEdit = onEditTrip,
@@ -123,14 +122,12 @@ internal fun TripsContent(
     actions: TripsActions,
     modifier: Modifier = Modifier,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
     val twentyFourHour = rememberTwentyFourHourClock()
-    val monthName = formatMonthAndYear(state.month, locale)
     val summary = state.summary
 
     // Which finished trip shows its buttons, and which one the question is being asked about.
     // Both belong to the screen, not to the trips, so they are kept here; saved, so a rotation
-    // does not close the question.
+    // does not close the question. Which days are open is the ViewModel's to keep.
     var openTripId by rememberSaveable { mutableStateOf<Long?>(null) }
     var askedAboutId by rememberSaveable { mutableStateOf<Long?>(null) }
     val rows =
@@ -155,12 +152,18 @@ internal fun TripsContent(
                 actions.onMark(trip.id, category)
             },
             onEdit = { trip ->
-                // Put away as well: back from the edit screen the list starts closed, and a
-                // trip that was moved to another day is not left behind with open buttons.
+                // Put away as well: back from the edit screen the trip's buttons are closed,
+                // and a trip that was moved to another day is not left behind with open ones.
                 openTripId = null
                 actions.onEdit(trip.id)
             },
         )
+    val onToggleDay = { day: TripDay ->
+        // A day that is closed takes its trip's buttons with it: opened again, it shows its
+        // trips as a day that was never touched does.
+        if (day.trips.any { it.id == openTripId }) openTripId = null
+        actions.onToggleDay(day.date)
+    }
 
     // A month that comes on screen starts at its top, where its name and its totals say which
     // month it is. That matters after a save on the edit screen: the list comes back where the
@@ -174,67 +177,39 @@ internal fun TripsContent(
         }
     }
 
-    // A lazy list: a busy month has a hundred trips, and only the rows on screen are laid out.
+    // A lazy list: a busy month has a day's tile for every day, and only the ones on screen
+    // are laid out. The tiles stand as on Home: 18 dp from the sides, 10 dp apart.
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = list,
-        contentPadding = PaddingValues(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+        contentPadding =
+            PaddingValues(
+                horizontal = MiloTheme.spacing.gutter,
+                vertical = MiloTheme.spacing.small,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.tileGap),
     ) {
-        item { ScreenTitle(text = stringResource(R.string.trips_title)) }
-        item {
-            MonthCard(
-                monthName = monthName,
-                summary = summary,
-                submission = state.submission,
-                changed = state.changedSinceSent,
-                zone = state.zone,
-                canStepForward = state.canStepForward,
-                onPreviousMonth = actions.onPreviousMonth,
-                onNextMonth = actions.onNextMonth,
-                onOpenReport = { actions.onReport(state.month) },
-            )
-        }
-        item { AddTripButton(actions.onAdd) }
-        item {
-            SwitchRow(
-                label = stringResource(R.string.trips_show_left_out),
-                checked = state.showLeftOut,
-                onCheckedChange = actions.onShowLeftOut,
-            )
-        }
-        if (state.changeFailed) {
-            item {
-                StatusRow(
-                    label = stringResource(R.string.trips_change_failed),
-                    status = RowStatus.PROBLEM,
-                )
-            }
-        }
+        monthItems(state, actions)
         if (summary == null) {
-            item { Note(stringResource(R.string.trips_reading)) }
+            item(key = "reading") { SentenceTile(stringResource(R.string.trips_reading)) }
             return@LazyColumn
         }
         summary.inProgress?.let { trip ->
-            item { InProgressCard(trip, state.zone, twentyFourHour) }
+            item(key = "in progress") { InProgressTile(trip, state.zone, twentyFourHour) }
         }
-        if (summary.isEmpty) {
-            item { Note(stringResource(R.string.trips_empty, monthName)) }
-        }
-        if (summary.hiddenLeftOut > 0) {
-            item {
-                Note(
-                    pluralStringResource(
-                        R.plurals.trips_hidden_left_out,
-                        summary.hiddenLeftOut,
-                        summary.hiddenLeftOut,
-                    ),
-                )
+        summary.emptyWordsRes()?.let { words ->
+            item(key = "nothing to list") {
+                SentenceTile(stringResource(words, monthName(state)))
             }
         }
-        if (summary.tripCount > 0) item { Note(stringResource(R.string.trips_press_hint)) }
         items(items = summary.days, key = { it.date.toEpochDay() }) { day ->
-            DayCard(day, rows)
+            DayTile(
+                day = day,
+                today = state.today,
+                expanded = day.date in state.openDays,
+                onToggle = { onToggleDay(day) },
+                context = rows,
+            )
         }
     }
 
@@ -258,25 +233,4 @@ internal fun TripsContent(
 
 private fun MonthSummary.countedTrip(id: Long?): TripLine? = days.firstNotNullOfOrNull { day ->
     day.trips.firstOrNull { it.id == id && it.kind == TripKind.COUNTED }
-}
-
-/**
- * The way to type in a trip MilO missed. Words and not a plus sign: it is used rarely, and
- * must be found without knowing what an icon means. At the end of a line of its own, like every
- * secondary action.
- */
-@Composable
-private fun AddTripButton(onAdd: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = onAdd) { Text(text = stringResource(R.string.trips_action_add)) }
-    }
-}
-
-@Composable
-private fun Note(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }

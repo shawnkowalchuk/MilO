@@ -125,6 +125,8 @@ class TypefaceTest {
             "mainButton" to own.mainButton,
             "fieldText" to own.fieldText,
             "sentence" to own.sentence,
+            "quietLabel" to own.quietLabel,
+            "standInWords" to own.standInWords,
             "appName" to own.appName,
             "rowFigure" to own.rowFigure,
             "sideFigure" to own.sideFigure,

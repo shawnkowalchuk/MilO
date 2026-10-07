@@ -167,16 +167,22 @@ internal val MiloTypography: Typography =
  * parts that come with the other screens' own layouts. Nothing uses them yet, and what is said
  * of each below is what the design sets in it.
  *
- * Five sizes of the design have no style at all, because nothing that is built is set in
+ * Two more came with the Trips screen's own layout, and are in use: [quietLabel] and
+ * [standInWords].
+ *
+ * Three sizes of the design have no style at all, because nothing that is built is set in
  * them: 28 at weight 600 (the Report screen's figure), 20 at 600 (the distance typed on the
- * edit screen), 16 at 500 ("of 14 ready" on Setup), 14 at 500 (an address that is still being
- * looked up) and 13 at 400 (a bare label beside a switch). Each is added here with the part
- * that needs it.
+ * edit screen) and 16 at 500 ("of 14 ready" on Setup). Each is added here with the part that
+ * needs it.
  *
  * @param mainButton the words on the one main button of a screen.
  * @param fieldText what is typed into a text field.
  * @param sentence a sentence that stands by itself in a tile or a dialog, a little larger and
  * firmer than a note. Also the line under the figures of the tile for the trip being recorded.
+ * @param quietLabel the label of a switch that stands on the page, between two tiles: small and
+ * plain, and set in the grey of secondary text.
+ * @param standInWords the words that stand where an address is missing, inside the line that
+ * says where a trip went ("looking up the address…"): lighter than the address beside them.
  * @param appName the app's name at the top of Home, and the figure of a small tile.
  * @param rowFigure a figure or a status word that stands alone at the end of a tile's row, and
  * the unit after the largest figure.
@@ -196,6 +202,8 @@ data class MiloTextStyles(
     val mainButton: TextStyle = style(16, FontWeight.Bold),
     val fieldText: TextStyle = style(14, FontWeight.Normal),
     val sentence: TextStyle = style(13, FontWeight.Medium, SentenceLine),
+    val quietLabel: TextStyle = style(13, FontWeight.Normal),
+    val standInWords: TextStyle = style(14, FontWeight.Medium),
     val appName: TextStyle = style(17, FontWeight.SemiBold),
     val rowFigure: TextStyle = style(18, FontWeight.SemiBold),
     val sideFigure: TextStyle = style(20, FontWeight.Bold),
