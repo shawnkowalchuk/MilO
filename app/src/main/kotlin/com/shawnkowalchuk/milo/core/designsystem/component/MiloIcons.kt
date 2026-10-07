@@ -2,84 +2,98 @@ package com.shawnkowalchuk.milo.core.designsystem.component
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
-// The icons of the bottom navigation bar, the back arrow, the way to Settings and the two
-// buttons of a stepper. Like the status indicators (StatusIcons.kt) they are built from path
-// data here, because the material-icons library is frozen and a handful of icons does not
-// justify a dependency. The outlines are Google's Material "home", "date range", "checklist",
-// "list", "arrow back", "settings", "add" and "remove" icons (Apache License 2.0).
+// The icons of the bottom bar, the back arrow, the way to Settings and the two buttons of a
+// stepper. Like the marks of the status dots (StatusIcons.kt) they are built from path data
+// here, because the material-icons library is frozen and a handful of icons does not justify a
+// dependency.
+//
+// They are the line icons of the owner's "Bento" design: drawn as lines on a 24 by 24 grid, with
+// round ends and round corners, not as filled shapes. The outlines are taken from the design
+// canvas as they are drawn there. Several of them match, or come close to, icons of the Feather
+// and Lucide sets, which are published under the MIT and ISC licences.
 
 private val IconSize = 24.dp
 private const val VIEWPORT_SIZE = 24f
 
-private const val HOME_PATH = "M10,20v-6h4v6h5v-8h3L12,3 2,12h3v8z"
+/** How thick the design draws the lines of an icon, on the 24 grid. */
+private const val LINE_WIDTH = 1.8f
 
-// A calendar page: the Trips screen shows one month at a time.
-private const val DATE_RANGE_PATH =
-    "M9,11L7,11v2h2v-2zM13,11h-2v2h2v-2zM17,11h-2v2h2v-2z" +
-        "M19,4h-1L18,2h-2v2L8,4L8,2L6,2v2L5,4c-1.11,0 -1.99,0.9 -1.99,2L3,20" +
-        "c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2L21,6c0,-1.1 -0.9,-2 -2,-2z" +
-        "M19,20L5,20L5,9h14v11z"
+/** The design draws a chevron, a plus and a minus a little thicker: they are simpler shapes. */
+private const val BOLD_LINE_WIDTH = 2f
 
-// Two ticked lines: the Setup screen is a checklist.
-private const val CHECKLIST_PATH =
-    "M22,7h-9v2h9V7zM22,15h-9v2h9V15z" +
-        "M5.54,11L2,7.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,11z" +
-        "M5.54,19L2,15.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,19z"
+private const val HOME_PATH = "M3,10.5L12,3l9,7.5V21h-6v-6H9v6H3z"
 
-// Bulleted lines: the event log.
-private const val LIST_PATH =
-    "M3,13h2v-2L3,11v2zM3,17h2v-2L3,15v2zM3,9h2L5,7L3,7v2z" +
-        "M7,13h14v-2L7,11v2zM7,17h14v-2L7,15v2zM7,7v2h14L21,7L7,7z"
+// Three lines, each with a dot before it: the Trips screen is a list of trips.
+private const val TRIPS_PATH =
+    "M8,6h13M8,12h13M8,18h13" +
+        "M3,6h0.01M3,12h0.01M3,18h0.01"
 
-private const val ARROW_BACK_PATH =
-    "M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"
+// A box with a tick in it: the Setup screen is a checklist.
+private const val SETUP_PATH =
+    "M9,11l3,3l8,-8" +
+        "M20,12v7a2,2 0 0 1 -2,2H6a2,2 0 0 1 -2,-2V5a2,2 0 0 1 2,-2h9"
 
-// A cog wheel: the Settings screen, opened from Home.
+// A sheet of paper with lines on it: the event log.
+private const val LOG_PATH =
+    "M14,3H6a2,2 0 0 0 -2,2v14a2,2 0 0 0 2,2h12a2,2 0 0 0 2,-2V9z" +
+        "M14,3v6h6M8,13h8M8,17h5"
+
+private const val BACK_PATH = "M15,18l-6,-6l6,-6"
+
+// Three sliders: the Settings screen, opened from Home. Each line is broken by its knob.
 private const val SETTINGS_PATH =
-    "M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58" +
-        "c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22" +
-        "l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 " +
-        "-0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29" +
-        "L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48" +
-        "l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58" +
-        "c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96" +
-        "c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84" +
-        "c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96" +
-        "c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94z" +
-        "M12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6" +
-        "S13.98,15.6 12,15.6z"
+    "M4,6h10M18,6h2M4,12h4M12,12h8M4,18h12" +
+        "M14,6a2,2 0 1 0 4,0a2,2 0 1 0 -4,0" +
+        "M8,12a2,2 0 1 0 4,0a2,2 0 1 0 -4,0" +
+        "M16,18a2,2 0 1 0 4,0a2,2 0 1 0 -4,0"
 
 // Plus and minus: one step up and one step down in a StepperRow.
-private const val ADD_PATH = "M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-private const val REMOVE_PATH = "M19,13H5v-2h14v2z"
+private const val ADD_PATH = "M12,5v14M5,12h14"
+private const val REMOVE_PATH = "M5,12h14"
 
 /** The icons screens may use. Each is tinted by the component that draws it. */
 object MiloIcons {
-    val Home: ImageVector by lazy { pathIcon(name = "Home", pathData = HOME_PATH) }
-    val Trips: ImageVector by lazy { pathIcon(name = "Trips", pathData = DATE_RANGE_PATH) }
-    val Setup: ImageVector by lazy { pathIcon(name = "Setup", pathData = CHECKLIST_PATH) }
-    val Log: ImageVector by lazy { pathIcon(name = "Log", pathData = LIST_PATH) }
-    val Back: ImageVector by lazy { pathIcon(name = "Back", pathData = ARROW_BACK_PATH) }
-    val Settings: ImageVector by lazy { pathIcon(name = "Settings", pathData = SETTINGS_PATH) }
-    val Add: ImageVector by lazy { pathIcon(name = "Add", pathData = ADD_PATH) }
-    val Remove: ImageVector by lazy { pathIcon(name = "Remove", pathData = REMOVE_PATH) }
+    val Home: ImageVector by lazy { lineIcon(name = "Home", pathData = HOME_PATH) }
+    val Trips: ImageVector by lazy { lineIcon(name = "Trips", pathData = TRIPS_PATH) }
+    val Setup: ImageVector by lazy { lineIcon(name = "Setup", pathData = SETUP_PATH) }
+    val Log: ImageVector by lazy { lineIcon(name = "Log", pathData = LOG_PATH) }
+    val Back: ImageVector by lazy {
+        lineIcon(name = "Back", pathData = BACK_PATH, lineWidth = BOLD_LINE_WIDTH)
+    }
+    val Settings: ImageVector by lazy { lineIcon(name = "Settings", pathData = SETTINGS_PATH) }
+    val Add: ImageVector by lazy {
+        lineIcon(name = "Add", pathData = ADD_PATH, lineWidth = BOLD_LINE_WIDTH)
+    }
+    val Remove: ImageVector by lazy {
+        lineIcon(name = "Remove", pathData = REMOVE_PATH, lineWidth = BOLD_LINE_WIDTH)
+    }
 }
 
-/** Builds a 24 dp icon from the path data of a Material icon. */
-internal fun pathIcon(name: String, pathData: String): ImageVector = ImageVector
-    .Builder(
-        name = name,
-        defaultWidth = IconSize,
-        defaultHeight = IconSize,
-        viewportWidth = VIEWPORT_SIZE,
-        viewportHeight = VIEWPORT_SIZE,
-    ).addPath(
-        pathData = addPathNodes(pathData),
-        // Never seen: Icon() replaces this fill with its tint, so the visible colour always comes
-        // from the theme.
-        fill = SolidColor(Color.Black),
-    ).build()
+/**
+ * Builds an icon from lines drawn on a 24 by 24 grid, with round ends and round corners.
+ *
+ * @param lineWidth how thick the lines are, on that grid.
+ */
+internal fun lineIcon(name: String, pathData: String, lineWidth: Float = LINE_WIDTH): ImageVector =
+    ImageVector
+        .Builder(
+            name = name,
+            defaultWidth = IconSize,
+            defaultHeight = IconSize,
+            viewportWidth = VIEWPORT_SIZE,
+            viewportHeight = VIEWPORT_SIZE,
+        ).addPath(
+            pathData = addPathNodes(pathData),
+            // Never seen: Icon() replaces this colour with its tint, so the visible colour always
+            // comes from the theme.
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = lineWidth,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        ).build()

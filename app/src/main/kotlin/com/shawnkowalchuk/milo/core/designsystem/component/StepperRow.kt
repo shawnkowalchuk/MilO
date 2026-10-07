@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,14 +17,14 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /**
  * How wide the place kept for the value is, in units of the value's own text size, so that it
  * grows with the phone's font size. The widest value a row shows today ("9.5 min") needs about
  * three and a half; a value that is wider still is shown whole, and only then does the place
- * grow with it.
+ * grow with it. The design draws the place 72 dp wide for text of 16, which is four and a half.
  */
 private const val VALUE_PLACE_EMS = 5
 
@@ -46,7 +44,7 @@ data class StepperButton(
 
 /**
  * A setting that is a number chosen in steps: its name, what it is for, and the value between a
- * minus and a plus button.
+ * minus and a plus button, each a square the colour of a control on a tile.
  *
  * Buttons and not a slider, because the values are few and exact (2 or 2.5 minutes), and a
  * slider is hard to set to one of them with a thumb.
@@ -76,7 +74,7 @@ fun StepperRow(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
     ) {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.textGap)) {
             Text(text = label, style = MaterialTheme.typography.bodyLarge)
             if (supportingText != null) {
                 Text(
@@ -88,12 +86,16 @@ fun StepperRow(
         }
         Row(
             modifier = Modifier.align(Alignment.End),
-            horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilledTonalIconButton(onClick = decrease.onClick, enabled = decrease.enabled) {
-                Icon(imageVector = MiloIcons.Remove, contentDescription = decrease.description)
-            }
+            SquareIconButton(
+                icon = MiloIcons.Remove,
+                description = decrease.description,
+                onClick = decrease.onClick,
+                fill = MiloTheme.colors.control.fill,
+                enabled = decrease.enabled,
+            )
             Text(
                 text = value,
                 style = valueStyle,
@@ -104,19 +106,24 @@ fun StepperRow(
                         // A screen reader says the new value after a press, without being asked.
                         .semantics { liveRegion = LiveRegionMode.Polite },
             )
-            FilledTonalIconButton(onClick = increase.onClick, enabled = increase.enabled) {
-                Icon(imageVector = MiloIcons.Add, contentDescription = increase.description)
-            }
+            SquareIconButton(
+                icon = MiloIcons.Add,
+                description = increase.description,
+                onClick = increase.onClick,
+                fill = MiloTheme.colors.control.fill,
+                enabled = increase.enabled,
+            )
         }
     }
 }
 
 // Sample text is written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+@Preview
 @Composable
 private fun StepperRowPreview() {
     MiloTheme {
-        Surface {
+        // On a tile, where a stepper stands in the app: its buttons are drawn to be seen there.
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             StepperRow(
                 label = "Wait after the truck disconnects",
                 value = "2 min",

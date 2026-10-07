@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.shawnkowalchuk.milo.core.designsystem.theme.MiloSystemBarStyle
 import com.shawnkowalchuk.milo.platform.nothingrecorded.homeAskedFor
 import com.shawnkowalchuk.milo.platform.reminder.reportMonthToOpen
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
         // Android 15 and later force apps to draw edge to edge; the phone this runs on
         // (Android 14) does not. Opting in here gives both the same layout, so what is tested on
         // the phone today does not shift after a system update.
-        enableEdgeToEdge()
+        enableEdgeToEdge(MiloSystemBarStyle, MiloSystemBarStyle)
 
         // Only for an activity that is being built for the first time. One that Android builds
         // again (the phone was turned, or MilO was put away and brought back) still carries the

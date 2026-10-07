@@ -1,22 +1,54 @@
 package com.shawnkowalchuk.milo.core.designsystem.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+
+/** How high the design draws the field. Also Android's smallest target for a finger. */
+private val FieldHeight = 48.dp
+
+/** The hairline around the field, as drawn. */
+private val Border = 1.dp
+
+/** The border of the field that is being typed in, or that holds something wrong. */
+private val StrongBorder = 2.dp
 
 /**
  * One line of text to type in, under a label that stays visible while it is filled: an address,
  * or a distance.
+ *
+ * It is the design's field: the label small and grey above it, and the field itself a dark,
+ * rounded well with a hairline around it. The hairline is a lighter grey than the design's, so
+ * that an empty field can be found on its tile (see `fieldBorder`), and it turns into the accent
+ * while the field is typed in. Material's own text field is not used because it puts the label
+ * inside the field.
  *
  * **The field keeps what is typed itself.** [initialText] is only where it starts, and every
  * change is reported through [onTextChange]. A text field has to show a keystroke in the frame
@@ -49,7 +81,12 @@ fun TextEntry(
     error: String? = null,
 ) {
     var text by remember { mutableStateOf(initialText) }
-    OutlinedTextField(
+    val interactions = remember { MutableInteractionSource() }
+    val typedIn by interactions.collectIsFocusedAsState()
+    val scheme = MaterialTheme.colorScheme
+    val colors = MiloTheme.colors
+    val shape = MiloTheme.shapes.control
+    BasicTextField(
         value = text,
         onValueChange = { typed ->
             // One line: a pasted line break would otherwise be stored inside an address.
@@ -57,11 +94,12 @@ fun TextEntry(
             text = kept
             onTextChange(kept)
         },
-        modifier = modifier.fillMaxWidth(),
-        label = { Text(text = label) },
-        supportingText = error?.let { { Text(text = it) } },
-        isError = error != null,
-        singleLine = true,
+        // The field tells a screen reader what is wrong itself, so that it is said with the
+        // field and not as a line somewhere after it. "this." is not decoration: without it,
+        // and without the import above, the same words would call Kotlin's own error(), which
+        // stops the app.
+        modifier = modifier.fillMaxWidth().semantics { if (error != null) this.error(error) },
+        textStyle = MiloTheme.textStyles.fieldText.copy(color = scheme.onSurface),
         keyboardOptions =
             KeyboardOptions(
                 capitalization =
@@ -82,5 +120,49 @@ fun TextEntry(
                     },
                 imeAction = if (lastField) ImeAction.Done else ImeAction.Next,
             ),
+        singleLine = true,
+        interactionSource = interactions,
+        cursorBrush = SolidColor(scheme.primary),
+        // The label and the error line are drawn as parts of the field, not beside it. A
+        // screen reader then reads the label with the field, and a tap on the label puts the
+        // cursor in the field.
+        decorationBox = { typedText ->
+            Column(verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.extraSmall)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                )
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = FieldHeight)
+                            .background(colors.fieldFill, shape)
+                            .border(
+                                width = if (typedIn || error != null) StrongBorder else Border,
+                                color =
+                                    when {
+                                        error != null -> scheme.error
+                                        typedIn -> scheme.primary
+                                        else -> colors.fieldBorder
+                                    },
+                                shape = shape,
+                            ).padding(horizontal = MiloTheme.spacing.controlPadding),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    typedText()
+                }
+                if (error != null) {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.error,
+                        // Said once, by the field itself (above), not a second time here.
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
+                }
+            }
+        },
     )
 }

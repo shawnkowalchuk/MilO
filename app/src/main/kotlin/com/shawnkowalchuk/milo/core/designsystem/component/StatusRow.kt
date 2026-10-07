@@ -1,14 +1,17 @@
 package com.shawnkowalchuk.milo.core.designsystem.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
@@ -16,26 +19,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
+// The design's status dot, the mark on it, and the line of the empty ring.
+private val DotSize = 28.dp
+private val MarkSize = 14.dp
+private val RingWidth = 2.dp
+
 /**
  * What a [StatusRow] says about its requirement. Four states, because MilO cannot read every
- * setting it depends on and must not pretend to.
+ * setting it depends on and must not pretend to. Each has a dot of its own, different in what
+ * is drawn on it as well as in colour.
  */
 enum class RowStatus {
-    /** Met. A green tick. */
+    /** Met. A dot in the accent colour with a tick. */
     OK,
 
-    /** Not met. A red warning. */
+    /** Not met. A red dot with an exclamation mark. */
     PROBLEM,
 
-    /** MilO tried to find out and could not. A grey question mark. */
+    /** MilO tried to find out and could not. A grey dot with a question mark. */
     UNKNOWN,
 
-    /** MilO cannot read this at all: the user sets it and says so. An amber empty ring. */
+    /** MilO cannot read this at all: the user sets it and says so. An empty ring. */
     NEEDS_CONFIRMATION,
 }
 
@@ -47,12 +60,15 @@ enum class RowStatus {
 data class StatusRowAction(val label: String, val onClick: () -> Unit)
 
 /**
- * One requirement and its state: an indicator, a label, an optional second line, and up to two
+ * One requirement and its state: a status dot, a label, an optional second line, and up to two
  * buttons.
  *
  * The buttons sit on a line of their own, under the text and at its end. The second line is
  * often an instruction a sentence or two long, and a button beside it would squeeze it into a
  * narrow column.
+ *
+ * The main button is drawn in the accent colour only while the row is a problem: that is the
+ * one press that puts something right. In every other state both buttons are quiet.
  *
  * @param supportingText a second, quieter line: what the requirement is for, or how to fix it.
  * @param action the main button: usually the one that takes the user to the place to fix it.
@@ -70,18 +86,14 @@ fun StatusRow(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            // Read the indicator and both lines as one sentence ("Needs attention, Location,
-            // ...") instead of three separate stops. Each button stays its own stop.
+            // Read the dot and both lines as one sentence ("Needs attention, Location, ...")
+            // instead of three separate stops. Each button stays its own stop.
             modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
-            horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.rowGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = status.icon(),
-                contentDescription = stringResource(status.descriptionRes()),
-                tint = status.tint(),
-            )
-            Column {
+            StatusDot(status)
+            Column(verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.textGap)) {
                 Text(text = label, style = MaterialTheme.typography.bodyLarge)
                 if (supportingText != null) {
                     Text(
@@ -95,23 +107,61 @@ fun StatusRow(
         if (action != null || secondaryAction != null) {
             Row(
                 modifier = Modifier.align(Alignment.End),
-                horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
+                horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.buttonGap),
             ) {
-                for (button in listOfNotNull(secondaryAction, action)) {
-                    TextButton(onClick = button.onClick) {
-                        Text(text = button.label)
-                    }
+                if (secondaryAction != null) {
+                    RowButton(text = secondaryAction.label, onClick = secondaryAction.onClick)
+                }
+                if (action != null) {
+                    RowButton(
+                        text = action.label,
+                        onClick = action.onClick,
+                        accent = status == RowStatus.PROBLEM,
+                    )
                 }
             }
         }
     }
 }
 
-private fun RowStatus.icon(): ImageVector = when (this) {
-    RowStatus.OK -> StatusIcons.Ok
-    RowStatus.PROBLEM -> StatusIcons.Problem
-    RowStatus.UNKNOWN -> StatusIcons.Unknown
-    RowStatus.NEEDS_CONFIRMATION -> StatusIcons.NeedsConfirmation
+/**
+ * The dot at the start of the row. It never changes size with the phone's font size: its mark
+ * is a drawn shape, not a letter.
+ */
+@Composable
+private fun StatusDot(status: RowStatus) {
+    val colors = MiloTheme.statusColors
+    val description = stringResource(status.descriptionRes())
+    val dot =
+        Modifier.size(DotSize).semantics {
+            contentDescription = description
+            role = Role.Image
+        }
+    val round = MiloTheme.shapes.pill
+    // Every state is named, with no "else": a fifth state would not compile until it has a dot.
+    when (status) {
+        RowStatus.OK -> FilledDot(dot, colors.ok, StatusIcons.Tick)
+        RowStatus.PROBLEM -> FilledDot(dot, colors.problem, StatusIcons.Exclamation)
+        RowStatus.UNKNOWN -> FilledDot(dot, colors.unknown, StatusIcons.Question)
+        RowStatus.NEEDS_CONFIRMATION -> Box(dot.border(RingWidth, colors.toConfirm, round))
+    }
+}
+
+/** A dot filled with [fill], with [mark] drawn on it. */
+@Composable
+private fun FilledDot(modifier: Modifier, fill: Color, mark: ImageVector) {
+    Box(
+        modifier = modifier.background(fill, MiloTheme.shapes.pill),
+        contentAlignment = Alignment.Center,
+    ) {
+        // The dot itself already says what the state is.
+        Icon(
+            imageVector = mark,
+            contentDescription = null,
+            modifier = Modifier.size(MarkSize),
+            tint = MiloTheme.statusColors.onDot,
+        )
+    }
 }
 
 private fun RowStatus.descriptionRes(): Int = when (this) {
@@ -121,21 +171,14 @@ private fun RowStatus.descriptionRes(): Int = when (this) {
     RowStatus.NEEDS_CONFIRMATION -> R.string.status_needs_confirmation
 }
 
-@Composable
-private fun RowStatus.tint(): Color = when (this) {
-    RowStatus.OK -> MiloTheme.statusColors.ok
-    RowStatus.PROBLEM -> MiloTheme.statusColors.problem
-    RowStatus.UNKNOWN -> MiloTheme.statusColors.unknown
-    RowStatus.NEEDS_CONFIRMATION -> MiloTheme.statusColors.attention
-}
-
 // Sample text is written inline because a preview is never shown to a user or shipped in a
 // screen; putting it in strings.xml would add resources the app does not use.
-@PreviewLightDark
+@Preview
 @Composable
 private fun StatusRowPreview() {
     MiloTheme {
-        Surface {
+        // On a tile, where a status row stands in the app.
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             Column {
                 StatusRow(label = "Notifications", status = RowStatus.OK)
                 StatusRow(

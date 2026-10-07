@@ -32,14 +32,19 @@ fun FigureRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.rowGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f), content = content)
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.textGap),
+            content = content,
+        )
         if (figure != null) {
             Text(
                 text = figure,
-                style = MaterialTheme.typography.bodyLarge,
+                // A step larger than the row's own text, as the design sets a row's figure.
+                style = MaterialTheme.typography.titleSmall,
                 color =
                     if (counted) {
                         MaterialTheme.colorScheme.onSurface

@@ -1,24 +1,44 @@
 package com.shawnkowalchuk.milo.core.designsystem.component
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+
+// Material's calendar is a grid of places of a fixed size: a day has 48 dp, a year 72 dp. They
+// do not grow with the phone's font size, and Sora is a wide typeface. With the font size at
+// its largest (2.0 on an emulator, 2026-10-06) a year no longer fitted its place: "2040" was
+// drawn as "204", and the chosen year filled its pill from edge to edge. So inside the calendar
+// the text grows to one and a half times and no further, which is the largest of Android's
+// steps at which every year stands whole in its place with room to spare. The two buttons under
+// the calendar are outside this and grow as they do everywhere.
+private const val CALENDAR_LARGEST_FONT_SCALE = 1.5f
 
 /**
  * Asks for a day with Android's usual calendar: a month at a time, and two buttons. Nothing is
  * chosen until the confirming button is pressed; pressing outside the dialog, or Back, is the
  * same as [onDismiss]. It is the companion of [TimeDialog].
+ *
+ * The calendar is Material's own, and the theme colours it: the dialog is a tile, and the chosen
+ * day is the accent with a dark number. Its two buttons are the small buttons of a row, both
+ * quiet, as in [ConfirmDialog].
+ *
+ * The text of the calendar follows the phone's font size up to one and a half times, and stays
+ * there for a larger setting: the calendar's places for a day and a year have a fixed size.
  *
  * @param date the day the calendar opens on, already marked.
  * @param latest the last day that can be chosen. Later days are greyed out: MilO only asks for
@@ -41,28 +61,47 @@ fun DateDialog(
             initialSelectedDateMillis = utcMillisOf(date),
             selectableDates = NotAfter(latest),
         )
+    val density = LocalDensity.current
+    val calendarDensity =
+        remember(density) {
+            Density(
+                density = density.density,
+                fontScale = density.fontScale.coerceAtMost(CALENDAR_LARGEST_FONT_SCALE),
+            )
+        }
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
+            RowButton(
+                text = confirmLabel,
                 onClick = {
                     // The picker lets the marked day be unmarked. Confirming nothing chooses
                     // nothing.
                     val picked = state.selectedDateMillis
                     if (picked == null) onDismiss() else onConfirm(dateOfUtcMillis(picked))
                 },
-            ) {
-                Text(text = confirmLabel)
-            }
+                // Material keeps this dialog's buttons 6 dp from its right edge and 8 dp from
+                // its bottom, which suits its own text buttons, whose words have air around
+                // them. A filled button there sits in the dialog's round corner. The padding
+                // brings the pair to 24 dp from both edges, where the other two dialogs have
+                // theirs and where the calendar's own heading starts on the other side.
+                modifier =
+                    Modifier.padding(
+                        end = MiloTheme.spacing.gutter,
+                        bottom = MiloTheme.spacing.medium,
+                    ),
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(text = dismissLabel) } },
+        dismissButton = { RowButton(text = dismissLabel, onClick = onDismiss) },
     ) {
         // Material's calendar has one height and does not scroll by itself. With the phone on
         // its side the dialog is lower than the calendar: the weekday letters were then drawn
         // over the first weeks and the last week lay under the buttons (seen on an emulator,
         // 2026-10-06). Scrolling lets every day be reached there, and changes nothing where the
         // calendar fits.
-        DatePicker(state = state, modifier = Modifier.verticalScroll(rememberScrollState()))
+        CompositionLocalProvider(LocalDensity provides calendarDensity) {
+            DatePicker(state = state, modifier = Modifier.verticalScroll(rememberScrollState()))
+        }
     }
 }
 
