@@ -12,8 +12,12 @@
         dollars ($412), the year (2026), and the year's ($3,980).
     -->
     <string name="widget_dollars">%1$s %2$s · %3$s %4$s at the CRA rate</string>
-    <!-- When MilO has no rate for this year yet: the line above, then the year of the rate used. -->
-    <string name="widget_dollars_older_rate">%1$s (%2$d rate)</string>
+    <!--
+        When MilO has no rate for this year yet: the line above, then the year of the rate used
+        ("(2026 rate)"). The year is passed as text: it is a name, not a quantity, so it takes no
+        plural.
+    -->
+    <string name="widget_dollars_older_rate">%1$s (%2$s rate)</string>
     <string name="widget_dollars_unknown">Business at the CRA rate: not available</string>
     <string name="widget_switched_off">MilO\'s widget is switched off. Turn it on in MilO, Settings.</string>
 

@@ -87,7 +87,7 @@ private fun dollarsLine(context: Context, dollars: WidgetDollars?): String {
     return if (dollars.rateIsTheYears) {
         line
     } else {
-        context.getString(R.string.widget_dollars_older_rate, line, dollars.rateYear)
+        context.getString(R.string.widget_dollars_older_rate, line, dollars.rateYear.toString())
     }
 }
 
