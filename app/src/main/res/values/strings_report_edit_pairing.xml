@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The words that came with the Report screen, the edit screen and the pairing screen being
+        laid out as the owner's design draws them (2026-10-07). They are in a file of their own,
+        beside strings.xml, because other screens were laid out at the same time and each kept
+        out of the others' files.
+    -->
+
+    <!--
+        Report: the title for a whole month, with the month's name alone, such as October, and
+        the quieter line under every title of the screen.
+    -->
+    <string name="report_month_title">%1$s report</string>
+    <string name="report_for_accountant">For the accountant</string>
+    <!-- The small labels over the two days of a date range, each on its button. -->
+    <string name="report_range_from">From</string>
+    <string name="report_range_to">To</string>
+    <!--
+        The Status tile. "Reminding daily" stands under "Not sent" only while the monthly
+        reminder is running for that month (feature/report/ReportStatus.kt). Under "Sent"
+        stands the day, in the Trips screen's own sentence.
+    -->
+    <string name="report_status_label">Status</string>
+    <string name="report_status_not_sent">Not sent</string>
+    <string name="report_status_sent">Sent</string>
+    <string name="report_status_reminding">Reminding daily</string>
+    <!-- The PDF's tile: what the file holds, and the link that opens it. -->
+    <string name="report_pdf_contents">Every Business trip with date, times, from, to and km. A CSV copy can be saved with it.</string>
+    <string name="report_preview_pdf">Preview PDF</string>
+    <!--
+        "Sent to": the tile's label, the link to Settings and what a screen reader says a press
+        on it does, and how the name and the company share a line.
+    -->
+    <string name="report_sent_to">Sent to</string>
+    <string name="report_change">Change</string>
+    <string name="report_change_press">open Settings</string>
+    <string name="report_name_and_company">%1$s · %2$s</string>
+    <!-- The main button, the two quiet ones under it, and the sentence under those. -->
+    <string name="report_email">Email the report</string>
+    <string name="report_save_both">Save PDF and CSV</string>
+    <string name="report_mark_sent">Mark as sent</string>
+    <string name="report_email_note">MilO opens your email app with the PDF attached. You press send.</string>
+    <!--
+        The question before a report is marked as sent without the email app. The first three
+        arguments are the period, its number of trips and its distance, such as 5 trips and
+        79.9 km. For a month that was sent before, also the number the report is listed under
+        and the day the month's first report was sent, from formatDate(). One of the first
+        three is followed, each after an empty line, by the fourth where the month has not
+        ended, and always by the last.
+    -->
+    <string name="report_mark_title">Mark this report as sent?</string>
+    <string name="report_mark_text_month">The report for %1$s is recorded as sent today, with %2$s and %3$s, and the month is marked as submitted.</string>
+    <string name="report_mark_text_month_again">The report for %1$s is added to the list of sent reports as Revision %4$d, sent today, with %2$s and %3$s. The month stays marked as submitted on %5$s, the day its first report was sent.</string>
+    <string name="report_mark_text_range">The report for %1$s is added to the list of sent reports, as sent today, with %2$s and %3$s. A report for a date range does not mark a month as submitted.</string>
+    <string name="report_mark_not_ended">%1$s has not ended yet. Trips you make later this month are then on no report until the month is sent again, as a revision.</string>
+    <string name="report_mark_use">Use this if you sent the report some other way, or answered \"Not sent\" by mistake. MilO sends nothing. You can take it out of the list again under \"Sent reports\".</string>
+
+    <!--
+        Edit trip: the small labels over the two times on their buttons, what a button says
+        while no time is chosen, and the labels of the two tiles that share a line.
+    -->
+    <string name="trip_edit_start_label">Start</string>
+    <string name="trip_edit_end_label">End</string>
+    <string name="trip_edit_time_not_set">Choose</string>
+    <string name="trip_edit_distance_label">Distance, km</string>
+    <string name="trip_edit_saved_as">Saved as</string>
+    <!--
+        "What MilO recorded": the line under the title. The arguments are the two times as the
+        Trips screen writes them and the distance, such as 18.4 km; the second form starts with
+        the day, from formatShortDay(), and is used when the form shows another day.
+    -->
+    <string name="trip_edit_recorded_line">%1$s · %2$s</string>
+    <string name="trip_edit_recorded_line_with_day">%1$s · %2$s · %3$s</string>
+</resources>

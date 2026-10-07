@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -15,8 +16,11 @@ import com.shawnkowalchuk.milo.platform.trip.UnreadableSettingsFile
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
+import java.time.DayOfWeek
+import java.time.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -131,6 +135,51 @@ class SettingsViewModelTest {
         // Each look found the value of its own press in the file already.
         assertEquals(listOf(true to 2, true to 3, false to 3), reminderLooks)
     }
+
+    @Test
+    fun `the week's slider stores its hours on all seven days, and a day's slider on that day`() =
+        runTest {
+            val file = FakeSettingsFile()
+            val viewModel = viewModel(file)
+
+            // No day in particular: the whole week.
+            viewModel.onDayStart(null, 7, 15)
+            runCurrent()
+            viewModel.onDayEnd(null, 15, 45)
+            runCurrent()
+
+            val week = SettingsStore(file).current().schedule
+            for (day in DayOfWeek.entries) {
+                assertEquals(LocalTime.of(7, 15), week.on(day).start)
+                assertEquals(LocalTime.of(15, 45), week.on(day).end)
+            }
+
+            viewModel.onDayEnd(DayOfWeek.FRIDAY, 12, 0)
+            runCurrent()
+
+            val stored = SettingsStore(file).current().schedule
+            assertEquals(LocalTime.of(12, 0), stored.on(DayOfWeek.FRIDAY).end)
+            assertEquals(LocalTime.of(15, 45), stored.on(DayOfWeek.THURSDAY).end)
+        }
+
+    @Test
+    fun `a time for the whole week that would end it before it starts is refused and said`() =
+        runTest {
+            val file = FakeSettingsFile()
+            val viewModel = viewModel(file)
+            val states = mutableListOf<SettingsUiState>()
+            val watching = launch { viewModel.state.collect { states += it } }
+
+            viewModel.onDayStart(null, 17, 0)
+            runCurrent()
+
+            // Nothing was stored, and the refusal stands under the week's hours.
+            assertEquals(DEFAULT_WORK_SCHEDULE, SettingsStore(file).current().schedule)
+            val shown = states.last() as SettingsUiState.Ready
+            assertEquals(true, shown.week.hoursRefused)
+            assertEquals(emptyList<ScheduleDay>(), shown.schedule.filter { it.hoursRefused })
+            watching.cancel()
+        }
 
     @Test
     fun `the reminder's day stops at the 1st and at the 31st`() = runTest {

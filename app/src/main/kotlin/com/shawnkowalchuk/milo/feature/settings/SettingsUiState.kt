@@ -1,5 +1,7 @@
 package com.shawnkowalchuk.milo.feature.settings
 
+import com.shawnkowalchuk.milo.core.schedule.weekHours
+import com.shawnkowalchuk.milo.core.schedule.workDaysAgree
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -42,7 +44,7 @@ enum class SettingsProblem {
  * button.
  * @param hoursRefused whether the last press was a time for this day that would have ended
  * its hours no later than they start. The refusal is said under this day's two times, where
- * the press was made: said once at the top of the card it is off the screen for every day
+ * the press was made: said once at the top of the tile it is off the screen for every day
  * but the first few, and the press looks as if it did nothing.
  */
 data class ScheduleDay(
@@ -51,6 +53,24 @@ data class ScheduleDay(
     val start: LocalTime,
     val end: LocalTime,
     val canCopy: Boolean,
+    val hoursRefused: Boolean,
+)
+
+/**
+ * The work schedule read as one week, for the one slider that stands for all of it.
+ *
+ * @param start and [end] the hours the week is shown with: those of the first work day, or
+ * Monday's while no day is tracked.
+ * @param daysAgree true while every work day has those hours. One slider then says and sets
+ * the whole week; while it is false each work day has a slider of its own.
+ * @param hoursRefused whether the last press was a time for the whole week that would have
+ * ended its hours no later than they start. Said under the week's hours, where the press was
+ * made, as [ScheduleDay.hoursRefused] is said under its day.
+ */
+data class ScheduleWeek(
+    val start: LocalTime,
+    val end: LocalTime,
+    val daysAgree: Boolean,
     val hoursRefused: Boolean,
 )
 
@@ -94,6 +114,7 @@ sealed interface SettingsUiState {
      * @param copyingSound true while a picked file is being copied and checked. The sound
      * buttons wait.
      * @param schedule the seven days, Monday first.
+     * @param week the same schedule read as one week.
      * @param ignoreOutsideSchedule true if "Ignore them" is chosen for the trips that start
      * outside the schedule, false for "Save as Personal".
      * @param drivingAlertEnabled whether MilO notifies when the phone reports driving during
@@ -121,6 +142,7 @@ sealed interface SettingsUiState {
         val ownSoundName: String?,
         val copyingSound: Boolean,
         val schedule: List<ScheduleDay>,
+        val week: ScheduleWeek,
         val ignoreOutsideSchedule: Boolean,
         val drivingAlertEnabled: Boolean,
         val report: ReportFields,
@@ -137,7 +159,8 @@ sealed interface SettingsUiState {
  * a value is outside what the screen offers; the first press of a button brings it inside.
  *
  * @param problemDay the day of the schedule the press that did not work was about, or null
- * if it was about none. It places refused hours under their day.
+ * if it was about none, or about the whole week. It places refused hours under their day, or
+ * under the week's.
  * @param refusedEmail what stands in the address field while that is not an email address and
  * so was not stored, or null while the field holds what is stored.
  */
@@ -176,6 +199,14 @@ fun settingsUiState(
                     problem == SettingsProblem.HOURS_END_NOT_AFTER_START && day == problemDay,
             )
         },
+    week =
+        ScheduleWeek(
+            start = settings.schedule.weekHours().start,
+            end = settings.schedule.weekHours().end,
+            daysAgree = settings.schedule.workDaysAgree(),
+            hoursRefused =
+                problem == SettingsProblem.HOURS_END_NOT_AFTER_START && problemDay == null,
+        ),
     ignoreOutsideSchedule = settings.ignoreTripsOutsideSchedule,
     drivingAlertEnabled = settings.drivingAlertEnabled,
     report =

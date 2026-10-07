@@ -17,9 +17,13 @@ import java.util.concurrent.Executor
 /**
  * Plays the trip-start sound once: Shawn's audible proof that a trip is being recorded.
  *
- * - **It behaves like a notification sound.** The audio attributes say "notification", so the
- *   phone plays it at the notification volume and mutes it on silent, on vibrate and in Do Not
- *   Disturb, with no check of the ringer mode here.
+ * - **It is played as an alarm,** since 2026-10-07, by the owner's decision ("Sound: Always
+ *   play"): he missed it once because the phone was in Bedtime mode. The audio attributes say
+ *   "alarm", so the phone plays it at the alarm volume, and the ringer being on silent or on
+ *   vibrate does not mute it. Do Not Disturb and Bedtime mode let alarms through unless they
+ *   were set not to. With the alarm volume at zero it is played and not heard. Nothing here
+ *   reads the ringer mode or changes a volume. (Until then it was a notification sound, muted
+ *   by all four.)
  * - **It asks for the phone's own speaker.** At the moment of a Bluetooth connect the truck's
  *   audio is not ready, and a stereo drops the first second or two of a new stream, which is
  *   most of this sound. Android treats the request as a preference and may route it elsewhere.
@@ -86,7 +90,7 @@ class TripStartSound(private val context: Context, private val onNote: (String) 
             player.setAudioAttributes(
                 AudioAttributes
                     .Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )

@@ -4,29 +4,36 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.GroupLabel
+import com.shawnkowalchuk.milo.core.designsystem.component.RowButton
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileRow
+import com.shawnkowalchuk.milo.core.designsystem.component.tileRowPlace
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
 import com.shawnkowalchuk.milo.platform.system.SystemScreen
 
-// The three cards of the pairing screen: the truck and how the last attempt went, what is in
+// The three parts of the pairing screen, each a small label on the page over a tile, as the
+// owner's design groups the rows of Setup: the truck and how the last attempt went, what is in
 // the way, and the phone's devices to pick from.
 
 /** The stored truck with its state in plain words, then the result of the attempt just made. */
 @Composable
-internal fun TruckCard(truck: TruckLine?, attempt: PairingAttempt) {
-    SectionCard(title = stringResource(R.string.pairing_truck_title)) {
+internal fun TruckGroup(truck: TruckLine?, attempt: PairingAttempt) {
+    GroupLabel(stringResource(R.string.pairing_truck_title))
+    Tile(modifier = Modifier.fillMaxWidth(), gap = MiloTheme.spacing.rowGap) {
         if (truck == null) {
             StatusRow(
                 label = stringResource(R.string.pairing_no_truck),
@@ -53,6 +60,7 @@ private fun AttemptRow(attempt: PairingAttempt) {
             Text(
                 text = stringResource(R.string.pairing_attempt_asking),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
         is PairingAttempt.Paired ->
@@ -99,7 +107,7 @@ private fun TruckWatch.textRes(): Int = when (this) {
 
 /** What stops Shawn from picking a truck, and the button that leads to the fix. */
 @Composable
-internal fun BlockerCard(blocker: PairingBlocker, actions: PairingActions) {
+internal fun BlockerGroup(blocker: PairingBlocker, actions: PairingActions) {
     val bluetoothSettings =
         StatusRowAction(stringResource(R.string.pairing_action_bluetooth_settings)) {
             actions.onOpenScreen(SystemScreen.BLUETOOTH)
@@ -127,7 +135,8 @@ internal fun BlockerCard(blocker: PairingBlocker, actions: PairingActions) {
             PairingBlocker.NOTHING_PAIRED ->
                 R.string.pairing_blocker_nothing_paired to bluetoothSettings
         }
-    SectionCard(title = stringResource(R.string.pairing_blocker_title)) {
+    GroupLabel(stringResource(R.string.pairing_blocker_title))
+    Tile(modifier = Modifier.fillMaxWidth()) {
         StatusRow(
             label = stringResource(textRes),
             status = RowStatus.PROBLEM,
@@ -136,25 +145,39 @@ internal fun BlockerCard(blocker: PairingBlocker, actions: PairingActions) {
     }
 }
 
-/** The phone's paired devices. Each has its own button, so it is plain what a press will do. */
+/**
+ * The phone's paired devices as the rows of one tile, with a hairline between two of them.
+ * Each has its own button, so it is plain what a press will do: "Pair" in the accent colour
+ * while no truck is stored, because that is the one thing to do here; once a truck is stored,
+ * a quiet "Pair again" on it and a quiet "Use this one" on every other device.
+ *
+ * @param canPick false greys every button: something is in the way, or Android is being asked.
+ */
 @Composable
-internal fun DevicesCard(
+internal fun DevicesGroup(
     devices: List<DeviceLine>,
     hasTruck: Boolean,
     canPick: Boolean,
     onPick: (PairedDevice) -> Unit,
 ) {
-    SectionCard(title = stringResource(R.string.pairing_devices_title)) {
-        if (hasTruck) {
-            Text(
-                text = stringResource(R.string.pairing_change_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    GroupLabel(stringResource(R.string.pairing_devices_title))
+    Column {
+        devices.forEachIndexed { index, line ->
+            key(line.device.address) {
+                TileRow(place = tileRowPlace(index, devices.size)) {
+                    DeviceRow(line = line, hasTruck = hasTruck, canPick = canPick, onPick = onPick)
+                }
+            }
         }
-        for (line in devices) {
-            DeviceRow(line = line, hasTruck = hasTruck, canPick = canPick, onPick = onPick)
-        }
+    }
+    if (hasTruck) {
+        // Under the tile it explains, and in from the edge like the label above it.
+        Text(
+            text = stringResource(R.string.pairing_change_note),
+            modifier = Modifier.padding(horizontal = MiloTheme.spacing.extraSmall),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -167,10 +190,13 @@ private fun DeviceRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.rowGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.textGap),
+        ) {
             Text(
                 text = line.device.name ?: stringResource(R.string.pairing_device_no_name),
                 style = MaterialTheme.typography.bodyLarge,
@@ -182,21 +208,22 @@ private fun DeviceRow(
                     } else {
                         line.device.address
                     },
-                style = MaterialTheme.typography.bodyMedium,
+                style = MiloTheme.textStyles.tileLabel,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = { onPick(line.device) }, enabled = canPick) {
-            Text(
-                text =
-                    stringResource(
-                        when {
-                            line.isTruck -> R.string.pairing_action_pair_again
-                            hasTruck -> R.string.pairing_action_switch
-                            else -> R.string.pairing_action_pair
-                        },
-                    ),
-            )
-        }
+        RowButton(
+            text =
+                stringResource(
+                    when {
+                        line.isTruck -> R.string.pairing_action_pair_again
+                        hasTruck -> R.string.pairing_action_switch
+                        else -> R.string.pairing_action_pair
+                    },
+                ),
+            onClick = { onPick(line.device) },
+            accent = !hasTruck,
+            enabled = canPick,
+        )
     }
 }

@@ -194,7 +194,7 @@ What you confirmed is your word, with its date. HyperOS is reported to put some 
 - **Do not swipe MilO away** in the recent apps. While it waits for the truck, a swipe ends it even when it is locked, and only Background autostart brings it back.
 - **Avoid the clear-all button** (the X in the recent apps) and the Security app's Cleaner and Boost speed on work days. Clear-all is reported to end apps that are not locked, a recording included.
 - **Keep Battery saver mode off on work days.** Settings, Battery, Current mode: Balanced or Performance, not Battery saver or Ultra battery saver. *(From the research notes for HyperOS, check on your phone.)*
-- **Bedtime mode and Do Not Disturb silence the trip-start sound.** So do silent and vibrate. Seen on your phone on 2026-10-05: nothing was heard until Bedtime mode was off, and the trip was recorded all the same.
+- **Keep the alarm volume up: the trip-start sound follows it.** Since 2026-10-07 the sound is played like an alarm, so that it is heard when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode. (On 2026-10-05 Bedtime mode silenced it on your phone; the trip was recorded all the same.) A Do Not Disturb that is set to silence alarms too still silences it. *(Not yet tried on your phone: device checks NL-70 to NL-74.)*
 - **After the phone restarts, unlock it once.** Android holds Bluetooth events back until the first unlock.
 - **Do not press "Back up now" in the phone's Google settings during a trip.** On an emulator a backup that was asked for from the Mac ended MilO in the middle of a recording. Whether the phone's own button does the same is not known.
 
@@ -208,7 +208,7 @@ This is what is built. A start by the truck and an end by its disconnect were se
 
 **When a trip starts.** The truck's Bluetooth connects, and within seconds:
 
-- the trip-start sound plays once from the phone (unless the phone is silenced);
+- the trip-start sound plays once from the phone, at the alarm volume;
 - a notification "Trip in progress" appears and stays, with the kilometres so far;
 - Home turns its lime tile into the trip: "Recording", the kilometres so far, the minutes it has run and "since (time)", and the button End trip. Its small Truck tile says "Connected".
 
@@ -242,7 +242,7 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
-**The report.** Set your name and the accountant's address in Settings first. On the Report screen, "Create PDF" and "Open PDF" let you look at it; **Send to accountant** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Export CSV" makes the same trips as a spreadsheet file. No email draft has been seen yet, on any device: the emulator had no email account.
+**The report.** Set your name and the accountant's address in Settings first. On the Report screen, "Preview PDF" lets you look at it; **Email the report** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Save PDF and CSV" hands both files to Android's share sheet, "Export CSV" the spreadsheet file alone, and "Mark as sent" records a report you sent some other way. No email draft has been seen yet, on any device: the emulator had no email account.
 
 **The log, and how to send it.** The Log screen lists the newest lines first. Each day's lines are one tile, with the day above it (today's has none). The chips under the title show one kind of line at a time (Trips, Bluetooth, Android Auto, Errors); "Tap for details" opens what a line holds. **The square button beside the title shares the whole log:** it asks first, saying what the file holds, then makes a text file of every line and opens Android's share sheet: pick your email app and send it to whoever is helping you. The file names the truck and the phone's other Bluetooth devices with their addresses, and every address you typed on the edit screen. It holds no GPS position. Lines older than 90 days are removed, except the newest 1,000.
 
@@ -254,7 +254,7 @@ MilO only sees Android Auto connect or disconnect while MilO itself is running; 
 
 There are three things to keep. The first two are yours to do.
 
-**1. An export file.** Settings, the last card ("Backup, export and import"), **Export all data**, with "Include the GPS points" left on. Android's file picker asks where to put `MilO-export-(date).json`: choose Downloads or Drive, then copy the file off the phone. Make one after each month's report, and before each update of MilO. It is the one copy that depends on nothing else: not the signing key, not a Google account, not this phone. "Import data" on the same card puts such a file back, and replaces everything the phone holds.
+**1. An export file.** Settings, the last tile ("Backup, export and import"), **Export**, with "Include the GPS points" left on. Android's file picker asks where to put `MilO-export-(date).json`: choose Downloads or Drive, then copy the file off the phone. Make one after each month's report, and before each update of MilO. It is the one copy that depends on nothing else: not the signing key, not a Google account, not this phone. "Import data" on the same card puts such a file back, and replaces everything the phone holds.
 
 **2. The signing key and its password.** Copy `~/keys/milo.jks` to somewhere that is not the Mac, and keep its password with it (it is in the macOS Keychain under `milo-keystore`; a password manager is a good place for the copy). Never put the password in a file inside the project. Without the key and its password, a new build cannot replace the MilO on the phone: the only way forward would be to uninstall, which deletes the trips, and Android's backup would then refuse to restore them.
 

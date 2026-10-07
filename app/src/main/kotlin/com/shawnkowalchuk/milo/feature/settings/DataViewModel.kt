@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 private const val KEEP_WATCHING_MS = 5_000L
 
 /**
- * The Settings screen's card for backup, export and import: its link to [DataTransfer], which
+ * The Settings screen's tile for backup, export and import: its link to [DataTransfer], which
  * does the work and keeps where it stands.
  *
  * It keeps nothing of an export or an import itself. Both run in the application's own scope,
@@ -31,10 +31,10 @@ private const val KEEP_WATCHING_MS = 5_000L
  * holds is the switch for the GPS points, which is not stored: it is on whenever the screen is
  * opened, so that an export is whole unless Shawn says otherwise that time.
  *
- * It has a ViewModel of its own, beside the one of the other cards, because that one is at
- * its size limit and this card shares nothing with them but the screen.
+ * It has a ViewModel of its own, beside the one of the other tiles, because that one is at
+ * its size limit and this tile shares nothing with them but the screen.
  *
- * [state] is null until the card's first real state is known. The card says what the last
+ * [state] is null until the tile's first real state is known. The tile says what the last
  * export or import came to and moves the screen to it when it changes; a made-up first state
  * would make whatever is still standing there from before look like news, each time Settings
  * is opened.
@@ -51,7 +51,7 @@ class DataViewModel(
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
 ) : ViewModel() {
-    /** What the card shows that neither the settings nor [DataTransfer] hold. */
+    /** What the tile shows that neither the settings nor [DataTransfer] hold. */
     private data class Passing(
         val includePoints: Boolean = true,
         val noFilePicker: Boolean = false,
@@ -62,7 +62,7 @@ class DataViewModel(
 
     /**
      * The date of the last export, or null if there was none. An unreadable settings file is
-     * said by the screen itself, above the cards; here it only means "no date to show".
+     * said by the screen itself, above the tiles; here it only means "no date to show".
      */
     private val lastExport: Flow<LastExport?> =
         settings

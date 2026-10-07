@@ -3,6 +3,8 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+import com.shawnkowalchuk.milo.core.schedule.withEndOn
+import com.shawnkowalchuk.milo.core.schedule.withStartOn
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
@@ -38,7 +40,7 @@ private const val KEEP_WATCHING_MS = 5_000L
 /** What the event log calls a change of the driving alert's switch. */
 private const val DRIVING_ALERT_SWITCH = "the Settings switch"
 
-/** What the event log calls a look at the reminder that a change of its card prompted. */
+/** What the event log calls a look at the reminder that a change of its tile prompted. */
 private const val REMINDER_CARD = "the reminder was changed in Settings"
 
 /**
@@ -51,7 +53,7 @@ private const val REMINDER_CARD = "the reminder was changed in Settings"
  * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
  * sorted again because the schedule changed.
  *
- * The exceptions are the driving alert's switch and the reminder's card. The alert has no
+ * The exceptions are the driving alert's switch and the reminder's tile. The alert has no
  * trigger of its own to read the setting at: it has to ask the phone to report driving, or to
  * stop, when the switch is pressed, so it is told ([armDrivingAlert]). The monthly reminder is
  * told for a like reason ([lookAtReminder]): a reminder that is showing must go when it is
@@ -141,14 +143,14 @@ class SettingsViewModel(
         settings.setSchedule(it.schedule.withTracked(day, tracked))
     }
 
-    /** The time picker's answer for the start of [day]'s hours. */
-    fun onDayStart(day: DayOfWeek, hour: Int, minute: Int) = changeHours(day) {
-        it.withStart(day, LocalTime.of(hour, minute))
+    /** A new start for [day]'s hours, or for every day's if [day] is null: the whole week. */
+    fun onDayStart(day: DayOfWeek?, hour: Int, minute: Int) = changeHours(day) {
+        it.withStartOn(day, LocalTime.of(hour, minute))
     }
 
-    /** The time picker's answer for the end of [day]'s hours. */
-    fun onDayEnd(day: DayOfWeek, hour: Int, minute: Int) = changeHours(day) {
-        it.withEnd(day, LocalTime.of(hour, minute))
+    /** A new end for [day]'s hours, or for every day's. */
+    fun onDayEnd(day: DayOfWeek?, hour: Int, minute: Int) = changeHours(day) {
+        it.withEndOn(day, LocalTime.of(hour, minute))
     }
 
     /** Gives every tracked day the hours [day] has. */
@@ -238,11 +240,11 @@ class SettingsViewModel(
     }
 
     /**
-     * A change to one of [day]'s two times. [next] works the new schedule out from the stored
-     * one, or answers null for hours that would not end after they start; nothing is stored
-     * then, and the screen says why, under that day.
+     * A change to one of [day]'s two times, or of the whole week's. [next] works the new
+     * schedule out from the stored one, or answers null for hours that would not end after
+     * they start; nothing is stored then, and the screen says why, under that day.
      */
-    private fun changeHours(day: DayOfWeek, next: (WorkSchedule) -> WorkSchedule?) =
+    private fun changeHours(day: DayOfWeek?, next: (WorkSchedule) -> WorkSchedule?) =
         changeUnlessRefused(day) {
             val schedule = next(it.schedule)
             if (schedule == null) {

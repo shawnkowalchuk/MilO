@@ -4,9 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,15 +14,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.designsystem.component.ChoiceRow
+import com.shawnkowalchuk.milo.core.designsystem.component.ChoiceButton
 import com.shawnkowalchuk.milo.core.designsystem.component.DateDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SwitchRow
 import com.shawnkowalchuk.milo.core.designsystem.component.TextEntry
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
+import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TimeDialog
+import com.shawnkowalchuk.milo.core.designsystem.component.ValueButton
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
@@ -31,55 +35,68 @@ import com.shawnkowalchuk.milo.core.util.formatClockTime
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
 
-// The cards of the edit form, in the order a trip is read on the Trips screen: when, where, how
-// far, and what it is saved as. (Under them, for a trip that was edited, stands what MilO
-// recorded: `RecordedCard.kt`.)
-// What a press on Save found wrong is said in the card it is about, beside what is to be put
+// The tiles of the edit form, as the owner's drawing has them and in the order a trip is read
+// on the Trips screen: when, where, and side by side how far and what it is saved as. (Under
+// them, for a trip that was edited, stands what MilO recorded: `RecordedTile.kt`.)
+// What a press on Save found wrong is said in the tile it is about, beside what is to be put
 // right: the times in "When", the kilometres under their field.
 
 /** Which of the form's three pickers is open. Saved, so turning the phone does not close it. */
 private enum class Picking { DATE, START, END }
 
 /**
- * The day and the two times. Each is a text button that shows the value and opens a picker,
- * as a time of day is chosen everywhere in MilO. Under them a switch for a trip that ran past
- * midnight, and what the last press on Save found wrong with the times.
+ * "When": the day as a quiet button as wide as the tile, and under it the start and the end
+ * side by side, each a button with its small label over the time. A press opens the calendar
+ * or the clock dial, as a time of day is chosen everywhere in MilO. Under them the switch for
+ * a trip that ran past midnight, and what the last press on Save found wrong with the times.
  */
 @Composable
-internal fun WhenCard(
+internal fun WhenTile(
     state: TripEditUiState.Ready,
     actions: TripEditActions,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val spacing = MiloTheme.spacing
     // The two times and the dial go by the phone's own 24-hour switch, like every time of day.
     val twentyFourHour = rememberTwentyFourHourClock()
     var picking by rememberSaveable { mutableStateOf<Picking?>(null) }
+    val notSet = stringResource(R.string.trip_edit_time_not_set)
 
-    SectionCard(title = stringResource(R.string.trip_edit_when_title), modifier = modifier) {
-        TextButton(onClick = { picking = Picking.DATE }) {
-            Text(text = stringResource(R.string.trip_edit_date, formatDay(state.date, locale)))
-        }
+    Tile(
+        modifier = modifier.fillMaxWidth(),
+        padding = TilePadding.EVEN,
+        gap = spacing.tileGap,
+    ) {
+        // Lets a screen reader jump from tile to tile, as it could from card to card.
+        TileLabel(
+            stringResource(R.string.trip_edit_when_title),
+            Modifier.semantics(mergeDescendants = true) {
+                heading()
+            },
+        )
+        ValueButton(
+            value = formatDay(state.date, locale),
+            onClick = { picking = Picking.DATE },
+            modifier = Modifier.fillMaxWidth(),
+        )
         // Each button has half the line, so that the two stay side by side at a large font size.
-        Row(modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = { picking = Picking.START }, modifier = Modifier.weight(1f)) {
-                Text(
-                    text =
-                        state.start?.let {
-                            val time = formatClockTime(it, locale, twentyFourHour)
-                            stringResource(R.string.trip_edit_start, time)
-                        } ?: stringResource(R.string.trip_edit_start_not_set),
-                )
-            }
-            TextButton(onClick = { picking = Picking.END }, modifier = Modifier.weight(1f)) {
-                Text(
-                    text =
-                        state.end?.let {
-                            val time = formatClockTime(it, locale, twentyFourHour)
-                            stringResource(R.string.trip_edit_end, time)
-                        } ?: stringResource(R.string.trip_edit_end_not_set),
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.small),
+        ) {
+            ValueButton(
+                value = state.start?.let { formatClockTime(it, locale, twentyFourHour) } ?: notSet,
+                onClick = { picking = Picking.START },
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.trip_edit_start_label),
+            )
+            ValueButton(
+                value = state.end?.let { formatClockTime(it, locale, twentyFourHour) } ?: notSet,
+                onClick = { picking = Picking.END },
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.trip_edit_end_label),
+            )
         }
         // The form has one date, the day the trip started. A trip that ran past midnight is
         // said to have done so here, and never worked out from an end that is earlier than the
@@ -88,6 +105,9 @@ internal fun WhenCard(
             label = stringResource(R.string.trip_edit_ends_next_day),
             checked = state.endsNextDay,
             onCheckedChange = actions.onEndsNextDay,
+            // The 2 dp the design has above the switch's line.
+            modifier = Modifier.padding(top = spacing.textGap),
+            quietOnTile = true,
         )
         state.laterEndDate?.let { endDate ->
             Quiet(stringResource(R.string.trip_edit_ends_on, formatDay(endDate, locale)))
@@ -136,10 +156,20 @@ internal fun WhenCard(
     }
 }
 
-/** The two addresses, typed. */
+/** "Where": the two addresses, typed, each under its small label. */
 @Composable
-internal fun WhereCard(state: TripEditUiState.Ready, actions: TripEditActions) {
-    SectionCard(title = stringResource(R.string.trip_edit_where_title)) {
+internal fun WhereTile(state: TripEditUiState.Ready, actions: TripEditActions) {
+    Tile(
+        modifier = Modifier.fillMaxWidth(),
+        padding = TilePadding.EVEN,
+        gap = MiloTheme.spacing.tileGap,
+    ) {
+        TileLabel(
+            stringResource(R.string.trip_edit_where_title),
+            Modifier.semantics(mergeDescendants = true) {
+                heading()
+            },
+        )
         TextEntry(
             label = stringResource(R.string.trip_edit_from),
             initialText = state.from,
@@ -152,25 +182,23 @@ internal fun WhereCard(state: TripEditUiState.Ready, actions: TripEditActions) {
             onTextChange = actions.onTo,
             maxLength = MAX_ADDRESS_LENGTH,
         )
-        Quiet(
-            stringResource(
-                if (state.adding) R.string.trip_add_where_note else R.string.trip_edit_where_note,
-            ),
-        )
     }
 }
 
-/** The distance, typed in kilometres. What Save found wrong with it is said under the field. */
+/**
+ * "Distance, km": the kilometres, typed, in the drawing's larger figure. The field's label is
+ * the tile's own. What Save found wrong with the distance is said under the field.
+ */
 @Composable
-internal fun DistanceCard(
+internal fun DistanceTile(
     state: TripEditUiState.Ready,
     actions: TripEditActions,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    SectionCard(title = stringResource(R.string.trip_edit_distance_title), modifier = modifier) {
+    Tile(modifier = modifier, padding = TilePadding.EVEN) {
         TextEntry(
-            label = stringResource(R.string.trip_edit_kilometres),
+            label = stringResource(R.string.trip_edit_distance_label),
             // What was typed, or the stored distance as every screen writes it. A stored
             // distance that cannot be written (it should never be negative) starts empty.
             initialText =
@@ -184,6 +212,7 @@ internal fun DistanceCard(
             decimalNumber = true,
             lastField = true,
             error = state.distanceProblem?.words(),
+            figure = true,
         )
     }
 }
@@ -199,26 +228,40 @@ private fun FormProblem.words(): String {
     }
 }
 
-/** Business or Personal: one of two, and under them who chose. */
+/**
+ * "Saved as": Business and Personal as two buttons, one above the other, the one in force in
+ * the accent colour. Neither is, while a trip that is being added has no start time to sort it
+ * by. Who chose is said in the line under the two tiles.
+ */
 @Composable
-internal fun KindCard(state: TripEditUiState.Ready, actions: TripEditActions) {
-    SectionCard(title = stringResource(R.string.trip_edit_kind_title)) {
+internal fun SavedAsTile(
+    state: TripEditUiState.Ready,
+    actions: TripEditActions,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = MiloTheme.spacing
+    Tile(modifier = modifier, padding = TilePadding.EVEN, gap = spacing.small) {
+        TileLabel(
+            stringResource(R.string.trip_edit_saved_as),
+            Modifier.semantics(mergeDescendants = true) {
+                heading()
+            },
+        )
         // One group for a screen reader: "1 of 2", "2 of 2".
         Column(
             modifier = Modifier.selectableGroup(),
-            verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(spacing.buttonGap),
         ) {
-            ChoiceRow(
-                label = stringResource(R.string.trip_business),
+            ChoiceButton(
+                text = stringResource(R.string.trip_business),
                 selected = state.category == TripCategory.BUSINESS,
                 onSelect = { actions.onCategory(TripCategory.BUSINESS) },
             )
-            ChoiceRow(
-                label = stringResource(R.string.trip_personal),
+            ChoiceButton(
+                text = stringResource(R.string.trip_personal),
                 selected = state.category == TripCategory.PERSONAL,
                 onSelect = { actions.onCategory(TripCategory.PERSONAL) },
             )
         }
-        Quiet(stringResource(state.kindSource.noteRes()))
     }
 }

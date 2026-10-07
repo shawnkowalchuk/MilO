@@ -1,27 +1,18 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import android.content.Intent
-import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
-import com.shawnkowalchuk.milo.core.report.ReportRevision
-import com.shawnkowalchuk.milo.core.report.ReportSender
-import com.shawnkowalchuk.milo.core.report.reportDays
-import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.ReportSelection
 import com.shawnkowalchuk.milo.data.report.SentEffect
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.monthSubmission
-import com.shawnkowalchuk.milo.data.report.nextRevision
-import com.shawnkowalchuk.milo.data.report.period
-import com.shawnkowalchuk.milo.data.report.removalEffect
 import com.shawnkowalchuk.milo.data.report.sentEffect
 import com.shawnkowalchuk.milo.data.report.sentFor
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.MissingDetail
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
-import com.shawnkowalchuk.milo.data.settings.missingForPdf
 import com.shawnkowalchuk.milo.data.settings.missingForSending
 import java.time.LocalDate
 import java.time.ZoneId
@@ -64,12 +55,19 @@ data class SentLine(
 )
 
 /**
- * That a report for the chosen period was sent before, so "Send to accountant" asks first.
+ * That a report for the chosen period was sent before, so "Email the report" asks first.
  *
  * @param last the newest report sent for it.
  * @param revision the number the new report would carry.
  */
 data class Resend(val last: SentLine, val revision: Int)
+
+/**
+ * Who the report is from, as far as the settings say: what its heading prints. The name is
+ * null while it is not set, and a report then cannot be made; a company or a vehicle that is
+ * not set is left out of the report, and of the screen.
+ */
+data class SenderDetails(val name: String?, val company: String?, val vehicle: String?)
 
 /** A press that did not do what it said, until the next press. */
 enum class ReportProblem {
@@ -121,14 +119,20 @@ sealed interface ReportUiState {
      * @param today the last day a period may reach.
      * @param submission whether the chosen month has been submitted. It is about the month,
      * also while "A date range" is chosen, where the screen does not show it.
+     * @param status what the Status tile says about the chosen period, month or range.
      * @param summary what the report would hold, or null while the trips are being read.
      * @param missing what stands in the way of sending the report. Shown as soon as the screen
      * is drawn, so that it is known before a button is pressed.
+     * @param sender the name, company and vehicle the report prints, as far as they are set.
      * @param resend set if the chosen period was sent before: sending then asks first.
-     * @param sendQuestions what "Send to accountant" asks before it sends, in order.
+     * @param sendQuestions what "Email the report" asks before it sends, in order.
+     * @param ifSent what recording a report for the chosen period as sent would do now. The
+     * question before "Mark as sent" says it.
      * @param working true while a file is being made. The buttons wait.
+     * @param pdfName what the PDF of this report is called, made or not, or null while no PDF
+     * can be made: the trips are being read, or the name it prints is not set.
      * @param pdfPages how many pages the PDF has that was made of exactly this report, or null
-     * if there is none: then there is nothing to open.
+     * if none was made yet.
      * @param refusals how many presses were refused for a missing setting. The screen moves to
      * the line that says what is missing each time it goes up.
      * @param launch another app for the screen to open, or null.
@@ -145,12 +149,16 @@ sealed interface ReportUiState {
         val choice: ReportChoice,
         val canStepForward: Boolean,
         val submission: MonthSubmission?,
+        val status: ReportStatus,
         val summary: ReportSummary?,
         val missing: List<MissingDetail>,
         val accountantEmail: String?,
+        val sender: SenderDetails,
         val resend: Resend?,
         val sendQuestions: List<SendQuestion>,
+        val ifSent: SentEffect,
         val working: Boolean,
+        val pdfName: String?,
         val pdfPages: Int?,
         val problem: ReportProblem?,
         val refusals: Int,
@@ -173,47 +181,6 @@ fun summaryOf(selection: ReportSelection): ReportSummary = ReportSummary(
 )
 
 /**
- * The report for [period] as it would be made now.
- *
- * A period that was sent before makes this one a revision: it carries the next number and
- * names the day the newest report before it was sent. That holds for a PDF that is only made to
- * be looked at too, so that what he looks at is what would be sent.
- *
- * @param name printed as the sender. The caller decides what a report may be made without.
- * @param sent every report sent so far.
- * @param today the day the report is generated on, in [zone].
- */
-fun mileageReport(
-    period: ReportPeriod,
-    selection: ReportSelection,
-    name: String,
-    settings: MiloSettings,
-    sent: List<SentReport>,
-    today: LocalDate,
-    zone: ZoneId,
-): MileageReport {
-    val sentBefore = sentFor(period, sent)
-    return MileageReport(
-        sender = ReportSender(name, settings.reportCompany, settings.reportVehicle),
-        period = period,
-        generatedOn = today,
-        revision =
-            sentBefore.lastOrNull()?.let { last ->
-                ReportRevision(nextRevision(sentBefore), localDateOf(last.sentAtMs, zone))
-            },
-        zone = zone,
-        days = reportDays(selection.trips, zone),
-    )
-}
-
-/** The question "Send to accountant" asks first, or null for a period never sent before. */
-fun resendOf(period: ReportPeriod, sent: List<SentReport>): Resend? {
-    val sentBefore = sentFor(period, sent)
-    val last = sentBefore.lastOrNull() ?: return null
-    return Resend(last = last.asLine(sent), revision = nextRevision(sentBefore))
-}
-
-/**
  * The screen for the chosen period.
  *
  * @param selection the period's trips, or null while they are being read.
@@ -233,12 +200,16 @@ fun reportUiState(
     choice = choice,
     canStepForward = choice.canStepForward(today),
     submission = monthSubmission(choice.month, sent),
+    status = reportStatus(choice.period, today, zone, selection?.trips?.size, settings, sent),
     summary = selection?.let(::summaryOf),
     missing = settings.missingForSending(),
     accountantEmail = settings.accountantEmail,
+    sender = SenderDetails(settings.reportName, settings.reportCompany, settings.reportVehicle),
     resend = resendOf(choice.period, sent),
     sendQuestions = sendQuestions(choice.period, today, sentFor(choice.period, sent).isNotEmpty()),
+    ifSent = sentEffect(choice.period, sent),
     working = passing.working,
+    pdfName = passing.pdfName,
     pdfPages = passing.pdfPages,
     problem = passing.problem,
     refusals = passing.refusals,
@@ -251,42 +222,15 @@ fun reportUiState(
 /**
  * What the screen shows that is not stored anywhere.
  *
+ * @param pdfName what the PDF of the report as it is now is called, or null while none can be
+ * made.
  * @param pdfPages the pages of the PDF made of the report as it is now, or null.
  */
 data class ReportPassing(
     val working: Boolean = false,
+    val pdfName: String? = null,
     val pdfPages: Int? = null,
     val problem: ReportProblem? = null,
     val refusals: Int = 0,
     val launch: ReportLaunch? = null,
-)
-
-/** What a press needs of the settings before it may make a file. */
-enum class ReportNeed {
-    /** A CSV: nothing. It prints no name and goes wherever Shawn shares it. */
-    NOTHING,
-
-    /** A PDF to look at: the name that is printed on it. */
-    PDF,
-
-    /** A PDF to send: the name, and the address it is sent to. */
-    SENDING,
-    ;
-
-    /** What of it [settings] lack. */
-    fun missingIn(settings: MiloSettings): List<MissingDetail> = when (this) {
-        NOTHING -> emptyList()
-        PDF -> settings.missingForPdf()
-        SENDING -> settings.missingForSending()
-    }
-}
-
-private fun SentReport.asLine(sent: List<SentReport>): SentLine = SentLine(
-    id = id,
-    period = period,
-    sentAtMs = sentAtMs,
-    tripCount = tripCount,
-    distanceMetres = distanceMetres,
-    revision = revision,
-    removal = removalEffect(this, sent),
 )

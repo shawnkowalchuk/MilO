@@ -188,9 +188,8 @@ internal val MiloTypography: Typography =
  * Two more came with the Trips screen's own layout, and are in use: [quietLabel] and
  * [standInWords].
  *
- * Two sizes of the design have no style at all, because nothing that is built is set in
- * them: 28 at weight 600 (the Report screen's figure) and 20 at 600 (the distance typed on
- * the edit screen). Each is added here with the part that needs it.
+ * Two more came with the Report screen's and the edit screen's own layouts, and are in use:
+ * [tileFigure] and [fieldFigure].
  *
  * @param mainButton the words on the one main button of a screen.
  * @param fieldText what is typed into a text field.
@@ -215,6 +214,10 @@ internal val MiloTypography: Typography =
  * @param markLetter the letter in the app's mark at the top of Home.
  * @param logTime the time of a line of the event log, in monospace so that times line up.
  * @param logTag the tag that names a line's kind in the event log.
+ * @param tileFigure the figure of a tile that holds a line under it as well: the kilometres on
+ * the Report screen.
+ * @param fieldFigure a figure that is typed into a field of its own: the distance on the edit
+ * screen.
  */
 @Immutable
 data class MiloTextStyles(
@@ -233,4 +236,6 @@ data class MiloTextStyles(
     val markLetter: TextStyle = style(15, FontWeight.Bold),
     val logTime: TextStyle = style(11, FontWeight.Normal, family = MiloMonoFontFamily),
     val logTag: TextStyle = style(10, FontWeight.Medium, family = MiloMonoFontFamily),
+    val tileFigure: TextStyle = style(28, FontWeight.SemiBold, tracking = HeadlineTracking),
+    val fieldFigure: TextStyle = style(20, FontWeight.SemiBold),
 )

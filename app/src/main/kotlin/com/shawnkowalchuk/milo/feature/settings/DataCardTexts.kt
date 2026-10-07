@@ -15,9 +15,10 @@ import com.shawnkowalchuk.milo.platform.transfer.CutOffImport
 import com.shawnkowalchuk.milo.platform.transfer.ImportOffer
 import com.shawnkowalchuk.milo.platform.transfer.PointsTaken
 import com.shawnkowalchuk.milo.platform.transfer.TransferRefusal
+import com.shawnkowalchuk.milo.platform.transfer.TransferWork
 import java.time.ZoneId
 
-// The words of the card for backup, export and import: which sentence stands for which
+// The words of the tile for backup, export and import: which sentence stands for which
 // outcome, and the text of the question before an import.
 
 private const val BYTES_PER_MEGABYTE = 1024 * 1024
@@ -52,13 +53,33 @@ private fun points(count: Long): String = pluralStringResource(
     count,
 )
 
+/** When the last export was written, or that none was. */
+@Composable
+internal fun lastExportText(state: DataCardState): String {
+    val last = state.lastExport ?: return stringResource(R.string.settings_data_never_exported)
+    val words =
+        if (last.withPoints) {
+            R.string.settings_data_last_export
+        } else {
+            R.string.settings_data_last_export_without_points
+        }
+    return stringResource(words, day(last.atMs, state.zone), time(last.atMs, state.zone))
+}
+
+/** What is being done right now, in words. */
+internal fun TransferWork.wordsRes(): Int = when (this) {
+    TransferWork.EXPORTING -> R.string.settings_data_working_export
+    TransferWork.READING_FILE -> R.string.settings_data_working_read
+    TransferWork.IMPORTING -> R.string.settings_data_working_import
+}
+
 internal fun OutcomeTone.rowStatus(): RowStatus = when (this) {
     OutcomeTone.DONE -> RowStatus.OK
     OutcomeTone.PROBLEM -> RowStatus.PROBLEM
     OutcomeTone.TO_DO -> RowStatus.NEEDS_CONFIRMATION
 }
 
-/** The sentence a line of the card stands for. */
+/** The sentence a line of the tile stands for. */
 @Composable
 internal fun OutcomeLine.text(): String = when (this) {
     is OutcomeLine.Exported -> exportedText(this)

@@ -5,14 +5,12 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,10 +18,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
 import com.shawnkowalchuk.milo.platform.system.SetupFix
@@ -101,38 +100,49 @@ fun PairingScreen(viewModel: PairingViewModel, onBack: () -> Unit, modifier: Mod
     PairingContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 }
 
+/**
+ * The pairing screen in the language of the owner's design, which has no drawing of it: the
+ * title behind the square back button, a quiet sentence, and then each part as a small label
+ * on the page over a tile. While the phone's devices are being read for the first time, one
+ * tile says so in place of all of them.
+ */
 @Composable
-private fun PairingContent(
+internal fun PairingContent(
     state: PairingUiState?,
     actions: PairingActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val spacing = MiloTheme.spacing
+    TileColumn(
         modifier =
             modifier
                 .fillMaxSize()
+                // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+                .padding(top = spacing.tileGap, bottom = spacing.small),
     ) {
-        ScreenTitle(text = stringResource(R.string.pairing_title), onBack = onBack)
-        if (state == null) {
-            Text(
-                text = stringResource(R.string.pairing_reading),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            return@Column
-        }
-        Text(
-            text = stringResource(R.string.pairing_intro),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ScreenTitle(
+            text = stringResource(R.string.pairing_title),
+            onBack = onBack,
+            // With the gap between two tiles, the design's 16 under the title.
+            modifier = Modifier.padding(bottom = spacing.buttonGap),
         )
-        TruckCard(truck = state.truck, attempt = state.attempt)
-        state.blocker?.let { BlockerCard(blocker = it, actions = actions) }
+        if (state == null) {
+            Tile(modifier = Modifier.fillMaxWidth()) {
+                Note(stringResource(R.string.pairing_reading))
+            }
+            return@TileColumn
+        }
+        // In from the edge like a label above a tile.
+        Note(
+            stringResource(R.string.pairing_intro),
+            Modifier.padding(horizontal = spacing.extraSmall),
+        )
+        TruckGroup(truck = state.truck, attempt = state.attempt)
+        state.blocker?.let { BlockerGroup(blocker = it, actions = actions) }
         if (state.devices.isNotEmpty()) {
-            DevicesCard(
+            DevicesGroup(
                 devices = state.devices,
                 hasTruck = state.truck != null,
                 canPick = state.canPick,
@@ -142,36 +152,13 @@ private fun PairingContent(
     }
 }
 
-// Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+/** A quiet sentence: what the screen is doing, or what it is for. */
 @Composable
-private fun PairingPreview() {
-    val state =
-        PairingUiState(
-            truck = TruckLine("Work truck", TruckWatch.WATCHED),
-            devices =
-                listOf(
-                    DeviceLine(PairedDevice("AA:BB:CC:DD:EE:FF", "Work truck"), isTruck = true),
-                    DeviceLine(PairedDevice("11:22:33:44:55:66", "Earbuds"), isTruck = false),
-                    DeviceLine(PairedDevice("77:88:99:AA:BB:CC", null), isTruck = false),
-                ),
-            attempt = PairingAttempt.Paired("Work truck"),
-        )
-    MiloTheme {
-        Surface {
-            PairingContent(state = state, actions = PairingActions({}, {}, {}), onBack = {})
-        }
-    }
-}
-
-@PreviewLightDark
-@Composable
-private fun PairingBlockedPreview() {
-    val state =
-        PairingUiState(blocker = PairingBlocker.BLUETOOTH_OFF, attempt = PairingAttempt.Declined)
-    MiloTheme {
-        Surface {
-            PairingContent(state = state, actions = PairingActions({}, {}, {}), onBack = {})
-        }
-    }
+private fun Note(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

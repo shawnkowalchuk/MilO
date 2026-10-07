@@ -12,7 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * What "Send to accountant" asks before it sends, and what the screen says removing a sent
+ * What "Email the report" asks before it sends, and what the screen says removing a sent
  * report would do. Kept apart from `ReportUiStateTest`, which is at its size limit.
  */
 class ReportSendQuestionsTest {

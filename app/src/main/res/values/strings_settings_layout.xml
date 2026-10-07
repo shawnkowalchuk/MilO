@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The words that came with Settings being laid out as the owner's design draws it
+        (2026-10-07). They are in a file of their own, beside strings.xml, because other
+        screens were laid out at the same time and each kept out of the others' files. The
+        words Settings had before are still in strings.xml, under "Settings".
+    -->
+
+    <!-- The truck's tile, while no truck is stored. The design's own words. -->
+    <string name="settings_truck_none">None paired</string>
+    <!-- The line under the truck's tile and the driving alert's that opens what both are for. -->
+    <string name="settings_about_pair">About the truck and the driving alert</string>
+
+    <!--
+        Report for the accountant: the grey words inside each field while it is empty, as the
+        design draws them, and the line that opens what the four fields are for.
+    -->
+    <string name="settings_report_name_example">[Your name]</string>
+    <string name="settings_report_company_example">[Company]</string>
+    <string name="settings_report_vehicle_example">Make, model and plate</string>
+    <string name="settings_report_email_example">name@example.com</string>
+    <string name="settings_about_report">About these details</string>
+
+    <!--
+        Monthly reminder: the line under its title. The argument is the stored day of the
+        month, 1 to 31. English writes it with one of four endings, so there are four
+        sentences; `ordinalEnding` in feature/settings/ReminderTile.kt picks one.
+    -->
+    <string name="settings_reminder_from_st">Daily from the %1$dst until the report is sent</string>
+    <string name="settings_reminder_from_nd">Daily from the %1$dnd until the report is sent</string>
+    <string name="settings_reminder_from_rd">Daily from the %1$drd until the report is sent</string>
+    <string name="settings_reminder_from_th">Daily from the %1$dth until the report is sent</string>
+    <string name="settings_about_reminder">About the reminder</string>
+
+    <!-- Trips: the tile's label, as drawn, and the line that opens what its numbers do. -->
+    <string name="settings_trips_label">Trips · applies from the next trip</string>
+    <string name="settings_about_trips">About these three</string>
+
+    <!-- Work schedule: the tile's label, as drawn. -->
+    <string name="settings_schedule_label">Work schedule · trips in these hours are Business</string>
+    <!-- What a screen reader says for a day's button, after the day's name. -->
+    <string name="settings_schedule_day_on">Work day</string>
+    <string name="settings_schedule_day_off">Not a work day</string>
+    <!-- Stands between a start and an end: "8:00 AM – 4:30 PM". -->
+    <string name="settings_schedule_dash">–</string>
+    <!-- What a screen reader says a press on a start or an end does, after "double tap to". -->
+    <string name="settings_schedule_set_time">set this time to the minute</string>
+    <!--
+        The line under the hours. The first argument is the number of work days, the second
+        the hours they add up to, from formatHours(): "5 days · 42.5 h a week".
+    -->
+    <plurals name="settings_schedule_summary">
+        <item quantity="one">%1$d day · %2$s h a week</item>
+        <item quantity="other">%1$d days · %2$s h a week</item>
+    </plurals>
+    <!-- The same line while no day is a work day. The design's own words. -->
+    <string name="settings_schedule_no_days">No days tracked: every trip is outside the work hours</string>
+    <!-- What a screen reader calls the two handles of the slider for the whole week. -->
+    <string name="settings_schedule_start_handle">Start of the work day</string>
+    <string name="settings_schedule_end_handle">End of the work day</string>
+    <!-- And of one day's own slider. The argument is the day's name: "Start on Friday". -->
+    <string name="settings_schedule_start_handle_day">Start on %1$s</string>
+    <string name="settings_schedule_end_handle_day">End on %1$s</string>
+    <!-- Stands where a day's name stands in the time picker's title: "Every work day: start". -->
+    <string name="settings_schedule_every_day">Every work day</string>
+    <!-- The line that opens a slider for each work day, in place of the one for the week. -->
+    <string name="settings_schedule_each_day">Set each day by itself</string>
+    <!-- The same line while two work days differ: then it only names what stands under it. -->
+    <string name="settings_schedule_each_day_caption">Each work day by itself</string>
+    <string name="settings_about_schedule">About the work schedule</string>
+    <string name="settings_schedule_slider_note">A slider moves in quarters of an hour. Press a start or an end to set it to the minute. While one slider stands for the week it sets the hours of all seven days, so a day you switch on later has them too.</string>
+
+    <!-- Trip-start sound: the line under its title, which names the sound in use. -->
+    <string name="settings_sound_line_built_in">Built-in chirp</string>
+    <!-- For a sound of his own whose file had no name. Otherwise the file's name stands there. -->
+    <string name="settings_sound_line_own">Your own sound</string>
+    <!--
+        Since 2026-10-07 the sound is played as an alarm, by the owner's decision. "Like an
+        alarm" is the whole truth in three words: whatever silences the phone's alarms (Do Not
+        Disturb set to let nothing through, an alarm volume of zero) silences this too.
+    -->
+    <string name="settings_sound_alarm_note">It plays like an alarm, at the alarm volume: also when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode.</string>
+
+    <!-- Daily check: the name before its time, and the line that opens what the check does. -->
+    <string name="settings_nothing_recorded_time_label">Check at</string>
+    <string name="settings_about_check">About the daily check</string>
+
+    <!--
+        Backup, export and import: the line under the title and the two short words on the
+        buttons, as drawn. A screen reader is told the longer names the buttons had before.
+    -->
+    <string name="settings_data_line">Keep a copy off the phone a few times a year</string>
+    <string name="settings_data_export_short">Export</string>
+    <string name="settings_data_import_short">Import</string>
+    <string name="settings_about_data">About backup, export and import</string>
+</resources>
