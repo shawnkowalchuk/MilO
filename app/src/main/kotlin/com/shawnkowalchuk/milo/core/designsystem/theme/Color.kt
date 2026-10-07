@@ -53,6 +53,10 @@ private val TextLog = Color(0xFFD8DBE0)
 private val Accent = Color(0xFFC6F432)
 private val AccentPressed = Color(0xFFDDFF7A)
 
+// The light that runs along the line between the phone and the truck while the two are
+// connected: the design's white at 85 percent.
+private val Glint = Color(0xD9FFFFFF)
+
 private val AttentionFill = Color(0xFF2A2416)
 private val AttentionText = Color(0xFFFFE7A8)
 private val AttentionSecondaryText = Color(0xFFD5C597)
@@ -209,10 +213,12 @@ data class MiloLogTagColors(
  * The design's colours that Material has no role for, or no role with a name that says what
  * they are for. Reach them through `MiloTheme.colors`.
  *
- * **Five of them are in use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and
- * [chip]. The others are the design's colours for parts that come with the screens' own layouts,
- * the next package. They are named here so that those parts find them; nothing uses them yet,
- * and what is said of each below is what the design draws with it.
+ * **In use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and [chip], and since
+ * Home was laid out as the design draws it, [quietFill], [idleOutline], [idleIcon], [linkGlint]
+ * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]). The
+ * others ([logText], [accentPressed], [danger], [logTags]) are the design's colours for parts
+ * that come with the other screens' own layouts. They are named here so that those parts find
+ * them; nothing uses them yet, and what is said of each below is what the design draws with it.
  *
  * @param control a control sitting on a tile: a small button, a stepper's button, a switch's
  * track when it is off.
@@ -227,6 +233,8 @@ data class MiloLogTagColors(
  * `SquareIconButton` greys its icon with the colour of secondary text instead.
  * @param logText running text in the event log, a little softer than the main text.
  * @param accentPressed the accent while a link is pressed.
+ * @param linkGlint the light that runs along the line between the phone and the truck while
+ * they are connected. Decoration: nothing is read from it.
  * @param attentionTile the amber tile for something that is waiting for the user, and its title.
  * @param attentionSecondaryText the quieter line on that tile.
  * @param attentionButton the button on that tile.
@@ -244,6 +252,7 @@ data class MiloColors(
     val idleIcon: Color,
     val logText: Color,
     val accentPressed: Color,
+    val linkGlint: Color,
     val attentionTile: FillAndText,
     val attentionSecondaryText: Color,
     val attentionButton: FillAndText,
@@ -263,6 +272,7 @@ internal val MiloExtraColors =
         idleIcon = IdleIcon,
         logText = TextLog,
         accentPressed = AccentPressed,
+        linkGlint = Glint,
         attentionTile = FillAndText(fill = AttentionFill, text = AttentionText),
         attentionSecondaryText = AttentionSecondaryText,
         attentionButton = FillAndText(fill = AttentionText, text = AttentionFill),

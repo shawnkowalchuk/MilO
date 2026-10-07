@@ -22,7 +22,8 @@ data object SetupKey : NavKey
 data object LogKey : NavKey
 
 /**
- * The truck pairing screen. Not in the bottom bar: it is opened from Setup, and from Settings.
+ * The truck pairing screen. Not in the bottom bar: it is opened from Setup, from Settings, and
+ * from Home's truck tile while no truck is paired.
  */
 @Serializable
 data object PairingKey : NavKey
@@ -41,10 +42,11 @@ data class TripEditKey(val tripId: Long?) : NavKey
 
 /**
  * The Report screen, where the report for the accountant is made and sent. Not in the bottom
- * bar: it is opened from Trips.
+ * bar: it is opened from Trips, and from Home's tile for a report that has not been sent.
  *
- * @param year and [month] (1 to 12) name the month the Trips screen was showing, which is the
- * period the screen opens with. Two plain numbers, because that is what the back stack saves.
+ * @param year and [month] (1 to 12) name the month the screen opens with: the one the Trips
+ * screen was showing, or the one Home's tile is about. Two plain numbers, because that is what
+ * the back stack saves.
  */
 @Serializable
 data class ReportKey(val year: Int, val month: Int) : NavKey
@@ -60,9 +62,10 @@ enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: Ima
 /**
  * The bottom-bar screen the back stack is in: the nearest one under whatever is on top. With
  * the pairing screen open from Setup that is Setup, with Settings open (or the pairing screen
- * on top of Settings) it is Home, and with the edit screen or the Report screen open (or
- * Settings opened from the Report screen) it is Trips, so the bar keeps showing where Shawn came
- * from.
+ * on top of Settings) it is Home, and with the edit screen or the Report screen open from
+ * Trips (or Settings opened from that Report screen) it is Trips, so the bar keeps showing
+ * where Shawn came from. The pairing screen and the Report screen opened from Home's own tiles
+ * keep it on Home for the same reason.
  */
 internal fun topLevelOf(backStack: List<NavKey>): TopLevelDestination = backStack
     .asReversed()

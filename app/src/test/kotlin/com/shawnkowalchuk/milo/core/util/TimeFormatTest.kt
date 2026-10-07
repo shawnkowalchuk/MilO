@@ -87,6 +87,18 @@ class TimeFormatTest {
     }
 
     @Test
+    fun `a month is named alone where the year goes without saying`() {
+        assertEquals("October", formatMonthName(YearMonth.of(2026, 10), Locale.US))
+        assertEquals("Oktober", formatMonthName(YearMonth.of(2026, 10), Locale.GERMANY))
+    }
+
+    @Test
+    fun `today is written short, with the weekday, the month and the day`() {
+        assertEquals("Tue, Oct 6", formatShortDay(LocalDate.of(2026, 10, 6), Locale.US))
+        assertEquals("Thu, Jan 1", formatShortDay(LocalDate.of(2026, 1, 1), Locale.US))
+    }
+
+    @Test
     fun `a time of day without a date is written like a trip's times`() {
         val start = LocalTime.of(8, 0)
         val end = LocalTime.of(16, 30)

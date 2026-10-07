@@ -118,7 +118,7 @@ class ColorContrastTest {
     @Test
     fun `the icons of the bottom bar and the switch's thumb can be made out`() {
         val bar = scheme.surfaceContainer
-        assertReadable("the bar's current icon", scheme.onSurface, bar, MARK)
+        assertReadable("the bar's current icon", scheme.primary, bar, MARK)
         assertReadable("the bar's other icons", scheme.onSurfaceVariant, bar, MARK)
         assertReadable("the thumb of a switch that is on", scheme.onPrimary, scheme.primary, MARK)
         assertReadable(

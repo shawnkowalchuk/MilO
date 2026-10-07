@@ -56,9 +56,10 @@ data class NavigationBarEntry(
  * The bar at the bottom of the phone UI: one button for each top-level screen, always visible.
  *
  * It is the design's floating bar: a rounded tile that stands clear of the screen's edges, with
- * icons and no words. The icon of the screen that is showing is drawn in the main text colour
- * and the others in the grey of secondary text. A screen reader is told each screen's name, that
- * the buttons are tabs, and which one is selected, as with Material's own bar.
+ * icons and no words. The icon of the screen that is showing is drawn in the accent colour, as
+ * on the design's drawing of Home, and the others in the grey of secondary text. A screen reader
+ * is told each screen's name, that the buttons are tabs, and which one is selected, as with
+ * Material's own bar.
  *
  * The room Android's own bottom bar takes (the gesture line or the three buttons) is left free
  * under it, so the two never lie on top of each other.
@@ -101,7 +102,7 @@ fun MiloNavigationBar(entries: List<NavigationBarEntry>, modifier: Modifier = Mo
                             modifier = Modifier.size(IconSize),
                             tint =
                                 if (entry.selected) {
-                                    MaterialTheme.colorScheme.onSurface
+                                    MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },

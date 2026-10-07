@@ -208,20 +208,22 @@ This is what is built. A start by the truck and an end by its disconnect were se
 
 - the trip-start sound plays once from the phone (unless the phone is silenced);
 - a notification "Trip in progress" appears and stays, with the kilometres so far;
-- Home shows "Trip in progress", the distance and "Started at (time)".
+- Home turns its lime tile into the trip: "Recording", the kilometres so far, the minutes it has run and "since (time)", and the button End trip. Its small Truck tile says "Connected".
+
+If Home is open at that moment, its truck tile first says "Connecting…" and then "Connected", for about four seconds, and only then does the lime tile change. The trip is being recorded all that time. Built on 2026-10-07 and seen on an emulator only.
 
 **When a trip ends.** In one of two ways, whichever comes first.
 
 - **The truck disconnects.** Home and the notification say "Trip in progress. Waiting for the truck to reconnect" for two minutes; reconnecting in that time continues the same trip. Then the trip ends and the notification goes.
 - **The truck has not moved for ten minutes,** connected or not. The trip ends where and when the truck stopped, not ten minutes later. A stop of ten minutes or more therefore cuts a drive into two trips; the ten minutes can be set from 5 to 30 in Settings.
 
-Either way there is no sound, and the trip is in "Today" on Home and on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
+Either way there is no sound, and the trip is the "Last trip" on Home and a row on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
 
-**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and Home says the same. Nothing is being recorded. MilO looks at the phone's position every 30 seconds, and when the truck drives off a new trip starts by itself within about a minute, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time. While MilO waits there is no End trip button: the button reads Start trip.
+**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and the truck's tile on Home says the same. Nothing is being recorded. MilO looks at the phone's position every 30 seconds, and when the truck drives off a new trip starts by itself within about a minute, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time. While MilO waits there is no End trip button: the lime tile on Home reads Start trip.
 
-**If you end a trip yourself with End trip while the truck is still connected,** MilO does not wait. It starts nothing by itself until the truck has disconnected and connected again, or until twelve hours have passed and MilO is opened, or you press Start trip. If the truck stays connected all that time, as yours can, nothing tells you that the next drive is not being recorded: open MilO before you drive off, and press Start trip if Home says "No trip in progress". After a trip you started that way, a stop is waited out as before.
+**If you end a trip yourself with End trip while the truck is still connected,** MilO does not wait. It starts nothing by itself until the truck has disconnected and connected again, or until twelve hours have passed and MilO is opened, or you press Start trip. If the truck stays connected all that time, as yours can, nothing tells you that the next drive is not being recorded: open MilO before you drive off, and press Start trip if the lime tile on Home reads Start trip. After a trip you started that way, a stop is waited out as before.
 
-After three days of standing MilO stops watching, to spare the battery, and Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
+After three days of standing MilO stops watching, to spare the battery, and the truck's tile on Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
 
 **If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add a missed trip".
 
@@ -231,10 +233,10 @@ After three days of standing MilO stops watching, to spare the battery, and Home
 
 | What | Where |
 |---|---|
-| The trip in progress, today's trips, Start trip / End trip | **Home**, the first button of the bottom bar (a house) |
+| Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
 | Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the month's card, **Report for the accountant** |
-| Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders beside the title on Home |
+| Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders at the top of Home |
 | The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 

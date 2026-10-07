@@ -1,14 +1,11 @@
 package com.shawnkowalchuk.milo.platform.reminder
 
-import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.crash.CrashRecord
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.SentReport
-import com.shawnkowalchuk.milo.data.report.monthSubmission
-import com.shawnkowalchuk.milo.data.report.selectForReport
 import com.shawnkowalchuk.milo.data.settings.ReminderShown
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -150,25 +147,16 @@ class MonthlyReminder(
             }
         val nowMs = clock()
         val zoneNow = zone()
-        val month = monthToRemindOf(nowMs, zoneNow)
-        val span = monthSpan(month, zoneNow)
-        // The trips the month's report would list: the report's own rule, so that the reminder
-        // and the Report screen cannot disagree about whether there is anything to send.
-        val onReport =
-            selectForReport(
-                tripsStartedBetween(span.fromMs, span.untilMs),
-                ReportPeriod.Month(month),
-                zoneNow,
-            ).trips.size
+        val span = monthSpan(monthToRemindOf(nowMs, zoneNow), zoneNow)
+        // Gathered by the function the home screen's tile uses too (`reminderMoment`), so the
+        // notification and the tile cannot disagree.
         val moment =
-            ReminderMoment(
+            reminderMoment(
                 nowMs = nowMs,
                 zone = zoneNow,
-                enabled = stored.reminderEnabled,
-                reminderDay = stored.reminderDay,
-                submitted = monthSubmission(month, sentReports()) != null,
-                businessTrips = onReport,
-                shown = stored.reminderShown,
+                stored = stored,
+                sent = sentReports(),
+                lastMonthTrips = tripsStartedBetween(span.fromMs, span.untilMs),
             )
         val verdict = judgeReminder(moment)
         when (verdict.step) {

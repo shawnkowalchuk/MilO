@@ -129,6 +129,9 @@ class TypefaceTest {
             "rowFigure" to own.rowFigure,
             "sideFigure" to own.sideFigure,
             "spanFigure" to own.spanFigure,
+            "tileLabel" to own.tileLabel,
+            "accentNote" to own.accentNote,
+            "markLetter" to own.markLetter,
             "logTime" to own.logTime,
             "logTag" to own.logTag,
         )

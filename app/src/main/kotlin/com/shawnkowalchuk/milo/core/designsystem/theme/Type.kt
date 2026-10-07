@@ -105,13 +105,12 @@ private fun style(
  * Which role is which part of the design:
  * - `displayLarge`, `displayMedium`, `displaySmall`: the three largest figures (the kilometres
  *   of the trip being recorded, a month's total, the count on Setup). Their line is as high as
- *   the figure itself, as drawn, so they are for one line of digits. They are for the screens'
- *   own layouts, the next package; no screen uses them yet. Material's own clock dialog does:
- *   its two large numbers are `displayLarge`.
- * - `headlineLarge` and `headlineSmall`: a figure in a tile, larger and smaller (no screen uses
- *   the larger yet; Material's calendar sets the chosen date at its top in it).
- *   `headlineMedium`: the title of a bottom-bar screen, and in the design the few words of a
- *   hero tile.
+ *   the figure itself, as drawn, so they are for one line of digits. Home uses the largest;
+ *   the other two wait for their screens. Material's own clock dialog uses `displayLarge` too,
+ *   for its two large numbers.
+ * - `headlineLarge` and `headlineSmall`: a figure in a tile, larger and smaller (Material's
+ *   calendar also sets the chosen date at its top in the larger).
+ *   `headlineMedium`: the title of a bottom-bar screen, and the few words of a hero tile.
  * - `titleLarge`: the title of a screen opened from another, and of a dialog.
  *   `titleMedium`: a value that is chosen (a stepper's value, a time). What is typed has a
  *   style of its own, `fieldText` below.
@@ -162,26 +161,33 @@ internal val MiloTypography: Typography =
  * The design's text styles that Material's fifteen roles have no room for. Reach them through
  * `MiloTheme.textStyles`.
  *
- * **Three are in use today:** [mainButton], [fieldText] and [sentence]. The other six are the
- * design's styles for parts that come with the screens' own layouts, the next package. Nothing
- * uses them yet, and what is said of each below is what the design sets in it.
+ * **Nine are in use today:** [mainButton], [fieldText], [sentence], and since Home was laid out
+ * as the design draws it, [appName], [rowFigure], [sideFigure], [tileLabel], [accentNote] and
+ * [markLetter]. The other three ([spanFigure], [logTime], [logTag]) are the design's styles for
+ * parts that come with the other screens' own layouts. Nothing uses them yet, and what is said
+ * of each below is what the design sets in it.
  *
- * Seven sizes of the design have no style at all, because nothing that is built is set in
+ * Five sizes of the design have no style at all, because nothing that is built is set in
  * them: 28 at weight 600 (the Report screen's figure), 20 at 600 (the distance typed on the
- * edit screen), 16 at 500 ("of 14 ready" on Setup), 15 at 700 (the letter in the app's mark),
- * 14 at 500 (an address that is still being looked up), 13 at 400 (a bare label beside a
- * switch) and 12 at 500 (the small lines on the accent tile). Each is added here with the part
+ * edit screen), 16 at 500 ("of 14 ready" on Setup), 14 at 500 (an address that is still being
+ * looked up) and 13 at 400 (a bare label beside a switch). Each is added here with the part
  * that needs it.
  *
  * @param mainButton the words on the one main button of a screen.
  * @param fieldText what is typed into a text field.
  * @param sentence a sentence that stands by itself in a tile or a dialog, a little larger and
- * firmer than a note.
+ * firmer than a note. Also the line under the figures of the tile for the trip being recorded.
  * @param appName the app's name at the top of Home, and the figure of a small tile.
  * @param rowFigure a figure or a status word that stands alone at the end of a tile's row, and
  * the unit after the largest figure.
  * @param sideFigure a second figure beside a large one: the minutes beside the kilometres.
  * @param spanFigure a span written out in a tile, such as the hours of a work day.
+ * @param tileLabel a tile's small grey label, and the quieter line under a tile's title. The
+ * same size as `bodyMedium`, but at Sora's own line, as the design draws a label: `bodyMedium`
+ * keeps the taller line of a sentence that runs over several lines, and a tile set in it
+ * would be a few dp higher than drawn for every label it holds.
+ * @param accentNote the small lines on an accent tile: under its title, and under a figure.
+ * @param markLetter the letter in the app's mark at the top of Home.
  * @param logTime the time of a line of the event log, in monospace so that times line up.
  * @param logTag the tag that names a line's kind in the event log.
  */
@@ -194,6 +200,9 @@ data class MiloTextStyles(
     val rowFigure: TextStyle = style(18, FontWeight.SemiBold),
     val sideFigure: TextStyle = style(20, FontWeight.Bold),
     val spanFigure: TextStyle = style(22, FontWeight.SemiBold, tracking = TitleTracking),
+    val tileLabel: TextStyle = style(12, FontWeight.Normal),
+    val accentNote: TextStyle = style(12, FontWeight.Medium),
+    val markLetter: TextStyle = style(15, FontWeight.Bold),
     val logTime: TextStyle = style(11, FontWeight.Normal, family = MiloMonoFontFamily),
     val logTag: TextStyle = style(10, FontWeight.Medium, family = MiloMonoFontFamily),
 )

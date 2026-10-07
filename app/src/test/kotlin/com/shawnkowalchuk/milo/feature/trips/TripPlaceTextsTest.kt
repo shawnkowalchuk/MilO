@@ -1,6 +1,10 @@
 package com.shawnkowalchuk.milo.feature.trips
 
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.text.PlaceSide
+import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
+import com.shawnkowalchuk.milo.core.designsystem.text.routeText
+import com.shawnkowalchuk.milo.core.designsystem.text.startText
 import com.shawnkowalchuk.milo.platform.address.TripPlace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

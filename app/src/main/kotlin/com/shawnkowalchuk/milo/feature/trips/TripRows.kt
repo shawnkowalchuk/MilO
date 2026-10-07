@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
+import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
+import com.shawnkowalchuk.milo.core.designsystem.text.placesWords
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
@@ -254,22 +256,8 @@ internal fun TripLine.kilometres(locale: Locale): String? =
 @Composable
 private fun PlacesLine(places: PlacesText) {
     Text(
-        text =
-            when (places) {
-                is PlacesText.Sentence -> stringResource(places.text)
-
-                is PlacesText.From -> stringResource(R.string.trips_from, places.address)
-
-                is PlacesText.FromTo ->
-                    stringResource(R.string.trips_from_to, places.from.text(), places.to.text())
-            },
+        text = placesWords(places),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-}
-
-@Composable
-private fun PlaceSide.text(): String = when (this) {
-    is PlaceSide.Address -> line
-    is PlaceSide.Words -> stringResource(text)
 }

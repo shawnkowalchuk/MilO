@@ -1,6 +1,8 @@
 package com.shawnkowalchuk.milo.feature.trips
 
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.text.PlaceSide
+import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
