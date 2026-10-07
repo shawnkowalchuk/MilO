@@ -1164,6 +1164,19 @@ Two of Shawn's decisions after the missed trip of 2026-10-07 (ADR-002, amendment
 | NL-114 | **Driving off starts a trip from the parked spot.** After NL-113, get in and drive off. Afterwards open the trip on Trips, and the Log with "Trip". | "Trip in progress" within about half a minute of driving off, with no sound. The trip starts at the parked spot, its time the moment you drove off (not when you parked), its km counted from there. The Log: "No longer waiting for the truck to move: it moved" and "Trip n started by TRUCK: it was connected and parked, and it moved". | not run |
 | NL-115 | **Another vehicle (only if the chance comes).** Truck parked and connected, MilO waiting beside it as in NL-113. Leave in another vehicle with the phone. | A "Trip in progress" may start as you drive off; when the truck's Bluetooth is lost and two minutes pass, the trip is gone from Trips, and the Log has "removed for good as a drive in another vehicle" with the times and the distance. Write down the distance it gives: if it is near 1000 m, the limit is too tight. | not run |
 
+## Beside the parked truck: GPS for an hour, then the motion sensor (2026-10-07)
+
+Shawn's choice "GPS 1 hour, then sensor" (ADR-002, amendment 32). The times ran here in unit tests; the service that turns GPS off and on, and the phone's reports reaching it, only in CI and not at all. These need the Physical activity permission granted (Setup) and the driving alert switched on (Settings), and a stop of more than an hour and ten minutes with the truck left connected: an evening at home is the natural one.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| NL-116 | **GPS goes off after the hour.** Park, truck still connected, and leave the phone for more than an hour. Then open the Log with "Location". | About an hour after "Waiting for the truck to move", "Location fixes stopped" and "GPS is off beside the parked truck, to spare the battery…". The notification still says "Truck connected and parked". | not run |
+| NL-117 | **The report turns GPS on, and the drive starts from the parked spot.** After NL-116, get in and drive off normally. Afterwards open the Log (all) and the trip on Trips. | A "DRIVING" line with the report a minute or so into the drive, then "The phone reports getting into a vehicle n s ago: the parked truck's position is read for the next 10 min…", "Location fixes requested", and "Trip n started by TRUCK: it was connected and parked, and it moved". The trip starts at the parked spot. Write down how many minutes after you drove off the trip's start time is. | not run |
+| NL-118 | **Overnight.** Leave the truck connected overnight with the phone near it, as usual. In the morning note the battery drop since the evening, and open the Log with "Location" and "Driving". | No "Location fixes" lines between the hour after parking and the morning's report. The battery drop overnight: write it down, beside the figure from check 271 if that was run. | not run |
+| NL-119 | **A stopped MilO.** Truck parked and connected for more than an hour, as in NL-116. Swipe MilO away in the recent apps, then lock the phone for ten minutes. Drive off. | As NL-117. If the trip never starts, write down whether the Log has a "DRIVING" line for the drive: that tells whether HyperOS delivered the report. | not run |
+| NL-120 | **Without the motion sensor GPS stays on.** Switch the driving alert off in Settings. Park as in NL-116 for more than an hour. | No "GPS is off beside the parked truck" line; fixes run for the whole wait, as before. Switch the alert back on afterwards. | not run |
+| NL-121 | **A short stop is unchanged.** Stop for 15 to 50 minutes with the truck connected, then drive off. | The trip starts within about half a minute of driving off, as in NL-114, with no report needed. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

@@ -59,6 +59,12 @@ class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
      */
     var zone: ZoneId = ZoneId.of("UTC")
 
+    /**
+     * Whether the phone reports getting into a vehicle to MilO. Off unless a test turns it on,
+     * so that a wait beside the parked truck reads GPS throughout, as before 2026-10-07.
+     */
+    var motionSensorWatching = false
+
     /** A controller as a fresh process would build it, and the service that goes with it. */
     fun newProcess(scope: CoroutineScope): Pair<TripController, FakeService> {
         val service = FakeService()
@@ -70,6 +76,7 @@ class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
                 settings = settings,
                 truck = truck,
                 starter = service,
+                motionSensorWatching = { motionSensorWatching },
                 clock = { nowMs },
                 zone = { zone },
                 scope = scope,
@@ -137,6 +144,9 @@ class FakeService :
     var tripStartsAnnounced = 0
     var checkAtMs: Long? = null
 
+    /** Beside the parked truck: when the controller last said GPS goes off, or null for never. */
+    var gpsUntilMs: Long? = null
+
     @Synchronized
     override fun start(request: StartRequest): StartFailure? {
         startRequests += request
@@ -163,10 +173,11 @@ class FakeService :
     }
 
     @Synchronized
-    override fun watchParked(checkAtMs: Long?) {
+    override fun watchParked(checkAtMs: Long?, gpsUntilMs: Long?) {
         recording = false
         watchingParked = true
         this.checkAtMs = checkAtMs
+        this.gpsUntilMs = gpsUntilMs
     }
 
     @Synchronized

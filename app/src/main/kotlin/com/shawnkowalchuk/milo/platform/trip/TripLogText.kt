@@ -157,6 +157,29 @@ internal const val WAITING_BEGAN =
     "Waiting for the truck to move: it is still connected. Its position is read at a low " +
         "rate, and a trip starts when it moves"
 
+/**
+ * The line for GPS going off beside the parked truck once the wait has lasted an hour
+ * (`parkedGpsUntilMs`). The trip service writes it.
+ */
+internal const val PARKED_GPS_OFF =
+    "GPS is off beside the parked truck, to spare the battery. The phone's motion sensor " +
+        "watches instead: getting into a vehicle turns GPS on again"
+
+private const val MILLIS_PER_SECOND = 1000L
+
+/**
+ * The line for a report of getting into a vehicle that turns GPS on beside the parked truck.
+ *
+ * @param ageMs how long before now the phone noticed it.
+ * @param forMs how long from now GPS is read.
+ */
+internal fun gpsForDrivingText(ageMs: Long, forMs: Long): String {
+    val minutes = (forMs + MILLIS_PER_MINUTE - 1) / MILLIS_PER_MINUTE
+    return "The phone reports getting into a vehicle ${ageMs / MILLIS_PER_SECOND} s ago: the " +
+        "parked truck's position is read for the next $minutes min, and a trip starts if it " +
+        "drives off"
+}
+
 /** The line for the end of a wait beside the parked truck, with the reason. */
 internal fun waitingEndedText(reason: WaitingEnd): String {
     val why =

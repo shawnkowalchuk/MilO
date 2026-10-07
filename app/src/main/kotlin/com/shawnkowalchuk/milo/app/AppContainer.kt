@@ -187,6 +187,8 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             truck = truckConnection,
             starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
+            // Asked only once the controller is at work, so the two can be built in any order.
+            motionSensorWatching = { drivingAlert.reportsComing() },
             clock = System::currentTimeMillis,
             zone = ZoneId::systemDefault,
             scope = applicationScope,

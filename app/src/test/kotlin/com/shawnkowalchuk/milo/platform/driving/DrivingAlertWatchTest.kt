@@ -148,4 +148,38 @@ class DrivingAlertWatchTest {
 
         assertEquals("Driving alert: watching for driving (MilO in front)", logged().single())
     }
+
+    @Test
+    fun `the parked wait counts on the phone's reports only once the phone has agreed`() = runTest {
+        val (controller, _) = process(world)
+        val alert = alertBeside(controller)
+        // Before the first request of the process has been answered: GPS stays on.
+        assertFalse(alert.reportsComing())
+
+        alert.arm("process start")
+        runCurrent()
+        assertTrue(alert.reportsComing())
+
+        // The permission taken away in the phone's settings, before MilO has noticed.
+        detection.granted = false
+        assertFalse(alert.reportsComing())
+        detection.granted = true
+
+        world.settings.setDrivingAlertEnabled(false)
+        alert.arm("the Settings switch")
+        runCurrent()
+        assertFalse(alert.reportsComing())
+    }
+
+    @Test
+    fun `a phone that refuses to report driving leaves the parked wait on GPS`() = runTest {
+        val (controller, _) = process(world)
+        val alert = alertBeside(controller)
+        detection.refuseWith = "ApiException: 17: API: ActivityRecognition.API is not available"
+
+        alert.arm("process start")
+        runCurrent()
+
+        assertFalse(alert.reportsComing())
+    }
 }

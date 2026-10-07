@@ -6,6 +6,7 @@ import java.time.DayOfWeek
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -222,5 +223,24 @@ class DrivingAlertRulesTest {
         assertFalse(DrivingWatch(alertEnabled = true, permissionGranted = false).wanted)
         assertFalse(DrivingWatch(alertEnabled = false, permissionGranted = true).wanted)
         assertFalse(DrivingWatch(alertEnabled = false, permissionGranted = false).wanted)
+    }
+
+    @Test
+    fun `a fresh report of getting into a vehicle is passed on with its time on the wall clock`() {
+        val now = TUESDAY_MORNING
+        assertEquals(now - 4_000, enteredVehicleAtMs(listOf(ENTERED), now))
+        assertEquals(now - 4_000, enteredVehicleAtMs(listOf(LEFT, ENTERED), now))
+        val atTheLimit = ENTERED.copy(ageMs = MAX_DRIVING_REPORT_AGE_MS)
+        assertEquals(now - MAX_DRIVING_REPORT_AGE_MS, enteredVehicleAtMs(listOf(atTheLimit), now))
+    }
+
+    @Test
+    fun `an old report, a report of leaving, or none at all passes nothing on`() {
+        val now = TUESDAY_MORNING
+        val stale = ENTERED.copy(ageMs = MAX_DRIVING_REPORT_AGE_MS + 1)
+        assertNull(enteredVehicleAtMs(listOf(stale), now))
+        // Only the newest counts: Shawn has got out again since.
+        assertNull(enteredVehicleAtMs(listOf(ENTERED, LEFT), now))
+        assertNull(enteredVehicleAtMs(emptyList(), now))
     }
 }

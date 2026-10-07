@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
  * the confirmation deadline of a companion start, the parked limit of a trip, or the limit on
  * watching a parked truck. When it runs out the controller reads the truck's connection, and the
  * rules decide. A part of [TripService], in a file of its own only to keep the service readable.
+ * The service also times the end of GPS beside a parked truck with one (`parkedGpsUntilMs`).
  *
  * TODO(debt): this timer and the service's minute timer are coroutines, and a coroutine's delay
  *  does not count time the phone spends asleep. With the screen off they can fire late. A GPS

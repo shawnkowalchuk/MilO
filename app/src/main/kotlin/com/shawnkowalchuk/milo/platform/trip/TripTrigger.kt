@@ -94,8 +94,10 @@ interface TripRecorder {
      * trip.
      *
      * @param checkAtMs as in [record]: when the wait has lasted too long.
+     * @param gpsUntilMs wall-clock time at which GPS goes off while the wait goes on, or null to
+     * keep it on (`parkedGpsUntilMs`). A later order with a later time turns it on again.
      */
-    fun watchParked(checkAtMs: Long?)
+    fun watchParked(checkAtMs: Long?, gpsUntilMs: Long?)
 
     /**
      * No trip is open: stop recording and stop the service, unless the service has reported in
