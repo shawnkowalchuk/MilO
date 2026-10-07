@@ -1179,6 +1179,15 @@ Shawn's choice "GPS 1 hour, then sensor" (ADR-002, amendment 32). The times ran 
 | NL-120 | **Without the motion sensor GPS stays on.** Switch the driving alert off in Settings. Park as in NL-116 for more than an hour. | No "GPS is off beside the parked truck" line; fixes run for the whole wait, as before. Switch the alert back on afterwards. | not run |
 | NL-121 | **A short stop is unchanged.** Stop for 15 to 50 minutes with the truck connected, then drive off. | The trip starts within about half a minute of driving off, as in NL-114, with no report needed. | not run |
 
+## A list of trip-start sounds (2026-10-07)
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| SL-1 | **The sound chosen before is on the list.** After installing this build, open Settings, Trip-start sound. | If a sound of your own was in use, the list shows "Built-in chirp" and that sound, the second marked. | not run |
+| SL-2 | **Add the Mario sound.** Put mario-1-up.mp3 on the phone (Downloads), tap "Add a sound" and pick it. Tap Play. | It joins the list, marked, and plays. The line under the title says "mario-1-up.mp3". | not run |
+| SL-3 | **Switch between them.** Tap the other rows one by one, with Play after each; then start a trip with the button. | Each plays when chosen; the trip start plays the one marked. | not run |
+| SL-4 | **Remove one.** With your own sound marked, tap "Remove this sound". | It is gone from the list, "Built-in chirp" is marked, and the others stay. | not run |
+
 ## The truck's odometer (2026-10-07)
 
 Shawn's decisions of 2026-10-07: he types the reading, MilO adds every truck trip, the report prints the start and the end of its period. The rules ran here in unit tests; the tile and the PDF have not been drawn anywhere.

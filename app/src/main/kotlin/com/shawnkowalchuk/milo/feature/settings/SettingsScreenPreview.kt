@@ -170,7 +170,21 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
             SettingsContent(
                 state = sample.screen,
                 actions =
-                    SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
+                    SettingsActions(
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        {},
+                        schedule,
+                        report,
+                        reminder,
+                    ),
                 onBack = null,
                 setupTile = {},
                 checkTile = {

@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.schedule.workDaysAgree
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.OwnSound
 import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
@@ -111,6 +112,8 @@ sealed interface SettingsUiState {
      * @param usesOwnSound true if a trip start plays the file Shawn chose, false for the
      * built-in sound.
      * @param ownSoundName what that file was called, or null if the phone gave no name.
+     * @param ownSounds every sound of his own on the list, to choose from (since 2026-10-07).
+     * @param soundInUseUri which of [ownSounds] plays, or null for the built-in sound.
      * @param copyingSound true while a picked file is being copied and checked. The sound
      * buttons wait.
      * @param schedule the seven days, Monday first.
@@ -140,6 +143,8 @@ sealed interface SettingsUiState {
         val soundEnabled: Boolean,
         val usesOwnSound: Boolean,
         val ownSoundName: String?,
+        val ownSounds: List<OwnSound>,
+        val soundInUseUri: String?,
         val copyingSound: Boolean,
         val schedule: List<ScheduleDay>,
         val week: ScheduleWeek,
@@ -185,6 +190,8 @@ fun settingsUiState(
     soundEnabled = settings.soundEnabled,
     usesOwnSound = settings.customSoundUri != null,
     ownSoundName = settings.customSoundName,
+    ownSounds = settings.ownSounds,
+    soundInUseUri = settings.customSoundUri,
     copyingSound = copyingSound,
     schedule =
         DayOfWeek.entries.map { day ->

@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -10,6 +11,7 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ActionButton
 import com.shawnkowalchuk.milo.core.designsystem.component.ActionButtonRow
 import com.shawnkowalchuk.milo.core.designsystem.component.ActionKind
+import com.shawnkowalchuk.milo.core.designsystem.component.ChoiceRow
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
@@ -23,12 +25,14 @@ private const val BYTES_PER_MEGABYTE = 1024 * 1024
 
 /**
  * The trip-start sound, as the design draws it: the title with the sound in use under it and
- * the switch, all of which toggle it; under them "Play" and "Use my own sound" side by side.
+ * the switch, all of which toggle it; under them "Play" and "Add a sound" side by side.
  *
- * What the design does not draw and MilO has: while a sound of Shawn's own is in use, a third
- * button under the two leads back to the built-in one; a picked file that was refused is said
- * in red, with its reason; and one grey line says that the sound plays like an alarm, which is
- * why it is heard when the phone is silent.
+ * What the design does not draw and MilO has: the sounds to choose from (since 2026-10-07,
+ * Shawn's choice "A list of my own sounds"), one row each, the built-in chirp first and his own
+ * after it in the order they were added, of which the one in use is marked; while one of his
+ * own is in use, a button under the two that takes it off the list; a picked file that was
+ * refused is said in red, with its reason; and one grey line says that the sound plays like an
+ * alarm, which is why it is heard when the phone is silent.
  */
 @Composable
 internal fun SoundTile(state: SettingsUiState.Ready, actions: SettingsActions) {
@@ -46,6 +50,7 @@ internal fun SoundTile(state: SettingsUiState.Ready, actions: SettingsActions) {
             checked = state.soundEnabled,
             onCheckedChange = actions.onSoundEnabled,
         )
+        if (state.ownSounds.isNotEmpty()) SoundChoices(state, actions.onChooseSound, idle)
         Column(verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.buttonGap)) {
             ActionButtonRow(
                 actions =
@@ -58,21 +63,22 @@ internal fun SoundTile(state: SettingsUiState.Ready, actions: SettingsActions) {
                             enabled = idle,
                         ),
                         ActionButton(
-                            label = stringResource(R.string.settings_sound_use_own),
+                            label = stringResource(R.string.settings_sound_add),
                             kind = ActionKind.PLAIN,
                             onClick = actions.onPickOwnSound,
                             enabled = idle,
                         ),
                     ),
             )
-            if (state.usesOwnSound) {
+            val inUse = state.soundInUseUri
+            if (inUse != null) {
                 ActionButtonRow(
                     actions =
                         listOf(
                             ActionButton(
-                                label = stringResource(R.string.settings_sound_use_built_in),
+                                label = stringResource(R.string.settings_sound_remove),
                                 kind = ActionKind.PLAIN,
-                                onClick = actions.onUseBuiltInSound,
+                                onClick = { actions.onRemoveSound(inUse) },
                                 enabled = idle,
                             ),
                         ),
@@ -82,6 +88,32 @@ internal fun SoundTile(state: SettingsUiState.Ready, actions: SettingsActions) {
         if (state.copyingSound) Note(stringResource(R.string.settings_sound_copying))
         state.problem?.soundText()?.let { StatusRow(label = it, status = RowStatus.PROBLEM) }
         Note(stringResource(R.string.settings_sound_alarm_note))
+    }
+}
+
+/**
+ * One row for each sound there is to choose from: the built-in chirp, then each of his own.
+ * Shown once he has added one; before that the chirp is all there is.
+ */
+@Composable
+private fun SoundChoices(
+    state: SettingsUiState.Ready,
+    onChoose: (ownSoundUri: String?) -> Unit,
+    idle: Boolean,
+) {
+    Column(modifier = Modifier.selectableGroup()) {
+        ChoiceRow(
+            label = stringResource(R.string.settings_sound_line_built_in),
+            selected = state.soundInUseUri == null,
+            onSelect = { if (idle) onChoose(null) },
+        )
+        for (sound in state.ownSounds) {
+            ChoiceRow(
+                label = sound.name ?: stringResource(R.string.settings_sound_line_own),
+                selected = sound.uri == state.soundInUseUri,
+                onSelect = { if (idle) onChoose(sound.uri) },
+            )
+        }
     }
 }
 

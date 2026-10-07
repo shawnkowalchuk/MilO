@@ -25,7 +25,7 @@ class SoundTooLargeException(val limitBytes: Long) :
     IOException("The audio file is larger than $limitBytes bytes")
 
 /**
- * MilO's own copy of the audio file Shawn chose as the trip-start sound.
+ * MilO's own copies of the audio files Shawn added as trip-start sounds, one of which plays.
  *
  * The file he picks belongs to another app, and Android's permission to read it ends when it is
  * moved or deleted, so it is copied here once and played from here from then on.
@@ -90,8 +90,16 @@ class OwnSoundStore(private val folder: File) {
      *
      * @return how many files were removed.
      */
-    fun keepOnly(inUse: File?): Int {
-        val others = folder.listFiles { file -> file != inUse }.orEmpty()
+    fun keepOnly(inUse: File?): Int = keepOnly(setOfNotNull(inUse))
+
+    /**
+     * Removes every copy except those in [kept]: the sounds of Shawn's own that are on his
+     * list (since 2026-10-07, when one sound became a list to choose from).
+     *
+     * @return how many files were removed.
+     */
+    fun keepOnly(kept: Set<File>): Int {
+        val others = folder.listFiles { file -> file !in kept }.orEmpty()
         others.forEach { Files.deleteIfExists(it.toPath()) }
         return others.size
     }

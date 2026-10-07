@@ -137,7 +137,12 @@ class SettingsViewModel(
 
     fun onSoundEnabled(enabled: Boolean) = change { settings.setSoundEnabled(enabled) }
 
-    fun onUseBuiltInSound() = change { ownSound.useBuiltIn() }
+    /** One sound of the list, by MilO's copy of it, or with null the built-in chirp. */
+    fun onChooseSound(ownSoundUri: String?) = change {
+        if (ownSoundUri == null) ownSound.useBuiltIn() else ownSound.useOwn(ownSoundUri)
+    }
+
+    fun onRemoveSound(ownSoundUri: String) = change { ownSound.remove(ownSoundUri) }
 
     fun onDayTracked(day: DayOfWeek, tracked: Boolean) = change {
         settings.setSchedule(it.schedule.withTracked(day, tracked))

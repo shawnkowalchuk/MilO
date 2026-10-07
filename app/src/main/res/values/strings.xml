@@ -717,8 +717,10 @@
     <string name="settings_sound_title">Trip-start sound</string>
     <string name="settings_sound_copying">Copying the sound…</string>
     <string name="settings_sound_play">Play</string>
-    <string name="settings_sound_use_own">Use my own sound</string>
-    <string name="settings_sound_use_built_in">Use the built-in sound</string>
+    <!-- Adds an audio file from the phone to the sounds to choose from, and uses it. -->
+    <string name="settings_sound_add">Add a sound</string>
+    <!-- Takes the sound of one's own that is in use off the list; the built-in chirp plays then. -->
+    <string name="settings_sound_remove">Remove this sound</string>
     <!-- Settings: why a picked file did not become the sound. -->
     <string name="settings_sound_refused_copy">MilO could not copy that file. The sound was not changed.</string>
     <!-- The argument is the limit in megabytes. -->

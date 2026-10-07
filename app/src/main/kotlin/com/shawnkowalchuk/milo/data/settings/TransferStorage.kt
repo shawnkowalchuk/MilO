@@ -163,8 +163,9 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
  *
  * @param dropAssociation true if Android on this phone holds no association for the stored
  * truck. The truck's address and name stay, so that the phone knows which device to pair again.
- * @param dropOwnSound true if MilO's copy of the chosen trip-start sound is not on this phone.
- * It never is after a restore: the copy is kept out of every backup.
+ * @param dropOwnSound true if MilO's copies of the trip-start sounds of Shawn's own are not on
+ * this phone. They never are after a restore: the copies are kept out of every backup. The
+ * list of them goes too, and the built-in chirp plays.
  */
 suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, dropOwnSound: Boolean) {
     dataStore.edit { stored ->
@@ -174,9 +175,6 @@ suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, drop
         stored.forgetParkedTruck()
         stored.forgetDrivenOffTrip()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
-        if (dropOwnSound) {
-            stored.remove(SettingsStore.CUSTOM_SOUND_URI)
-            stored.remove(SettingsStore.CUSTOM_SOUND_NAME)
-        }
+        if (dropOwnSound) stored.forgetOwnSounds()
     }
 }

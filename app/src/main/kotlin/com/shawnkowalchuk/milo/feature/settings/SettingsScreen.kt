@@ -35,7 +35,8 @@ internal class SettingsActions(
     val onSoundEnabled: (Boolean) -> Unit,
     val onPlaySound: () -> Unit,
     val onPickOwnSound: () -> Unit,
-    val onUseBuiltInSound: () -> Unit,
+    val onChooseSound: (ownSoundUri: String?) -> Unit,
+    val onRemoveSound: (ownSoundUri: String) -> Unit,
     val onDrivingAlertEnabled: (Boolean) -> Unit,
     val schedule: ScheduleActions,
     val report: ReportDetailActions,
@@ -122,7 +123,8 @@ fun SettingsScreen(
                     viewModel.onNoFilePicker()
                 }
             },
-            onUseBuiltInSound = viewModel::onUseBuiltInSound,
+            onChooseSound = viewModel::onChooseSound,
+            onRemoveSound = viewModel::onRemoveSound,
             onDrivingAlertEnabled = viewModel::onDrivingAlertEnabled,
             schedule =
                 ScheduleActions(
