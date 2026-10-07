@@ -48,7 +48,7 @@ private const val DRIVING_ALERT_TAP_REQUEST = 1
  *   no trip is being recorded and the truck is not connected (`platform/driving/`). Tapping it
  *   starts a trip exactly as a tap on the warning above does. Posting it never starts one.
  *
- * Posting needs the notification permission on Android 13 and later. Without it Android drops
+ * Posting needs the notification permission. Without it Android drops
  * the notification silently, and the trip service still runs. [showCouldNotStart] and
  * [showDrivingAlert] report whether the notification can be seen, so the event log can say
  * that it went unseen.
@@ -125,7 +125,7 @@ class TripNotifications(private val context: Context) {
         .setOngoing(true)
         .setOnlyAlertOnce(true)
         .setCategory(Notification.CATEGORY_SERVICE)
-        // Android 12 and later may hold a foreground notification back for ten seconds.
+        // Android may hold a foreground notification back for ten seconds.
         // This one is Shawn's sign that the trip started, so it is shown at once.
         .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
 

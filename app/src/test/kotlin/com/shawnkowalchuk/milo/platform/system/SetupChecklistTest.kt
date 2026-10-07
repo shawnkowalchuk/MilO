@@ -45,7 +45,6 @@ class SetupChecklistTest {
                     bluetoothGranted = true,
                 ),
             notificationsEnabled = true,
-            notificationPermissionAskable = true,
             ignoringBatteryOptimizations = true,
             exemptFromUnusedAppPause = true,
             batterySaverOn = false,

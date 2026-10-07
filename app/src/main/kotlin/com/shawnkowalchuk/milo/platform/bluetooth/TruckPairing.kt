@@ -55,8 +55,7 @@ class TruckPairing internal constructor(
 
     /**
      * The device an association is being made for. Taken when the pairing finishes or fails,
-     * so that it happens once: on Android 13 and later both the callback and the dialog's
-     * result report success.
+     * so that it happens once: both the callback and the dialog's result report success.
      */
     private val pending = AtomicReference<PairedDevice?>(null)
 
@@ -89,8 +88,8 @@ class TruckPairing internal constructor(
     }
 
     /**
-     * The screen passes on the result of Android's consent dialog. On Android 12 this is the
-     * only sign that the association was made; later versions also report it through a callback.
+     * The screen passes on the result of Android's consent dialog. Android reports a new
+     * association through a callback as well; whichever of the two comes first stores the truck.
      */
     fun onConsentResult(resultCode: Int) {
         if (resultCode == Activity.RESULT_OK) {

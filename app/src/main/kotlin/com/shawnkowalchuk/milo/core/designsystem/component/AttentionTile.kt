@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -23,12 +22,6 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /** How high the design draws the tile's button. */
 private val ButtonHeight = 44.dp
-
-/**
- * What Material keeps free around a button that is drawn lower than Android's 48 dp target for
- * a finger: the difference, half above and half below.
- */
-private val TouchMargin = 48.dp - ButtonHeight
 
 /**
  * The amber tile for something that is waiting for the user, with the one button that deals
@@ -77,7 +70,10 @@ fun AttentionTile(
             }
             Button(
                 onClick = onAction,
-                modifier = Modifier.heightIn(min = ButtonHeight).withoutTouchMargin(),
+                // Material keeps 48 dp for a finger around the lower button. The tile is as
+                // high as the design draws it all the same: the 2 dp above and below reach into
+                // the room the tile keeps free.
+                modifier = Modifier.heightIn(min = ButtonHeight).takesUpOnly(ButtonHeight),
                 shape = MiloTheme.shapes.pill,
                 colors =
                     ButtonDefaults.buttonColors(
@@ -98,15 +94,4 @@ fun AttentionTile(
             }
         }
     }
-}
-
-/**
- * Lets the button take up only the height it is drawn at, so that the tile is as high as the
- * design draws it. The place a finger can hit is not made smaller: it still reaches past the
- * drawn button, into the room the tile keeps free above and below it.
- */
-private fun Modifier.withoutTouchMargin(): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val margin = TouchMargin.roundToPx().coerceAtMost(placeable.height)
-    layout(placeable.width, placeable.height - margin) { placeable.place(0, -margin / 2) }
 }

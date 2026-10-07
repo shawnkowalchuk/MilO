@@ -21,6 +21,7 @@ Reliable automatic trip start is the number one requirement. Most of section 10 
 | Layer | Technology | Why this one |
 |---|---|---|
 | App framework | Native Android, one Gradle module `:app` | The app depends on CompanionDeviceManager, foreground services and Android Auto, which are platform APIs |
+| Android versions | Android 14 (API 34) and newer; built against API 37 | The one phone runs Android 14. Nothing older could be tested, so no code is written for it (FINDINGS_LOG, 2026-10-07) |
 | Language | Kotlin 2.4.20, warnings are errors | Compile-time safety |
 | Styling / design system | Jetpack Compose with Material 3; tokens in `core/designsystem/`. One look, always dark: the owner's "Bento" design (2026-10-06), set in its typeface, Sora, which the app carries as one font file | One UI toolkit, one set of tokens |
 | Navigation/routing | Navigation 3 | Navigation 2 is in maintenance mode |
@@ -719,7 +720,7 @@ Each is one `UPDATE` that sets the status and matches on the status it starts fr
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `truck_address`, `truck_name`, `truck_association_id` | text, text, integer | none | The paired truck and its companion device association. Written and cleared together, by `platform/bluetooth/TruckPairing`. The address is in capitals, the only form Android's Bluetooth classes accept. The id is absent on Android 12 and on a phone without companion device support |
+| `truck_address`, `truck_name`, `truck_association_id` | text, text, integer | none | The paired truck and its companion device association. Written and cleared together, by `platform/bluetooth/TruckPairing`. The address is in capitals, the only form Android's Bluetooth classes accept. The id is absent on a phone without companion device support, and for a truck that came with a restore or an import and has no association on this phone yet |
 | `grace_period_seconds` | integer | 120 | How long a trip waits after the truck disconnects |
 | `parked_limit_seconds` | integer | 600 | Since 2026-10-06 (evening). How long a trip may go without real movement before it is closed where it last moved, even with the truck still connected. A stored number that is not positive reads as the default. Its key, and the five below, are in `data/settings/ParkedStorage.kt` |
 | `parked_since_ms`, `parked_place_at_ms`, `parked_place_latitude`, `parked_place_longitude`, `parked_place_accuracy_metres` | integer, integer, decimal, decimal, decimal | none | Since 2026-10-06 (evening). The wait beside a parked truck (ADR-002, amendment 28): when it began, and where the truck stands, which is the end position of the trip that was closed there, with the time it stopped and the accuracy of that fix; for a trip that never moved, which has no end position, it is that trip's newest usable fix. Absent means MilO is not waiting. The place is written in one piece and can be missing as a whole (that trip had no usable fix). Written by `platform/trip/TripParking` when a wait begins and removed when it ends |
@@ -867,7 +868,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 
 - Android has no public "is this device connected" before Android 16 QPR2 (API 36.1). On this phone the reading asks the hands-free and the audio profile which devices they are connected to, through a profile proxy each. A truck connected on neither profile reads as "not connected" for as long as it is connected. So a reading of "not connected" is held against a trip only once some reading has shown the truck connected on its present link; until then only a disconnect event ends the trip. (`2026-10-03-cdm-presence.md`; ADR-002, amendment 18)
 - A reading can be "unknown" (no Bluetooth permission, no answer). Unknown is never "connected", and it must never be turned into "not connected" for a trip that is recording. (ADR-002, amendment 11)
-- A request to associate with the truck must go through an Activity: Android shows its consent dialog on it, and up to Android 12 the request fails from any other context. (FINDINGS_LOG, 2026-10-05)
+- A request to associate with the truck goes through the pairing screen's Activity: Android shows its consent dialog on it. Android 12 refused the request from any other context. MilO no longer runs on Android 12, and the call was left as it is: it is the one that paired the truck on the phone. (FINDINGS_LOG, 2026-10-05 and 2026-10-07)
 
 **This phone**
 - HyperOS background limits: starting a dead app is gated by Autostart, which is off by default for a sideloaded app. With it off, decompiled system code shows manifest broadcasts dropped and service starts and binds rejected, which would block both the Bluetooth receiver and the CompanionDeviceManager path. Battery saver "No restrictions" is a second, separate gate. This rests on decompiled code and forum reports, so the with and without Autostart test on the POCO X5 decides it. (`2026-10-03-miui-background-limits.md`, `2026-10-03-cdm-presence.md`)

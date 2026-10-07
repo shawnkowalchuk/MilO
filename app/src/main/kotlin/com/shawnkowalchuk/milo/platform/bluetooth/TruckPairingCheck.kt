@@ -45,7 +45,7 @@ internal class TruckPairingCheck(
             settings.setTruck(truck.address, truck.name, association.id)
         }
         link.startObserving(association)
-        val which = association.id?.let { "association $it" } ?: "the association"
+        val which = "association ${association.id}"
         return PairingStatus(PairingState.ARMED, "$which for ${truck.address} is observed")
     }
 
@@ -143,4 +143,4 @@ internal class TruckPairingCheck(
  * one for a truck that was paired before, the one with the highest id is the newest.
  */
 internal fun List<Association>.newestFor(address: String): Association? =
-    filter { sameAddress(it.address, address) }.maxByOrNull { it.id ?: 0 }
+    filter { sameAddress(it.address, address) }.maxByOrNull { it.id }

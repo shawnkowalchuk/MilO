@@ -54,8 +54,8 @@ internal data class BluetoothSignal(val what: String, val trigger: TripTrigger)
  *   can reconnect without a new link, which must not release the hold-off.
  *
  * @param profileState the broadcast's `EXTRA_STATE`, for the two profile broadcasts.
- * @param transport the broadcast's `EXTRA_TRANSPORT`, which only Android 13 and later send.
- * Null when it is absent.
+ * @param transport the broadcast's `EXTRA_TRANSPORT`, which the two link broadcasts carry.
+ * Null when it is absent, and the link is then taken for the classic one.
  * @return null for an action that is not one of the four, and for a profile that is only on its
  * way to a state ("connecting", "disconnecting"), which changes nothing yet.
  */
@@ -136,8 +136,8 @@ internal fun decideBroadcast(
 /** What a companion device callback says happened, whichever Android version sent it. */
 internal enum class CompanionSignal(val what: String, val trigger: TripTrigger) {
     /**
-     * "Appeared". It starts a trip that must be confirmed within 15 seconds (ADR-002): on
-     * Android 13 to 15 the callback also fires when the truck is only seen nearby.
+     * "Appeared". It starts a trip that must be confirmed within 15 seconds (ADR-002): up to
+     * Android 15 the callback also fires when the truck is only seen nearby.
      */
     APPEARED("device appeared", TripTrigger.TRUCK_APPEARED),
 
@@ -161,16 +161,15 @@ internal fun companionSignal(presenceEvent: Int): CompanionSignal? = when (prese
  * for devices MilO itself is associated with, and that is normally the truck alone.
  *
  * @param address the address the callback named, or null (Android 16 names only the id).
- * @param associationId the association the callback named, or null (Android 12 names only the
- * address).
+ * @param associationId the association the callback named.
  */
 internal fun decideCompanion(
     signal: CompanionSignal,
     address: String?,
-    associationId: Int?,
+    associationId: Int,
     lookup: TruckLookup,
 ): SignalDecision {
-    val named = listOfNotNull(address, associationId?.let { "association $it" }).joinToString()
+    val named = listOfNotNull(address, "association $associationId").joinToString()
     val what = "companion service: ${signal.what} ($named)"
     val truck = lookup.truck
     return when {

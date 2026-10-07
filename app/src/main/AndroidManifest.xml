@@ -13,17 +13,16 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!--
         "Allow all the time". Without it, a location service started while MilO is in the
-        background throws on Android 14 and gets no location on Android 12 and 13. Every
-        automatic trip start is such a start.
+        background throws. Every automatic trip start is such a start.
     -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- The trip service. The second permission is required for its type from Android 14. -->
+    <!-- The trip service. The second permission is required for its type, "location". -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!--
-        A runtime permission from Android 13. Without it the trip service still runs, but its
+        A runtime permission. Without it the trip service still runs, but its
         notification, the "could not start this trip" warning, the driving alert, the monthly
         reminder and the daily check's notification are not shown.
     -->
@@ -57,7 +56,7 @@
         - OBSERVE: Android binds MilO's companion service when the truck connects.
         - START_FOREGROUND_SERVICES_FROM_BACKGROUND: with an association, the documented and
           standing permission to start the trip service while MilO is in the background.
-        - RUN_IN_BACKGROUND: declared on purpose. On Android 12 to 15, an app that has an
+        - RUN_IN_BACKGROUND: declared on purpose. Up to Android 15, an app that has an
           association but not this permission is taken off the battery allowlist at every
           reinstall (ADR-002, "Permissions declared").
     -->
@@ -208,7 +207,6 @@
             Android binds this when the truck connects, starting MilO's process if it has to
             (ADR-002, the companion service). Exported because the binding comes from Android's
             companion device manager, outside MilO; the permission lets nothing else bind it.
-            Android 12 refuses to bind unless an app declares exactly one such service.
         -->
         <service
             android:name=".platform.bluetooth.TruckCompanionService"

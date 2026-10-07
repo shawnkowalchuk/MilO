@@ -86,9 +86,10 @@ android {
 
     defaultConfig {
         applicationId = "com.shawnkowalchuk.milo"
-        // The app runs on one phone (Android 14, API 34). 31 is the floor because the companion
-        // device and foreground-service rules the trip detection relies on changed at Android 12.
-        minSdk = 31
+        // The app runs on one phone (Android 14, API 34), and that is the floor: code for an
+        // older Android could be tested nowhere (FINDINGS_LOG, 2026-10-07). Do not lower it
+        // without putting the Android 12 and 13 branches back.
+        minSdk = 34
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"

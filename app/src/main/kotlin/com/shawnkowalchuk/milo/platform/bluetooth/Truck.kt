@@ -12,8 +12,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * @param address its Bluetooth address, in capitals, the way Android's Bluetooth classes write it.
  * @param name its name as the phone shows it, or null if it has none.
- * @param associationId the id of its companion device association. Null on Android 12, which
- * has no such id, and on a phone without companion device support.
+ * @param associationId the id of its companion device association. Null on a phone without
+ * companion device support, and for a truck that arrived with a restore or an import and has no
+ * association on this phone yet.
  */
 data class Truck(val address: String, val name: String?, val associationId: Int?) {
     /**

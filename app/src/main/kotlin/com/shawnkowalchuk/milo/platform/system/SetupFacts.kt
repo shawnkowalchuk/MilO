@@ -24,8 +24,6 @@ enum class AutostartReading { LOOKS_ON, LOOKS_OFF, UNKNOWN }
  * @param preflight the five facts that stop a trip from being recorded, read by the same code
  * that checks them before the trip service is started.
  * @param notificationsEnabled whether MilO's notifications are shown at all.
- * @param notificationPermissionAskable true from Android 13, where notifications are a runtime
- * permission MilO can ask for. Before that they can only be switched on in the phone's settings.
  * @param ignoringBatteryOptimizations Android's battery optimisation exemption ("Unrestricted").
  * @param exemptFromUnusedAppPause whether "Pause app activity if unused" is off for MilO.
  * @param batterySaverOn the phone-wide Battery Saver, which throttles location and background
@@ -38,7 +36,6 @@ enum class AutostartReading { LOOKS_ON, LOOKS_OFF, UNKNOWN }
 data class SetupFacts(
     val preflight: PreflightFacts,
     val notificationsEnabled: Boolean,
-    val notificationPermissionAskable: Boolean,
     val ignoringBatteryOptimizations: Boolean,
     val exemptFromUnusedAppPause: Boolean,
     val batterySaverOn: Boolean,
@@ -79,10 +76,9 @@ class SetupReader(private val context: Context, private val preflight: TripPrefl
         val isXiaomi = isXiaomiFamily(Build.MANUFACTURER, Build.BRAND)
         return SetupFacts(
             preflight = preflight.facts(),
-            // Also false from Android 13 on while the notification permission is not granted.
+            // Also false while the notification permission is not granted.
             notificationsEnabled =
                 context.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
-            notificationPermissionAskable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
             ignoringBatteryOptimizations = power.isIgnoringBatteryOptimizations(
                 context.packageName,
             ),

@@ -39,7 +39,7 @@ class TruckSignalsTest {
     }
 
     @Test
-    fun `Android 12 sends no transport, and the link is then taken for the classic one`() {
+    fun `a link broadcast that names no transport is taken for the classic one`() {
         val classic = BluetoothDevice.TRANSPORT_BREDR
 
         assertEquals(
@@ -191,13 +191,14 @@ class TruckSignalsTest {
     }
 
     @Test
-    fun `a callback is matched by address on Android 12 to 15`() {
-        val byAddress = decideCompanion(CompanionSignal.APPEARED, "aa:bb:cc:dd:ee:ff", null, PAIRED)
+    fun `a callback of Android 14 and 15 names both, and the address alone is enough`() {
+        // The number Android gives the association can be newer than the one MilO stored.
+        val byAddress = decideCompanion(CompanionSignal.APPEARED, "aa:bb:cc:dd:ee:ff", 99, PAIRED)
 
         assertEquals(
             SignalDecision.Fire(
                 TripTrigger.TRUCK_APPEARED,
-                "companion service: device appeared (aa:bb:cc:dd:ee:ff)",
+                "companion service: device appeared (aa:bb:cc:dd:ee:ff, association 99)",
             ),
             byAddress,
         )

@@ -28,7 +28,7 @@ Constraints that shaped the choices:
 ### Project shape
 
 - One Gradle module, `:app`, at the repo root. `applicationId` and `namespace`: `com.shawnkowalchuk.milo`. App name: MilO.
-- minSdk 31, compileSdk 37, targetSdk 37. Android 17 (API 37) is the newest stable platform, and the current AndroidX releases require compileSdk 37 (V27, V28).
+- minSdk 34, compileSdk 37, targetSdk 37. Android 17 (API 37) is the newest stable platform, and the current AndroidX releases require compileSdk 37 (V27, V28). *(minSdk was 31 until 2026-10-07. Asked which Android versions MilO should run on, Shawn chose "Android 14 and newer" on 2026-10-06: the one phone runs Android 14, API 34, and code for Android 12 and 13 could be tested nowhere. That code is gone. See the findings log, 2026-10-07.)*
 - Feature-first packages inside the one module: `app/`, `feature/<name>/`, `core/designsystem/`, `core/util/`, `data/`, `platform/`. The layout and its rules are in ENGINEERING_STANDARDS §3.
 - Manual dependency injection: an `AppContainer` created by the `Application` class.
 - Signing: the standard debug keystore for now. No signing config in the repo. *(Superseded on 2026-10-05: builds for the phone are signed with a dedicated key outside the repo. See ENGINEERING_STANDARDS §12 and the findings log.)*

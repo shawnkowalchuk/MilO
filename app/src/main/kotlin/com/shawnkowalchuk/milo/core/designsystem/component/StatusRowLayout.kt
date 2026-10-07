@@ -160,7 +160,7 @@ private fun StatusRowButtonLine(
     secondaryAction: StatusRowAction?,
     status: RowStatus,
 ) {
-    val drawn = Modifier.takesDrawnHeight(ButtonDefaults.MinHeight)
+    val drawn = Modifier.takesUpOnly(ButtonDefaults.MinHeight)
     Row(horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.buttonGap)) {
         if (secondaryAction != null) {
             RowButton(

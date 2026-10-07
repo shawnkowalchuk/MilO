@@ -38,7 +38,7 @@ class TruckTest {
     @Test
     fun `an event that names nothing is not the truck's`() {
         assertFalse(truck.isDevice(address = null, associationId = null))
-        // Android 12 has no association ids. No id on both sides is not a match.
+        // A truck stored without an association has no id. No id on both sides is not a match.
         val withoutId = truck.copy(associationId = null)
         assertFalse(withoutId.isDevice(address = null, associationId = null))
     }

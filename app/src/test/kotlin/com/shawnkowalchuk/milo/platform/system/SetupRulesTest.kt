@@ -90,20 +90,15 @@ class SetupRulesTest {
     }
 
     @Test
-    fun `notifications are asked for with the dialog from Android 13 and in settings before`() {
-        val android13 = allGood.copy(notificationsEnabled = false)
-        val android12 = android13.copy(notificationPermissionAskable = false)
+    fun `notifications are asked for with the dialog, and in the settings once it is spent`() {
+        val switchedOff = allGood.copy(notificationsEnabled = false)
 
         assertEquals(
             SetupFix.AskPermission(
                 listOf("android.permission.POST_NOTIFICATIONS"),
                 ifNotAsked = SystemScreen.APP_NOTIFICATIONS,
             ),
-            rows(android13).row(SetupItem.NOTIFICATIONS).fix,
-        )
-        assertEquals(
-            SetupFix.Open(SystemScreen.APP_NOTIFICATIONS),
-            rows(android12).row(SetupItem.NOTIFICATIONS).fix,
+            rows(switchedOff).row(SetupItem.NOTIFICATIONS).fix,
         )
     }
 

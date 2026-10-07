@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.pairing
 
+import android.companion.CompanionDeviceManager
 import android.content.IntentSender
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDeviceList
@@ -89,19 +90,16 @@ data class PairingInputs(
 )
 
 /** The consent dialog's result when it was closed with Back or a tap outside it. */
-private const val CONSENT_CANCELLED = 0
+private const val CONSENT_CANCELLED = CompanionDeviceManager.RESULT_CANCELED
 
-/**
- * The consent dialog's result for "Don't allow": `CompanionDeviceManager.RESULT_USER_REJECTED`,
- * written out because the constant arrived with Android 13 and MilO also runs on Android 12.
- */
-private const val CONSENT_REFUSED = 1
+/** The consent dialog's result for "Don't allow". */
+private const val CONSENT_REFUSED = CompanionDeviceManager.RESULT_USER_REJECTED
 
 /**
  * Whether [resultCode], the result of Android's consent dialog, means that Shawn himself closed
  * or refused it. That is not an error: he changed his mind, and nothing was changed.
  *
- * From Android 13 the dialog has other results that are not "allowed" either: Android gave up
+ * The dialog has other results that are not "allowed" either: Android gave up
  * looking for the device (2), or failed inside (3). Those are failures, and the screen has to
  * say so; told to "pick again" he would never learn why it keeps not working.
  */

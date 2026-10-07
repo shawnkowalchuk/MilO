@@ -125,14 +125,10 @@ private fun backgroundLocationRow(preflight: PreflightFacts): SetupRow = when {
 private fun notificationsRow(facts: SetupFacts): SetupRow = simpleRow(
     SetupItem.NOTIFICATIONS,
     facts.notificationsEnabled,
-    if (facts.notificationPermissionAskable) {
-        SetupFix.AskPermission(
-            listOf(POST_NOTIFICATIONS_PERMISSION),
-            ifNotAsked = SystemScreen.APP_NOTIFICATIONS,
-        )
-    } else {
-        SetupFix.Open(SystemScreen.APP_NOTIFICATIONS)
-    },
+    SetupFix.AskPermission(
+        listOf(Manifest.permission.POST_NOTIFICATIONS),
+        ifNotAsked = SystemScreen.APP_NOTIFICATIONS,
+    ),
 )
 
 private fun nearbyDevicesRow(preflight: PreflightFacts): SetupRow = simpleRow(
@@ -286,10 +282,3 @@ private fun confirmRow(
         SetupRow(item, SetupState.NEEDS_CONFIRMATION, SetupDetail.NOT_CONFIRMED, fix, step)
     }
 }
-
-/**
- * `Manifest.permission.POST_NOTIFICATIONS`, written out. The constant arrived with Android 13
- * and MilO also runs on Android 12; it is only ever asked for on 13 and later (see
- * [SetupFacts.notificationPermissionAskable]).
- */
-private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"

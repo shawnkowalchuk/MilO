@@ -1,6 +1,6 @@
 # MilO
 
-MilO is Shawn's own Android app for one phone, a Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It records the business kilometres driven in the work truck and makes the monthly mileage report for the accountant, as a PDF and as a CSV file. It has no account, no server and no internet permission: every trip stays on the phone unless Shawn sends or saves a file himself. It is installed over USB from the Mac mini, and is not on the Play Store.
+MilO is Shawn's own Android app for one phone, a Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It runs on Android 14 and newer only. It records the business kilometres driven in the work truck and makes the monthly mileage report for the accountant, as a PDF and as a CSV file. It has no account, no server and no internet permission: every trip stays on the phone unless Shawn sends or saves a file himself. It is installed over USB from the Mac mini, and is not on the Play Store.
 
 **What MilO does by itself**
 

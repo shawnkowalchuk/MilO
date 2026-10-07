@@ -201,8 +201,8 @@ class PairingUiStateTest {
         assertTrue(consentWasDeclined(1))
         // Allowed.
         assertFalse(consentWasDeclined(-1))
-        // Android 13 and later: it gave up looking for the device, it failed inside, and
-        // whatever a later version may add.
+        // Android gave up looking for the device, it failed inside, and whatever a later
+        // version may add.
         assertFalse(consentWasDeclined(2))
         assertFalse(consentWasDeclined(3))
         assertFalse(consentWasDeclined(4))

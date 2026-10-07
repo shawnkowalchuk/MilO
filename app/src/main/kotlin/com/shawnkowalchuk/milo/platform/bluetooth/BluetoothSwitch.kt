@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -44,11 +43,6 @@ fun bluetoothSwitchChanges(context: Context): Flow<Unit> = callbackFlow {
             }
         }
     val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-    } else {
-        // Android 12 has no such flag: every receiver registered in code is exported.
-        appContext.registerReceiver(receiver, filter)
-    }
+    appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
     awaitClose { appContext.unregisterReceiver(receiver) }
 }

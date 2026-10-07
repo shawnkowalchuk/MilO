@@ -1,13 +1,11 @@
 package com.shawnkowalchuk.milo.platform.bluetooth
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import com.shawnkowalchuk.milo.app.MiloApplication
@@ -45,9 +43,6 @@ class TruckBluetoothReceiver : BroadcastReceiver() {
     /** True only on the instance the trip service registers for itself. */
     private var inService = false
 
-    // EXTRA_TRANSPORT is new in Android 13. Its name is compiled in, so asking for it is safe
-    // on Android 12, where the broadcast simply does not carry it.
-    @SuppressLint("InlinedApi")
     override fun onReceive(context: Context, intent: Intent) {
         val signal =
             bluetoothSignal(
@@ -71,12 +66,7 @@ class TruckBluetoothReceiver : BroadcastReceiver() {
     fun registerIn(context: Context) {
         inService = true
         val filter = IntentFilter().apply { TRUCK_BROADCAST_ACTIONS.forEach(::addAction) }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(this, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            // Android 12 has no such flag: every receiver registered in code is exported.
-            context.registerReceiver(this, filter)
-        }
+        context.registerReceiver(this, filter, Context.RECEIVER_EXPORTED)
     }
 
     fun unregisterFrom(context: Context) {
@@ -86,19 +76,8 @@ class TruckBluetoothReceiver : BroadcastReceiver() {
     private fun Intent.intOrNull(name: String): Int? =
         if (hasExtra(name)) getIntExtra(name, 0) else null
 
-    private fun Intent.deviceAddress(): String? {
-        val device =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-            } else {
-                // The typed call arrived with Android 13, where it can throw from inside
-                // Android (AndroidX uses it from Android 14 for that reason). Older versions
-                // have only this one.
-                @Suppress("DEPRECATION")
-                getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-            }
-        return device?.address
-    }
+    private fun Intent.deviceAddress(): String? =
+        getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)?.address
 }
 
 /**
