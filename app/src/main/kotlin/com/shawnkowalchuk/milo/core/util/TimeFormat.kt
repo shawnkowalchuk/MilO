@@ -128,6 +128,14 @@ fun formatDay(date: LocalDate, locale: Locale): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale).format(date)
 
 /**
+ * A day in the medium form of the user's language, with its year: "5 Oct 2026". For a place
+ * too narrow for the long form, where the year still has to be said: the two days of a date
+ * range.
+ */
+fun formatMediumDay(date: LocalDate, locale: Locale): String =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date)
+
+/**
  * A stored time as a date only, in the medium form of the user's language: "5 Oct 2026". Used
  * where the day matters and the time of day does not, such as the day a setting was confirmed.
  */

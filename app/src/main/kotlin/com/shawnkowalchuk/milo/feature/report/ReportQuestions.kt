@@ -12,6 +12,7 @@ import com.shawnkowalchuk.milo.core.report.periodInWords
 import com.shawnkowalchuk.milo.core.util.formatDate
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.SentEffect
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
@@ -21,6 +22,9 @@ import java.util.Locale
 // The questions of the Report screen: before a month is sent that has not ended, before a
 // period is sent a second time, when MilO is in front again after the email app, whether the
 // email was sent, and before a report is removed from the list of sent reports.
+
+/** What stands between two paragraphs of a question: an empty line. */
+private const val PARAGRAPH_BREAK = "\n\n"
 
 /** A period in the words of the screen, the PDF and the email's subject. */
 @Composable
@@ -137,6 +141,60 @@ private fun ResendQuestion(resend: Resend, zone: ZoneId, onSend: () -> Unit, onK
         confirmLabel = stringResource(R.string.report_resend_confirm),
         dismissLabel = stringResource(R.string.action_cancel),
         onConfirm = onSend,
+        onDismiss = onKeep,
+    )
+}
+
+/**
+ * Asked before a report is marked as sent without the email app. It says what marking does,
+ * which is what "I sent it" would do for the same period (`sentEffect`), with the figures that
+ * are recorded, and for a month that has not ended what that costs. "Mark as sent" records it;
+ * Cancel, Back and a tap beside the question record nothing.
+ *
+ * @param summary what the report holds at this moment: the figures that are recorded.
+ */
+@Composable
+internal fun MarkQuestion(
+    state: ReportUiState.Ready,
+    summary: ReportSummary,
+    onMark: () -> Unit,
+    onKeep: () -> Unit,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    val period = periodWords(state.choice.period, locale)
+    val trips = pluralStringResource(R.plurals.trips_count, summary.tripCount, summary.tripCount)
+    val km = stringResource(R.string.distance_km, formatTenths(summary.tenths, locale))
+    val what =
+        when (val effect = state.ifSent) {
+            SentEffect.MarksMonth ->
+                stringResource(R.string.report_mark_text_month, period, trips, km)
+
+            is SentEffect.RevisesMonth ->
+                stringResource(
+                    R.string.report_mark_text_month_again,
+                    period,
+                    trips,
+                    km,
+                    effect.revision,
+                    formatDate(effect.firstSentAtMs, state.zone, locale),
+                )
+
+            SentEffect.ListsRange ->
+                stringResource(R.string.report_mark_text_range, period, trips, km)
+        }
+    val notEnded =
+        if (SendQuestion.MONTH_NOT_ENDED in state.sendQuestions) {
+            stringResource(R.string.report_mark_not_ended, period)
+        } else {
+            null
+        }
+    val paragraphs = listOfNotNull(what, notEnded, stringResource(R.string.report_mark_use))
+    ConfirmDialog(
+        title = stringResource(R.string.report_mark_title),
+        text = paragraphs.joinToString(separator = PARAGRAPH_BREAK),
+        confirmLabel = stringResource(R.string.report_mark_sent),
+        dismissLabel = stringResource(R.string.action_cancel),
+        onConfirm = onMark,
         onDismiss = onKeep,
     )
 }

@@ -22,8 +22,9 @@ enum class SentReportKind {
  * One report Shawn has said he sent: a line of the list of sent reports, and, for a report of a
  * whole month, what makes that month "submitted".
  *
- * A row is written when he answers "I sent it" after coming back from the email app, and at no
- * other moment: Android cannot tell an app whether an email was sent, so MilO takes his word.
+ * A row is written when he answers "I sent it" after coming back from the email app, or
+ * presses "Mark as sent" on the Report screen and says yes to its question, and at no other
+ * moment: Android cannot tell an app whether an email was sent, so MilO takes his word.
  * A row is never changed afterwards. It is a record of what was sent, with the figures the
  * report had then, which later edits of the trips do not reach. It leaves the table in one way
  * only: he removes it himself on the Report screen, because it was recorded by mistake.
@@ -35,7 +36,8 @@ enum class SentReportKind {
  * [SentReportKind.MONTH] the two are the first and the last day of that month.
  * @param sentAtMs when the email app was opened with the report, wall-clock milliseconds since
  * 1970: the moment the report left MilO, which is the day he says he sent it, however much
- * later he answers the question.
+ * later he answers the question. For a report that was marked as sent by hand, the moment it
+ * was marked.
  * @param tripCount how many Business trips the report listed.
  * @param distanceMetres the total the report printed, in metres like every stored distance. It
  * is a whole number of tenths of a kilometre, because the report adds up the figures it prints.

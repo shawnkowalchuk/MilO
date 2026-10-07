@@ -3,7 +3,7 @@ package com.shawnkowalchuk.milo.feature.report
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import java.time.LocalDate
 
-// What "Send to accountant" asks before it opens the email app. A pure function, so the cases
+// What "Email the report" asks before it opens the email app. A pure function, so the cases
 // are tested without a phone.
 
 /** A question that is asked before a report is sent. */

@@ -20,6 +20,7 @@ private const val REPORTS_AUTHORITY_SUFFIX = ".reports"
 private const val PDF_TYPE = "application/pdf"
 private const val CSV_TYPE = "text/csv"
 private const val TEXT_TYPE = "text/plain"
+private const val ANY_TYPE = "*/*"
 private const val MAIL_SCHEME = "mailto"
 
 /**
@@ -89,6 +90,34 @@ class ReportHandOff(context: Context) {
      * @param title what the share sheet and the receiving app are told the file is.
      */
     fun toShare(csv: File, title: String): Intent = shareSheet(csv, CSV_TYPE, title)
+
+    /**
+     * Offers the report's two files together, [pdf] and [csv], to Android's share sheet, so
+     * that both can be saved to one place in one go (Drive, Files) or sent with an app of
+     * Shawn's own choosing. Nothing is chosen for him, and nothing is recorded as sent.
+     *
+     * @param title what the share sheet and the receiving app are told the files are.
+     */
+    fun toShareBoth(pdf: File, csv: File, title: String): Intent {
+        val uris = arrayListOf(uriOf(pdf), uriOf(csv))
+        val send =
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                // Two kinds of file, so the request names no single kind; the two it holds
+                // are listed for an app that asks.
+                type = ANY_TYPE
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(PDF_TYPE, CSV_TYPE))
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                // Both addresses go on the request as clip data, which is where Android looks
+                // when it hands the permission to read them on.
+                clipData =
+                    ClipData.newRawUri("", uris.first()).apply {
+                        uris.drop(1).forEach { addItem(ClipData.Item(it)) }
+                    }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        return Intent.createChooser(send, title)
+    }
 
     /**
      * Offers the event log, written to [log] as plain text, to Android's share sheet. Where it

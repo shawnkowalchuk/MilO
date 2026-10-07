@@ -42,6 +42,9 @@ private val ThumbSize = 22.dp
  * what is listed, as the design draws it on Trips: its label is small and grey, and the row
  * takes up no more than the height of the switch. The place a finger can hit stays 48 dp high:
  * it reaches into the room the tiles above and below keep free.
+ * @param quietOnTile true for a quiet switch that stands in a tile, as the design draws it on
+ * the edit screen: the same small label and the same height, with the label in the tile's own
+ * text colour. What stands above and below it in the tile has to leave 10 dp free.
  */
 @Composable
 fun SwitchRow(
@@ -50,12 +53,14 @@ fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     quiet: Boolean = false,
+    quietOnTile: Boolean = false,
 ) {
+    val small = quiet || quietOnTile
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .then(if (quiet) Modifier.takesUpOnly(TrackHeight) else Modifier)
+                .then(if (small) Modifier.takesUpOnly(TrackHeight) else Modifier)
                 .heightIn(min = MinHeight)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
@@ -64,7 +69,7 @@ fun SwitchRow(
         Text(
             text = label,
             style =
-                if (quiet) {
+                if (small) {
                     MiloTheme.textStyles.quietLabel
                 } else {
                     MaterialTheme.typography.bodyLarge

@@ -70,6 +70,9 @@ private val StrongBorder = 2.dp
  * @param placeholder grey words inside the field while it is empty, as the design draws them:
  * an example of what goes in ("name@example.com"). They go with the first letter typed. A
  * screen reader is not told them: the label says what the field is.
+ * @param figure true for a field that is the one thing in a tile and holds a figure, as the
+ * design draws the distance on the edit screen: what is typed is set large and firm, and the
+ * label above it is the tile's own label, with the room a tile keeps under its label.
  */
 @Composable
 fun TextEntry(
@@ -83,6 +86,7 @@ fun TextEntry(
     lastField: Boolean = false,
     error: String? = null,
     placeholder: String? = null,
+    figure: Boolean = false,
 ) {
     var text by remember { mutableStateOf(initialText) }
     val interactions = remember { MutableInteractionSource() }
@@ -103,7 +107,9 @@ fun TextEntry(
         // and without the import above, the same words would call Kotlin's own error(), which
         // stops the app.
         modifier = modifier.fillMaxWidth().semantics { if (error != null) this.error(error) },
-        textStyle = MiloTheme.textStyles.fieldText.copy(color = scheme.onSurface),
+        textStyle =
+            (if (figure) MiloTheme.textStyles.fieldFigure else MiloTheme.textStyles.fieldText)
+                .copy(color = scheme.onSurface),
         keyboardOptions =
             KeyboardOptions(
                 capitalization =
@@ -131,10 +137,19 @@ fun TextEntry(
         // screen reader then reads the label with the field, and a tap on the label puts the
         // cursor in the field.
         decorationBox = { typedText ->
-            Column(verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.extraSmall)) {
+            val spacing = MiloTheme.spacing
+            Column(
+                verticalArrangement =
+                    Arrangement.spacedBy(if (figure) spacing.small else spacing.extraSmall),
+            ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodySmall,
+                    style =
+                        if (figure) {
+                            MiloTheme.textStyles.tileLabel
+                        } else {
+                            MaterialTheme.typography.bodySmall
+                        },
                     color = scheme.onSurfaceVariant,
                 )
                 Box(

@@ -6,10 +6,8 @@ import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
 import com.shawnkowalchuk.milo.platform.report.ReportDocuments
-import com.shawnkowalchuk.milo.platform.report.ReportFile
 import com.shawnkowalchuk.milo.platform.report.ReportHandOff
 import com.shawnkowalchuk.milo.platform.report.ReportTexts
-import java.io.IOException
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -48,19 +46,19 @@ private const val KEEP_WATCHING_MS = 5_000L
 class ReportViewModel(
     openedFor: YearMonth,
     reading: ReportReading,
-    private val documents: ReportDocuments,
-    private val handOff: ReportHandOff,
-    private val texts: ReportTexts,
+    documents: ReportDocuments,
+    handOff: ReportHandOff,
+    texts: ReportTexts,
     private val records: ReportRecords,
     private val onRecordedAsSent: () -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
 ) : ViewModel() {
-    /** The PDF that was made last, and the report it was made of. */
-    private data class Created(val report: MileageReport, val file: ReportFile)
-
+    private val files = ReportFiles(documents, handOff, texts, records)
     private val chosen = MutableStateFlow(opening(openedFor))
-    private val created = MutableStateFlow<Created?>(null)
+
+    /** The PDF that was made last. */
+    private val created = MutableStateFlow<CreatedPdf?>(null)
     private val passing = MutableStateFlow(ReportPassing())
     private var launches = 0
 
@@ -81,10 +79,11 @@ class ReportViewModel(
                 stored == null -> ReportUiState.Unreadable
 
                 else -> {
-                    // The PDF can be opened only while it is of the report as it is now. A
-                    // trip that ended since, or a changed name, makes it an old one.
+                    // The PDF that was made counts only while it is of the report as it is
+                    // now. A trip that ended since, or a changed name, makes it an old one.
                     val report = from.reportFor(ReportNeed.PDF)
                     val pages = made?.takeIf { it.report == report }?.file?.pageCount
+                    val name = report?.let(files::pdfName)
                     reportUiState(
                         choice = from.chosen.choice,
                         today = from.chosen.today,
@@ -92,7 +91,7 @@ class ReportViewModel(
                         selection = from.selection,
                         settings = stored,
                         sent = from.sent,
-                        passing = now.copy(pdfPages = pages),
+                        passing = now.copy(pdfName = name, pdfPages = pages),
                     )
                 }
             }
@@ -103,14 +102,7 @@ class ReportViewModel(
         )
 
     init {
-        // Report files from earlier weeks. They are in the cache and can be made again.
-        viewModelScope.launch {
-            try {
-                documents.removeOldFiles(clock())
-            } catch (failure: IOException) {
-                records.failed("Removing old report files", failure)
-            }
-        }
+        viewModelScope.launch { files.removeOld(clock()) }
     }
 
     fun onKind(kind: PeriodKind) = choose { choice, _ -> choice.copy(kind = kind) }
@@ -129,26 +121,13 @@ class ReportViewModel(
         chosen.update { it.copy(today = now.today, zone = now.zone) }
     }
 
-    /** Makes the PDF of the report as the screen shows it, to be looked at. */
-    fun onCreatePdf() = make(ReportNeed.PDF) { report ->
-        val file = documents.createPdf(report)
-        created.value = Created(report, file)
-        records.created("PDF", report.period, report.tripCount, report.totalTenths)
-        null
-    }
-
     /**
-     * Opens the PDF that was made, in whatever app the phone shows a PDF with.
-     *
-     * The file is in the cache, which Android empties by itself when the phone runs short of
-     * room (seen on an emulator, where it was gone seconds after it was made). So it is looked
-     * for first, and made again if it is no longer there or no longer the report on screen.
+     * "Preview PDF": opens the PDF of the report as the screen shows it, in whatever app the
+     * phone shows a PDF with. It is made first if there is none of exactly this report.
      */
-    fun onOpenPdf() = make(ReportNeed.PDF) { report ->
-        val made = created.value?.takeIf { it.report == report && documents.holds(it.file) }
-        val file = made?.file ?: documents.createPdf(report)
-        created.value = Created(report, file)
-        ReportLaunch(++launches, LaunchKind.PDF_VIEWER, listOf(handOff.toView(file.file)))
+    fun onPreviewPdf() = make(ReportNeed.PDF) { report ->
+        val pdf = files.pdf(report, created.value).also { created.value = it }
+        ReportLaunch(++launches, LaunchKind.PDF_VIEWER, files.toView(pdf))
     }
 
     /**
@@ -169,30 +148,48 @@ class ReportViewModel(
     private suspend fun handOver(report: MileageReport): ReportLaunch? {
         // Checked by make(): sending needs the address.
         val address = sources.value?.settings?.accountantEmail ?: return null
-        val file = documents.createPdf(report)
-        created.value = Created(report, file)
+        val pdf = files.freshPdf(report).also { created.value = it }
         val handOver = ReportHandOver(report.period, report.tripCount, report.totalTenths, clock())
         records.awaitAnswerFor(handOver)
         return ReportLaunch(
-            id = ++launches,
-            kind = LaunchKind.EMAIL,
-            intents =
-                handOff.toAccountant(
-                    pdf = file.file,
-                    address = address,
-                    subject = texts.subject(report),
-                    body = texts.body(report),
-                ),
-            handOver = handOver,
+            ++launches,
+            LaunchKind.EMAIL,
+            files.toAccountant(pdf, address),
+            handOver,
         )
     }
 
     /** Makes the CSV of the same trips and offers it to Android's share sheet. */
     fun onExportCsv() = make(ReportNeed.NOTHING) { report ->
-        val file = documents.createCsv(report)
-        records.created("CSV", report.period, report.tripCount, report.totalTenths)
-        val title = texts.subject(report)
-        ReportLaunch(++launches, LaunchKind.SHARE, listOf(handOff.toShare(file.file, title)))
+        ReportLaunch(++launches, LaunchKind.SHARE, files.csvToShare(report))
+    }
+
+    /**
+     * "Save PDF and CSV": makes both files and offers them together to Android's share sheet,
+     * where each can be saved to Drive or to the phone's files. Nothing is recorded as sent.
+     */
+    fun onSaveBoth() = make(ReportNeed.PDF) { report ->
+        val pdf = files.pdf(report, created.value).also { created.value = it }
+        ReportLaunch(++launches, LaunchKind.SHARE, files.bothToShare(pdf))
+    }
+
+    /**
+     * "Mark as sent", once the screen has asked and Shawn has said yes: the report as the
+     * screen shows it is recorded as sent now, without the email app. It needs neither the
+     * name nor the address, because nothing is made and nothing is sent.
+     *
+     * One question at a time, as for sending: while a report that was handed to the email app
+     * still waits for its answer, nothing is marked.
+     */
+    fun onMarkSent() {
+        val from = sources.value ?: return
+        if (from.settings?.reportHandOver != null) return
+        // Still reading the trips: there is nothing true to record yet.
+        val report = from.reportFor(ReportNeed.NOTHING) ?: return
+        record(ReportProblem.COULD_NOT_RECORD) {
+            val stored = records.markedSent(report.period, report.tripCount, report.totalTenths)
+            (stored != null).also { if (it) onRecordedAsSent() }
+        }
     }
 
     /**

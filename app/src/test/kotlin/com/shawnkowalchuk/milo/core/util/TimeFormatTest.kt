@@ -174,6 +174,19 @@ class TimeFormatTest {
     }
 
     @Test
+    fun `a day in the medium form is short and still names its year`() {
+        val day = LocalDate.of(2026, 10, 5)
+
+        assertEquals("5 Oct 2026", formatMediumDay(day, Locale.UK))
+        // The same words as a stored time of that day is written in.
+        val noonThatDay = day.atTime(12, 0).atZone(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        assertEquals(
+            formatDate(noonThatDay, ZoneId.of("UTC"), Locale.US),
+            formatMediumDay(day, Locale.US),
+        )
+    }
+
+    @Test
     fun `a date is the local day the time fell on`() {
         // 23:30 on 2 October in Edmonton is already 3 October in UTC.
         val lateEvening = NOON_UTC_MS - 6 * 60 * 60 * 1000 - 30 * 60 * 1000

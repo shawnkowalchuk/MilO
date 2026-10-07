@@ -61,6 +61,12 @@ class ReportDocuments(private val texts: ReportTexts, private val files: ReportF
     }
 
     /**
+     * What the PDF of [report] is called, whether or not it has been made yet: the name
+     * [createPdf] gives its file. The Report screen shows it before anything is created.
+     */
+    fun pdfName(report: MileageReport): String = fileName(report, PDF_EXTENSION)
+
+    /**
      * Makes the CSV of the same trips.
      *
      * @throws IOException if the file cannot be written.

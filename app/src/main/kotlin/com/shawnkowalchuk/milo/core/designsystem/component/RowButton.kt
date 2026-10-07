@@ -19,6 +19,8 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
  *
  * @param accent true for the one button that puts a problem right: the accent with dark words.
  * Every other one is the quiet fill of a control on a tile.
+ * @param enabled false greys the button while it has to wait: the quiet fill of a control with
+ * the grey of secondary text, as on a main button that is switched off. It is never hidden.
  */
 @Composable
 internal fun RowButton(
@@ -26,19 +28,27 @@ internal fun RowButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     accent: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val control = MiloTheme.colors.control
+    val greyed = MaterialTheme.colorScheme.onSurfaceVariant
     Button(
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         shape = MiloTheme.shapes.control,
         colors =
             if (accent) {
-                ButtonDefaults.buttonColors()
+                ButtonDefaults.buttonColors(
+                    disabledContainerColor = control.fill,
+                    disabledContentColor = greyed,
+                )
             } else {
                 ButtonDefaults.buttonColors(
                     containerColor = control.fill,
                     contentColor = control.text,
+                    disabledContainerColor = control.fill,
+                    disabledContentColor = greyed,
                 )
             },
         contentPadding =

@@ -137,6 +137,8 @@ class TypefaceTest {
             "markLetter" to own.markLetter,
             "logTime" to own.logTime,
             "logTag" to own.logTag,
+            "tileFigure" to own.tileFigure,
+            "fieldFigure" to own.fieldFigure,
         )
     }
 }

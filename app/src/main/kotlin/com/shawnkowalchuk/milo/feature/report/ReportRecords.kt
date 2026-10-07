@@ -99,7 +99,31 @@ class ReportRecords(
      * @return the row as stored, or null if storage failed; the event log then says why, and
      * nothing was recorded.
      */
-    suspend fun answeredSent(report: ReportHandOver): SentReport? {
+    suspend fun answeredSent(report: ReportHandOver): SentReport? = recordSent(report, ::sentText)
+
+    /**
+     * Shawn pressed "Mark as sent", and said yes to its question: the report as the screen
+     * shows it is added to the list of sent reports without the email app having been opened.
+     * It is for a report he sent some other way, and for one he answered "Not sent" for by
+     * mistake. It is recorded as sent now, and does for a month or a range exactly what "I
+     * sent it" does; only the line in the event log says that it was marked by hand.
+     *
+     * @param tripCount and [tenths] are what the report lists and adds up to at this moment.
+     * @return the row as stored, or null if storage failed; the event log then says why, and
+     * nothing was recorded.
+     */
+    suspend fun markedSent(period: ReportPeriod, tripCount: Int, tenths: Long): SentReport? =
+        recordSent(ReportHandOver(period, tripCount, tenths, clock()), ::markedText)
+
+    /**
+     * Adds [report] to the list of sent reports, as sent at its own time.
+     *
+     * @param line the event-log line for the row as it was stored.
+     */
+    private suspend fun recordSent(
+        report: ReportHandOver,
+        line: (SentReport) -> String,
+    ): SentReport? {
         val stored =
             try {
                 sent.recordSent(
@@ -119,7 +143,7 @@ class ReportRecords(
         // After the write and outside the guard around it: a report that was recorded is never
         // reported as failed because its log line could not be written, which would have it
         // recorded a second time, as a revision that was never sent.
-        log(sentText(stored))
+        log(line(stored))
         return stored
     }
 
@@ -172,8 +196,18 @@ class ReportRecords(
     }
 }
 
-/** The event-log line for a report that was recorded as sent. */
-internal fun sentText(stored: SentReport): String {
+/** The event-log line for a report that was recorded as sent after the email app. */
+internal fun sentText(stored: SentReport): String =
+    "Report for ${stored.period.inLogWords()} recorded as sent, on Shawn's word: " +
+        whatWasRecorded(stored)
+
+/** The event-log line for a report that was marked as sent by hand, with no email app. */
+internal fun markedText(stored: SentReport): String =
+    "Report for ${stored.period.inLogWords()} marked as sent by hand on the Report screen, " +
+        "without the email app: " + whatWasRecorded(stored)
+
+/** Which report of its period a stored row is, its figures, and what it did to the month. */
+private fun whatWasRecorded(stored: SentReport): String {
     val which =
         if (stored.revision == 0) {
             "the first report for this period"
@@ -187,8 +221,7 @@ internal fun sentText(stored: SentReport): String {
             else -> "The month was marked as submitted before, and stays so"
         }
     val total = figures(stored.tripCount, tenthsOfAKilometre(stored.distanceMetres))
-    return "Report for ${stored.period.inLogWords()} recorded as sent, on Shawn's word: " +
-        "$which, $total. $effect"
+    return "$which, $total. $effect"
 }
 
 /** The event-log line for a report that was removed from the list of sent reports. */

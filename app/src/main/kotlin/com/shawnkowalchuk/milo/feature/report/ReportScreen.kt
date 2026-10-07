@@ -3,14 +3,6 @@ package com.shawnkowalchuk.milo.feature.report
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,28 +12,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
-import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
-import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
-import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import java.time.LocalDate
 
-/** What the cards of the Report screen can ask for. */
+/** What the tiles of the Report screen can ask for. */
 internal class ReportActions(
     val onKind: (PeriodKind) -> Unit,
     val onPreviousMonth: () -> Unit,
     val onNextMonth: () -> Unit,
     val onRangeFirst: (LocalDate) -> Unit,
     val onRangeLast: (LocalDate) -> Unit,
-    val onCreatePdf: () -> Unit,
-    val onOpenPdf: () -> Unit,
+    val onPreviewPdf: () -> Unit,
     val onSend: () -> Unit,
     val onExportCsv: () -> Unit,
+    val onSaveBoth: () -> Unit,
+    val onMarkSent: () -> Unit,
     val onOpenSettings: () -> Unit,
     val onRemoveSent: (Long) -> Unit,
 )
@@ -50,10 +37,11 @@ internal class ReportActions(
  * The report for the accountant: the Business trips of a month, or of a date range, as a PDF
  * that is handed to the email app, and as a CSV file.
  *
- * MilO sends nothing itself. "Send to accountant" opens the email app with the PDF attached,
+ * MilO sends nothing itself. "Email the report" opens the email app with the PDF attached,
  * and Shawn presses send there. Android does not tell an app what became of an email, so when
- * he is back MilO asks, and only his "I sent it" records the report as sent. A report that was
- * recorded by mistake can be removed from the list again, after a question.
+ * he is back MilO asks, and only his "I sent it" records the report as sent. "Mark as sent"
+ * records one without the email app, after a question, and a report that was recorded by
+ * mistake can be removed from the list again, after a question too.
  *
  * @param onBack leaves the screen. Navigation belongs to the app, not the feature.
  * @param onOpenSettings opens Settings, where the name and the accountant's address are set.
@@ -84,6 +72,8 @@ fun ReportScreen(
     // that turning the phone closes neither.
     var askingBeforeSend by rememberSaveable { mutableStateOf<Int?>(null) }
     var removingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Whether "Mark as sent" is asking its question. Saved for the same reason.
+    var askingToMark by rememberSaveable { mutableStateOf(false) }
 
     // Another app is opened on MilO's own activity, so that Back from it leads here. What comes
     // back says nothing about an email ("Output: nothing", in Android's own words): it only
@@ -119,8 +109,7 @@ fun ReportScreen(
             onNextMonth = viewModel::onNextMonth,
             onRangeFirst = viewModel::onRangeFirst,
             onRangeLast = viewModel::onRangeLast,
-            onCreatePdf = viewModel::onCreatePdf,
-            onOpenPdf = viewModel::onOpenPdf,
+            onPreviewPdf = viewModel::onPreviewPdf,
             onSend = {
                 when {
                     // A report that was handed over earlier still waits for its answer, put
@@ -138,6 +127,12 @@ fun ReportScreen(
                 }
             },
             onExportCsv = viewModel::onExportCsv,
+            onSaveBoth = viewModel::onSaveBoth,
+            onMarkSent = {
+                // One question at a time, as for sending: a report that was handed to the
+                // email app and still waits for its answer is asked about first.
+                if (ready?.awaiting != null) heldBack = false else askingToMark = true
+            },
             onOpenSettings = onOpenSettings,
             onRemoveSent = { id -> removingId = id },
         )
@@ -178,6 +173,19 @@ fun ReportScreen(
         )
     }
 
+    val marking = ready?.summary
+    if (ready != null && marking != null && askingToMark) {
+        MarkQuestion(
+            state = ready,
+            summary = marking,
+            onMark = {
+                askingToMark = false
+                viewModel.onMarkSent()
+            },
+            onKeep = { askingToMark = false },
+        )
+    }
+
     // Not while a file is being made or another app is about to be opened: the hand-over is
     // stored a moment before the email app covers the screen.
     val owed = ready?.awaiting
@@ -190,44 +198,5 @@ fun ReportScreen(
             onAnswer = viewModel::onAnswer,
             onPutOff = { heldBack = true },
         )
-    }
-}
-
-@Composable
-internal fun ReportContent(
-    state: ReportUiState,
-    actions: ReportActions,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
-    ) {
-        ScreenTitle(text = stringResource(R.string.report_title), onBack = onBack)
-        when (state) {
-            ReportUiState.Reading ->
-                Text(
-                    text = stringResource(R.string.report_reading),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-
-            ReportUiState.Unreadable ->
-                StatusRow(
-                    label = stringResource(R.string.report_settings_unreadable),
-                    status = RowStatus.PROBLEM,
-                )
-
-            is ReportUiState.Ready -> {
-                PeriodCard(state, actions)
-                SummaryCard(state)
-                ActionsCard(state, actions)
-                SentReportsCard(state, actions.onRemoveSent)
-            }
-        }
     }
 }

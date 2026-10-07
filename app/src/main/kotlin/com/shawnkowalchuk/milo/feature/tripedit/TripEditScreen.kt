@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,7 +11,6 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -21,18 +21,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
+import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.data.trip.RecordedValues
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 /**
  * What the form can ask for.
@@ -111,6 +110,12 @@ fun TripEditScreen(
     TripEditContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 }
 
+/**
+ * The edit screen as the owner's design draws it: the title behind the square back button,
+ * "When", "Where", and side by side "Distance, km" and "Saved as"; the line that says who
+ * chose Business or Personal; the Save button; and, for a trip that was edited, what MilO
+ * recorded.
+ */
 @Composable
 internal fun TripEditContent(
     state: TripEditUiState,
@@ -118,43 +123,47 @@ internal fun TripEditContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val spacing = MiloTheme.spacing
     val adding = (state as? TripEditUiState.Ready)?.adding == true
-    Column(
+    TileColumn(
         modifier =
             modifier
                 .fillMaxSize()
+                // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+                .padding(top = spacing.tileGap, bottom = spacing.small),
     ) {
         ScreenTitle(
             text =
                 stringResource(if (adding) R.string.trip_add_title else R.string.trip_edit_title),
             onBack = onBack,
+            // With the gap between two tiles, the design's 16 under the title.
+            modifier = Modifier.padding(bottom = spacing.buttonGap),
         )
         when (state) {
             TripEditUiState.Reading ->
-                Text(
-                    text = stringResource(R.string.trip_edit_reading),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                Tile(modifier = Modifier.fillMaxWidth()) {
+                    Quiet(stringResource(R.string.trip_edit_reading))
+                }
 
             TripEditUiState.NotEditable ->
-                StatusRow(
-                    label = stringResource(R.string.trip_edit_not_editable),
-                    status = RowStatus.PROBLEM,
-                )
+                Tile(modifier = Modifier.fillMaxWidth()) {
+                    StatusRow(
+                        label = stringResource(R.string.trip_edit_not_editable),
+                        status = RowStatus.PROBLEM,
+                    )
+                }
 
             is TripEditUiState.Ready -> Form(state, actions)
         }
     }
 }
 
-/** The cards of the form, the Save button, and the way back to what MilO recorded. */
+/** The tiles of the form, the Save button, and the way back to what MilO recorded. */
 @Composable
-private fun Form(state: TripEditUiState.Ready, actions: TripEditActions) {
-    val whenCard = remember { BringIntoViewRequester() }
-    val distanceCard = remember { BringIntoViewRequester() }
+private fun ColumnScope.Form(state: TripEditUiState.Ready, actions: TripEditActions) {
+    val whenTile = remember { BringIntoViewRequester() }
+    val distanceTile = remember { BringIntoViewRequester() }
     val saveArea = remember { BringIntoViewRequester() }
     // A press on Save that stored nothing is answered in red beside what is wrong, and that is
     // a screen or more above the button: without this, the press would seem to have done
@@ -168,9 +177,9 @@ private fun Form(state: TripEditUiState.Ready, actions: TripEditActions) {
             // their place, and the screen can tell how far to move.
             withFrameNanos { }
             when (state.firstProblemPart) {
-                FormPart.TIMES -> whenCard
+                FormPart.TIMES -> whenTile
 
-                FormPart.DISTANCE -> distanceCard
+                FormPart.DISTANCE -> distanceTile
 
                 // Nothing is wrong with the form: storage did not take it. Said at the button.
                 null -> saveArea
@@ -178,36 +187,46 @@ private fun Form(state: TripEditUiState.Ready, actions: TripEditActions) {
         }
     }
 
-    Quiet(stringResource(state.introRes()))
-    WhenCard(state, actions, Modifier.bringIntoViewRequester(whenCard))
-    WhereCard(state, actions)
-    DistanceCard(state, actions, Modifier.bringIntoViewRequester(distanceCard))
-    KindCard(state, actions)
+    // What sets a trip that is typed in apart from one MilO recorded, in from the edge like
+    // the line under the tiles. A recorded trip has no line here, as drawn.
+    state.introRes()?.let { Note(stringResource(it)) }
+    WhenTile(state, actions, Modifier.bringIntoViewRequester(whenTile))
+    WhereTile(state, actions)
+    TilePair(
+        first = { half ->
+            DistanceTile(state, actions, half.bringIntoViewRequester(distanceTile))
+        },
+        second = { half -> SavedAsTile(state, actions, half) },
+    )
+    // Who chose Business or Personal, under the two tiles as drawn.
+    Note(stringResource(state.kindSource.noteRes()))
     SaveArea(state, actions.onSave, Modifier.bringIntoViewRequester(saveArea))
-    state.recorded?.let { RecordedCard(it, state, actions.onRestore) }
+    state.recorded?.let { RecordedTile(it, state, actions.onRestore) }
 }
 
-private fun TripEditUiState.Ready.introRes(): Int = when {
+private fun TripEditUiState.Ready.introRes(): Int? = when {
     adding -> R.string.trip_add_intro
     addedByHand -> R.string.trip_edit_added_intro
-    else -> R.string.trip_edit_intro
+    else -> null
 }
 
 /**
  * The Save button and, directly above it, that storage did not take the last press. What is
- * wrong with the form itself is said in the cards, beside what is to be put right.
+ * wrong with the form itself is said in the tiles, beside what is to be put right.
  */
 @Composable
 private fun SaveArea(state: TripEditUiState.Ready, onSave: () -> Unit, modifier: Modifier) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.tileGap),
     ) {
         if (state.saveFailed) {
-            StatusRow(
-                label = stringResource(R.string.trip_edit_save_failed),
-                status = RowStatus.PROBLEM,
-            )
+            Tile(modifier = Modifier.fillMaxWidth()) {
+                StatusRow(
+                    label = stringResource(R.string.trip_edit_save_failed),
+                    status = RowStatus.PROBLEM,
+                )
+            }
         }
         PrimaryButton(
             text =
@@ -220,7 +239,7 @@ private fun SaveArea(state: TripEditUiState.Ready, onSave: () -> Unit, modifier:
     }
 }
 
-/** A quieter line of explanation, as the Settings screen writes them. */
+/** A quieter line of explanation inside a tile. */
 @Composable
 internal fun Quiet(text: String) {
     Text(
@@ -230,46 +249,13 @@ internal fun Quiet(text: String) {
     )
 }
 
-// Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+/** A quieter line that stands on the page, in from the edge like a label above a tile. */
 @Composable
-private fun TripEditPreview() {
-    val morning = 1_791_028_800_000
-    val state =
-        TripEditUiState.Ready(
-            adding = false,
-            addedByHand = false,
-            zone = ZoneId.of("UTC"),
-            date = LocalDate.of(2026, 10, 5),
-            latestDate = LocalDate.of(2026, 10, 6),
-            start = LocalTime.of(8, 5),
-            end = LocalTime.of(8, 39),
-            startDial = LocalTime.of(8, 5),
-            endDial = LocalTime.of(8, 39),
-            endsNextDay = false,
-            laterEndDate = null,
-            from = "12 Shop Rd, Edmonton",
-            to = "",
-            kilometres = "123",
-            storedMetres = 12_344.7,
-            category = TripCategory.BUSINESS,
-            kindSource = KindSource.BY_SCHEDULE,
-            problems = listOf(FormProblem.DISTANCE_TOO_FAST),
-            saveFailed = false,
-            refusals = 1,
-            recorded = RecordedValues(morning, morning + 1_500_000, 12_344.7),
-            unsaved = true,
-            closing = false,
-            savedStartMs = null,
-        )
-    MiloTheme {
-        Surface {
-            TripEditContent(
-                state = state,
-                actions =
-                    TripEditActions({}, { _, _ -> }, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}),
-                onBack = {},
-            )
-        }
-    }
+private fun Note(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(horizontal = MiloTheme.spacing.extraSmall),
+        style = MiloTheme.textStyles.tileLabel,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

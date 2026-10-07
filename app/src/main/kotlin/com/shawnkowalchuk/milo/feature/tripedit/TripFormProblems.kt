@@ -19,10 +19,10 @@ private const val MILLIS_PER_HOUR = 3_600_000.0
 
 /** The part of the form a problem is about: the screen says it there, beside what is wrong. */
 enum class FormPart {
-    /** The day and the two times: the card "When". */
+    /** The day and the two times: the tile "When". */
     TIMES,
 
-    /** The kilometres: the card "Distance". */
+    /** The kilometres: the tile "Distance, km". */
     DISTANCE,
 }
 

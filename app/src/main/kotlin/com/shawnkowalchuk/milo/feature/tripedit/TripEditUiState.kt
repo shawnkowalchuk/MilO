@@ -80,7 +80,7 @@ sealed interface TripEditUiState {
      * if the field is untouched: it then shows [storedMetres], written by the screen.
      * @param category the Business or Personal a save would store, and [kindSource] who chose.
      * @param problems what the last press on Save found wrong, kept up to date as the form is
-     * put right. Empty before the first press. Each is said in the card it is about
+     * put right. Empty before the first press. Each is said in the tile it is about
      * ([timeProblems], [distanceProblem]).
      * @param saveFailed true after a save or a restore that storage did not take.
      * @param refusals how many presses on Save or on Restore have stored nothing so far. The
@@ -119,7 +119,7 @@ sealed interface TripEditUiState {
         val closing: Boolean,
         val savedStartMs: Long?,
     ) : TripEditUiState {
-        /** What is wrong with the day and the two times: said in the card "When". */
+        /** What is wrong with the day and the two times: said in the tile "When". */
         val timeProblems: List<FormProblem> get() = problems.filter { it.part == FormPart.TIMES }
 
         /**

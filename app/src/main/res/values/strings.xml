@@ -449,17 +449,9 @@
     <string name="trip_add_title">Add a missed trip</string>
     <string name="trip_edit_reading">Reading the trip…</string>
     <string name="trip_edit_not_editable">This trip cannot be changed here. It was deleted, or it is not a finished trip. Go back to Trips.</string>
-    <string name="trip_edit_intro">Change what is wrong, then press Save. If you change a time, an address or the distance, the trip is marked \"edited by hand\". What MilO recorded is kept, and you can put it back.</string>
     <string name="trip_edit_added_intro">You added this trip by hand, so MilO has no recording of it. Change what is wrong, then press Save.</string>
     <string name="trip_add_intro">For a trip MilO did not record. It is saved as a finished trip, counted like any other, and marked \"added by hand\".</string>
     <string name="trip_edit_when_title">When</string>
-    <!-- The argument is a day from formatDay(), such as Tuesday, October 6, 2026. -->
-    <string name="trip_edit_date">Date: %1$s</string>
-    <!-- The argument is a time of day from formatClockTime(), such as 08:14. -->
-    <string name="trip_edit_start">Start: %1$s</string>
-    <string name="trip_edit_end">End: %1$s</string>
-    <string name="trip_edit_start_not_set">Start: choose a time</string>
-    <string name="trip_edit_end_not_set">End: choose a time</string>
     <!-- The edit screen: the titles of the time picker. -->
     <string name="trip_edit_pick_start">When the trip started</string>
     <string name="trip_edit_pick_end">When the trip ended</string>
@@ -470,22 +462,21 @@
     <string name="trip_edit_where_title">Where</string>
     <string name="trip_edit_from">From</string>
     <string name="trip_edit_to">To</string>
-    <string name="trip_edit_where_note">An address you type or change here stays as you typed it. MilO does not look it up again.</string>
-    <string name="trip_add_where_note">MilO has no GPS position for this trip, so it cannot look the addresses up. They are what you type here.</string>
-    <string name="trip_edit_distance_title">Distance</string>
-    <string name="trip_edit_kilometres">Kilometres</string>
-    <string name="trip_edit_kind_title">Business or Personal</string>
-    <!-- The edit screen: who chose Business or Personal, under the two choices. -->
-    <string name="trip_edit_kind_by_you">Chosen by you. Changing the times does not change it.</string>
-    <string name="trip_edit_kind_by_schedule">Chosen by MilO from your work hours and the start time. Choose the other one if it is wrong.</string>
-    <string name="trip_edit_kind_as_saved">As this trip was saved. If you change when it started, MilO chooses again from your work hours.</string>
+    <!--
+        The edit screen: who chose Business or Personal, in the line under the two tiles. The
+        first two are the owner's drawing's own sentences. The second is for a trip as it was
+        saved; the third for one whose start was typed or changed, which MilO sorts again.
+    -->
+    <string name="trip_edit_kind_by_you">You chose this. The work hours no longer decide it.</string>
+    <string name="trip_edit_kind_as_saved">MilO chose this from your work hours.</string>
+    <string name="trip_edit_kind_by_schedule">MilO chose this from your work hours and the start time.</string>
     <string name="trip_edit_kind_needs_start">Choose the start time first. MilO then picks one from your work hours, and you can change it.</string>
     <string name="trip_edit_kind_not_known">MilO cannot tell which it is. Choose one yourself.</string>
     <string name="trip_edit_save">Save</string>
     <string name="trip_add_save">Add this trip</string>
     <!--
         The edit screen: why a press on Save stored nothing. One line per thing to put right,
-        shown in the card it is about: the times in "When", the distance under its field.
+        shown in the tile it is about: the times in "When", the distance under its field.
     -->
     <string name="trip_edit_problem_start_missing">Choose when the trip started.</string>
     <string name="trip_edit_problem_end_missing">Choose when the trip ended.</string>
@@ -505,8 +496,6 @@
     <string name="trip_edit_recorded_title">What MilO recorded</string>
     <!-- The arguments are a day, the trip's times such as 08:14 – 08:39, and its distance. -->
     <string name="trip_edit_recorded_trip">%1$s\n%2$s · %3$s</string>
-    <string name="trip_edit_recorded_note">You changed this trip by hand. Restoring puts these times and this distance back, removes any address you typed so that MilO looks it up again, and takes the \"edited by hand\" mark away.</string>
-    <string name="trip_edit_restore">Restore recorded values</string>
     <string name="trip_edit_restore_title">Restore recorded values?</string>
     <!-- The argument is the recorded trip, as trip_edit_recorded_trip writes it. -->
     <string name="trip_edit_restore_text">%1$s\n\nThe times and the distance go back to these, and what you typed in their place is dropped. Any address you typed is removed and looked up again. The Log screen keeps a line that says what was changed.</string>
@@ -533,22 +522,12 @@
     <string name="report_period_month_detail">The month is marked as submitted once you have sent its report.</string>
     <string name="report_period_range">A date range</string>
     <string name="report_period_range_detail">Any days you choose. Such a report is kept in the list of sent reports, and never marks a month as submitted.</string>
-    <!-- The argument is a day from formatDay(), such as Monday, October 5, 2026. -->
-    <string name="report_range_first">From: %1$s</string>
-    <string name="report_range_last">To: %1$s</string>
     <!--
         How the two dates of a range are joined, on the screen, on the PDF and in the email's
         subject: October 5, 2026 to October 18, 2026.
     -->
     <string name="report_period_range_words">%1$s to %2$s</string>
-    <string name="report_summary_title">In this report</string>
-    <!-- The arguments are the number of Business trips and their distance, such as 412.3 km. -->
-    <plurals name="report_summary_trips">
-        <item quantity="one">%1$d Business trip · %2$s</item>
-        <item quantity="other">%1$d Business trips · %2$s</item>
-    </plurals>
     <string name="report_summary_none">No Business trips in this period. The report would say so, with a total of 0.0 km.</string>
-    <string name="report_summary_rounding">The total is the sum of the kilometres printed for each trip, so the report\'s columns add up. The Trips screen adds up the same way.</string>
     <plurals name="report_summary_marked">
         <item quantity="one">%d of them was added or edited by hand. It carries an asterisk (*) on the report.</item>
         <item quantity="other">%d of them were added or edited by hand. They carry an asterisk (*) on the report.</item>
@@ -567,20 +546,12 @@
         <item quantity="other">%d trips are not marked Business or Personal yet, so they are left off. Mark them on the Trips screen.</item>
     </plurals>
     <string name="report_summary_in_progress">A trip is being recorded right now. It is not on the report until it has ended.</string>
-    <string name="report_actions_title">Create and send</string>
-    <string name="report_actions_intro">Create the PDF to look at it first, or send it straight away: sending makes a fresh one.</string>
-    <string name="report_create_pdf">Create PDF</string>
-    <string name="report_open_pdf">Open PDF</string>
     <plurals name="report_pdf_created">
         <item quantity="one">PDF created: %d page.</item>
         <item quantity="other">PDF created: %d pages.</item>
     </plurals>
     <string name="report_working">Creating the report…</string>
-    <string name="report_send">Send to accountant</string>
-    <!-- The argument is the accountant's email address. -->
-    <string name="report_send_detail">Opens your email app with the PDF attached, addressed to %1$s. Nothing is sent until you press send there.</string>
     <string name="report_export_csv">Export CSV</string>
-    <string name="report_export_csv_detail">The same trips as a spreadsheet file, to save or share wherever you choose.</string>
     <!-- What a report needs and does not have. The argument is the title of the Settings card. -->
     <string name="report_missing_name">Your name is not set, and it is printed on the report. Set it in Settings, under \"%1$s\".</string>
     <string name="report_missing_email">The accountant\'s email address is not set, so there is nowhere to send the report. Set it in Settings, under \"%1$s\".</string>
@@ -633,7 +604,7 @@
     -->
     <string name="report_remove">Remove</string>
     <string name="report_remove_title">Remove this sent report?</string>
-    <string name="report_remove_text_month_unmarked">The report for %1$s, recorded as sent on %2$s, is deleted from this list, and %1$s goes back to \"Not submitted\".\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here; to mark the month again, send its report again.</string>
+    <string name="report_remove_text_month_unmarked">The report for %1$s, recorded as sent on %2$s, is deleted from this list, and %1$s goes back to \"Not submitted\".\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here; to mark the month again, send its report again or press \"Mark as sent\".</string>
     <string name="report_remove_text_month_kept">The report for %1$s, recorded as sent on %2$s, is deleted from this list. %1$s stays submitted, on %3$s, because another report for it is in the list. The reports that stay keep their revision numbers.\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here.</string>
     <string name="report_remove_text_range">The report for %1$s, recorded as sent on %2$s, is deleted from this list. A date range marked no month, so nothing else changes.\n\nUse this if you did not send it after all. No trip is changed, and MilO takes back no email: one that was sent stays sent. There is no undo here.</string>
 
