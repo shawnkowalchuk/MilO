@@ -301,6 +301,8 @@ Never install that build on the phone: it cannot update the real one.
 
 **Your own trip-start sound.** The repo ships an original synthesized chirp. A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. (Settings in the app can also choose any audio file on the phone, without a rebuild.)
 
+**The typeface.** The screens are set in Sora, which the app carries as `app/src/main/res/font/sora.ttf`. Its licence, the SIL Open Font License 1.1, is `licenses/Sora-OFL.txt`, and stays in the repository for as long as the font does.
+
 ### The pre-commit hook
 
 One-time setup, per clone. Turn the hook on:

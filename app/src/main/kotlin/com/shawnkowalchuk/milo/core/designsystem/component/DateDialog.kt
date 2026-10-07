@@ -9,11 +9,24 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+
+// Material's calendar is a grid of places of a fixed size: a day has 48 dp, a year 72 dp. They
+// do not grow with the phone's font size, and Sora is a wide typeface. With the font size at
+// its largest (2.0 on an emulator, 2026-10-06) a year no longer fitted its place: "2040" was
+// drawn as "204", and the chosen year filled its pill from edge to edge. So inside the calendar
+// the text grows to one and a half times and no further, which is the largest of Android's
+// steps at which every year stands whole in its place with room to spare. The two buttons under
+// the calendar are outside this and grow as they do everywhere.
+private const val CALENDAR_LARGEST_FONT_SCALE = 1.5f
 
 /**
  * Asks for a day with Android's usual calendar: a month at a time, and two buttons. Nothing is
@@ -23,6 +36,9 @@ import java.time.ZoneOffset
  * The calendar is Material's own, and the theme colours it: the dialog is a tile, and the chosen
  * day is the accent with a dark number. Its two buttons are the small buttons of a row, both
  * quiet, as in [ConfirmDialog].
+ *
+ * The text of the calendar follows the phone's font size up to one and a half times, and stays
+ * there for a larger setting: the calendar's places for a day and a year have a fixed size.
  *
  * @param date the day the calendar opens on, already marked.
  * @param latest the last day that can be chosen. Later days are greyed out: MilO only asks for
@@ -45,6 +61,14 @@ fun DateDialog(
             initialSelectedDateMillis = utcMillisOf(date),
             selectableDates = NotAfter(latest),
         )
+    val density = LocalDensity.current
+    val calendarDensity =
+        remember(density) {
+            Density(
+                density = density.density,
+                fontScale = density.fontScale.coerceAtMost(CALENDAR_LARGEST_FONT_SCALE),
+            )
+        }
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -75,7 +99,9 @@ fun DateDialog(
         // over the first weeks and the last week lay under the buttons (seen on an emulator,
         // 2026-10-06). Scrolling lets every day be reached there, and changes nothing where the
         // calendar fits.
-        DatePicker(state = state, modifier = Modifier.verticalScroll(rememberScrollState()))
+        CompositionLocalProvider(LocalDensity provides calendarDensity) {
+            DatePicker(state = state, modifier = Modifier.verticalScroll(rememberScrollState()))
+        }
     }
 }
 
