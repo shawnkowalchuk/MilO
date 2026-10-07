@@ -1,7 +1,8 @@
 # The single place where versions are pinned.
 #
 # Rules (docs/ENGINEERING_STANDARDS.md):
-#   - Latest STABLE release only. Never alpha, beta, rc, milestone or a snapshot.
+#   - Latest STABLE release only. Never alpha, beta, rc, milestone or a snapshot. One entry is
+#     an exception that Shawn decided, and says so: carApp.
 #   - Exact versions as plain strings. No ranges, no "+", no "latest.release".
 #   - An entry exists only while the code uses it. Add the library in the change that needs it.
 #   - Dependabot opens the update pull requests; do not bump versions by hand in feature work.
@@ -21,12 +22,16 @@ ktlint = "1.8.0"
 # Libraries.
 activityCompose = "1.13.0"
 # The Car App Library: the Android Auto screen, and CarConnection, which tells the trip service
-# whether Android Auto is connected. 1.7.0 is the newest stable release; 1.8.0 is still a release
-# candidate and must not be taken before it is stable.
-# TODO(debt): the release notes of 1.8.0-rc01 say it includes a security fix (not named) and tell
-# every lower version to update, and MilO's car service is exported. Take 1.8.0 the day it is
-# stable, without waiting for the weekly round of updates (FINDINGS_LOG, 2026-10-05).
-carApp = "1.7.0"
+# whether Android Auto is connected.
+# THE ONE EXCEPTION to "stable only", decided by Shawn on 2026-10-06 (ADR-001, "Exception"): a
+# release candidate, taken because its release notes say it includes a security fix and tell
+# every lower version to update, and MilO's car service is exported. The newest stable release
+# is still 1.7.0, which lacks the fix.
+# TODO(debt): return to the stable line. Change this to 1.8.0 the day 1.8.0 is stable, and take
+# the "androidx.car.app" ignore rule out of .github/dependabot.yml in the same change (it hides
+# pre-releases only, so a rule that is forgotten hides nothing stable). Never move this to
+# another pre-release (1.8.0-rc02, 1.9.0-alpha...) without asking Shawn.
+carApp = "1.8.0-rc01"
 composeBom = "2026.09.00"
 # androidx.core, for one class: FileProvider, which hands the report for the accountant to the
 # email app (platform/report/ReportHandOff.kt, and the provider in the manifest). Other

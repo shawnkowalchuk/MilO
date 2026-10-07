@@ -48,9 +48,9 @@ Pinned. Changing the stack mid-project is the most expensive form of debt there 
 | Navigation | Navigation 3 1.2.0; kotlinx-serialization-json 1.11.0 for its back-stack keys | Navigation 2 is in maintenance mode. |
 | State | ViewModel (lifecycle 2.11.0), coroutines 1.11.0 | A screen's state lives in its ViewModel. No global store. |
 | Storage | Room 3.0.3 on bundled SQLite; DataStore Preferences 1.2.1 for settings | New app, so start on Room's current line. |
-| Background work | WorkManager 2.12.0 | Only for jobs that can wait. Never to start a trip. Not in the build yet: no job has needed it. The monthly reminder uses one inexact `AlarmManager` alarm a day instead (FINDINGS_LOG, 2026-10-06). |
+| Background work | WorkManager 2.12.0 | Only for jobs that can wait. Never to start a trip. Not in the build yet: no job has needed it. The monthly reminder and the daily "nothing recorded" check each use one inexact `AlarmManager` alarm a day instead (FINDINGS_LOG, 2026-10-06). |
 | Location | play-services-location 21.4.0 | Fused location provider. |
-| Android Auto | `androidx.car.app` 1.7.0 | The in-truck screen and `CarConnection`. |
+| Android Auto | `androidx.car.app` 1.8.0-rc01 | The in-truck screen and `CarConnection`. **A release candidate: the one exception to "stable only",** taken on 2026-10-06 for its security fix and to be replaced by the stable 1.8.0 the day that is released (ADR-001, "Exception, 2026-10-06"). |
 | Dependency injection | Manual: an `AppContainer` created by the `Application` class | **No Hilt.** Small app, and Hilt's plugin is tied to AGP majors. |
 | Tests | JUnit 4, kotlinx-coroutines-test, Turbine | Plain JVM tests. **No Robolectric** (§11). |
 | Backend, auth, hosting, analytics | **None** | One user. All data stays on the phone. |
@@ -67,6 +67,7 @@ The goal is **current *and* stable**: the latest stable release (no alpha, beta,
 - **Dependabot** finds updates: weekly, minor and patch grouped, majors separate. **Dependabot, not Renovate:** Dependabot is native to GitHub, free on private repos, and handles the catalog and the Gradle wrapper.
 - **Update cadence:** merge update PRs weekly. A year of skipped upgrades is a migration project.
 - **Never upgrade a major version blind.** Read the breaking-changes, do it in its own branch, let CI + the device checklist (§11) confirm. One major per branch.
+- **A pre-release is taken only by Shawn's decision, written into ADR-001 with its reason and its end.** There is one: the Car App Library's 1.8.0-rc01 (2026-10-06). While a library is on a pre-release, Dependabot offers further pre-releases of it, so such a pin comes with an `ignore` rule in `.github/dependabot.yml` that hides that library's pre-releases. **The rule names ranges of pre-releases only, never "everything above" a version:** Dependabot's own pull request for the stable release does not touch that file, so the rule must do no harm if it is still there afterwards. It is taken out with the pin, as tidying.
 
 ---
 

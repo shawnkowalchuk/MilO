@@ -34,8 +34,9 @@ enum class ConfirmedStep(val key: String) {
  * Everything the settings store holds, read in one piece.
  *
  * Seven fields are not settings Shawn chooses: [lastDrivingAlertAtMs], [reminderShown],
- * [lastExport] and the last four. They are small pieces of state that must outlive the process,
- * and the settings store is where such values live.
+ * [lastExport] and the last four; and one value inside [nothingRecorded] is not either. They
+ * are small pieces of state that must outlive the process, and the settings store is where
+ * such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -76,6 +77,9 @@ enum class ConfirmedStep(val key: String) {
  * or null if it never was. Not a setting: see [ReminderShown].
  * @param lastExport when all of MilO's data was last written to an export file, or null if it
  * never was. Not a setting: see [LastExport].
+ * @param nothingRecorded the "nothing recorded" check: whether MilO says, with a notification,
+ * that no trip has been recorded on a work day, from which time of day it looks, and the day
+ * it last said so. Three values in one, kept and written in `NothingRecordedStorage.kt`.
  * @param autoStartHeldOffSinceMs the hold-off of ADR-002: when a trip was ended by hand with
  * the truck still connected, or null when automatic start is not held off. The time is kept
  * because two of the three things that release the hold-off are measured from it.
@@ -106,6 +110,7 @@ data class MiloSettings(
     val reminderDay: Int = DEFAULT_REMINDER_DAY,
     val reminderShown: ReminderShown? = null,
     val lastExport: LastExport? = null,
+    val nothingRecorded: NothingRecordedStored = NothingRecordedStored(),
     val autoStartHeldOffSinceMs: Long? = null,
     val lastProcessExitImportedAtMs: Long = 0L,
     val confirmedAtMs: Map<ConfirmedStep, Long> = emptyMap(),

@@ -31,9 +31,17 @@ import java.time.YearMonth
  *
  * @param reportToOpen the month whose Report screen a tap on the monthly reminder asked for,
  * or null. The screen is opened once, and [onReportOpened] says that the request is dealt with.
+ * @param homeAsked true while a tap on the daily check's notification is waiting for the Home
+ * screen. Home is shown once, and [onHomeShown] says that the request is dealt with.
  */
 @Composable
-fun MiloApp(container: AppContainer, reportToOpen: YearMonth?, onReportOpened: () -> Unit) {
+fun MiloApp(
+    container: AppContainer,
+    reportToOpen: YearMonth?,
+    onReportOpened: () -> Unit,
+    homeAsked: Boolean,
+    onHomeShown: () -> Unit,
+) {
     MiloTheme {
         // Saved and restored by Navigation 3, so the screen that was showing comes back after
         // Android has put MilO away and brought it back.
@@ -61,6 +69,18 @@ fun MiloApp(container: AppContainer, reportToOpen: YearMonth?, onReportOpened: (
                 leave(TopLevelDestination.TRIPS) {
                     backStack.showReport(ReportKey(reportToOpen.year, reportToOpen.monthValue))
                     onReportOpened()
+                }
+            }
+        }
+
+        // A tap on the daily check's notification leads to Home, by the same gate: it is what
+        // a press of the bar's Home button does, so whatever was open on top is closed, and
+        // unsaved work is asked about first.
+        LaunchedEffect(homeAsked, unsavedWork.unsaved) {
+            if (homeAsked) {
+                leave(TopLevelDestination.HOME) {
+                    backStack.showTopLevel(HomeKey, HomeKey)
+                    onHomeShown()
                 }
             }
         }
@@ -117,8 +137,10 @@ fun MiloApp(container: AppContainer, reportToOpen: YearMonth?, onReportOpened: (
                 },
                 onDismiss = {
                     unsavedWork = unsavedWork.kept()
-                    // Staying on the form is also the answer to a reminder that was tapped.
+                    // Staying on the form is also the answer to a notification that was
+                    // tapped, the reminder's or the daily check's.
                     onReportOpened()
+                    onHomeShown()
                 },
             )
         }

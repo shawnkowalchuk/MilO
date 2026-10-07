@@ -70,10 +70,11 @@ internal class ScheduleActions(
  * The settings: which truck, who the report for the accountant is from and where it goes, how
  * long a trip waits for the truck to reconnect, how short a trip may be, the work schedule that
  * makes a trip Business or Personal, what becomes of a trip outside it, the driving alert, the
- * monthly reminder to send last month's report, the sound of a trip start, and, last, Android's
- * backup with the export and import of all data.
+ * daily check that a work day has a trip, the monthly reminder to send last month's report,
+ * the sound of a trip start, and, last, Android's backup with the export and import of all data.
  *
  * @param dataViewModel the last card's own ViewModel: see [DataViewModel].
+ * @param checkViewModel the daily check's card has one of its own too.
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
  * @param onBack leaves the screen.
@@ -82,6 +83,7 @@ internal class ScheduleActions(
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     dataViewModel: DataViewModel,
+    checkViewModel: NothingRecordedViewModel,
     onChangeTruck: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -138,11 +140,14 @@ fun SettingsScreen(
         actions = actions,
         onBack = onBack,
         modifier = modifier,
+        checkCard = { NothingRecordedCard(checkViewModel) },
         dataCard = { DataCard(dataViewModel) },
     )
 }
 
 /**
+ * @param checkCard the card of the daily check, handed in whole because it has a state of its
+ * own. It stands with the driving alert: both speak up when a trip is not being recorded.
  * @param dataCard the card for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
@@ -153,6 +158,7 @@ private fun SettingsContent(
     actions: SettingsActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    checkCard: @Composable () -> Unit,
     dataCard: @Composable () -> Unit,
 ) {
     Column(
@@ -194,6 +200,7 @@ private fun SettingsContent(
                 ScheduleCard(state, actions.schedule)
                 OutsideScheduleCard(state, actions.schedule)
                 DrivingAlertCard(state, actions)
+                checkCard()
                 SoundCard(state, actions)
             }
         }
@@ -258,6 +265,7 @@ private fun SettingsPreview() {
                 actions =
                     SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
                 onBack = {},
+                checkCard = {},
                 dataCard = {},
             )
         }
