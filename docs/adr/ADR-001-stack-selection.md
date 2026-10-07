@@ -18,7 +18,7 @@ There is one platform and one phone, so a cross-platform framework would add a l
 
 Constraints that shaped the choices:
 
-- The project rule is latest stable only: no alpha, beta or RC.
+- The project rule is latest stable only: no alpha, beta or RC. *(One exception since 2026-10-06, for one library: see "Exception, 2026-10-06" below.)*
 - The standards template was written for TypeScript (strict tsc, ESLint, Prettier, Husky, npm audit, Sentry, dev/staging/prod). Each rule needed a Kotlin equivalent or a stated reason for dropping it.
 - The Mac has one JDK, Zulu 17.0.18, and `JAVA_HOME` is unset. No second JDK is being installed.
 - Every version below was read from live indexes on 2026-10-03 and re-checked by an independent verifier. The evidence is `docs/research/2026-10-03-versions.md` (cited as V plus the finding number) and `docs/research/2026-10-03-kotlin-standards.md` (cited as K plus the finding number; that file was not independently verified).
@@ -63,7 +63,7 @@ A pin is a choice of library. Each one is added to the build only when code need
 | DataStore Preferences | 1.2.1 | V19 |
 | WorkManager | 2.12.0 | V20 |
 | play-services-location | 21.4.0 | V21 |
-| `androidx.car.app` (`app` and `app-projected`) | 1.7.0 | V22 |
+| `androidx.car.app` (`app` and `app-projected`) | 1.7.0 at the start. **1.8.0-rc01 since 2026-10-06**, a release candidate: the one exception to "stable only" (below) | V22 for 1.7.0; the live Maven metadata of 2026-10-06 for 1.8.0-rc01 |
 | kotlinx-coroutines | 1.11.0 | V23 |
 | kotlinx-serialization-json | 1.11.0 | V24 |
 | JUnit | 4.13.2 | V25 |
@@ -101,7 +101,27 @@ Room 3 over Room 2.8.5: this is a new app with nothing to migrate, and Room 3 is
 | Husky, lint-staged, Node | A plain git hook does the same job with nothing to install but gitleaks (K14). |
 | `org.jetbrains.kotlin.android`, kapt | AGP 9 has Kotlin built in, and the kapt plugin does not work with it. Room 3 needs KSP anyway (V9, V17). |
 | Signing config in the repo | The debug keystore is used for now. A dedicated keystore, if created, stays outside git. |
-| Pre-release versions | AGP 9.5 alphas, Kotlin 2.4.21-RC, Gradle 9.9 milestones, car app 1.8.0-rc01 and the others listed in the versions research were seen and excluded. |
+| Pre-release versions | AGP 9.5 alphas, Kotlin 2.4.21-RC, Gradle 9.9 milestones, car app 1.8.0-rc01 and the others listed in the versions research were seen and excluded. *(Car app 1.8.0-rc01 was taken after all on 2026-10-06, as the one exception below. Every other pre-release stays excluded.)* |
+
+## Exception, 2026-10-06: one pre-release, for a security fix
+
+**Decided by Shawn on 2026-10-06** (FINDINGS_LOG, "Four open decisions settled by Shawn"). It is the only exception to the stable-only rule, and it covers one library.
+
+- **What.** `androidx.car.app` (`app` and `app-projected`, which move together) is pinned to **1.8.0-rc01**, a release candidate, in place of 1.7.0, the newest stable release.
+- **Why.** The release notes of 1.8.0-rc01 (2026-08-26) say "This release includes a security fix. If you are using a lower version, please update to use this version." They do not name the fix. MilO's Android Auto service is exported with no permission, because Android offers none for Android Auto's binding on a phone; the check that turns other apps away is the library's own code (`HostValidator`). MilO's one process holds the trips and has location "all the time". Until this decision the fix was knowingly missing (FINDINGS_LOG, 2026-10-05, `[DEBT]`).
+- **A stable release was looked for first.** The live Maven metadata of `androidx.car.app:app` was read on 2026-10-06: its versions end `…, 1.7.0, 1.8.0-alpha01, 1.8.0-alpha02, 1.8.0-alpha03, 1.8.0-beta01, 1.8.0-rc01, 1.9.0-alpha01, 1.9.0-alpha02`. There is no stable 1.8.0, and 1.8.0-rc01 is the only release candidate of it. Had a stable 1.8.0 existed, it would have been taken and no exception needed.
+- **It ends as soon as it can.** The version **returns to the stable line the day 1.8.0 is stable.** That change is one line in `gradle/libs.versions.toml` (`carApp`, tagged `TODO(debt)`). One rule in `.github/dependabot.yml` goes with it (below); the rule is harmless if it is left in.
+- **It does not widen.** No other library may be moved to a pre-release under this exception, and this library may not be moved to another one (a later release candidate, or a 1.9.0 alpha) without Shawn being asked again.
+
+**How the exception is kept to what was decided.** Dependabot treats a library that is pinned to a pre-release as one that wants pre-releases, and proposes the highest version there is. Read from its source on 2026-10-06 (`dependabot-core`, the Gradle version finder and the grouping rule): with 1.8.0-rc01 pinned and nothing else changed, the weekly pull request of minor updates would have carried `1.9.0-alpha02`, and once 1.8.0 was stable Dependabot would still have proposed the newest 1.9.0 alpha in its place. So `.github/dependabot.yml` has one `ignore` rule, for `androidx.car.app:*`, of two ranges: `(1.8.0-rc01,1.8.0)`, a later release candidate of 1.8.0, and `[1.9.0-alpha01,1.9.0)`, every pre-release of 1.9.0. That leaves Dependabot the stable 1.8.0 to propose, and it will propose it as a pull request of its own, because the step from 1.8.0-rc01 to 1.8.0 changes none of the three numbers the grouping goes by. **The rule hides pre-releases only, so it is safe to forget.** Dependabot's pull request for 1.8.0 changes the version catalog and not this rule, and it is merged when CI is green; a rule that outlives the pin then hides nothing that would be offered, because Dependabot offers no pre-release for a library on a stable version, and 1.8.1, 1.9.0 and every later release lie outside both ranges. (The rule was first written as "everything above 1.8.0", which would have hidden every later release, security fixes included, for as long as nobody remembered to remove it. The review of this change replaced it: FINDINGS_LOG, 2026-10-06, evening.) It is still to be taken out when 1.8.0 is taken, as tidying. **Not covered:** a pre-release of a version after 1.9.0, which does not exist today; if one is offered while the pin is still the release candidate, it is not to be merged. All of this was read from Dependabot's code (`dependabot-core`, the Gradle version finder and the Maven range parser it shares), not seen happening: the first weekly run after this change is the proof.
+
+**What the update changed, as far as it could be read.**
+
+- **In MilO's code: nothing.** The gate (`spotlessCheck lintDebug testDebugUnitTest assembleDebug`) passes with 1.8.0-rc01 and no change to a Kotlin file, the manifest or a resource. The release notes of 1.8.0-alpha01 to rc01 name nothing that `platform/car/` uses: they add a media category, new templates, row images and one deprecation in the hardware API (`Mileage`), which MilO does not touch.
+- **In the library** (the two AARs taken apart and compared, 1.7.0 against 1.8.0-rc01): the classes the Android Auto screen is built from (`Pane`, `PaneTemplate`, `Header`, their builders, the row constraints) and the classes behind `CarConnection` hold the same code in both; `Row` and `Action` gained members (an image at a row's end, a progress bar, a media action) and lost none. The library's lowest Android version moved from 5.0 to 6.0 (MilO's is higher). Its manifest declares no new permission, its list of Android Auto's signing certificates is unchanged, and the highest Car API level is still 8. One library it brings along moved: Guava, from 31.1 to 32.0.1.
+- **The one change found in the check of who may connect.** In 1.7.0, `HostValidator` lets in a host that holds the permission `android.car.permission.TEMPLATE_RENDERER`, on any device, beside the hosts on the list. In 1.8.0-rc01 it does so only on a car that runs Android itself (`android.hardware.type.automotive`); on a phone, only the hosts on the list are let in. Google does not say that this is the security fix. It is the only difference found in that class, and it is in the very check MilO's exported service depends on.
+
+**What is not proven.** A release candidate is not a release: Google may still change it before 1.8.0. The Android Auto screen has never run anywhere, with either version (APP_ENCYCLOPEDIA, Android Auto screen). `CarConnection` answered on an emulator with 1.8.0-rc01 as it did with 1.7.0 ("type 0", beside a stub of the Android Auto app); what it reports on the phone beside the real Android Auto has not been seen with either.
 
 ## Consequences
 
@@ -131,3 +151,4 @@ Room 3 over Room 2.8.5: this is a new app with nothing to migrate, and Room 3 is
 - Navigation 3 pulls in kotlinx-serialization, which is why the serialization plugin is in the toolchain.
 - WorkManager 2.12.0 depends on Room 2.7.0 at runtime, so both Room lines are on the classpath. Imports must come from `androidx.room3` only.
 - This ADR records the starting pins. Dependabot will move them weekly; `gradle/libs.versions.toml` is the live source.
+- Since 2026-10-06, one pin is a pre-release, and one Dependabot rule exists because of it ("Exception, 2026-10-06"). Both are to be undone together when the Car App Library's 1.8.0 is stable; the rule is written so that forgetting it costs nothing.

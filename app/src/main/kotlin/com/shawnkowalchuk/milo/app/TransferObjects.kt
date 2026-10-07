@@ -58,12 +58,14 @@ internal fun transferParts(
     checkPairing = { occasion -> container.truckPairing.check(occasion) },
     afterImport = { occasion ->
         // The truck may have to be paired again, the imported trips may lack an address or
-        // a category, and the settings that the alert and the reminder go by have changed.
+        // a category, and the settings that the alert, the reminder and the daily check go by
+        // have changed, as have the trips of today.
         container.truckPairing.check(occasion)
         container.tripAddresses.catchUp(occasion)
         container.tripCategoryCatchUp.catchUp(occasion)
         container.drivingAlert.arm(occasion)
         container.reports.reminder.look(occasion)
+        container.checks.nothingRecorded.arm(occasion)
     },
     clock = System::currentTimeMillis,
     zone = ZoneId::systemDefault,

@@ -33,6 +33,10 @@ data class TransferredTruck(val address: String, val name: String?)
  * copy of a chosen trip-start sound, the confirmations of the setup checklist, the hold-off
  * after a manual end, the times of the last driving alert and the last reminder, the report
  * that waits for "Did you send it?", and how far the process-exit records were imported.
+ *
+ * Two settings are missing that do mean the same anywhere: the switch and the time of the
+ * daily "nothing recorded" check. That is a gap, not a rule (`NothingRecordedStorage.kt` says
+ * why): an import leaves them as this phone has them.
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,

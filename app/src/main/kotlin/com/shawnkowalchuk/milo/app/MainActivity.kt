@@ -8,13 +8,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.shawnkowalchuk.milo.platform.nothingrecorded.homeAskedFor
 import com.shawnkowalchuk.milo.platform.reminder.reportMonthToOpen
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import java.time.YearMonth
 
 /**
  * The only activity. It hosts the Compose UI, says when MilO has been opened or has come back
- * to the front, and passes on which month's report a tap on the monthly reminder asked for.
+ * to the front, and passes on what a tapped notification asked for: which month's report (the
+ * monthly reminder), or the Home screen (the daily check).
  * Nothing else: no logic, no system calls. Anything that talks to Android (Bluetooth, location,
  * notifications) belongs in `platform/` and is reached through a ViewModel.
  */
@@ -25,6 +27,12 @@ class MainActivity : ComponentActivity() {
      * request holds is the reminder's own business (`reportMonthToOpen`).
      */
     private var reportToOpen by mutableStateOf<YearMonth?>(null)
+
+    /**
+     * True from a tap on the daily check's notification until the screens have shown Home.
+     * Whether a request is such a tap is the check's own business (`homeAskedFor`).
+     */
+    private var homeAsked by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +46,10 @@ class MainActivity : ComponentActivity() {
         // again (the phone was turned, or MilO was put away and brought back) still carries the
         // request it was first started with, and that tap was dealt with then: the screens come
         // back as they were left.
-        if (savedInstanceState == null) reportToOpen = reportMonthToOpen(intent)
+        if (savedInstanceState == null) {
+            reportToOpen = reportMonthToOpen(intent)
+            homeAsked = homeAskedFor(intent)
+        }
 
         val container = (application as MiloApplication).container
         setContent {
@@ -46,22 +57,25 @@ class MainActivity : ComponentActivity() {
                 container = container,
                 reportToOpen = reportToOpen,
                 onReportOpened = { reportToOpen = null },
+                homeAsked = homeAsked,
+                onHomeShown = { homeAsked = false },
             )
         }
     }
 
-    /** The reminder was tapped while MilO's activity was already there. */
+    /** A notification was tapped while MilO's activity was already there. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         reportMonthToOpen(intent)?.let { reportToOpen = it }
+        if (homeAskedFor(intent)) homeAsked = true
     }
 
     /**
      * ADR-002's reconcile at app launch, the check that Android still watches for the truck,
-     * and a look at the monthly reminder. All run every time MilO comes to the front, not only
-     * when the activity is first created: Android keeps an activity for days, and opening MilO
-     * is what Shawn does when a trip did not start by itself. Each call only queues work;
-     * nothing here waits.
+     * a look at the monthly reminder and one at the daily check that a work day has a trip.
+     * All run every time MilO comes to the front, not only when the activity is first created:
+     * Android keeps an activity for days, and opening MilO is what Shawn does when a trip did
+     * not start by itself. Each call only queues work; nothing here waits.
      */
     override fun onStart() {
         super.onStart()
@@ -71,6 +85,10 @@ class MainActivity : ComponentActivity() {
         // The monthly reminder is looked at whenever MilO comes to the front, beside its daily
         // alarm: on a phone that holds the alarm back, opening MilO is what brings it.
         container.reports.reminder.look(APP_OPENED)
+        // So is the daily check. It follows the reconcile above, which only asks for the trip
+        // service when the truck turns out to be connected: the trip is stored a moment later.
+        // The check gives it that moment by itself before it says "no trip" (its second look).
+        container.checks.nothingRecorded.look(APP_OPENED)
     }
 
     /**

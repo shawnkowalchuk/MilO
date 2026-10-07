@@ -216,6 +216,8 @@ fun MiloNavigation(
                                 },
                             ),
                         dataViewModel = viewModel(factory = dataViewModelFactory(container)),
+                        checkViewModel =
+                            viewModel(factory = nothingRecordedViewModelFactory(container)),
                         onChangeTruck = { backStack.openOnTop(PairingKey) },
                         onBack = { backStack.closeIfOnTop(SettingsKey) },
                     )

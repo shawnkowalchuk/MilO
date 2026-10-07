@@ -213,6 +213,8 @@ This is what is built. With the truck it has not been seen yet; a trip started w
 
 **If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add a missed trip".
 
+**If MilO has stopped noticing the truck.** Once a day MilO asks itself whether a trip has been started. On a work day (a day that is switched on in the work schedule) that has none by 12:00 noon, it posts one notification: "No trip recorded today". If the truck has not been driven that day, there is nothing to do. If it has, tap the notification: MilO opens on Home, which says "Setup needs attention" if something it needs is switched off. The time and the switch are in Settings, on the card "Daily check"; a trip you add by hand does not count. Built on 2026-10-06 and seen on an emulator only: whether this phone lets MilO wake up for it at noon is one of the things still to be tried.
+
 **Where things are.**
 
 | What | Where |
@@ -220,7 +222,7 @@ This is what is built. With the truck it has not been seen yet; a trip started w
 | The trip in progress, today's trips, Start trip / End trip | **Home**, the first button of the bottom bar |
 | Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button |
 | The report for the accountant | Trips, the month's card, **Report for the accountant** |
-| Your name, company, vehicle, the accountant's email address, the work hours, the two trip numbers, the driving alert, the reminder, the sound, export and import | **Settings**, the cog beside the title on Home |
+| Your name, company, vehicle, the accountant's email address, the work hours, the two trip numbers, the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the cog beside the title on Home |
 | The permissions and phone settings, and the truck | **Setup**, the third button |
 | What MilO did and when | **Log**, the last button |
 

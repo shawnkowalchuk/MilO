@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The words of the daily "nothing recorded" check (platform/nothingrecorded/, and its card
+        in feature/settings/). They are in a file of their own, beside strings.xml, because the
+        check was built at the same time as another change to the Settings screen and the two
+        were kept out of each other's files.
+    -->
+
+    <!-- The channel's name appears in the phone's notification settings. -->
+    <string name="notification_channel_nothing_recorded">Daily check</string>
+    <!--
+        The notification. It is posted once on a work day that has no trip by the time set.
+        Tapping it opens MilO on the Home screen.
+    -->
+    <string name="notification_nothing_recorded_title">No trip recorded today</string>
+    <string name="notification_nothing_recorded_text">That is fine if the truck has not been driven today. If it has, tap to open MilO and check that it is still set up.</string>
+
+    <!-- Settings: the card of the daily check. -->
+    <string name="settings_nothing_recorded_title">Daily check</string>
+    <string name="settings_nothing_recorded_enabled">Tell me when no trip has been recorded</string>
+    <string name="settings_nothing_recorded_detail">On a work day, if no trip has been recorded by the time below, MilO sends one notification. It catches the day MilO has quietly stopped noticing the truck. If the truck has not been driven that day, there is nothing to do.</string>
+    <!-- The argument is a time of day from formatClockTime(), such as 12:00 or 12:00 p.m. -->
+    <string name="settings_nothing_recorded_time">Check at: %1$s</string>
+    <string name="settings_nothing_recorded_time_detail">A work day is a day that is switched on in the work schedule above. If its hours start later than this time, MilO checks from their start. A trip you add by hand does not count.</string>
+    <!-- The title of the time picker. -->
+    <string name="settings_nothing_recorded_pick_time">Daily check: time</string>
+</resources>

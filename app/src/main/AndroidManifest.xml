@@ -24,8 +24,8 @@
 
     <!--
         A runtime permission from Android 13. Without it the trip service still runs, but its
-        notification, the "could not start this trip" warning, the driving alert and the monthly
-        reminder are not shown.
+        notification, the "could not start this trip" warning, the driving alert, the monthly
+        reminder and the daily check's notification are not shown.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -45,9 +45,10 @@
 
     <!--
         The reconcile after a reboot: the truck may already be connected, and no event says so.
-        The same start of MilO asks again for the monthly reminder's daily alarm, which Android
-        forgets at a reboot. That alarm is an inexact one and needs no permission of its own:
-        MilO declares neither SCHEDULE_EXACT_ALARM nor USE_EXACT_ALARM, on purpose.
+        The same start of MilO asks again for the two daily alarms, the monthly reminder's and
+        the "nothing recorded" check's, which Android forgets at a reboot. Both are inexact
+        alarms and need no permission of their own: MilO declares neither SCHEDULE_EXACT_ALARM
+        nor USE_EXACT_ALARM, on purpose.
     -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -297,6 +298,17 @@
         -->
         <receiver
             android:name=".platform.reminder.ReminderReceiver"
+            android:exported="false" />
+
+        <!--
+            Where the daily alarm of the "nothing recorded" check arrives
+            (platform/nothingrecorded/). Declared here so that the alarm can start MilO's
+            process. It asks whether a trip has been recorded today and posts a notification at
+            most; it never touches a trip. Not exported and without an intent filter, like the
+            receiver above. Its alarm is an inexact one too, and needs no permission.
+        -->
+        <receiver
+            android:name=".platform.nothingrecorded.NothingRecordedReceiver"
             android:exported="false" />
 
         <!--

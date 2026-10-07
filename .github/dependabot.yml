@@ -6,7 +6,9 @@
 #   - A major update always arrives as its OWN pull request, one per dependency. Read its
 #     breaking changes, and test on the phone before merging. Never combine two majors.
 #   - Dependabot only proposes stable releases while the pinned version is itself stable, which
-#     is how the "no alpha, beta or rc" rule is kept without any ignore rules here.
+#     is how the "no alpha, beta or rc" rule is kept. For a library that is pinned to a
+#     pre-release it proposes pre-releases too, which is why the one such library has an ignore
+#     rule below.
 version: 2
 
 updates:
@@ -21,6 +23,29 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # The Car App Library is pinned to a release candidate, 1.8.0-rc01, for its security fix:
+    # the one exception to "stable only", decided by Shawn on 2026-10-06 (ADR-001). Dependabot
+    # treats a library that is on a pre-release as one that wants pre-releases, and offers the
+    # highest version there is: today 1.9.0-alpha02, inside the weekly pull request of minor
+    # updates. These two ranges hide its pre-releases, and nothing but pre-releases:
+    #   - "(1.8.0-rc01,1.8.0)" is a later release candidate of 1.8.0;
+    #   - "[1.9.0-alpha01,1.9.0)" is every alpha, beta and release candidate of 1.9.0.
+    # What is left to offer today is the stable 1.8.0, once it exists. The step to it from
+    # 1.8.0-rc01 changes none of the three numbers, so Dependabot opens a pull request of its
+    # own for it, outside the group above.
+    # THE RULE IS SAFE TO FORGET, on purpose: neither range holds a stable release. Dependabot's
+    # own pull request for 1.8.0 changes gradle/libs.versions.toml only, so the rule may well
+    # outlive the pin. Once the pin is stable Dependabot offers no pre-release anyway, and
+    # 1.8.1, 1.9.0 and every later release are offered as for any other library. Take the rule
+    # out when 1.8.0 is taken, as tidying. (A first form of it, "> 1.8.0", would have hidden
+    # every later release for good if it had been left in: FINDINGS_LOG, 2026-10-06, evening.)
+    # Not hidden: a pre-release of a version after 1.9.0. None exists today; if one is offered
+    # while the pin is still the release candidate, it is not to be merged.
+    ignore:
+      - dependency-name: "androidx.car.app:*"
+        versions:
+          - "(1.8.0-rc01,1.8.0)"
+          - "[1.9.0-alpha01,1.9.0)"
 
   # The actions used by the workflows in .github/workflows. Each one is pinned to a commit SHA
   # with its release in a trailing comment (for example "# v7.0.1"). Dependabot reads that
