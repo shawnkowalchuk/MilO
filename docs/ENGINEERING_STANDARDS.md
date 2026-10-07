@@ -6,7 +6,7 @@
 >
 > **This is one of four documents** that work together — see §17 for how they fit.
 >
-> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-06
+> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-07
 
 ---
 
@@ -28,7 +28,7 @@ That five-minute habit is the entire game. Ad-hoc development is just this loop 
 |---|---|
 | App name | MilO (`com.shawnkowalchuk.milo`) |
 | One-line purpose | Logs business mileage in Shawn's work truck automatically and produces a monthly PDF. |
-| Platforms | Android only, native Kotlin. One phone: Xiaomi POCO X5 Pro 5G, Android 14 (HyperOS 2.0). Phone UI plus an Android Auto screen. Never on the Play Store. |
+| Platforms | Android only, native Kotlin, Android 14 and newer. One phone: Xiaomi POCO X5 Pro 5G, Android 14 (HyperOS 2.0). Phone UI plus an Android Auto screen. Never on the Play Store. |
 | Primary user | Shawn only. No accounts. |
 | Target launch milestone | Phase 1: a trip starts by itself every time the truck connects. |
 | Repo URL | https://github.com/shawnkowalchuk/MilO (private) |
@@ -43,7 +43,7 @@ Pinned. Changing the stack mid-project is the most expensive form of debt there 
 |---|---|---|
 | **Language** | **Kotlin 2.4.20, `allWarningsAsErrors`** | Non-negotiable. A compiler warning fails the build. |
 | Build | AGP 9.4.1, Gradle 9.8.0, JDK 17, KSP 2.3.12 | One `:app` module. Kotlin is built into AGP 9: never apply `org.jetbrains.kotlin.android` or kapt. |
-| SDK levels | minSdk 31, compileSdk 37, targetSdk 37 | Android 17 is the newest stable platform. The phone runs API 34. |
+| SDK levels | minSdk 34, compileSdk 37, targetSdk 37 | Android 17 is the newest stable platform. The phone runs API 34 (Android 14), and MilO runs on nothing older: Shawn's decision of 2026-10-06 (FINDINGS_LOG, 2026-10-07). **No code is written for an older Android:** it could be tested nowhere. A branch on the Android version is only for something that differs from Android 14 upwards. |
 | UI | Jetpack Compose, Material 3 (Compose BOM 2026.09.00) | One UI toolkit. No XML layouts. |
 | Navigation | Navigation 3 1.2.0; kotlinx-serialization-json 1.11.0 for its back-stack keys | Navigation 2 is in maintenance mode. |
 | State | ViewModel (lifecycle 2.11.0), coroutines 1.11.0 | A screen's state lives in its ViewModel. No global store. |

@@ -94,13 +94,13 @@ Step 4 is kept by the controller, not by the service: an event that would leave 
 
 All are in the manifest. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` was the last to be added, on 2026-10-05 with the permission checklist (the Setup screen): it only allows MilO to ask for the exemption, and the checklist's battery row is the one place that asks (STANDARDS §12: declare only what built code uses).
 
-Both companion permissions are declared on purpose. On Android 12 to 15, an app with an association but without `REQUEST_COMPANION_RUN_IN_BACKGROUND` is removed from the battery allowlist on every reinstall.
+Both companion permissions are declared on purpose. Up to Android 15, an app with an association but without `REQUEST_COMPANION_RUN_IN_BACKGROUND` is removed from the battery allowlist on every reinstall.
 
 ### Pairing
 
 Onboarding lists the phone's paired devices, Shawn picks the truck, and MilO associates it using an address filter with single-device mode and no device profile. That combination is the only one that matches an already-paired device without a scan. MilO then starts observing presence. At every process start and every time it is opened, it checks the association still exists and re-arms observation.
 
-The request to associate goes through the pairing screen's Activity: Android shows its consent dialog on top of it, and up to Android 12 the request fails from any other context. On a phone without companion device support the truck is stored anyway, so the Bluetooth receiver knows which device to listen for. Only the pairing screen can do that: without an association there is nothing to adopt (amendment 19).
+The request to associate goes through the pairing screen's Activity: Android shows its consent dialog on top of it. (Android 12 refused the request from any other context. MilO has not run on Android 12 since 2026-10-07, and the call was left as it is.) On a phone without companion device support the truck is stored anyway, so the Bluetooth receiver knows which device to listen for. Only the pairing screen can do that: without an association there is nothing to adopt (amendment 19).
 
 ### Evidence from day one
 
@@ -131,7 +131,7 @@ Phone screens reach the controller through their ViewModels.
 **Worse**
 - Autostart on HyperOS is a hard prerequisite that MilO can only partly verify. If it is off, every automatic path fails together. The permission checklist is the only defence.
 - More code than a single receiver: three trigger classes, a reconcile step and a state machine.
-- `minSdk` is 31, so the companion and notification code needs branches for Android 12 and 13 that this phone will never run. Raising `minSdk` to 34 would delete them. That is Shawn's call; the brief says 31.
+- `minSdk` is 31, so the companion and notification code needs branches for Android 12 and 13 that this phone will never run. Raising `minSdk` to 34 would delete them. That is Shawn's call; the brief says 31. *(Decided and done: Shawn chose "Android 14 and newer" on 2026-10-06. Since 2026-10-07 `minSdk` is 34 and those branches are gone. See the findings log, 2026-10-07.)*
 
 **Deferred, decided by the phase 1 test drives**
 - **An always-on service.** If starting from a dead process proves unreliable even with Autostart on, the fallback is a small permanent foreground service that keeps the process alive and listens in code. It costs a permanent notification and some battery, so it needs Shawn's agreement and is not built now.

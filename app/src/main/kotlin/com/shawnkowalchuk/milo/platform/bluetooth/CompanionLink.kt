@@ -17,17 +17,17 @@ private const val COMPANION_FEATURE = PackageManager.FEATURE_COMPANION_DEVICE_SE
  * One companion device association MilO holds, as Android lists it.
  *
  * @param address the device's address in Android's own spelling, which is small letters on some
- * versions. Compare it with [sameAddress]; Android 12 takes it back only as it gave it.
- * @param id null on Android 12, which has no association ids.
+ * versions. Compare it with [sameAddress], and hand it back to Android only as Android gave it.
+ * @param id the number Android gave the association.
  */
-internal data class Association(val address: String, val id: Int?)
+internal data class Association(val address: String, val id: Int)
 
 /** What Android answers while an association is being made. */
 internal sealed interface AssociationStep {
     /** Android wants Shawn's consent. An Activity has to launch this to show its dialog. */
     data class ConsentNeeded(val intentSender: IntentSender) : AssociationStep
 
-    /** Android 13 and later: the association exists. Android 12 never sends this. */
+    /** The association exists. */
     data object Created : AssociationStep
 
     data class Failed(val why: String) : AssociationStep
@@ -79,13 +79,7 @@ internal class SystemCompanionLink(context: Context) : CompanionLink {
 
     override fun associations(): List<Association> {
         val manager = manager ?: return emptyList()
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            manager.myAssociations.mapNotNull(::associationOf)
-        } else {
-            // Android 12 lists addresses only; getMyAssociations() arrived with Android 13.
-            @Suppress("DEPRECATION")
-            manager.associations.map { Association(it, id = null) }
-        }
+        return manager.myAssociations.mapNotNull(::associationOf)
     }
 
     /**
@@ -93,9 +87,9 @@ internal class SystemCompanionLink(context: Context) : CompanionLink {
      * That combination is the only one for which Android looks in its list of paired devices,
      * so the truck is found at once, without a scan and even while it is switched off.
      *
-     * The request goes through the Activity's own manager, not the one this class keeps. Up to
-     * Android 12 the manager takes the context it was obtained from for an Activity and ties
-     * its callback to it, so a manager obtained from anything else cannot make this request.
+     * The request goes through the Activity's own manager, not the one this class keeps.
+     * Android 12 could make this request from no other manager. Android 14 can, and the call
+     * is left as it was: it is the one that paired the truck on the phone (2026-10-06).
      */
     override fun associate(activity: Activity, address: String, onStep: (AssociationStep) -> Unit) {
         check(supported) { "This phone has no companion device support" }
@@ -105,11 +99,6 @@ internal class SystemCompanionLink(context: Context) : CompanionLink {
             AssociationRequest.Builder().addDeviceFilter(filter).setSingleDevice(true).build()
         val callback =
             object : CompanionDeviceManager.Callback() {
-                @Deprecated("Android 12's callback. Later versions call onAssociationPending.")
-                override fun onDeviceFound(intentSender: IntentSender) {
-                    onStep(AssociationStep.ConsentNeeded(intentSender))
-                }
-
                 override fun onAssociationPending(intentSender: IntentSender) {
                     onStep(AssociationStep.ConsentNeeded(intentSender))
                 }
@@ -129,9 +118,9 @@ internal class SystemCompanionLink(context: Context) : CompanionLink {
 
     override fun startObserving(association: Association) {
         val manager = checkNotNull(manager) { "This phone has no companion device support" }
-        val id = association.id
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA && id != null) {
-            val request = ObservingDevicePresenceRequest.Builder().setAssociationId(id).build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            val request =
+                ObservingDevicePresenceRequest.Builder().setAssociationId(association.id).build()
             manager.startObservingDevicePresence(request)
         } else {
             // Up to Android 15 presence is observed by address; the request form arrived with
@@ -143,18 +132,10 @@ internal class SystemCompanionLink(context: Context) : CompanionLink {
 
     override fun remove(association: Association) {
         val manager = manager ?: return
-        val id = association.id
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && id != null) {
-            manager.disassociate(id)
-        } else {
-            // Android 12 removes an association by address; ids arrived with Android 13.
-            @Suppress("DEPRECATION")
-            manager.disassociate(association.address)
-        }
+        manager.disassociate(association.id)
     }
 
     private fun associationOf(info: AssociationInfo): Association? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
         // An association without an address is one an app manages itself; MilO makes none.
         val address = info.deviceMacAddress ?: return null
         return Association(address.toString(), info.id)

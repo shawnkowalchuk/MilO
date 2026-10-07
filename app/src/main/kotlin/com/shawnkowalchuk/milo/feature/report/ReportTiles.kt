@@ -3,7 +3,6 @@ package com.shawnkowalchuk.milo.feature.report
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,11 +20,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ChevronIcons
-import com.shawnkowalchuk.milo.core.designsystem.component.ChoiceButton
 import com.shawnkowalchuk.milo.core.designsystem.component.DateDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureText
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
+import com.shawnkowalchuk.milo.core.designsystem.component.Segment
+import com.shawnkowalchuk.milo.core.designsystem.component.SegmentedChoice
 import com.shawnkowalchuk.milo.core.designsystem.component.SquareIconButton
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileKind
@@ -48,7 +48,7 @@ private enum class PickingDay { FIRST, LAST }
 
 /**
  * The period, which the drawing does not have and Shawn asked for: a whole month or a date
- * range, as two buttons of which one is in force. Under them the month, with a square button
+ * range, chosen with the design's two-part control. Under it the month, with a square button
  * for the month before and one for the month after, like the Trips screen's; or the range's
  * two days, each a button that shows the day and opens the calendar. The last line says what
  * the chosen kind of period means for "submitted".
@@ -72,24 +72,23 @@ internal fun PeriodTile(state: ReportUiState.Ready, actions: ReportActions) {
                 heading()
             },
         )
-        // One group for a screen reader: "1 of 2", "2 of 2".
-        Row(
-            modifier = Modifier.fillMaxWidth().selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(spacing.buttonGap),
-        ) {
-            ChoiceButton(
-                text = stringResource(R.string.report_period_month),
-                selected = choice.kind == PeriodKind.MONTH,
-                onSelect = { actions.onKind(PeriodKind.MONTH) },
-                modifier = Modifier.weight(1f),
-            )
-            ChoiceButton(
-                text = stringResource(R.string.report_period_range),
-                selected = choice.kind == PeriodKind.RANGE,
-                onSelect = { actions.onKind(PeriodKind.RANGE) },
-                modifier = Modifier.weight(1f),
-            )
-        }
+        // The control Settings uses for "Save as Personal / Ignore them". It is one group for
+        // a screen reader by itself: "1 of 2", "2 of 2".
+        SegmentedChoice(
+            segments =
+                listOf(
+                    Segment(
+                        label = stringResource(R.string.report_period_month),
+                        selected = choice.kind == PeriodKind.MONTH,
+                        onSelect = { actions.onKind(PeriodKind.MONTH) },
+                    ),
+                    Segment(
+                        label = stringResource(R.string.report_period_range),
+                        selected = choice.kind == PeriodKind.RANGE,
+                        onSelect = { actions.onKind(PeriodKind.RANGE) },
+                    ),
+                ),
+        )
         when (choice.kind) {
             PeriodKind.MONTH ->
                 Row(

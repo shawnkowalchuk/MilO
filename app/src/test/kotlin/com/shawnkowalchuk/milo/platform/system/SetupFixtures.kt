@@ -20,7 +20,6 @@ internal val allGood =
     SetupFacts(
         preflight = preflightGood,
         notificationsEnabled = true,
-        notificationPermissionAskable = true,
         ignoringBatteryOptimizations = true,
         exemptFromUnusedAppPause = true,
         batterySaverOn = false,

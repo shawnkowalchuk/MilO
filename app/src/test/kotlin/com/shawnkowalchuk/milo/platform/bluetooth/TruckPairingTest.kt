@@ -30,26 +30,25 @@ class TruckPairingTest {
     private fun TestScope.pairing() = world.pairing(backgroundScope)
 
     @Test
-    fun `Android 13 and later - the callback reports the association and the truck is stored`() =
-        runTest {
-            val pairing = pairing()
+    fun `the callback reports the association and the truck is stored`() = runTest {
+        val pairing = pairing()
 
-            pairing.associate(TRUCK_DEVICE, screen)
-            assertEquals(PairingProgress.Asking, pairing.progress.value)
-            assertEquals(TRUCK_ADDRESS, link.askedFor)
+        pairing.associate(TRUCK_DEVICE, screen)
+        assertEquals(PairingProgress.Asking, pairing.progress.value)
+        assertEquals(TRUCK_ADDRESS, link.askedFor)
 
-            link.create(TRUCK_ADDRESS, id = 7)
-            runCurrent()
+        link.create(TRUCK_ADDRESS, id = 7)
+        runCurrent()
 
-            val truck = Truck(TRUCK_ADDRESS, "Work truck", associationId = 7)
-            assertEquals(PairingProgress.Paired(truck), pairing.progress.value)
-            assertEquals(truck, settings.current().truck())
-            // Armed in the same step, and the caller is told to look at the truck: Android does
-            // not always report a truck that is already connected.
-            assertEquals(PairingState.ARMED, pairing.status.value?.state)
-            assertEquals(listOf(Association(TRUCK_ADDRESS, 7)), link.observed)
-            assertEquals(1, world.truckChanges)
-        }
+        val truck = Truck(TRUCK_ADDRESS, "Work truck", associationId = 7)
+        assertEquals(PairingProgress.Paired(truck), pairing.progress.value)
+        assertEquals(truck, settings.current().truck())
+        // Armed in the same step, and the caller is told to look at the truck: Android does
+        // not always report a truck that is already connected.
+        assertEquals(PairingState.ARMED, pairing.status.value?.state)
+        assertEquals(listOf(Association(TRUCK_ADDRESS, 7)), link.observed)
+        assertEquals(1, world.truckChanges)
+    }
 
     @Test
     fun `the dialog's result and the callback both report success, and the truck is stored once`() =
@@ -66,16 +65,16 @@ class TruckPairingTest {
         }
 
     @Test
-    fun `Android 12 - only the dialog's result says the association was made`() = runTest {
+    fun `the dialog's result alone stores the truck when the callback has not come`() = runTest {
         val pairing = pairing()
         pairing.associate(TRUCK_DEVICE, screen)
 
-        // Android 12 lists the association by address, without an id, and sends no callback.
-        link.held += Association(TRUCK_ADDRESS, id = null)
+        // Android lists the association, and the dialog's result is the first to say so.
+        link.held += Association(TRUCK_ADDRESS, id = 7)
         pairing.onConsentResult(Activity.RESULT_OK)
         runCurrent()
 
-        assertEquals(Truck(TRUCK_ADDRESS, "Work truck", null), settings.current().truck())
+        assertEquals(Truck(TRUCK_ADDRESS, "Work truck", 7), settings.current().truck())
         assertEquals(PairingState.ARMED, pairing.status.value?.state)
     }
 

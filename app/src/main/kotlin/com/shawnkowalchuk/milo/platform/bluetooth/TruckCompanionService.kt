@@ -16,11 +16,10 @@ import com.shawnkowalchuk.milo.platform.trip.TripTrigger
  * It is exported, because Android's own companion device manager binds it from outside MilO,
  * and the manifest lets nothing else bind it (`BIND_COMPANION_DEVICE_SERVICE`).
  *
- * Android has had three shapes of callback, and newer versions also send the older ones. Each
- * shape below acts only on the versions for which it is the newest, so one event reaches the
+ * Android has two shapes of callback here, and Android 16 also sends the older one. Each shape
+ * below acts only on the versions for which it is the newest, so one event reaches the
  * controller once:
- * - Android 12: an address.
- * - Android 13 to 15: the association.
+ * - Android 14 and 15: the association.
  * - Android 16 and later: a presence event that says what was seen.
  *
  * A callback is a hint, like every trigger. Android queues these callbacks at the front of the
@@ -40,25 +39,15 @@ class TruckCompanionService : CompanionDeviceService() {
         container.tripController.onTrigger(TripTrigger.RECONCILE, "companion service created")
     }
 
-    @Deprecated("Android 12's callback. Later versions call the ones below.")
-    override fun onDeviceAppeared(address: String) {
-        report(CompanionSignal.APPEARED, address, associationId = null)
-    }
+    // The framework's own version of these two only hands the address on to Android 12's
+    // callback, which MilO no longer has. Super is not called, as before.
 
-    @Deprecated("Android 12's callback. Later versions call the ones below.")
-    override fun onDeviceDisappeared(address: String) {
-        report(CompanionSignal.DISAPPEARED, address, associationId = null)
-    }
-
-    // The framework's own version of these two passes the address on to the callbacks above.
-    // That is not wanted, so super is not called.
-
-    @Deprecated("The callback of Android 13 to 15. Android 16 calls onDevicePresenceEvent too.")
+    @Deprecated("The callback of Android 14 and 15. Android 16 calls onDevicePresenceEvent too.")
     override fun onDeviceAppeared(associationInfo: AssociationInfo) {
         reportAssociation(CompanionSignal.APPEARED, associationInfo)
     }
 
-    @Deprecated("The callback of Android 13 to 15. Android 16 calls onDevicePresenceEvent too.")
+    @Deprecated("The callback of Android 14 and 15. Android 16 calls onDevicePresenceEvent too.")
     override fun onDeviceDisappeared(associationInfo: AssociationInfo) {
         reportAssociation(CompanionSignal.DISAPPEARED, associationInfo)
     }
@@ -77,16 +66,12 @@ class TruckCompanionService : CompanionDeviceService() {
     }
 
     private fun reportAssociation(signal: CompanionSignal, association: AssociationInfo) {
-        // Acted on only where this shape is the newest: Android 13 to 15.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
-        ) {
-            return
-        }
+        // Acted on only where this shape is the newest: Android 14 and 15.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) return
         report(signal, association.deviceMacAddress?.toString(), association.id)
     }
 
-    private fun report(signal: CompanionSignal, address: String?, associationId: Int?) {
+    private fun report(signal: CompanionSignal, address: String?, associationId: Int) {
         val controller = container.tripController
         val lookup = container.pairedTruck.now()
         when (val decision = decideCompanion(signal, address, associationId, lookup)) {

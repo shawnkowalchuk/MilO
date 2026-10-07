@@ -40,10 +40,10 @@ private val FingerTarget = 48.dp
  * one the quiet fill of a control on a tile.
  *
  * A `ChoiceRow` is for a choice that needs a sentence; this is for one that a word or two
- * says. The buttons of one choice stand under each other or side by side, 6 dp apart, in a
- * column or a row that carries `Modifier.selectableGroup()`, so that a screen reader announces
- * them as one group and each as chosen or not. None of them may be in force, while nothing is
- * chosen yet.
+ * says. The buttons of one choice stand under each other, 6 dp apart, in a column that carries
+ * `Modifier.selectableGroup()`, so that a screen reader announces them as one group and each
+ * as chosen or not. None of them may be in force, while nothing is chosen yet. Choices that
+ * stand side by side are a [SegmentedChoice].
  *
  * It is drawn 44 dp high and takes up no more. The place a finger can hit is 48 dp high: it
  * reaches 2 dp past the button, above and below.

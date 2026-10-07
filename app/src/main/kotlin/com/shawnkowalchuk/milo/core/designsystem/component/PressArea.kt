@@ -82,13 +82,18 @@ private fun Modifier.reachingAFingerTarget(): Modifier = layout { measurable, co
 }
 
 /**
- * Lets a row that keeps 48 dp for a finger take up only the height it is drawn at. The place a
- * finger can hit is not made smaller: it reaches past the row, half above and half below, into
- * the room its neighbours keep free.
+ * Lets a row or a control that keeps 48 dp for a finger take up only the height it is drawn at,
+ * so that what it stands in is as high as drawn. The place a finger can hit is not made
+ * smaller: it reaches past what is drawn, half above and half below. So only use it where that
+ * much room is kept free: the padding of a tile, or the gap to a neighbour.
  *
- * A row whose words need more than the 48 dp is left as high as it is.
+ * One that needs more than the 48 dp, because its words run onto a second line or the font is
+ * very large, is left as high as it is.
  *
- * @param drawn how high the row is drawn while its words fit on one line.
+ * It is the one helper for this. Buttons built on Material's (the `RowButton`s of a
+ * `StatusRow`, the button of `AttentionTile`) and MilO's own rows use it alike.
+ *
+ * @param drawn how high it is drawn while its words fit on one line.
  */
 internal fun Modifier.takesUpOnly(drawn: Dp): Modifier = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
