@@ -63,7 +63,7 @@ class UnsavedWorkTest {
                 UnsavedWork(),
                 holding,
                 checkNotNull(holding.asked(to = null)),
-                checkNotNull(holding.asked(TopLevelDestination.SETUP)),
+                checkNotNull(holding.asked(TopLevelDestination.SETTINGS)),
             )
 
         // Android keeps plain values only; this scope accepts what a Bundle would.

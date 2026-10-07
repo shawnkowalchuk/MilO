@@ -19,8 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
@@ -120,13 +120,13 @@ internal fun PairingContent(
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(top = spacing.tileGap, bottom = spacing.small),
+                .padding(vertical = spacing.small),
     ) {
-        ScreenTitle(
-            text = stringResource(R.string.pairing_title),
+        AppHeader(
+            title = stringResource(R.string.pairing_title),
             onBack = onBack,
-            // With the gap between two tiles, the design's 16 under the title.
-            modifier = Modifier.padding(bottom = spacing.buttonGap),
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = spacing.extraSmall),
         )
         if (state == null) {
             Tile(modifier = Modifier.fillMaxWidth()) {

@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 //     the accent (C6F432) as the icon's background and the page colour (121316) as its letter.
 //     Change them together;
 //   - the notification icon (res/drawable/ic_stat_trip.xml), which Android draws itself, outside
-//     Compose, and tints as it likes;
+//     Compose, and tints as it likes. The notifications' colour, which Android paints around
+//     that icon in the shade, is in res/values/colors.xml: it repeats the accent (C6F432), and a
+//     unit test (NotificationAccentTest) keeps the two equal;
 //   - the window's background (res/values/colors.xml, used by res/values/themes.xml), which
 //     Android paints before Compose has drawn anything. It repeats the page colour below so that
 //     a launch never flashes white, and a unit test (WindowBackgroundTest) keeps the two equal;

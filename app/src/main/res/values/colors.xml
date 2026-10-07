@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        The one colour in a values file, and it is not for a screen. Android paints the window
-        with it before Compose has drawn anything (res/values/themes.xml), and Compose's tokens
-        cannot be read that early. It repeats the page colour of the theme
-        (core/designsystem/theme/Color.kt); a unit test (WindowBackgroundTest) fails if the two
-        ever differ. The only other colours in XML are inside the launcher icon's and the
-        notification icon's drawables (res/drawable/). Every colour of a screen is a token in
-        that Kotlin file.
+        The two colours in a values file, and neither is for a screen. Every colour of a screen
+        is a token in core/designsystem/theme/Color.kt; these two are read by Android, outside
+        Compose, where those tokens cannot be reached. Each repeats a colour of the theme, and a
+        unit test fails if the two ever differ. The only other colours in XML are inside the
+        launcher icon's and the notification icon's drawables (res/drawable/).
+    -->
+    <!--
+        Android paints the window with it before Compose has drawn anything
+        (res/values/themes.xml). The page colour of the theme; kept equal by
+        WindowBackgroundTest.
     -->
     <color name="milo_window_background">#121316</color>
+    <!--
+        The colour of MilO's notifications (Notification.Builder.setColor): Android paints the
+        small icon's surroundings with it in the notification shade, so the mark's lime shows
+        where the icon itself cannot carry it (res/drawable/ic_stat_trip.xml). The accent of
+        the theme; kept equal by NotificationAccentTest. Android may darken it on a light shade
+        so that the icon stays readable.
+    -->
+    <color name="milo_notification_accent">#C6F432</color>
 </resources>

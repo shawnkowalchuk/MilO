@@ -109,7 +109,7 @@ private val sampleRecording =
         startAddress = "Shop, 63 Ave NW",
     )
 
-private val noActions = HomeActions({}, {}, {}, {}, {}, {}, {})
+private val noActions = HomeActions({}, {}, {}, {}, {}, {})
 
 /**
  * Home as a preview draws it. Android Studio's own picture has no system bars; shown on a

@@ -32,6 +32,10 @@ internal fun reportOf(vararg tripsPerDay: Int): MileageReport = report(
 internal val ReportPage.texts: List<PageItem.Text>
     get() = items.filterIsInstance<PageItem.Text>()
 
+/** True for the line at the bottom of every page: its words, and the small mark before them. */
+internal val PageItem.Text.inFooter: Boolean
+    get() = style == ReportTextStyle.FOOTER || style == ReportTextStyle.FOOTER_MARK
+
 internal fun ReportPage.has(text: String): Boolean = texts.any { it.text == text }
 
 internal fun ReportPage.find(text: String): PageItem.Text = texts.first { it.text == text }
@@ -61,7 +65,7 @@ internal fun assertSound(pages: List<ReportPage>, tripsPerDay: List<Int>) {
     assertEquals(expected, pages.flatMap { page -> page.rows.map { it.text } })
 
     for (page in pages) {
-        for (text in page.texts.filter { it.style != ReportTextStyle.FOOTER }) {
+        for (text in page.texts.filterNot { it.inFooter }) {
             val where = "\"${text.text}\" on page ${page.number}"
             assertTrue(where, text.baseline > CONTENT_TOP && text.baseline <= CONTENT_BOTTOM)
             val start = if (text.rightAligned) {

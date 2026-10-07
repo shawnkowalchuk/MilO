@@ -29,7 +29,8 @@ internal class TripParking(
 
     /**
      * The fixes the watch counts as showing the movement (`ParkedWatch.sinceStirred`), as they
-     * arrived: with the phone's own speed, which the watch does not carry.
+     * arrived, to be stored as they were: a missing accuracy as missing, not as the "infinitely
+     * bad" the watch makes of it.
      */
     private var stirred: List<RawPoint> = emptyList()
 

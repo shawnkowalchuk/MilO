@@ -14,8 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
@@ -35,7 +35,8 @@ internal class SettingsActions(
     val onSoundEnabled: (Boolean) -> Unit,
     val onPlaySound: () -> Unit,
     val onPickOwnSound: () -> Unit,
-    val onUseBuiltInSound: () -> Unit,
+    val onChooseSound: (ownSoundUri: String?) -> Unit,
+    val onRemoveSound: (ownSoundUri: String) -> Unit,
     val onDrivingAlertEnabled: (Boolean) -> Unit,
     val schedule: ScheduleActions,
     val report: ReportDetailActions,
@@ -73,19 +74,28 @@ internal class ScheduleActions(
  * work day has a trip; the sound of a trip start; and, last, Android's backup with the export
  * and import of all data.
  *
+ * Since 2026-10-07 it is a screen of the bottom bar, in Setup's place, and Setup is the tile at
+ * its top ([setupTile]).
+ *
  * @param dataViewModel the last tile's own ViewModel: see [DataViewModel].
  * @param checkViewModel the daily check's tile has one of its own too.
+ * @param odometerViewModel and so has the odometer's.
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
- * @param onBack leaves the screen.
+ * @param onBack leaves the screen, when it was opened from another one (the Report screen's
+ * "Open Settings"). Null when it is the bottom bar's: the bar is how it is left then.
+ * @param setupTile the tile that opens the Setup checklist. The app hands it in, because it is
+ * the Setup feature's: a feature never imports another one.
  */
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     dataViewModel: DataViewModel,
     checkViewModel: NothingRecordedViewModel,
+    odometerViewModel: OdometerViewModel,
     onChangeTruck: () -> Unit,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
+    setupTile: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
@@ -113,7 +123,8 @@ fun SettingsScreen(
                     viewModel.onNoFilePicker()
                 }
             },
-            onUseBuiltInSound = viewModel::onUseBuiltInSound,
+            onChooseSound = viewModel::onChooseSound,
+            onRemoveSound = viewModel::onRemoveSound,
             onDrivingAlertEnabled = viewModel::onDrivingAlertEnabled,
             schedule =
                 ScheduleActions(
@@ -141,18 +152,25 @@ fun SettingsScreen(
         actions = actions,
         onBack = onBack,
         modifier = modifier,
+        setupTile = setupTile,
         checkTile = { NothingRecordedTile(checkViewModel) },
+        odometerTile = { OdometerTile(odometerViewModel) },
         dataTile = { DataTile(dataViewModel) },
     )
 }
 
 /**
- * The screen's tiles, top to bottom in the design's order. The two tiles the design does not
- * draw stand where they belong: the daily check under the work schedule it goes by, and the
- * tile for backup, export and import last.
+ * The screen's tiles, top to bottom in the design's order. The tiles the design does not draw
+ * stand where they belong: Setup first, because it says whether a trip can start at all; the
+ * daily check under the work schedule it goes by; and the tile for backup, export and import
+ * last.
  *
+ * @param setupTile the tile that opens Setup. It is shown whatever the settings file says:
+ * the checklist does not come from it.
  * @param checkTile the tile of the daily check, handed in whole because it has a state of its
  * own.
+ * @param odometerTile the truck's odometer, under the truck's tile, handed in whole for the
+ * same reason.
  * @param dataTile the tile for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
@@ -161,9 +179,11 @@ fun SettingsScreen(
 internal fun SettingsContent(
     state: SettingsUiState,
     actions: SettingsActions,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    setupTile: @Composable () -> Unit,
     checkTile: @Composable () -> Unit,
+    odometerTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
 ) {
     val spacing = MiloTheme.spacing
@@ -173,14 +193,15 @@ internal fun SettingsContent(
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(top = spacing.tileGap, bottom = spacing.small),
+                .padding(vertical = spacing.small),
     ) {
-        ScreenTitle(
-            text = stringResource(R.string.settings_title),
-            // With the gap between two tiles, the design's 16 under the title.
-            modifier = Modifier.padding(bottom = spacing.buttonGap),
+        AppHeader(
+            title = stringResource(R.string.settings_title),
             onBack = onBack,
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = spacing.extraSmall),
         )
+        setupTile()
         when (state) {
             SettingsUiState.Reading -> NoteTile { Note(stringResource(R.string.settings_reading)) }
 
@@ -202,6 +223,8 @@ internal fun SettingsContent(
                     }
                 }
                 TruckAndAlertTiles(state, actions)
+                // Under the truck: it is the truck's.
+                odometerTile()
                 // Second, and not last: the Report screen sends Shawn here for his name and
                 // the accountant's address.
                 ReportDetailsTile(state.report, actions.report)

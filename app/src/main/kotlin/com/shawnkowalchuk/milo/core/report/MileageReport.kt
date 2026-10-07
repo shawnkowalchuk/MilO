@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.sumOfTenths
 import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
@@ -68,12 +69,26 @@ data class ReportSender(val name: String, val company: String?, val vehicle: Str
 data class ReportRevision(val number: Int, val replacesSentOn: LocalDate)
 
 /**
+ * The period's Personal driving. The report lists no Personal trip, but shows what they add up
+ * to at its top, beside the Business total (Shawn's request of 2026-10-07: "at the top it
+ * should show business and personal mileage separate").
+ *
+ * @param tripCount how many counted Personal trips started in the period.
+ * @param tenths their kilometres, added up as the report adds up its own (`sumOfTenths`), so
+ * the figure is the one the Trips screen shows for the month's Personal trips.
+ */
+data class PersonalDriving(val tripCount: Int, val tenths: Long)
+
+/**
  * A whole report.
  *
  * @param generatedOn the day the report was made, in [zone].
  * @param revision null for the first report of its period.
  * @param zone the time zone its days and times of day are worked out in: the phone's.
  * @param days oldest first, and only days that have a trip.
+ * @param personal what the period's Personal trips add up to. They are not listed.
+ * @param odometer the truck's odometer at the start and the end of the period, or null while
+ * no reading has been typed in (Shawn's decision of 2026-10-07).
  */
 data class MileageReport(
     val sender: ReportSender,
@@ -82,6 +97,8 @@ data class MileageReport(
     val revision: ReportRevision?,
     val zone: ZoneId,
     val days: List<ReportDay>,
+    val personal: PersonalDriving,
+    val odometer: OdometerSpan? = null,
 ) {
     val tripCount: Int get() = days.sumOf { it.trips.size }
 

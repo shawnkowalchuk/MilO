@@ -73,6 +73,26 @@ class ReportSelectionTest {
     }
 
     @Test
+    fun `the Personal trips' kilometres are added up as the report adds up its own`() {
+        val trips =
+            listOf(
+                storedTrip("2026-10-05T08:00", category = TripCategory.BUSINESS, metres = 50_000.0),
+                // 12.34 and 5.86 km are printed as 12.3 and 5.9: 18.2, not the 18.20 of the
+                // metres added up first.
+                storedTrip("2026-10-05T18:00", category = TripCategory.PERSONAL, metres = 12_340.0),
+                storedTrip("2026-10-06T19:00", category = TripCategory.PERSONAL, metres = 5_860.0),
+                // Neither counted nor of the period, so in no figure.
+                storedTrip("2026-10-08T18:00", TripStatus.DELETED, TripCategory.PERSONAL),
+                storedTrip("2026-09-30T18:00", category = TripCategory.PERSONAL),
+            )
+
+        val selection = selectForReport(trips, october, EDMONTON)
+
+        assertEquals(2, selection.personalLeftOut)
+        assertEquals(182L, selection.personalTenths)
+    }
+
+    @Test
     fun `the trips are listed oldest first, whatever order storage hands them in`() {
         val trips =
             listOf(
@@ -148,6 +168,6 @@ class ReportSelectionTest {
     fun `a period without trips has nothing on it and nothing left off`() {
         val selection = selectForReport(listOf(storedTrip("2026-09-15T08:00")), october, EDMONTON)
 
-        assertEquals(ReportSelection(emptyList(), 0, 0, 0, false), selection)
+        assertEquals(ReportSelection(emptyList(), 0, 0, 0, false, personalTenths = 0), selection)
     }
 }

@@ -120,6 +120,7 @@ class TripNotifications(private val context: Context) {
     private fun ongoing(titleRes: Int): Notification.Builder = Notification
         .Builder(context, TRIP_CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_trip)
+        .setColor(context.getColor(R.color.milo_notification_accent))
         .setContentTitle(context.getString(titleRes))
         .setContentIntent(openApp())
         .setOngoing(true)
@@ -149,6 +150,7 @@ class TripNotifications(private val context: Context) {
             Notification
                 .Builder(context, FAILURE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_trip)
+                .setColor(context.getColor(R.color.milo_notification_accent))
                 .setContentTitle(context.getString(R.string.notification_could_not_start_title))
                 .setContentText(context.getString(R.string.notification_could_not_start_text))
                 .setContentIntent(startTrip(COULD_NOT_START_TAP_REQUEST, COULD_NOT_START_TAP))
@@ -183,6 +185,7 @@ class TripNotifications(private val context: Context) {
             Notification
                 .Builder(context, DRIVING_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_trip)
+                .setColor(context.getColor(R.color.milo_notification_accent))
                 .setContentTitle(context.getString(R.string.notification_driving_title))
                 .setContentText(context.getString(R.string.notification_driving_text))
                 .setContentIntent(startTrip(DRIVING_ALERT_TAP_REQUEST, DRIVING_ALERT_TAP))

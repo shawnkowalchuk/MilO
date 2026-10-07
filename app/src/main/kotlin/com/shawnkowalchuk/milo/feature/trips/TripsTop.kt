@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.SteppedTitle
@@ -33,17 +34,25 @@ internal fun monthName(state: TripsUiState): String =
     formatMonthAndYear(state.month, LocalConfiguration.current.locales[0])
 
 /**
- * What stands above the trips, whatever the month holds: the title and the two steps, the
- * month's tile, "Personal" and "Add missed trip", the warning for a month that changed after
- * its report was sent, the switch, and that a change to a trip was not made.
+ * What stands above the trips, whatever the month holds: the top line every screen has, the
+ * month with the two steps, the month's tile, "Personal" and "Add missed trip", the warning
+ * for a month that changed after its report was sent, the switch, and that a change to a trip
+ * was not made.
  */
 internal fun LazyListScope.monthItems(state: TripsUiState, actions: TripsActions) {
     val summary = state.summary
     // Each part has a name of its own, so that the list keeps its place when one of the
     // parts that are not always there (the warning, the failed change) comes or goes.
     item(key = "title") {
+        AppHeader(
+            title = stringResource(R.string.trips_title),
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = MiloTheme.spacing.extraSmall),
+        )
+    }
+    item(key = "steps") {
         SteppedTitle(
-            text = stringResource(R.string.trips_title),
+            text = monthName(state),
             previous =
                 StepperButton(
                     description = stringResource(R.string.trips_previous_month),
@@ -57,7 +66,7 @@ internal fun LazyListScope.monthItems(state: TripsUiState, actions: TripsActions
                     enabled = state.canStepForward,
                 ),
             // With the gap between two tiles, and the room a square keeps free around itself
-            // for a finger, the design's 16 under the title, as on Home.
+            // for a finger, the design's 16 under the month, as under the top line.
             modifier = Modifier.padding(bottom = MiloTheme.spacing.extraSmall),
         )
     }

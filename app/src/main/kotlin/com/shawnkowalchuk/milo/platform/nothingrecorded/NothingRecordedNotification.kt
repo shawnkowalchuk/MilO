@@ -69,6 +69,7 @@ class NothingRecordedNotification(private val context: Context, private val open
             Notification
                 .Builder(context, NOTHING_RECORDED_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_trip)
+                .setColor(context.getColor(R.color.milo_notification_accent))
                 .setContentTitle(context.getString(R.string.notification_nothing_recorded_title))
                 .setContentText(text)
                 // The text is two sentences. Without this Android shows one line of it and

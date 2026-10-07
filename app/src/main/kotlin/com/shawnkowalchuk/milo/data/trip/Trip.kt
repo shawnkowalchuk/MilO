@@ -11,8 +11,12 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
 /**
  * One trip, open or closed: recorded by MilO, or typed in by Shawn afterwards.
  *
- * A row is never removed. A trip under the minimum distance is kept as discarded, and one that
- * Shawn deletes is kept as deleted; both are a matter of [status] alone, so each can be undone.
+ * A row is never removed, with one exception. A trip under the minimum distance is kept as
+ * discarded, and one that Shawn deletes is kept as deleted; both are a matter of [status] alone,
+ * so each can be undone. The exception, since 2026-10-07: a trip that a parked truck's moving
+ * started and that lost the truck within its first kilometre was Shawn leaving in another
+ * vehicle, and is removed for good as it closes, row and points (`leftInAnotherVehicle`,
+ * `TripRepository.removeOpenTripForGood`).
  *
  * All times are wall-clock milliseconds since 1970, because they are shown to Shawn and must
  * still mean something after a reboot. Distances are metres; kilometres exist only on screen.

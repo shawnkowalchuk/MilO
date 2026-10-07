@@ -19,10 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
+import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.data.settings.ConfirmedStep
 import com.shawnkowalchuk.milo.platform.system.SetupDetail
@@ -37,12 +38,17 @@ import com.shawnkowalchuk.milo.platform.system.SystemScreen
  * with its state and a button that leads to the place to fix it. Above the rows, how many of
  * them are ready.
  *
+ * Since 2026-10-07 it is not in the bottom bar: it is opened from the tile at the top of
+ * Settings ([SetupLinkTile]) and from Home's warning, and its name at the top is the way back.
+ *
  * @param onOpenPairing the truck row's button. Navigation belongs to the app, not the feature.
+ * @param onBack leaves the screen.
  */
 @Composable
 fun SetupScreen(
     viewModel: SetupViewModel,
     onOpenPairing: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rows by viewModel.rows.collectAsState()
@@ -84,7 +90,29 @@ fun SetupScreen(
             onConfirm = viewModel::onConfirm,
             onTakeBack = viewModel::onTakeBack,
         )
-    SetupContent(rows = rows, actions = actions, modifier = modifier)
+    SetupContent(rows = rows, actions = actions, onBack = onBack, modifier = modifier)
+}
+
+/**
+ * The way into Setup from Settings (Shawn's decision of 2026-10-07: the bottom bar's Setup
+ * button became Settings, and Setup is a tile at the top of Settings). It is the tile with the
+ * count from the top of Setup, with the screen's name and an arrowhead over it, and the whole
+ * tile opens the checklist.
+ *
+ * Settings shows it in a slot that the app fills, because a feature never imports another one.
+ * It reads the rows through Setup's own view model, so the count cannot disagree with Setup's.
+ *
+ * @param onOpenSetup opens the checklist. Navigation belongs to the app, not the feature.
+ */
+@Composable
+fun SetupLinkTile(viewModel: SetupViewModel, onOpenSetup: () -> Unit) {
+    val rows by viewModel.rows.collectAsState()
+    // As on Setup itself: the phone's settings change outside MilO without a word.
+    CameToFrontEffect(viewModel::onCameToFront)
+    SummaryTile(
+        summary = rows?.let(::setupSummary),
+        link = TilePress(stringResource(R.string.setup_open), onOpenSetup),
+    )
 }
 
 /**
@@ -96,6 +124,7 @@ fun SetupScreen(
 private fun SetupContent(
     rows: List<SetupRow>?,
     actions: SetupActions,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = MiloTheme.spacing
@@ -105,12 +134,13 @@ private fun SetupContent(
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(top = spacing.tileGap, bottom = spacing.small),
+                .padding(vertical = spacing.small),
     ) {
-        ScreenTitle(
-            text = stringResource(R.string.setup_title),
-            // With the gap between two tiles, the design's 16 under the title.
-            modifier = Modifier.padding(bottom = spacing.buttonGap),
+        AppHeader(
+            title = stringResource(R.string.setup_title),
+            onBack = onBack,
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = spacing.extraSmall),
         )
         if (rows == null) {
             Tile(modifier = Modifier.fillMaxWidth()) { Note(R.string.setup_reading) }
@@ -181,7 +211,7 @@ private fun SetupPreview() {
         )
     MiloTheme {
         Surface {
-            SetupContent(rows = rows, actions = SetupActions({}, {}, {}))
+            SetupContent(rows = rows, actions = SetupActions({}, {}, {}), onBack = {})
         }
     }
 }

@@ -8,11 +8,13 @@ import android.os.IBinder
 import android.os.SystemClock
 import com.shawnkowalchuk.milo.app.MiloApplication
 import com.shawnkowalchuk.milo.core.trip.POLL_INTERVAL_MS
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.PollPacer
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckBluetoothReceiver
 import com.shawnkowalchuk.milo.platform.car.AndroidAutoWatcher
+import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,8 +69,9 @@ class TripService :
 
     /**
      * What the controller last asked for. While [WATCHING_PARKED] no trip is open: the truck is
-     * connected and parked, and its position is read at a low rate until it moves. Android Auto
-     * is watched then as during a trip: with the truck's Bluetooth gone it holds the wait.
+     * connected and parked, and its position is read at a low rate until it moves, for as long
+     * as the controller says ([parkedGpsInLine]). Android Auto is watched then as during a
+     * trip: with the truck's Bluetooth gone it holds the wait.
      */
     private enum class Work { NONE, RECORDING, WATCHING_PARKED }
 
@@ -79,6 +82,21 @@ class TripService :
     private var destroyed = false
     private var session: Job? = null
     private val checkTimer = TripCheckTimer(scope) { controller.onCheckDue(it) }
+
+    /** Beside the parked truck: how GPS is read (see [watchParked]). */
+    private var parkedGps = ParkedGps()
+
+    /** True once GPS has gone off beside the parked truck, until it is turned on again. */
+    private var parkedGpsOff = false
+
+    /**
+     * Runs out at the next change of how GPS is read beside the parked truck. A fix that
+     * arrives after it stands in when it is late.
+     */
+    private val parkedGpsTimer =
+        TripCheckTimer(scope) { dueMs ->
+            mainExecutor.execute { parkedGpsInLine(max(System.currentTimeMillis(), dueMs)) }
+        }
     private var androidAutoConnected = false
     private val pollPacer = PollPacer()
 
@@ -152,11 +170,13 @@ class TripService :
         }
     }
 
-    override fun watchParked(checkAtMs: Long?) {
+    override fun watchParked(checkAtMs: Long?, gps: ParkedGps) {
         mainExecutor.execute {
             if (destroyed) return@execute
             turnTo(Work.WATCHING_PARKED)
             checkTimer.set(checkAtMs)
+            parkedGps = gps
+            parkedGpsInLine()
         }
     }
 
@@ -180,10 +200,13 @@ class TripService :
         val wasWatching = work == Work.WATCHING_PARKED
         if (work == Work.NONE) beginSession()
         work = next
-        location.start(if (next == Work.RECORDING) FixRate.RECORDING else FixRate.WATCHING_PARKED)
+        // Beside the parked truck GPS follows the time the controller gives (parkedGpsInLine).
+        if (next == Work.RECORDING) location.start(FixRate.RECORDING)
         // For the whole session. Starting a watch that is running does nothing.
         androidAuto.start()
         if (next == Work.RECORDING) {
+            parkedGpsTimer.set(null)
+            parkedGpsOff = false
             // At once, not when the trip's figures next change: the notification must not go
             // on saying that the truck is parked.
             val trip = controller.activity.value.trip
@@ -213,6 +236,35 @@ class TripService :
         truckReceiver.unregisterFrom(this)
         session?.cancel()
         checkTimer.set(null)
+        parkedGpsTimer.set(null)
+        parkedGpsOff = false
+    }
+
+    /**
+     * Beside the parked truck, GPS is read every 5 seconds until [ParkedGps.fastUntilMs], every
+     * 30 until [ParkedGps.untilMs], and not at all after it: the phone's motion sensor watches
+     * then, and its report of getting into a vehicle reaches the controller, which gives later
+     * times. Called with each order, when the timer runs out, and with each fix, which stands
+     * in for a timer that runs late while the phone sleeps.
+     */
+    private fun parkedGpsInLine(nowMs: Long = System.currentTimeMillis()) {
+        if (work != Work.WATCHING_PARKED) return
+        val fast = parkedGps.fastUntilMs?.let { nowMs < it } ?: false
+        val on = parkedGps.untilMs?.let { nowMs < it } ?: true
+        if (fast || on) {
+            parkedGpsOff = false
+            location.start(if (fast) FixRate.RECORDING else FixRate.WATCHING_PARKED)
+        } else if (!parkedGpsOff) {
+            // Also when it never came on: a service that Android restarted after the hour.
+            parkedGpsOff = true
+            location.stop()
+            controller.note(EventCategory.LOCATION, PARKED_GPS_OFF)
+        }
+        val nextChangeMs =
+            listOfNotNull(parkedGps.fastUntilMs, parkedGps.untilMs).filter {
+                it > nowMs
+            }.minOrNull()
+        parkedGpsTimer.set(nextChangeMs)
     }
 
     /** Recording has really begun: the moment for the trip-start sound, once per trip. */
@@ -236,6 +288,7 @@ class TripService :
     /** One GPS fix. It also stands in for the minute timer when that is late ([PollPacer]). */
     private fun onFix(fix: RawPoint) {
         controller.onFix(fix)
+        parkedGpsInLine()
         if (pollPacer.fixArrived(SystemClock.elapsedRealtime())) {
             readTheTruck("$MINUTE_CHECK (prompted by a GPS fix: the timer was late)")
         }

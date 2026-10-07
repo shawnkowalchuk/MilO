@@ -11,14 +11,47 @@ package com.shawnkowalchuk.milo.core.trip
 const val MOVEMENT_BORNE_OUT_WITHIN_MS = 2 * 60_000L
 
 /**
+ * A parked truck has driven off once it moves at this speed or more (Shawn's decision of
+ * 2026-10-07: "Speed over 15 km/h"). A person walks at about 5 km/h, so walking about a site with
+ * the phone, the truck still connected, never starts a trip, as it did while being further from
+ * the parked place than GPS jitter was enough; a truck pulling out of a yard is past it within
+ * its first fixes.
+ */
+const val DRIVING_OFF_KMH = 15.0
+
+private const val DRIVING_OFF_METRES_PER_SECOND = DRIVING_OFF_KMH / 3.6
+
+/**
+ * The trip that driving off starts is dated at the first fix of the last stretch of this length
+ * that kept the truck away from its parked place, and holds those fixes, less the ones at its
+ * start that read the truck as standing ([AT_REST_METRES_PER_SECOND]). A truck that rolled on a
+ * few metres after its trip ended, and stood there an hour before it was driven off, is not given
+ * that hour: its trip starts with the drive. The stretch from the parked place to the first of
+ * these fixes is still counted (see [ParkedWatch.tripStart]).
+ */
+const val DRIVING_OFF_LOOKBACK_MS = 2 * 60_000L
+
+/** A speed reading under this, 3.6 km/h, is a truck standing, or barely creeping. */
+private const val AT_REST_METRES_PER_SECOND = 1.0f
+
+private const val MILLIS_PER_SECOND = 1000.0
+
+/**
  * The watch on a truck that is connected and parked (see [Parked]): has it driven off?
  *
- * The question is answered by the distance calculation itself, run over the place the truck is
- * parked at and the fixes that arrive while MilO waits. So "moved" means here exactly what it
- * means for the kilometres of a trip: further than GPS jitter can explain (rule 3), and not one
- * bad fix that the next fix takes back (rule 4). The second half is why the truck has moved only
- * once the distance is [DistanceState.settledMetres]: a second fix has borne the first out.
- * Starting a trip on the first fix alone would start one on every stray fix of the night.
+ * **It has once a fix shows it away from the parked place, moving at [DRIVING_OFF_KMH] or more**
+ * (since 2026-10-07). "Away" is answered by the distance calculation itself, run over the place
+ * the truck is parked at and the fixes that arrive while MilO waits, so it means exactly what it
+ * means for the kilometres of a trip: further than GPS jitter can explain (rule 3). The speed is
+ * the phone's own reading, from the satellites' Doppler shift: a truck standing still reads
+ * nought however its position scatters, so one fix that has both is enough. A fix without a
+ * speed reading is judged by the rule the watch had before, with a speed worked out from the
+ * positions: the distance has to be borne out by a second fix (rule 4,
+ * [DistanceState.settledMetres]), so that one stray fix cannot start a trip, and the step from
+ * the fix before has to be as fast.
+ *
+ * Until 2026-10-07 the truck had driven off as soon as it was borne out to be further away than
+ * jitter, at any speed. A phone carried about near the connected truck then started a trip.
  *
  * A plain value, built up one fix at a time like [TripProgress].
  *
@@ -29,7 +62,8 @@ const val MOVEMENT_BORNE_OUT_WITHIN_MS = 2 * 60_000L
  *
  * @param distance the calculation so far. Its first accepted fix is the parked place.
  * @param sinceStirred every fix since the distance last stood at zero, in order: the fixes that
- * show the movement. They become the first points of the trip the movement starts.
+ * show the truck away from its parked place. Once it has driven off, only the last stretch of
+ * them ([DRIVING_OFF_LOOKBACK_MS]), which become the first points of the trip it starts.
  * @param seenAwayBefore true once a fix that showed the truck somewhere else has been dropped
  * because nothing bore it out in time ([MOVEMENT_BORNE_OUT_WITHIN_MS]), and until a usable fix
  * shows the truck at the parked place again. The next usable fix that is also away from the
@@ -38,21 +72,30 @@ const val MOVEMENT_BORNE_OUT_WITHIN_MS = 2 * 60_000L
  * apart would never be seen to move: each fix would be a first sighting, dropped in its turn,
  * and the whole drive would go unrecorded. A missed trip is worse than a short one that the
  * parked rule discards.
+ * @param drivenOffAtMs see [movedAtMs]: set by [plus] once, never from outside.
  */
 data class ParkedWatch(
     val distance: DistanceState = DistanceState(),
     val sinceStirred: List<TrackPoint> = emptyList(),
     val seenAwayBefore: Boolean = false,
+    private val drivenOffAtMs: Long? = null,
 ) {
     /** Where the truck is parked: the end of the trip before, or the first usable fix. */
     val place: TrackPoint? get() = distance.firstAccepted
 
     /**
-     * When the next trip starts, or null while the truck stands: the wall-clock time of the fix
-     * that first showed the truck somewhere else, once a later fix has borne it out. If that
-     * first fix was dropped as too old ([seenAwayBefore]), it is the time of the later fix.
+     * When the next trip starts, or null while the truck stands: the wall-clock time of the first
+     * of the fixes that show it driving off (see [DRIVING_OFF_LOOKBACK_MS]), once one of them
+     * has shown it fast enough. It does not change after that.
      */
-    val movedAtMs: Long?
+    val movedAtMs: Long? get() = drivenOffAtMs
+
+    /**
+     * When the distance alone says the truck is away from its parked place, as the watch decided
+     * until 2026-10-07: the fix that first showed it somewhere else, once a later fix has borne
+     * it out. If that first fix was dropped as too old ([seenAwayBefore]), the later fix.
+     */
+    private val awayAtMs: Long?
         get() = when {
             distance.settledMetres > 0.0 -> distance.settledAnchor?.wallClockMs
             seenAwayBefore && distance.metres > 0.0 -> distance.anchor?.wallClockMs
@@ -69,17 +112,47 @@ data class ParkedWatch(
 
     /** The watch after one more fix. */
     fun plus(fix: TrackPoint, limits: DistanceLimits = DistanceLimits()): ParkedWatch {
+        // Once the truck has driven off, the trip it starts is the controller's to open. A fix
+        // that crosses with that is part of the drive, wherever it shows the truck.
+        if (drivenOffAtMs != null) {
+            return copy(
+                distance = DistanceCalculator.add(distance, fix, limits),
+                sinceStirred = sinceStirred + fix,
+            )
+        }
         val tooLate = waitedTooLongFor(fix)
         val watch = if (tooLate) at(place, limits) else this
         val measured = DistanceCalculator.add(watch.distance, fix, limits)
         val away = measured.metres > 0.0
+        val usable = measured.acceptedCount > watch.distance.acceptedCount
         // A usable fix at the parked place: the truck stands, whatever an older fix showed.
-        val seenAtPlace = !away && measured.acceptedCount > watch.distance.acceptedCount
-        return ParkedWatch(
-            distance = measured,
-            sinceStirred = if (away) watch.sinceStirred + fix else emptyList(),
-            seenAwayBefore = (seenAwayBefore || tooLate) && !seenAtPlace,
-        )
+        val seenAtPlace = !away && usable
+        val next =
+            ParkedWatch(
+                distance = measured,
+                sinceStirred = if (away) watch.sinceStirred + fix else emptyList(),
+                seenAwayBefore = (seenAwayBefore || tooLate) && !seenAtPlace,
+            )
+        val drivingOff =
+            away && usable &&
+                when (val reported = fix.speedMetresPerSecond) {
+                    // From the usable fix before this one, also if that was dropped as too old
+                    // to date the trip: a truck driven off while usable fixes come minutes
+                    // apart is still seen to go fast.
+                    null ->
+                        next.awayAtMs != null &&
+                            speedBetween(distance.lastAccepted, fix) >=
+                            DRIVING_OFF_METRES_PER_SECOND
+
+                    else -> reported >= DRIVING_OFF_METRES_PER_SECOND
+                }
+        if (!drivingOff) return next
+        // This fix is fast, so it is always kept, and the trip is never dated after it.
+        val drive =
+            next.sinceStirred
+                .filter { fix.elapsedRealtimeMs - it.elapsedRealtimeMs <= DRIVING_OFF_LOOKBACK_MS }
+                .dropWhile { it !== fix && it.isAtRest() }
+        return next.copy(sinceStirred = drive, drivenOffAtMs = drive.first().wallClockMs)
     }
 
     /**
@@ -93,6 +166,19 @@ data class ParkedWatch(
         val unconfirmed = distance.metres > 0.0 && distance.settledMetres == 0.0
         val displaced = distance.anchor?.takeIf { unconfirmed } ?: return false
         return next.elapsedRealtimeMs - displaced.elapsedRealtimeMs > MOVEMENT_BORNE_OUT_WITHIN_MS
+    }
+
+    private fun TrackPoint.isAtRest(): Boolean =
+        speedMetresPerSecond?.let { it < AT_REST_METRES_PER_SECOND } ?: false
+
+    /**
+     * The speed from [from] to [to], worked out from their positions and their times since boot,
+     * or 0 if there is no fix before or no time between them.
+     */
+    private fun speedBetween(from: TrackPoint?, to: TrackPoint): Double {
+        val seconds = (to.elapsedRealtimeMs - (from ?: return 0.0).elapsedRealtimeMs) /
+            MILLIS_PER_SECOND
+        return if (seconds > 0.0) from.metresTo(to) / seconds else 0.0
     }
 
     companion object {

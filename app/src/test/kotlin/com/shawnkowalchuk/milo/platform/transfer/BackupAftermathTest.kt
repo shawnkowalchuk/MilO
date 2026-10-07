@@ -139,6 +139,8 @@ class BackupAftermathTest {
                 truckAssociationId = null,
                 customSoundUri = null,
                 customSoundName = null,
+                // Its copy is not here, so it goes off the list of his own sounds too.
+                ownSounds = emptyList(),
                 confirmedAtMs = emptyMap(),
             )
         assertEquals(expected, settings.current())

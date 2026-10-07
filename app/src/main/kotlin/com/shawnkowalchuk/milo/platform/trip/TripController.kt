@@ -34,6 +34,9 @@ import kotlinx.coroutines.launch
  * Start) asks for the service directly on the thread it fired on, because the allowance Android
  * attaches to a Bluetooth broadcast is measured in seconds.
  *
+ * @param motionSensorWatching whether the phone reports entering a vehicle to MilO right now
+ * (`DrivingAlert.reportsComing`). A wait beside the parked truck turns GPS off after its first
+ * hour only then ([com.shawnkowalchuk.milo.core.trip.parkedGpsUntilMs]).
  * @param clock wall-clock milliseconds.
  * @param zone the phone's time zone. It is asked for at one moment only, when a trip is closed
  * and sorted into Business or Personal by the day and time of day it started.
@@ -46,6 +49,7 @@ class TripController(
     settings: SettingsStore,
     truck: TruckConnectionSource,
     private val starter: RecordingStarter,
+    motionSensorWatching: () -> Boolean,
     private val clock: () -> Long,
     zone: () -> ZoneId,
     scope: CoroutineScope,
@@ -58,6 +62,7 @@ class TripController(
             eventLog = eventLog,
             settings = settings,
             truck = truck,
+            motionSensorWatching = motionSensorWatching,
             clock = clock,
             startService = ::startService,
         )
@@ -127,6 +132,15 @@ class TripController(
     /** One GPS fix from the service's location callback. Its trip id is filled in here. */
     fun onFix(fix: RawPoint) {
         inbox.trySend(TripWork.Fix(fix))
+    }
+
+    /**
+     * The phone's driving detection noticed Shawn getting into a vehicle at [atMs]. Beside a
+     * parked truck this turns GPS on again, and the fixes decide whether the truck is driving
+     * off. It starts no trip by itself: the phone cannot tell the truck from another vehicle.
+     */
+    fun onVehicleEntered(atMs: Long) {
+        inbox.trySend(TripWork.VehicleEntered(atMs))
     }
 
     /** Android Auto connected or disconnected, as the service's watcher saw it. */
@@ -205,6 +219,8 @@ internal sealed interface TripWork {
     data class AndroidAuto(val connected: Boolean, val source: String, val atMs: Long) : TripWork
 
     data class Fix(val fix: RawPoint) : TripWork
+
+    data class VehicleEntered(val atMs: Long) : TripWork
 
     data class StartFailed(val request: StartRequest?, val failure: StartFailure, val atMs: Long) :
         TripWork

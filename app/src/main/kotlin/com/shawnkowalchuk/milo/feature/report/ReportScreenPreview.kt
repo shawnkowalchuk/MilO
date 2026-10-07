@@ -45,6 +45,7 @@ private val drawnMonth: ReportSelection =
         unsortedLeftOut = 0,
         withoutAddress = 0,
         tripInProgress = false,
+        personalTenths = 482,
     )
 
 /**

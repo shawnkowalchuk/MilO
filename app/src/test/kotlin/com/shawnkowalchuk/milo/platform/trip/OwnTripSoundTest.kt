@@ -13,6 +13,7 @@ import java.io.InputStream
 import java.net.URI
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -22,7 +23,7 @@ import org.junit.rules.TemporaryFolder
 /**
  * Choosing an audio file as the trip-start sound, on a real folder and stand-ins for the picked
  * file and for Android's player: a file that cannot be copied or played changes nothing, and a
- * new choice replaces the copy before it.
+ * new choice joins the list of his own sounds (since 2026-10-07).
  */
 class OwnTripSoundTest {
     @get:Rule
@@ -105,18 +106,69 @@ class OwnTripSoundTest {
     }
 
     @Test
-    fun `a new choice replaces the copy before it`() = runBlocking {
+    fun `a new sound joins the list, and the one before stays to be chosen again`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
-        onThePhone("content://music/2", "horn.wav", "honk")
+        onThePhone("content://music/2", "mario-1-up.mp3", "ding")
         sound.choose("content://music/1")
         nowMs += 60_000
 
         assertNull(sound.choose("content://music/2"))
 
         val now = settings.current()
-        assertEquals("horn.wav", now.customSoundName)
-        assertEquals("honk", soundInUse(now).readText())
-        // Replaced, not accumulated.
+        assertEquals("mario-1-up.mp3", now.customSoundName)
+        assertEquals("ding", soundInUse(now).readText())
+        // A list since 2026-10-07: both copies are kept, in the order they were added.
+        assertEquals(listOf("r2d2.mp3", "mario-1-up.mp3"), now.ownSounds.map { it.name })
+        assertEquals(2, copies().size)
+    }
+
+    @Test
+    fun `a sound on the list can be chosen again`() = runBlocking {
+        onThePhone("content://music/1", "r2d2.mp3", "beep boop")
+        onThePhone("content://music/2", "mario-1-up.mp3", "ding")
+        sound.choose("content://music/1")
+        nowMs += 60_000
+        sound.choose("content://music/2")
+        val first = settings.current().ownSounds.first()
+
+        sound.useOwn(first.uri)
+
+        val now = settings.current()
+        assertEquals("r2d2.mp3", now.customSoundName)
+        assertEquals("beep boop", soundInUse(now).readText())
+    }
+
+    @Test
+    fun `removing the sound in use takes its copy away, and the chirp plays`() = runBlocking {
+        onThePhone("content://music/1", "r2d2.mp3", "beep boop")
+        onThePhone("content://music/2", "mario-1-up.mp3", "ding")
+        sound.choose("content://music/1")
+        nowMs += 60_000
+        sound.choose("content://music/2")
+        val inUse = soundInUse(settings.current())
+
+        sound.remove(settings.current().customSoundUri.orEmpty())
+
+        val now = settings.current()
+        assertNull(now.customSoundUri)
+        assertEquals(listOf("r2d2.mp3"), now.ownSounds.map { it.name })
+        assertTrue(inUse !in copies())
+        assertEquals(1, copies().size)
+    }
+
+    @Test
+    fun `removing another sound leaves the one in use alone`() = runBlocking {
+        onThePhone("content://music/1", "r2d2.mp3", "beep boop")
+        onThePhone("content://music/2", "mario-1-up.mp3", "ding")
+        sound.choose("content://music/1")
+        val other = settings.current().ownSounds.single().uri
+        nowMs += 60_000
+        sound.choose("content://music/2")
+
+        sound.remove(other)
+
+        val now = settings.current()
+        assertEquals("mario-1-up.mp3", now.customSoundName)
         assertEquals(listOf(soundInUse(now)), copies())
     }
 
@@ -227,16 +279,19 @@ class OwnTripSoundTest {
     // ---- Going back -------------------------------------------------------------------------------
 
     @Test
-    fun `going back to the built-in sound forgets the choice and removes the copy`() = runBlocking {
+    fun `going back to the built-in sound keeps his own on the list`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         sound.choose("content://music/1")
         settings.setSoundEnabled(false)
 
         sound.useBuiltIn()
 
+        val now = settings.current()
+        assertNull(now.customSoundUri)
         // Whether the sound plays at all is another setting, and stays as it was.
-        assertEquals(MiloSettings(soundEnabled = false), settings.current())
-        assertTrue(copies().isEmpty())
+        assertFalse(now.soundEnabled)
+        assertEquals(listOf("r2d2.mp3"), now.ownSounds.map { it.name })
+        assertEquals(1, copies().size)
     }
 
     @Test

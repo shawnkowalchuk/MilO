@@ -28,15 +28,12 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
-import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleAction
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.util.formatShortDay
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import java.time.YearMonth
@@ -54,7 +51,6 @@ private const val HAND_OVER_FADE_MS = 300
 /** What the home screen can ask for. */
 internal class HomeActions(
     val onOpenSetup: () -> Unit,
-    val onOpenSettings: () -> Unit,
     val onOpenPairing: () -> Unit,
     val onOpenTrips: () -> Unit,
     val onOpenReport: (YearMonth) -> Unit,
@@ -70,10 +66,10 @@ internal class HomeActions(
 internal class HomeFormat(val locale: Locale, val zone: ZoneId, val twentyFourHour: Boolean)
 
 /**
- * The home screen, laid out as the owner's design draws it: the app's mark and today's date,
- * then tiles. With no trip open: the accent tile that starts one, today's and the month's
- * Business kilometres side by side, the truck's connection, last month's report while it has
- * not been sent, and the last trip of today. While a trip is being recorded: the accent tile
+ * The home screen, laid out as the owner's design draws it: the top line every screen has
+ * (the app's mark and today's date), then tiles. With no trip open: the accent tile that
+ * starts one, today's and the month's Business kilometres side by side, the truck's
+ * connection, last month's report while it has not been sent, and the last trip of today. While a trip is being recorded: the accent tile
  * with its kilometres and the button that ends it, the truck and today side by side, and
  * today's finished trips. A warning while the setup checklist needs attention, and why the
  * last start failed if it did, stand directly under the top line in both.
@@ -84,7 +80,6 @@ internal class HomeFormat(val locale: Locale, val zone: ZoneId, val twentyFourHo
  * Navigation belongs to the app, not the feature, so each way out is a plain function.
  *
  * @param onOpenSetup the setup warning's button.
- * @param onOpenSettings the three sliders at the end of the top line.
  * @param onOpenPairing the truck's tile, while no truck is paired.
  * @param onOpenTrips the tile of the last trip, and the list of today's trips.
  * @param onOpenReport the report tile's button, with the month the report is for.
@@ -93,7 +88,6 @@ internal class HomeFormat(val locale: Locale, val zone: ZoneId, val twentyFourHo
 fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenSetup: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenPairing: () -> Unit,
     onOpenTrips: () -> Unit,
     onOpenReport: (YearMonth) -> Unit,
@@ -113,7 +107,6 @@ fun HomeScreen(
         actions =
             HomeActions(
                 onOpenSetup = onOpenSetup,
-                onOpenSettings = onOpenSettings,
                 onOpenPairing = onOpenPairing,
                 onOpenTrips = onOpenTrips,
                 onOpenReport = onOpenReport,
@@ -161,17 +154,9 @@ internal fun HomeContent(shown: HomeShown, actions: HomeActions, modifier: Modif
                 .padding(vertical = MiloTheme.spacing.small),
     ) {
         AppHeader(
-            mark = stringResource(R.string.app_mark),
-            name = stringResource(R.string.app_name),
-            line = formatShortDay(ui.date, locale),
-            action =
-                ScreenTitleAction(
-                    icon = MiloIcons.Settings,
-                    description = stringResource(R.string.home_open_settings),
-                    onClick = actions.onOpenSettings,
-                ),
-            // With the gap between two tiles, and the room the button keeps free around
-            // itself for a finger, the design's 16 under the top line.
+            title = stringResource(R.string.nav_home),
+            // With the gap between two tiles, and the room the top line keeps free for a
+            // finger, the design's 16 under the top line.
             modifier = Modifier.padding(bottom = MiloTheme.spacing.extraSmall),
         )
 

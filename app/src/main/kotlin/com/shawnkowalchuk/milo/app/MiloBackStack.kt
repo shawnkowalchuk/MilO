@@ -15,11 +15,22 @@ data object HomeKey : NavKey
 @Serializable
 data object TripsKey : NavKey
 
+/**
+ * The Settings screen, a screen of the bottom bar since 2026-10-07 (it was opened from Home
+ * before). It is also opened on top of the Report screen, by its "Open Settings".
+ */
 @Serializable
-data object SetupKey : NavKey
+data object SettingsKey : NavKey
 
 @Serializable
 data object LogKey : NavKey
+
+/**
+ * The Setup checklist. Not in the bottom bar since 2026-10-07, when Settings took its place:
+ * it is opened from the tile at the top of Settings, and from Home's warning.
+ */
+@Serializable
+data object SetupKey : NavKey
 
 /**
  * The truck pairing screen. Not in the bottom bar: it is opened from Setup, from Settings, and
@@ -27,10 +38,6 @@ data object LogKey : NavKey
  */
 @Serializable
 data object PairingKey : NavKey
-
-/** The Settings screen. Not in the bottom bar: it is opened from Home. */
-@Serializable
-data object SettingsKey : NavKey
 
 /**
  * The edit screen. Not in the bottom bar: it is opened from Trips.
@@ -55,21 +62,22 @@ data class ReportKey(val year: Int, val month: Int) : NavKey
 enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: ImageVector) {
     HOME(HomeKey, R.string.nav_home, MiloIcons.Home),
     TRIPS(TripsKey, R.string.nav_trips, MiloIcons.Trips),
-    SETUP(SetupKey, R.string.nav_setup, MiloIcons.Setup),
+    SETTINGS(SettingsKey, R.string.nav_settings, MiloIcons.Settings),
     LOG(LogKey, R.string.nav_log, MiloIcons.Log),
 }
 
 /**
- * The bottom-bar screen the back stack is in: the nearest one under whatever is on top. With
- * the pairing screen open from Setup that is Setup, with Settings open (or the pairing screen
- * on top of Settings) it is Home, and with the edit screen or the Report screen open from
- * Trips (or Settings opened from that Report screen) it is Trips, so the bar keeps showing
- * where Shawn came from. The pairing screen and the Report screen opened from Home's own tiles
- * keep it on Home for the same reason.
+ * The bottom-bar screen the back stack is in: the one directly on top of Home, which is where
+ * a button of the bar puts its screen ([showTopLevel]), or Home itself. With Setup or the
+ * pairing screen open from Settings that is Settings, and with the edit screen or the Report
+ * screen open from Trips it is Trips, so the bar keeps showing where Shawn came from. Settings
+ * opened from that Report screen keeps it on Trips too: Settings is a screen of the bar, but
+ * there it is opened on top of another one, as the pairing screen, Setup and the Report screen
+ * opened from Home's own tiles keep it on Home.
  */
 internal fun topLevelOf(backStack: List<NavKey>): TopLevelDestination = backStack
-    .asReversed()
-    .firstNotNullOfOrNull { key -> TopLevelDestination.entries.firstOrNull { it.key == key } }
+    .getOrNull(1)
+    ?.let { key -> TopLevelDestination.entries.firstOrNull { it.key == key } }
     ?: TopLevelDestination.HOME
 
 /**

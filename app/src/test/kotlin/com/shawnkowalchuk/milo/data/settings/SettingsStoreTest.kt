@@ -127,6 +127,9 @@ class SettingsStoreTest {
                 soundEnabled = false,
                 customSoundUri = "file:/data/sounds/own_trip_start_sound_1",
                 customSoundName = "r2d2.mp3",
+                // The sound in use is always on the list of his own (since 2026-10-07).
+                ownSounds =
+                    listOf(OwnSound("file:/data/sounds/own_trip_start_sound_1", "r2d2.mp3")),
                 autoStartHeldOffSinceMs = 1_791_028_700_000,
                 lastProcessExitImportedAtMs = 1_791_028_800_000,
             ),

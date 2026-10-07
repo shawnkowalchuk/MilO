@@ -43,7 +43,9 @@ data class TransferredTruck(val address: String, val name: String?)
  * TODO(debt): the parked limit ([MiloSettings.parkedLimitSeconds]) is a setting that would mean
  *  the same on another phone, and it is not here: adding it changes the export file's form,
  *  which needs a new format version and a reader for both. An import leaves the phone's own
- *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening).
+ *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening). The odometer readings
+ *  ([MiloSettings.odometerReadings], 2026-10-07) are left out on the same terms: Android's
+ *  backup carries them, an export file does not. See docs/FINDINGS_LOG.md, 2026-10-07.
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,
@@ -161,18 +163,18 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
  *
  * @param dropAssociation true if Android on this phone holds no association for the stored
  * truck. The truck's address and name stay, so that the phone knows which device to pair again.
- * @param dropOwnSound true if MilO's copy of the chosen trip-start sound is not on this phone.
- * It never is after a restore: the copy is kept out of every backup.
+ * @param dropOwnSound true if MilO's copies of the trip-start sounds of Shawn's own are not on
+ * this phone. They never are after a restore: the copies are kept out of every backup. The
+ * list of them goes too, and the built-in chirp plays.
  */
 suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, dropOwnSound: Boolean) {
     dataStore.edit { stored ->
         for (step in ConfirmedStep.entries) stored.remove(longPreferencesKey(step.key))
-        // A wait beside the truck was true of the moment the backup was made, nothing more.
+        // A wait beside the truck was true of the moment the backup was made, nothing more; so
+        // was the trip that a parked truck's moving had started.
         stored.forgetParkedTruck()
+        stored.forgetDrivenOffTrip()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
-        if (dropOwnSound) {
-            stored.remove(SettingsStore.CUSTOM_SOUND_URI)
-            stored.remove(SettingsStore.CUSTOM_SOUND_NAME)
-        }
+        if (dropOwnSound) stored.forgetOwnSounds()
     }
 }

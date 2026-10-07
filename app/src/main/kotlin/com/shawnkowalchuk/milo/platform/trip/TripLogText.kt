@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.schedule.TripFiling
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+import com.shawnkowalchuk.milo.core.trip.ANOTHER_VEHICLE_WITHIN_METRES
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripEndReason
 import com.shawnkowalchuk.milo.core.trip.TripEvent
@@ -104,6 +105,21 @@ internal fun closedText(
     return "$outcome; ended by $reason${parked.orEmpty()}; $fixes"
 }
 
+/**
+ * A trip removed for good as a drive in another vehicle (`leftInAnotherVehicle`): what it was
+ * removed for, with the figures that decided it, so the log keeps what the trips table no longer
+ * holds.
+ */
+internal fun anotherVehicleText(closed: ClosedTrip, startedAtMs: Long, zone: ZoneId): String {
+    val metres = closed.distance.metres.roundToInt()
+    val within = ANOTHER_VEHICLE_WITHIN_METRES.roundToInt()
+    val started = TIME_OF_DAY.format(Instant.ofEpochMilli(startedAtMs).atZone(zone))
+    val lost = TIME_OF_DAY.format(Instant.ofEpochMilli(closed.endedAtMs).atZone(zone))
+    return "removed for good as a drive in another vehicle: it started at $started when the " +
+        "parked truck seemed to drive off, and the truck's connection was lost for good at " +
+        "$lost, $metres m on, under $within m. Its row and its points are deleted"
+}
+
 private const val MILLIS_PER_MINUTE = 60_000L
 private val TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss")
 
@@ -121,25 +137,56 @@ internal fun parkedText(lastMovedAtMs: Long, parkedLimitMs: Long?, zone: ZoneId)
  * The line for a trip that has started.
  *
  * @param fromParked true if the truck, connected and parked, moved again.
- * @param carriedOver how many points such a trip was given: the parked place and the fixes that
- * showed the movement.
+ * @param carriedOver how many points a trip that begins at the parked place was given: the
+ * place and the fixes the watch kept. Null for a trip that begins where it was started.
  */
 internal fun startedText(
     tripId: Long,
     startedBy: TripStartCause,
     fromParked: Boolean,
-    carriedOver: Int,
+    carriedOver: Int?,
 ): String {
     val started = "Trip $tripId started by $startedBy"
-    if (!fromParked) return started
-    return "$started: it was connected and parked, and it moved. The trip starts where it " +
-        "was parked ($carriedOver points carried over), with no trip-start sound"
+    return when {
+        fromParked ->
+            "$started: it was connected and parked, and it moved. The trip starts where it " +
+                "was parked ($carriedOver points carried over), with no trip-start sound"
+
+        carriedOver != null ->
+            "$started while MilO waited beside the parked truck. The trip starts where it " +
+                "was parked ($carriedOver points carried over)"
+
+        else -> started
+    }
 }
 
 /** The line for the beginning of a wait beside the parked truck. */
 internal const val WAITING_BEGAN =
     "Waiting for the truck to move: it is still connected. Its position is read at a low " +
         "rate, and a trip starts when it moves"
+
+/**
+ * The line for GPS going off beside the parked truck once the wait has lasted an hour
+ * (`parkedGpsUntilMs`). The trip service writes it.
+ */
+internal const val PARKED_GPS_OFF =
+    "GPS is off beside the parked truck, to spare the battery. The phone's motion sensor " +
+        "watches instead: getting into a vehicle turns GPS on again"
+
+private const val MILLIS_PER_SECOND = 1000L
+
+/**
+ * The line for a report of getting into a vehicle that turns GPS on beside the parked truck.
+ *
+ * @param ageMs how long before now the phone noticed it.
+ * @param forMs how long from now GPS is read.
+ */
+internal fun gpsForDrivingText(ageMs: Long, forMs: Long): String {
+    val minutes = (forMs + MILLIS_PER_MINUTE - 1) / MILLIS_PER_MINUTE
+    return "The phone reports getting into a vehicle ${ageMs / MILLIS_PER_SECOND} s ago: the " +
+        "parked truck's position is read every 5 s for the next $minutes min, and a trip " +
+        "starts if it drives off"
+}
 
 /** The line for the end of a wait beside the parked truck, with the reason. */
 internal fun waitingEndedText(reason: WaitingEnd): String {

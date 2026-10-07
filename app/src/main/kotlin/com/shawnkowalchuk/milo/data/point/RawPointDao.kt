@@ -12,4 +12,8 @@ interface RawPointDao {
 
     @Query("SELECT * FROM raw_points WHERE tripId = :tripId ORDER BY id")
     suspend fun findForTrip(tripId: Long): List<RawPoint>
+
+    /** Removes every point of a trip whose row was removed. */
+    @Query("DELETE FROM raw_points WHERE tripId = :tripId")
+    suspend fun deleteForTrip(tripId: Long): Int
 }

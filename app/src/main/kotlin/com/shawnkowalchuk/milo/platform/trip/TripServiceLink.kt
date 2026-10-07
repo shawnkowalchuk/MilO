@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStateMachine
@@ -31,11 +32,15 @@ internal class TripServiceLink {
 
     private var lastOrders: Orders? = null
 
-    /** What a service was last told: to record or to watch the parked truck, and until when. */
+    /**
+     * What a service was last told: to record or to watch the parked truck, until when, and
+     * beside the parked truck how to read GPS.
+     */
     private data class Orders(
         val service: TripRecorder,
         val watching: Boolean,
         val checkAtMs: Long?,
+        val gps: ParkedGps,
     )
 
     /** The service is in the foreground and is handing a trigger over. */
@@ -54,17 +59,20 @@ internal class TripServiceLink {
     /**
      * Tells the service what the state now asks of it: keep recording, watch the parked truck,
      * or stop.
+     *
+     * @param parkedGps beside the parked truck, how GPS is read (`ParkedGps`).
      */
-    fun sync(state: TripState?, rules: TripRules) {
+    fun sync(state: TripState?, rules: TripRules, parkedGps: ParkedGps) {
         val service = recorder
         if (service == null || state == null) return
         if (state.wantsService) {
             val watching = state.trip == null
-            val orders = Orders(service, watching, TripStateMachine.nextCheckAtMs(state, rules))
+            val checkAtMs = TripStateMachine.nextCheckAtMs(state, rules)
+            val orders = Orders(service, watching, checkAtMs, parkedGps)
             // Told again only when something changed: this runs after every GPS fix.
             if (tripJustStarted || orders != lastOrders) {
                 if (watching) {
-                    service.watchParked(orders.checkAtMs)
+                    service.watchParked(orders.checkAtMs, orders.gps)
                 } else {
                     service.record(orders.checkAtMs, tripJustStarted)
                 }

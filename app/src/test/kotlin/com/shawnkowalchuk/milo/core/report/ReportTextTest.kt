@@ -23,12 +23,32 @@ class ReportTextTest {
                 "Name" to "Sam Driver",
                 "Company" to "Northside Electric Ltd.",
                 "Vehicle" to "Ford F-150, ABC-123",
-                "Period" to "October 2026",
-                "Generated" to "October 6, 2026",
             ),
             printed.fields,
         )
+        assertEquals("October 2026", printed.period)
+        assertEquals("Generated October 6, 2026", printed.generated)
         assertEquals(listOf("Business trips only. Distances are in kilometres."), printed.notes)
+    }
+
+    @Test
+    fun `the top shows the Business and the Personal kilometres, each with its trips`() {
+        val trips = listOf(trip(monday, "08:14", metres = 12_340.0), trip(monday, "17:02"))
+
+        val printed = printed(report(trips, personal = PersonalDriving(2, tenths = 182)))
+
+        assertEquals(PrintedTally("Business", "24.6", "3 business trips"), printed.business)
+        assertEquals(PrintedTally("Personal", "18.2", "2 personal trips"), printed.personal)
+        // The Business figure is the total the report ends with.
+        assertEquals(printed.totalKm, printed.business.km)
+    }
+
+    @Test
+    fun `a period without Personal trips says so in figures`() {
+        val printed =
+            printed(report(listOf(trip(monday, "08:14")), personal = PersonalDriving(0, 0)))
+
+        assertEquals("0.0", printed.personal.km)
     }
 
     @Test
@@ -37,7 +57,7 @@ class ReportTextTest {
 
         val printed = printed(report(listOf(trip(monday, "08:14")), sender = alone))
 
-        assertEquals(listOf("Name", "Period", "Generated"), printed.fields.map { it.first })
+        assertEquals(listOf("Name"), printed.fields.map { it.first })
     }
 
     @Test
@@ -47,8 +67,8 @@ class ReportTextTest {
         val printed = printed(report(listOf(trip(monday, "08:14")), period = range))
 
         val words = "October 5, 2026 to October 18, 2026"
-        assertEquals("Period" to words, printed.fields.single { it.first == "Period" })
-        assertEquals("Total kilometres for $words", printed.totalLabel)
+        assertEquals(words, printed.period)
+        assertEquals("Total business kilometres for $words", printed.totalLabel)
         assertEquals("Sam Driver · $words", printed.footer)
     }
 
@@ -85,7 +105,7 @@ class ReportTextTest {
         )
         assertEquals("12.3", day.subtotalKm)
         assertEquals("12.3", printed.totalKm)
-        assertEquals("Total kilometres for October 2026", printed.totalLabel)
+        assertEquals("Total business kilometres for October 2026", printed.totalLabel)
     }
 
     @Test

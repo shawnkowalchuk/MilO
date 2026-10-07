@@ -1,11 +1,15 @@
 package com.shawnkowalchuk.milo.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -24,6 +28,7 @@ import com.shawnkowalchuk.milo.feature.pairing.PairingScreen
 import com.shawnkowalchuk.milo.feature.pairing.PairingViewModel
 import com.shawnkowalchuk.milo.feature.settings.SettingsScreen
 import com.shawnkowalchuk.milo.feature.settings.SettingsViewModel
+import com.shawnkowalchuk.milo.feature.setup.SetupLinkTile
 import com.shawnkowalchuk.milo.feature.setup.SetupScreen
 import com.shawnkowalchuk.milo.feature.setup.SetupViewModel
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditScreen
@@ -90,8 +95,8 @@ fun MiloNavigation(
                                     }
                                 },
                             ),
-                        onOpenSetup = { backStack.showTopLevel(SetupKey, HomeKey) },
-                        onOpenSettings = { backStack.openOnTop(SettingsKey) },
+                        // On top of Home, as the bar keeps showing: Back leads to Home.
+                        onOpenSetup = { backStack.openOnTop(SetupKey) },
                         onOpenPairing = { backStack.openOnTop(PairingKey) },
                         onOpenTrips = { backStack.showTopLevel(TripsKey, HomeKey) },
                         onOpenReport = { month ->
@@ -169,18 +174,9 @@ fun MiloNavigation(
                 }
                 entry<SetupKey> {
                     SetupScreen(
-                        viewModel =
-                            viewModel(
-                                factory = viewModelFactory {
-                                    initializer {
-                                        SetupViewModel(
-                                            container.setupChecklist,
-                                            container.systemScreens,
-                                        )
-                                    }
-                                },
-                            ),
+                        viewModel = viewModel(factory = setupViewModelFactory(container)),
                         onOpenPairing = { backStack.openOnTop(PairingKey) },
+                        onBack = { backStack.closeIfOnTop(SetupKey) },
                     )
                 }
                 entry<PairingKey> {
@@ -205,6 +201,13 @@ fun MiloNavigation(
                     )
                 }
                 entry<SettingsKey> {
+                    // The bar's screen directly on Home; opened on top of the Report screen by
+                    // "Open Settings" anywhere higher, and then it shows the way back. While it
+                    // slides away it is off the back stack, and keeps what it showed.
+                    val place = backStack.indexOf(SettingsKey)
+                    val lastPlace = remember { mutableIntStateOf(place) }
+                    SideEffect { if (place != -1) lastPlace.intValue = place }
+                    val openedOnTop = (if (place != -1) place else lastPlace.intValue) > 1
                     SettingsScreen(
                         viewModel =
                             viewModel(
@@ -225,8 +228,21 @@ fun MiloNavigation(
                         dataViewModel = viewModel(factory = dataViewModelFactory(container)),
                         checkViewModel =
                             viewModel(factory = nothingRecordedViewModelFactory(container)),
+                        odometerViewModel =
+                            viewModel(factory = odometerViewModelFactory(container)),
                         onChangeTruck = { backStack.openOnTop(PairingKey) },
-                        onBack = { backStack.closeIfOnTop(SettingsKey) },
+                        onBack =
+                            if (openedOnTop) {
+                                { backStack.closeIfOnTop(SettingsKey) }
+                            } else {
+                                null
+                            },
+                        setupTile = {
+                            SetupLinkTile(
+                                viewModel = viewModel(factory = setupViewModelFactory(container)),
+                                onOpenSetup = { backStack.openOnTop(SetupKey) },
+                            )
+                        },
                     )
                 }
                 entry<LogKey> {
@@ -250,6 +266,12 @@ fun MiloNavigation(
             },
     )
 }
+
+/** The Setup checklist's view model, for the Setup screen and for its tile on Settings. */
+private fun setupViewModelFactory(container: AppContainer): ViewModelProvider.Factory =
+    viewModelFactory {
+        initializer { SetupViewModel(container.setupChecklist, container.systemScreens) }
+    }
 
 /**
  * What the home screen reads besides the trip controller, the checklist and the stored trips:

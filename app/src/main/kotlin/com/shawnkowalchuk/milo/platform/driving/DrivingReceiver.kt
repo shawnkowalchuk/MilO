@@ -14,9 +14,10 @@ import com.shawnkowalchuk.milo.platform.bluetooth.holdUntilHandled
  * HyperOS lets it do that with Autostart off is one of the things the phone has to show
  * (docs/DEVICE_TEST_CHECKLIST.md, the DA checks).
  *
- * It only hands the report to [DrivingAlert], which may post a notification. What an event of
- * the report means is read by [vehicleReport], a pure function with tests of its own. It does
- * not call the trip controller and cannot start a trip.
+ * It hands the report to [DrivingAlert], which may post a notification, and a fresh report of
+ * getting into a vehicle to the trip controller, which reads GPS again beside a parked truck
+ * ([enteredVehicleAtMs]). What an event of the report means is read by [vehicleReport], a pure
+ * function with tests of its own. Neither can start a trip on a report alone.
  *
  * Not exported. The report is sent through a `PendingIntent` MilO made itself, which Android
  * delivers as coming from MilO, so nothing outside MilO needs to reach this receiver and
@@ -31,9 +32,13 @@ class DrivingReceiver : BroadcastReceiver() {
             result.transitionEvents.mapNotNull {
                 vehicleReport(it.activityType, it.transitionType, it.elapsedRealTimeNanos, nowNanos)
             }
-        val alert = (context.applicationContext as MiloApplication).container.drivingAlert
+        val container = (context.applicationContext as MiloApplication).container
+        // First, so that the controller has it before the alert waits for it to catch up.
+        enteredVehicleAtMs(reports, System.currentTimeMillis())?.let { atMs ->
+            container.tripController.onVehicleEntered(atMs)
+        }
         // Held open until the alert has been decided: the decision reads the truck's
         // connection first, a moment after onReceive has returned (see holdUntilHandled).
-        alert.onReports(reports, holdUntilHandled())
+        container.drivingAlert.onReports(reports, holdUntilHandled())
     }
 }

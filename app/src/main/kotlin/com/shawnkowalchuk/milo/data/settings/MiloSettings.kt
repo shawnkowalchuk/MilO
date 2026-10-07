@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.data.settings
 
+import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 
@@ -33,10 +34,10 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Eight fields are not settings Shawn chooses: [parkedTruck], [lastDrivingAlertAtMs],
- * [reportHandOver], [reminderShown], [lastExport] and the last three; and one value inside
- * [nothingRecorded] is not either. They are small pieces of state that must outlive the
- * process, and the settings store is where such values live.
+ * Nine fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
+ * [lastDrivingAlertAtMs], [reportHandOver], [reminderShown], [lastExport] and the last three;
+ * and one value inside [nothingRecorded] is not either. They are small pieces of state that
+ * must outlive the process, and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -47,11 +48,15 @@ enum class ConfirmedStep(val key: String) {
  * where it last moved, even with the truck still connected.
  * @param parkedTruck set while MilO is waiting beside the parked truck for it to move, with no
  * trip open. Not a setting: see [ParkedTruck].
+ * @param drivenOffTripId the open trip that the parked truck's moving started, if one is open.
+ * Not a setting: see `readDrivenOffTripId`.
  * @param soundEnabled whether the trip-start sound plays.
  * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp. It names
  * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
  * @param customSoundName what the file he picked was called, for display only. Null with no
  * custom sound, and when the phone gave no name for the file.
+ * @param ownSounds every sound of his own he has added, the one in use among them, to choose
+ * from (since 2026-10-07; kept in `SoundListStorage.kt`).
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
  * starts inside it is saved as Business. It sorts a trip when the trip is finalised and never
  * before, and it has no say in whether a trip starts. The driving alert reads it too, to keep
@@ -69,6 +74,9 @@ enum class ConfirmedStep(val key: String) {
  * @param reportCompany his company, for the report's heading, or null to leave the line out.
  * @param reportVehicle a description of the vehicle, for the report's heading, or null to
  * leave the line out.
+ * @param odometerReadings every reading of the truck's odometer Shawn typed in, oldest first,
+ * corrections too. MilO works the odometer out from them and the truck trips
+ * (`core/odometer/`); kept in `OdometerStorage.kt`.
  * @param accountantEmail where the report is sent: the address the email app is opened with,
  * or null while it is not set. MilO itself sends nothing.
  * @param reportHandOver the report that was handed to the email app and not answered for
@@ -100,9 +108,11 @@ data class MiloSettings(
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val parkedLimitSeconds: Int = DEFAULT_PARKED_LIMIT_SECONDS,
     val parkedTruck: ParkedTruck? = null,
+    val drivenOffTripId: Long? = null,
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
     val customSoundName: String? = null,
+    val ownSounds: List<OwnSound> = emptyList(),
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,
     val drivingAlertEnabled: Boolean = true,
@@ -110,6 +120,7 @@ data class MiloSettings(
     val reportName: String? = null,
     val reportCompany: String? = null,
     val reportVehicle: String? = null,
+    val odometerReadings: List<OdometerReading> = emptyList(),
     val accountantEmail: String? = null,
     val reportHandOver: ReportHandOver? = null,
     val reminderEnabled: Boolean = true,

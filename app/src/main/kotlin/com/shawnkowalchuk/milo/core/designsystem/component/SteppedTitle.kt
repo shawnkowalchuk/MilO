@@ -19,14 +19,15 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /**
  * Each square is drawn 44 dp and takes up 48, for the finger. Moved out by the 2 dp the last
- * one keeps free at its end, its drawn edge lines up with the tiles under it, as on `AppHeader`.
+ * one keeps free at its end, its drawn edge lines up with the tiles under it.
  */
 private val ButtonOverhang = 2.dp
 
 /**
- * The heading of a bottom-bar screen that is stepped through, as the design draws it on Trips:
- * the large title, and at the end of its line two square buttons, one step back and one step on
- * (the month before, the month after).
+ * What a screen that is stepped through shows, as a large heading under the top line
+ * (`AppHeader`), with two square buttons at the end of its line, one step back and one step on:
+ * on Trips, "October 2026" with the month before and the month after. Until 2026-10-07 the
+ * heading was the screen's own name, which now stands in the top line.
  *
  * A step that cannot be taken keeps its square, with the arrow in the design's idle grey, so
  * that nothing moves. A screen reader is told that the button is switched off.
@@ -84,7 +85,7 @@ private fun SteppedTitlePreview() {
     MiloTheme {
         Surface {
             SteppedTitle(
-                text = "Trips",
+                text = "October 2026",
                 previous = StepperButton("Previous month", {}),
                 next = StepperButton("Next month", {}, enabled = false),
             )

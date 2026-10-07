@@ -183,14 +183,25 @@ object TripStateMachine {
             )
     }
 
-    /** Opens a trip now. Whether the truck has been seen in it is what is known at this moment. */
+    /**
+     * Opens a trip now. Whether the truck has been seen in it is what is known at this moment.
+     *
+     * @param atParkedPlace see [TripEffect.StartTrip.atParkedPlace].
+     */
     internal fun startTrip(
         state: TripState,
         startedBy: TripStartCause,
         atMs: Long,
         effects: MutableList<TripEffect>,
+        atParkedPlace: Boolean = false,
     ): TripState {
-        effects += TripEffect.StartTrip(startedBy, truckSeen = state.truckConnected, atMs)
+        effects +=
+            TripEffect.StartTrip(
+                startedBy,
+                truckSeen = state.truckConnected,
+                atMs,
+                atParkedPlace = atParkedPlace,
+            )
         val trip = ActiveTrip(startedBy, truckSeen = state.truckConnected, lastMovementAtMs = atMs)
         return state.copy(trip = trip)
     }

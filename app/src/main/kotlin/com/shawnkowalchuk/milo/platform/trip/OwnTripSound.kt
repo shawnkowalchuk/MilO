@@ -3,10 +3,14 @@ package com.shawnkowalchuk.milo.platform.trip
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.addOwnSound
+import com.shawnkowalchuk.milo.data.settings.chooseOwnSound
+import com.shawnkowalchuk.milo.data.settings.removeOwnSound
 import com.shawnkowalchuk.milo.data.sound.OwnSoundStore
 import com.shawnkowalchuk.milo.data.sound.SoundTooLargeException
 import java.io.File
 import java.io.IOException
+import java.net.URI
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -27,12 +31,16 @@ enum class OwnSoundRefusal {
 }
 
 /**
- * Changes which sound a trip start plays: Shawn's own audio file, or the bundled chirp again.
+ * Changes which sound a trip start plays: one of Shawn's own audio files, or the bundled chirp.
+ *
+ * Since 2026-10-07 his own sounds are a list he chooses from (his choice: "A list of my own
+ * sounds"): a picked file is added to it and plays from then on, and the sounds added before
+ * stay on the list, to be chosen again or removed.
  *
  * A picked file is copied into MilO's own storage, checked to be playable, and only then put in
  * the settings, from where the trip service reads it at the next trip start. If any step fails
- * the choice is refused and nothing has changed: the settings and the copy that was in use are
- * exactly as before.
+ * the choice is refused and nothing has changed: the settings and the copies are exactly as
+ * before.
  *
  * @param picked reads the file Shawn picked.
  * @param playbackProblem says why Android cannot play a file, or null if it can. A plain
@@ -56,7 +64,7 @@ class OwnTripSound(
     private val oneAtATime = Mutex()
 
     /**
-     * Makes the picked file the trip-start sound.
+     * Adds the picked file to the list of his own sounds, and makes it the trip-start sound.
      *
      * @return null if it is now the sound, else why it was refused. The reason is also written
      * to the event log, with what Android or the file system said.
@@ -86,9 +94,7 @@ class OwnTripSound(
                 return@withLock refuse(OwnSoundRefusal.NOT_PLAYABLE, problem)
             }
             try {
-                // The settings first, the old copy second: until the settings name the new copy,
-                // the old one is what a trip start plays, so it must still be there.
-                settings.setCustomSound(
+                settings.addOwnSound(
                     uri = copy.toURI().toString(),
                     name = picked.nameOf(uri)?.takeIf { it.isNotBlank() },
                 )
@@ -96,24 +102,55 @@ class OwnTripSound(
                 tidy { store.discard(copy) }
                 return@withLock refuse(OwnSoundRefusal.COULD_NOT_COPY, notStored.toString())
             }
-            tidy { store.keepOnly(copy) }
-            note("Trip-start sound: a file chosen on the Settings screen is now used")
+            tidy { store.keepOnly(listedCopies()) }
+            note("Trip-start sound: a file added on the Settings screen is now used")
             null
         }
     }
 
     /**
-     * Goes back to the bundled chirp and removes MilO's copy of the file that was chosen.
+     * Goes back to the bundled chirp. His own sounds stay on the list.
      *
      * @throws IOException if the settings cannot be written. Nothing has changed then.
      */
     suspend fun useBuiltIn() = withContext(io + NonCancellable) {
         oneAtATime.withLock {
             settings.clearCustomSound()
-            tidy { store.keepOnly(null) }
             note("Trip-start sound: the bundled chirp is used again")
         }
     }
+
+    /**
+     * Makes the sound of his own at [uri], one of the list, the trip-start sound.
+     *
+     * @throws IOException if the settings cannot be written. Nothing has changed then.
+     */
+    suspend fun useOwn(uri: String) = withContext(io + NonCancellable) {
+        oneAtATime.withLock {
+            if (settings.chooseOwnSound(uri)) {
+                note("Trip-start sound: a sound added before is used again")
+            }
+        }
+    }
+
+    /**
+     * Takes the sound at [uri] off the list and removes MilO's copy of it. If it was the one in
+     * use, the bundled chirp plays from then on.
+     *
+     * @throws IOException if the settings cannot be written. Nothing has changed then.
+     */
+    suspend fun remove(uri: String) = withContext(io + NonCancellable) {
+        oneAtATime.withLock {
+            settings.removeOwnSound(uri)
+            tidy { store.keepOnly(listedCopies()) }
+            note("Trip-start sound: a sound was removed from the list")
+        }
+    }
+
+    /** MilO's copies of the sounds on the list: every other copy can go. */
+    private suspend fun listedCopies(): Set<File> = settings.current().ownSounds
+        .mapNotNull { runCatching { File(URI(it.uri)) }.getOrNull() }
+        .toSet()
 
     private suspend fun refuse(why: OwnSoundRefusal, detail: String): OwnSoundRefusal {
         eventLog.add(
@@ -129,7 +166,7 @@ class OwnTripSound(
      * Removes copies that are no longer wanted. A failure here changes nothing about which sound
      * plays, so it is logged and the change stands; the next change removes what was left.
      */
-    private suspend fun tidy(remove: () -> Unit) {
+    private suspend fun tidy(remove: suspend () -> Unit) {
         try {
             remove()
         } catch (leftBehind: IOException) {

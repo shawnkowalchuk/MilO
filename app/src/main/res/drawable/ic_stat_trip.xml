@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The small icon of MilO's notifications. Android draws it itself, in the status bar and the
-    notification shade, using only the shape: every opaque pixel is tinted by the system. That
-    is why the size and the white fill are written here and not taken from the design tokens,
-    which exist only inside Compose.
+    The small icon of every MilO notification: the app's mark, a rounded square with the "M" cut
+    out of it (Shawn's choice of 2026-10-07). Android draws it itself, in the status bar and the
+    notification shade, using only the shape: every opaque pixel is painted in one colour of the
+    system's choosing, so the lime of the mark cannot be in here. The lime is the notifications'
+    colour instead (res/values/colors.xml), which Android uses around this shape where it adds
+    colour at all. That is why the size and the white fill are written here and not taken from
+    the design tokens, which exist only inside Compose.
 
-    The outline is Google's Material "navigation" icon (Apache License 2.0).
+    The square is 20 of the 24 units wide, the margin Android's status bar icons keep, with the
+    mark's corner (11 on 36, so 6 here). The letter is the launcher icon's "M"
+    (ic_launcher_foreground.xml, read from res/font/sora.ttf at weight 700), halved and moved to
+    the middle. It is larger on the square than on the mark, 12 of 20 units wide instead of a
+    third: at the mark's size its strokes would be about one pixel wide in the status bar.
+
+    One path: the square and the letter are both in it, and "evenOdd" makes the letter a hole.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -14,5 +23,6 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,2L4.5,20.29l0.71,0.71L12,18l6.79,3 0.71,-0.71z" />
+        android:fillType="evenOdd"
+        android:pathData="M8,2h8a6,6 0,0 1,6 6v8a6,6 0,0 1,-6 6h-8a6,6 0,0 1,-6 -6v-8a6,6 0,0 1,6 -6z M5.945,17.475L5.945,6.525L9.335,6.525L11.835,12.685L12.12,12.685L14.6,6.525L18.055,6.525L18.055,17.475L15.615,17.475L15.615,8.13L15.97,8.16L13.075,15.255L10.725,15.255L7.82,8.16L8.2,8.13L8.2,17.475z" />
 </vector>

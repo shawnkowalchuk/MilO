@@ -12,13 +12,35 @@ import org.junit.Test
  */
 class ReportPaginationTest {
     @Test
-    fun `the first page starts with the title, and no later page repeats it`() {
+    fun `the first page starts with the app's mark and name, and no later page repeats them`() {
         val pages = layout(reportOf(100))
 
-        val title = pages.first().find("Mileage report")
-        assertEquals(CONTENT_LEFT, title.x, 0f)
-        assertTrue(pages.first().texts.none { it.baseline < title.baseline })
-        assertTrue(pages.drop(1).none { it.has("Mileage report") || it.has("Name") })
+        val first = pages.first()
+        val name = first.find("MilO")
+        val initial = first.texts.first { it.style == ReportTextStyle.MARK }
+        assertTrue(first.texts.filterNot { it.inFooter }.none { it.baseline < name.baseline - 6 })
+        assertTrue(initial.x < name.x)
+        assertTrue(first.has("Mileage report"))
+        val again = listOf("MilO", "Mileage report", "Name", "Business", "Personal")
+        assertTrue(pages.drop(1).none { page -> again.any { page.has(it) } })
+    }
+
+    @Test
+    fun `every page's line at the bottom starts with the app's small mark`() {
+        val pages = layout(reportOf(100))
+
+        for (page in pages) {
+            val mark = page.texts.single { it.style == ReportTextStyle.FOOTER_MARK }
+            assertEquals("M", mark.text)
+            val whose = page.texts.single { it.style == ReportTextStyle.FOOTER && !it.rightAligned }
+            assertTrue(mark.end() < whose.x)
+            val square = page.items.filterIsInstance<PageItem.Box>().single {
+                it.top >
+                    CONTENT_BOTTOM
+            }
+            assertEquals(ReportInk.ACCENT, square.ink)
+            assertTrue(mark.x > square.left && mark.end() < square.right)
+        }
     }
 
     @Test
@@ -38,7 +60,8 @@ class ReportPaginationTest {
 
     @Test
     fun `a name too long for the footer is cut short, and never runs into the page number`() {
-        val longName = "Bartholomew Montgomery-Featherstonehaugh of the Northside Electric Company"
+        val longName = "Bartholomew Montgomery-Featherstonehaugh of the Northside Electric " +
+            "Company and Sons, Electrical and Mechanical Contractors Limited"
         val range = ReportPeriod.Range(DAY_ONE, DAY_ONE.plusDays(17))
         val sender = SENDER.copy(name = longName)
         val page = layout(report(listOf(trip(DAY_ONE, "08:00")), range, sender)).single()
@@ -48,8 +71,10 @@ class ReportPaginationTest {
         assertTrue(whose.text, whose.text.startsWith("Bartholomew") && whose.text.endsWith("…"))
         val numberStart = number.x - MEASURE.width(number.text, number.style)
         assertTrue(whose.end() < numberStart)
-        // The heading still has the name whole.
-        assertTrue(page.has(longName))
+        // The heading still has the name whole, wrapped under its label.
+        val name = page.find("Name")
+        val lines = page.texts.filter { it.style == ReportTextStyle.VALUE && it.x == name.x }
+        assertEquals(longName, lines.sortedBy { it.baseline }.joinToString(" ") { it.text })
         // And a footer that fits is left as it is.
         val style = ReportTextStyle.FOOTER
         assertEquals("Sam Driver", cutToFit("Sam Driver", 40f, style, MEASURE))
@@ -59,11 +84,11 @@ class ReportPaginationTest {
 
     @Test
     fun `a day that does not fit in what is left of the page starts the next one, whole`() {
-        // Under the title and two days, page 1 has room left for a heading and a couple of
+        // Under the heading and two days, page 1 has room left for a heading and a couple of
         // trips, but not for the third day's twelve. The day is not started there and split:
         // it moves to page 2 in one piece.
-        val sizes = listOf(12, 10, 12, 12)
-        val pages = layout(reportOf(12, 10, 12, 12))
+        val sizes = listOf(6, 4, 12, 12)
+        val pages = layout(reportOf(6, 4, 12, 12))
 
         assertSound(pages, sizes)
         assertTrue(pages.none { page -> page.texts.any { it.text.endsWith("(continued)") } })
@@ -74,7 +99,7 @@ class ReportPaginationTest {
         assertEquals(1, pageOf(pages, fromOf(1, 0)))
         assertEquals(2, pageOf(pages, fromOf(2, 0)))
         // The room that was left would have held its heading and its first trips.
-        val lastOnPage1 = pages[0].texts.filter { it.style != ReportTextStyle.FOOTER }
+        val lastOnPage1 = pages[0].texts.filterNot { it.inFooter }
         val roomLeft = CONTENT_BOTTOM - lastOnPage1.maxOf { it.baseline }
         assertTrue("Only $roomLeft points were left", roomLeft > 4 * ReportTextStyle.CELL.leading)
         // It starts the page: its heading is the first thing on it.
@@ -160,7 +185,7 @@ class ReportPaginationTest {
                 }
             val pages = layout(report(trips))
 
-            val closing = pages.single { it.has("Total kilometres for October 2026") }
+            val closing = pages.single { it.has("Total business kilometres for October 2026") }
             for (text in listOf(WORDS.legend, "Signature", "Date", WORDS.tripCount)) {
                 assertTrue("$count trips: $text", closing.has(text))
             }
@@ -177,7 +202,7 @@ class ReportPaginationTest {
         val page = layout(report(emptyList())).single()
 
         assertTrue(page.has("No business trips in this period."))
-        assertTrue(page.has("Total kilometres for October 2026"))
+        assertTrue(page.has("Total business kilometres for October 2026"))
         assertTrue(page.has("0.0"))
         assertTrue(page.has("Signature"))
         assertTrue(page.has("Page 1 of 1"))

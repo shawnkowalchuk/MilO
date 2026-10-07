@@ -35,13 +35,17 @@
     <string name="status_problem">Needs attention</string>
     <string name="status_unknown">Could not be checked</string>
     <string name="status_needs_confirmation">Waiting for you to confirm</string>
-    <!-- Design system: the back arrow of a screen that was opened from another one. -->
-    <string name="navigate_back">Back</string>
+    <!--
+        Design system: what a screen reader says the screen's name at the top of a screen
+        opened from another one does when pressed, after "double tap to". Name and arrowhead
+        are one button that goes back.
+    -->
+    <string name="navigate_back_press">go back</string>
 
     <!-- The bottom navigation bar. -->
     <string name="nav_home">Home</string>
     <string name="nav_trips">Trips</string>
-    <string name="nav_setup">Setup</string>
+    <string name="nav_settings">Settings</string>
     <string name="nav_log">Log</string>
 
     <!-- Shared: what a truck is called when the phone knows no name for it. -->
@@ -65,10 +69,8 @@
     <!-- The argument is a time of day from formatTimeOfDay(), such as 08:14. -->
     <string name="trip_started_at">Started at %1$s</string>
 
-    <!-- Home: the top of the screen. The mark is the app's initial, on a square of the accent. -->
+    <!-- The top line of every screen: the app's initial, on a square of the accent. -->
     <string name="app_mark">M</string>
-    <!-- Home: spoken by the screen reader for the three sliders at the end of the top line. -->
-    <string name="home_open_settings">Settings</string>
     <!--
         Home: the accent tile that starts a trip by hand, and the dark button that ends one.
         The first line under "Start trip" is only shown while a paired truck is not connected
@@ -205,6 +207,8 @@
 
     <!-- Setup: the permission checklist. -->
     <string name="setup_title">Setup</string>
+    <!-- Settings: what a screen reader says the Setup tile at its top does, after "double tap to". -->
+    <string name="setup_open">open Setup</string>
     <string name="setup_reading">Reading the phone\'s settings…</string>
     <!-- The words of the tile with the count are in strings_setup_log.xml. -->
     <string name="setup_section_android">Android</string>
@@ -616,8 +620,15 @@
     <string name="report_pdf_name">Name</string>
     <string name="report_pdf_company">Company</string>
     <string name="report_pdf_vehicle">Vehicle</string>
-    <string name="report_pdf_period">Period</string>
-    <string name="report_pdf_generated">Generated</string>
+    <!-- Under the period at the top of the PDF. The argument is the day, such as October 6, 2026. -->
+    <string name="report_pdf_generated_on">Generated %1$s</string>
+    <!-- The two tiles of figures at the top of the PDF: what the Business and the Personal trips add up to. -->
+    <string name="report_pdf_business">Business</string>
+    <string name="report_pdf_personal">Personal</string>
+    <plurals name="report_pdf_personal_trip_count">
+        <item quantity="one">%d personal trip</item>
+        <item quantity="other">%d personal trips</item>
+    </plurals>
     <string name="report_pdf_business_only">Business trips only. Distances are in kilometres.</string>
     <!-- The arguments are the revision's number and the day the report it replaces was sent. -->
     <string name="report_pdf_revision">Revision %1$d. It replaces the report sent on %2$s.</string>
@@ -630,7 +641,7 @@
     <string name="report_pdf_day_continued">%1$s (continued)</string>
     <string name="report_pdf_subtotal">Subtotal</string>
     <!-- The argument is the period, such as October 2026. -->
-    <string name="report_pdf_total">Total kilometres for %1$s</string>
+    <string name="report_pdf_total">Total business kilometres for %1$s</string>
     <plurals name="report_pdf_trip_count">
         <item quantity="one">%d business trip</item>
         <item quantity="other">%d business trips</item>
@@ -706,8 +717,10 @@
     <string name="settings_sound_title">Trip-start sound</string>
     <string name="settings_sound_copying">Copying the sound…</string>
     <string name="settings_sound_play">Play</string>
-    <string name="settings_sound_use_own">Use my own sound</string>
-    <string name="settings_sound_use_built_in">Use the built-in sound</string>
+    <!-- Adds an audio file from the phone to the sounds to choose from, and uses it. -->
+    <string name="settings_sound_add">Add a sound</string>
+    <!-- Takes the sound of one's own that is in use off the list; the built-in chirp plays then. -->
+    <string name="settings_sound_remove">Remove this sound</string>
     <!-- Settings: why a picked file did not become the sound. -->
     <string name="settings_sound_refused_copy">MilO could not copy that file. The sound was not changed.</string>
     <!-- The argument is the limit in megabytes. -->

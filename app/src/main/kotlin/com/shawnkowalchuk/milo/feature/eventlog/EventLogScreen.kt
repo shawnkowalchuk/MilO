@@ -25,16 +25,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.GroupLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleAction
+import com.shawnkowalchuk.milo.core.designsystem.component.SquareIconButton
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogEntry
@@ -125,18 +126,19 @@ private fun EventLogContent(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.small),
     ) {
+        item { AppHeader(title = stringResource(R.string.log_title)) }
         item {
-            ScreenTitle(
-                text = stringResource(R.string.log_title),
-                action =
-                    ScreenTitleAction(
-                        icon = MiloIcons.Share,
-                        description = stringResource(R.string.log_share),
-                        onClick = { askingToShare = true },
-                        // The button waits while the file is being written.
-                        enabled = !share.working,
-                    ),
-            )
+            // The one thing done with the log as a whole, at the end of a line of its own under
+            // the top line, as Trips has its two steps there.
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                SquareIconButton(
+                    icon = MiloIcons.Share,
+                    description = stringResource(R.string.log_share),
+                    onClick = { askingToShare = true },
+                    // The button waits while the file is being written.
+                    enabled = !share.working,
+                )
+            }
         }
         if (share.working || share.problem != null) {
             item { ShareState(share, Modifier.padding(top = spacing.rowGap)) }

@@ -1,11 +1,14 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.trip.GPS_AFTER_VEHICLE_REPORT_MS
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TripEffect
 import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStateMachine
 import com.shawnkowalchuk.milo.core.trip.TripTransition
+import com.shawnkowalchuk.milo.core.trip.parkedGps
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.point.RawPoint
@@ -36,6 +39,7 @@ private const val AFTER_FAILURE = "after a failure in the trip controller"
  * Only [handle] may be called, and only by the controller's inbox loop. [known] and [rules] are
  * also read from other threads, so they are volatile.
  *
+ * @param motionSensorWatching see [TripController].
  * @param startService asks Android to start the trip service with a trigger in its intent.
  */
 internal class TripWorker(
@@ -43,6 +47,7 @@ internal class TripWorker(
     private val eventLog: EventLogRepository,
     settings: SettingsStore,
     truck: TruckConnectionSource,
+    private val motionSensorWatching: () -> Boolean,
     private val clock: () -> Long,
     private val startService: (StartRequest) -> Unit,
 ) {
@@ -64,6 +69,13 @@ internal class TripWorker(
 
     private val evidence = TripEvidence(truck)
 
+    /**
+     * When the phone last reported getting into a vehicle, or null if it has not since this
+     * process started. Kept whatever MilO is doing: a report that starts the process arrives
+     * before the stored wait has been picked up, and must still turn GPS on for it.
+     */
+    private var vehicleEnteredAtMs: Long? = null
+
     suspend fun handle(work: TripWork) {
         try {
             carryOut(work)
@@ -84,12 +96,22 @@ internal class TripWorker(
             is TripWork.Trigger -> onTrigger(work.request)
             is TripWork.AndroidAuto -> onAndroidAuto(work)
             is TripWork.Fix -> onFix(work.fix)
+            is TripWork.VehicleEntered -> onVehicleEntered(work.atMs)
             is TripWork.StartFailed -> onStartFailed(work)
             is TripWork.ServiceStopped -> onServiceStopped(work)
             is TripWork.Note -> eventLog.add(work.atMs, work.category, work.message, work.detail)
             is TripWork.CaughtUp -> work.done()
         }
-        service.sync(known, rules)
+        service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
+    }
+
+    /**
+     * How GPS is read beside the parked truck ([parkedGps]), or null while MilO is not
+     * watching a parked truck.
+     */
+    private fun parkedGpsNow(): ParkedGps? {
+        val parked = known?.takeIf { it.waitingToMove }?.parked ?: return null
+        return parkedGps(parked.sinceMs, vehicleEnteredAtMs, motionSensorWatching())
     }
 
     /**
@@ -113,7 +135,7 @@ internal class TripWorker(
     private suspend fun readStorageAgain() {
         try {
             onTrigger(StartRequest(TripTrigger.RECONCILE, AFTER_FAILURE, clock()))
-            service.sync(known, rules)
+            service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (again: Exception) {
@@ -210,6 +232,21 @@ internal class TripWorker(
         if (known?.trip == null || ledger.open == null) return
         val movement = ledger.addFix(fix) ?: return
         advance("GPS", movement, restart, quiet = true)
+    }
+
+    /**
+     * The phone reported getting into a vehicle. Beside the parked truck GPS is read every 5
+     * seconds for a while ([GPS_AFTER_VEHICLE_REPORT_MS]): the next [service] sync passes the
+     * new times on. The driving alert writes a line for every report; this one is written only
+     * for a report that changes how GPS is read beside the parked truck.
+     */
+    private suspend fun onVehicleEntered(atMs: Long) {
+        vehicleEnteredAtMs = max(atMs, vehicleEnteredAtMs ?: atMs)
+        val fastUntilMs = parkedGpsNow()?.fastUntilMs ?: return
+        val nowMs = clock()
+        if (fastUntilMs <= nowMs) return
+        val line = gpsForDrivingText(ageMs = nowMs - atMs, forMs = fastUntilMs - nowMs)
+        eventLog.add(nowMs, EventCategory.LOCATION, line)
     }
 
     private suspend fun onStartFailed(work: TripWork.StartFailed) {

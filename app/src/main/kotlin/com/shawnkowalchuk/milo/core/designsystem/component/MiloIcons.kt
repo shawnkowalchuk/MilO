@@ -41,11 +41,6 @@ private const val TRIPS_PATH =
     "M8,6h13M8,12h13M8,18h13" +
         "M3,6h0.01M3,12h0.01M3,18h0.01"
 
-// A box with a tick in it: the Setup screen is a checklist.
-private const val SETUP_PATH =
-    "M9,11l3,3l8,-8" +
-        "M20,12v7a2,2 0 0 1 -2,2H6a2,2 0 0 1 -2,-2V5a2,2 0 0 1 2,-2h9"
-
 // A sheet of paper with lines on it: the event log.
 private const val LOG_PATH =
     "M14,3H6a2,2 0 0 0 -2,2v14a2,2 0 0 0 2,2h12a2,2 0 0 0 2,-2V9z" +
@@ -53,7 +48,7 @@ private const val LOG_PATH =
 
 private const val BACK_PATH = "M15,18l-6,-6l6,-6"
 
-// Three sliders: the Settings screen, opened from Home. Each line is broken by its knob.
+// Three sliders: the Settings screen, a button of the bottom bar. Each line is broken by its knob.
 private const val SETTINGS_PATH =
     "M4,6h10M18,6h2M4,12h4M12,12h8M4,18h12" +
         "M14,6a2,2 0 1 0 4,0a2,2 0 1 0 -4,0" +
@@ -98,7 +93,6 @@ private const val LINK_PATH =
 object MiloIcons {
     val Home: ImageVector by lazy { lineIcon(name = "Home", pathData = HOME_PATH) }
     val Trips: ImageVector by lazy { lineIcon(name = "Trips", pathData = TRIPS_PATH) }
-    val Setup: ImageVector by lazy { lineIcon(name = "Setup", pathData = SETUP_PATH) }
     val Log: ImageVector by lazy { lineIcon(name = "Log", pathData = LOG_PATH) }
     val Back: ImageVector by lazy {
         lineIcon(name = "Back", pathData = BACK_PATH, lineWidth = BOLD_LINE_WIDTH)

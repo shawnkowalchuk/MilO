@@ -1,5 +1,7 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
+
 /**
  * Everything that can prompt the trip controller, apart from GPS fixes and Android Auto changes
  * (which carry data and have their own entry points). ADR-002: every trigger calls the same
@@ -94,8 +96,10 @@ interface TripRecorder {
      * trip.
      *
      * @param checkAtMs as in [record]: when the wait has lasted too long.
+     * @param gps how GPS is read meanwhile: until when at all, and until when every 5 seconds
+     * (`ParkedGps`). A later order with later times turns it on again.
      */
-    fun watchParked(checkAtMs: Long?)
+    fun watchParked(checkAtMs: Long?, gps: ParkedGps)
 
     /**
      * No trip is open: stop recording and stop the service, unless the service has reported in

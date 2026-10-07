@@ -143,6 +143,9 @@ class FakeTripDao : TripDao {
     private fun kept(stored: String?, byHand: Boolean, found: String?): String? =
         if (byHand) stored else stored ?: found
 
+    override suspend fun deleteOpen(tripId: Long, open: TripStatus): Int =
+        if (rows.removeAll { it.id == tripId && it.status == open }) 1 else 0
+
     override suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int {
         failNextStatusChange?.let { failure ->
             failNextStatusChange = null

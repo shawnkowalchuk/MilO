@@ -1,7 +1,6 @@
 package com.shawnkowalchuk.milo.platform.report
 
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
@@ -18,8 +17,8 @@ import java.io.OutputStream
 // PdfDocument. There is no third-party PDF library (ADR-001).
 //
 // A PDF page is measured in points, and so is everything here: a text size of 10 is a 10 pt
-// font, whatever the phone's screen density or font scale. The colours are ink on paper, not
-// part of MilO's screens, so they are not design tokens: black, and nothing else.
+// font, whatever the phone's screen density or font scale. The colours are the layout pass's
+// (`ReportInk`): ink on white paper, four of them the app's own.
 
 /**
  * The paints the report is drawn with, one for each kind of text, and the answer to "how wide
@@ -27,8 +26,12 @@ import java.io.OutputStream
  * line that was measured to fit a column fit it on the page.
  *
  * Not thread safe, like the PdfDocument it draws into: one report, one thread.
+ *
+ * @param sora the app's typeface, `res/font/sora.ttf`. It is a variable font, one file that
+ * holds every weight, so each paint tells it how heavy to draw itself, as the screens do
+ * (`Type.kt`); without that, every text would come out at the file's default weight.
  */
-internal class ReportPaints : TextMeasure {
+internal class ReportPaints(sora: Typeface) : TextMeasure {
     private val text: Map<ReportTextStyle, Paint> =
         ReportTextStyle.entries.associateWith { style ->
             // Without hinting and with sub-pixel positions, a text's width does not depend on
@@ -36,20 +39,15 @@ internal class ReportPaints : TextMeasure {
             // zoom and on paper.
             Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or Paint.LINEAR_TEXT_FLAG)
                 .apply {
-                    color = Color.BLACK
                     textSize = style.size
-                    typeface =
-                        Typeface.create(
-                            Typeface.SANS_SERIF,
-                            if (style.bold) Typeface.BOLD else Typeface.NORMAL,
-                        )
+                    typeface = sora
+                    setFontVariationSettings("'wght' ${style.weight}")
                 }
         }
 
-    private val rule = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
-        style = Paint.Style.STROKE
-    }
+    private val rule = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
     override fun width(text: String, style: ReportTextStyle): Float =
         this.text.getValue(style).measureText(text)
@@ -58,6 +56,7 @@ internal class ReportPaints : TextMeasure {
         when (item) {
             is PageItem.Text -> {
                 val paint = text.getValue(item.style)
+                paint.color = item.ink.argb
                 paint.textAlign = if (item.rightAligned) Paint.Align.RIGHT else Paint.Align.LEFT
                 canvas.drawText(item.text, item.x, item.baseline, paint)
             }
@@ -65,8 +64,22 @@ internal class ReportPaints : TextMeasure {
             is PageItem.Rule -> {
                 // Always a thickness of its own: a hairline (0) is one device pixel wide and
                 // can print almost invisibly.
+                rule.color = item.ink.argb
                 rule.strokeWidth = item.thickness
                 canvas.drawLine(item.fromX, item.y, item.toX, item.y, rule)
+            }
+
+            is PageItem.Box -> {
+                fill.color = item.ink.argb
+                canvas.drawRoundRect(
+                    item.left,
+                    item.top,
+                    item.right,
+                    item.bottom,
+                    item.radius,
+                    item.radius,
+                    fill,
+                )
             }
         }
     }

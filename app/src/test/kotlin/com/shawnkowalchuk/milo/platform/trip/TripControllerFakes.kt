@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.platform.trip
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TrackPoint
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.trip.driveNorth
@@ -59,6 +60,12 @@ class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
      */
     var zone: ZoneId = ZoneId.of("UTC")
 
+    /**
+     * Whether the phone reports getting into a vehicle to MilO. Off unless a test turns it on,
+     * so that a wait beside the parked truck reads GPS throughout, as before 2026-10-07.
+     */
+    var motionSensorWatching = false
+
     /** A controller as a fresh process would build it, and the service that goes with it. */
     fun newProcess(scope: CoroutineScope): Pair<TripController, FakeService> {
         val service = FakeService()
@@ -70,6 +77,7 @@ class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
                 settings = settings,
                 truck = truck,
                 starter = service,
+                motionSensorWatching = { motionSensorWatching },
                 clock = { nowMs },
                 zone = { zone },
                 scope = scope,
@@ -137,6 +145,12 @@ class FakeService :
     var tripStartsAnnounced = 0
     var checkAtMs: Long? = null
 
+    /** Beside the parked truck: when the controller last said GPS goes off, or null for never. */
+    var gpsUntilMs: Long? = null
+
+    /** And until when it said GPS is read every 5 seconds, or null. */
+    var fastGpsUntilMs: Long? = null
+
     @Synchronized
     override fun start(request: StartRequest): StartFailure? {
         startRequests += request
@@ -163,10 +177,12 @@ class FakeService :
     }
 
     @Synchronized
-    override fun watchParked(checkAtMs: Long?) {
+    override fun watchParked(checkAtMs: Long?, gps: ParkedGps) {
         recording = false
         watchingParked = true
         this.checkAtMs = checkAtMs
+        gpsUntilMs = gps.untilMs
+        fastGpsUntilMs = gps.fastUntilMs
     }
 
     @Synchronized
@@ -206,6 +222,12 @@ class FakeRawPointDao : RawPointDao {
 
     override suspend fun findForTrip(tripId: Long): List<RawPoint> =
         rows.filter { it.tripId == tripId }
+
+    override suspend fun deleteForTrip(tripId: Long): Int {
+        val before = rows.size
+        rows.removeAll { it.tripId == tripId }
+        return before - rows.size
+    }
 }
 
 class FakeEventLogDao : EventLogDao {

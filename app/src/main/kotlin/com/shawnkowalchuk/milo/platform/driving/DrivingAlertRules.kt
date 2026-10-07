@@ -13,7 +13,8 @@ import java.time.ZoneId
 //
 // Nothing here can start a trip, and nothing here is asked when one starts. The phone cannot
 // tell the truck from a bus or a colleague's car, so driving detection only ever leads to a
-// notification; a trip starts when Shawn taps it (ADR-002).
+// notification; a trip starts when Shawn taps it (ADR-002). Beside a parked, connected truck a
+// report also turns GPS on again ([enteredVehicleAtMs]), and the fixes decide.
 
 /**
  * An "entered a vehicle" report older than this says nothing about now, and is not acted on.
@@ -76,6 +77,22 @@ fun vehicleReport(
             else -> return null
         }
     return VehicleReport(entered, ageMs = (nowNanos - eventNanos) / NANOS_PER_MILLI)
+}
+
+/**
+ * When the phone noticed Shawn getting into a vehicle, on the wall clock, if that is the newest
+ * of [reports] and no older than [MAX_DRIVING_REPORT_AGE_MS]; otherwise null. The trip
+ * controller is told it: beside a parked, connected truck it turns GPS on again, and a trip
+ * starts only if the fixes show the truck driving off (`parkedGpsUntilMs`).
+ *
+ * @param reports oldest first, as the phone handed them over.
+ * @param nowMs the wall clock now. A report's age is measured on the clock that counts from
+ * boot, so its time on the wall clock is worked out from the present.
+ */
+fun enteredVehicleAtMs(reports: List<VehicleReport>, nowMs: Long): Long? {
+    val newest = reports.lastOrNull() ?: return null
+    if (!newest.entered || newest.ageMs > MAX_DRIVING_REPORT_AGE_MS) return null
+    return nowMs - newest.ageMs
 }
 
 /**

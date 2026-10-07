@@ -58,7 +58,13 @@ internal val UnsavedWorkSaver: Saver<UnsavedWork, Any> =
             UnsavedWork(
                 unsaved = saved[0] as Boolean,
                 asking = saved[1] as Boolean,
-                askedFor = (saved[2] as String?)?.let(TopLevelDestination::valueOf),
+                // By name, and an unknown one as Back: the bar's buttons were renamed once
+                // (SETUP became SETTINGS on 2026-10-07), and a name saved by an older build
+                // must not crash the screens, which would take the trip service with them.
+                askedFor =
+                    (saved[2] as String?)?.let { name ->
+                        TopLevelDestination.entries.firstOrNull { it.name == name }
+                    },
             )
         },
     )

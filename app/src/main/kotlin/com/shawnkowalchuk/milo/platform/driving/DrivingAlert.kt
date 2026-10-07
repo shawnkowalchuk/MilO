@@ -81,10 +81,14 @@ class DrivingAlert(
 ) {
     private val failures = DrivingFailures(eventLog, crashFileStore, clock)
 
-    /** One request to the phone at a time; the two fields below are only touched inside it. */
+    /**
+     * One request to the phone at a time; the two fields below are only changed inside it.
+     * [reportsComing] reads the first from the trip controller's worker.
+     */
     private val oneRequestAtATime = Mutex()
 
     /** What the phone was last asked for, successfully, by this process. Null before that. */
+    @Volatile
     private var asked: DrivingWatch? = null
 
     /** The failure last written to the event log, so that a repeat of it is not written again. */
@@ -151,6 +155,15 @@ class DrivingAlert(
             eventLog.add(clock(), EventCategory.ERROR, watchFailedText(watch, source), problem)
         }
     }
+
+    /**
+     * Whether the phone reports getting into a vehicle to MilO right now: this process asked for
+     * the reports and the phone agreed, and the Physical activity permission is still granted.
+     * A wait beside the parked truck turns GPS off after its first hour only then
+     * (`parkedGpsUntilMs`): these reports are what turns it on again. Before the first request
+     * of a process has been answered, the answer is no, and GPS stays on.
+     */
+    fun reportsComing(): Boolean = asked?.wanted == true && detection.permissionGranted()
 
     /**
      * The phone has reported entering or leaving a vehicle.

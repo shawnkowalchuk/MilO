@@ -36,9 +36,19 @@ internal object ButtonRules {
         val open = state.trip
         return when {
             // Beside a parked truck too: Shawn says he is driving, and the trip starts at once.
+            // It starts where the truck was parked (his choice of 2026-10-07): on 2026-10-07 he
+            // pressed Start 244 m down the road, the trip having been closed in the moment he
+            // drove off, and those 244 m were lost.
             open == null -> {
+                val watched = state.waitingToMove
                 val left = ParkedRules.leave(state, WaitingEnd.START_PRESSED, effects)
-                TripStateMachine.startTrip(left, TripStartCause.MANUAL, atMs, effects)
+                TripStateMachine.startTrip(
+                    left,
+                    TripStartCause.MANUAL,
+                    atMs,
+                    effects,
+                    atParkedPlace = watched,
+                )
             }
 
             // The open trip is only waiting out its grace period: the truck is gone, and Shawn

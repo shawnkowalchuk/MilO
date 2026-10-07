@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -25,6 +26,9 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /** The small icon the design draws before some tile labels. */
 private val LabelIconSize = 14.dp
+
+/** The arrowhead at the end of the label of a tile that opens a screen. */
+private val LeadsOnIconSize = 18.dp
 
 /** Which of the design's tiles a [Tile] is. They differ in their colours and in nothing else. */
 enum class TileKind {
@@ -173,6 +177,26 @@ fun TileLabel(text: String, modifier: Modifier = Modifier, icon: ImageVector? = 
             text = text,
             style = MiloTheme.textStyles.tileLabel,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The label of a tile that opens another screen: the small grey words at the start of the
+ * line, as [TileLabel] draws them, and an arrowhead that points on at its end. It says that the
+ * whole tile is a way in, as Settings' "Setup" tile is. The tile's `TilePress` is what is
+ * pressed; this only draws the sign of it.
+ */
+@Composable
+fun TileLinkLabel(text: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TileLabel(text = text, modifier = Modifier.weight(1f))
+        Icon(
+            imageVector = ChevronIcons.Forward,
+            // The tile's press says where it leads.
+            contentDescription = null,
+            modifier = Modifier.size(LeadsOnIconSize),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
