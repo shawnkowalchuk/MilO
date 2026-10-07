@@ -228,6 +228,7 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             customSoundUri = preferences[CUSTOM_SOUND_URI],
             customSoundName = preferences[CUSTOM_SOUND_NAME],
             ownSounds = preferences.readOwnSounds(),
+            homeWidgetEnabled = preferences.readHomeWidgetEnabled(),
             schedule = preferences.readSchedule(),
             ignoreTripsOutsideSchedule =
                 preferences[IGNORE_TRIPS_OUTSIDE_SCHEDULE] ?: defaults.ignoreTripsOutsideSchedule,

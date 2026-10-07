@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's tile: the app's tile colour, with the corners Android gives every widget. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/milo_widget_tile" />
+    <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+</shape>

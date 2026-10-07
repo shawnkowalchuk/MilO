@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's Start trip: the accent, as the app's buttons that start something. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/milo_widget_accent" />
+    <corners android:radius="12dp" />
+</shape>

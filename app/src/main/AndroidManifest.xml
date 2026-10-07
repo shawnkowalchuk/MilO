@@ -310,6 +310,35 @@
             android:exported="false" />
 
         <!--
+            The home-screen widget (platform/widget/): drawn from MilO's state when the home
+            screen asks for it. Exported, as every widget provider is: the home screen app sends
+            it Android's widget broadcasts. It reads the trip and changes nothing; its Start
+            button is a PendingIntent for the trip service, its End button one for the receiver
+            below. The switch in Settings disables this component, which takes the widget out of
+            the phone's list.
+        -->
+        <receiver
+            android:name=".platform.widget.HomeWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_widget_info" />
+        </receiver>
+
+        <!--
+            Where the widget's End button arrives: it hands the press to the trip controller,
+            the same trigger as the app's End button. Not exported and without an intent filter:
+            the button is a PendingIntent MilO makes itself and aims at this class by name.
+        -->
+        <receiver
+            android:name=".platform.widget.HomeWidgetActionReceiver"
+            android:exported="false" />
+
+        <!--
             The reconcile after a reboot and after an update of MilO: the two moments at which
             the truck can already be connected with no event to say so. Not exported: both
             broadcasts come from Android's core.

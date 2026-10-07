@@ -80,6 +80,7 @@ internal class ScheduleActions(
  * @param dataViewModel the last tile's own ViewModel: see [DataViewModel].
  * @param checkViewModel the daily check's tile has one of its own too.
  * @param odometerViewModel and so has the odometer's.
+ * @param widgetViewModel and the home-screen widget's.
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
  * @param onBack leaves the screen, when it was opened from another one (the Report screen's
@@ -93,6 +94,7 @@ fun SettingsScreen(
     dataViewModel: DataViewModel,
     checkViewModel: NothingRecordedViewModel,
     odometerViewModel: OdometerViewModel,
+    widgetViewModel: HomeWidgetViewModel,
     onChangeTruck: () -> Unit,
     onBack: (() -> Unit)?,
     setupTile: @Composable () -> Unit,
@@ -155,6 +157,7 @@ fun SettingsScreen(
         setupTile = setupTile,
         checkTile = { NothingRecordedTile(checkViewModel) },
         odometerTile = { OdometerTile(odometerViewModel) },
+        widgetTile = { HomeWidgetTile(widgetViewModel) },
         dataTile = { DataTile(dataViewModel) },
     )
 }
@@ -171,6 +174,8 @@ fun SettingsScreen(
  * own.
  * @param odometerTile the truck's odometer, under the truck's tile, handed in whole for the
  * same reason.
+ * @param widgetTile the home-screen widget's switch, after the trip-start sound, handed in whole
+ * for the same reason.
  * @param dataTile the tile for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
@@ -184,6 +189,7 @@ internal fun SettingsContent(
     setupTile: @Composable () -> Unit,
     checkTile: @Composable () -> Unit,
     odometerTile: @Composable () -> Unit,
+    widgetTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
 ) {
     val spacing = MiloTheme.spacing
@@ -236,6 +242,7 @@ internal fun SettingsContent(
                 // Under the schedule: the check goes by its work days and their start.
                 checkTile()
                 SoundTile(state, actions)
+                widgetTile()
             }
         }
         // Last: it is used a few times a year, and it is the one tile that can replace

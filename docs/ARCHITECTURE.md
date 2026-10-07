@@ -80,9 +80,10 @@ The system also starts the app when no screen is open: a Bluetooth connect, a re
 | MilO coming to the front | `app/MainActivity.onStart` | "Read the truck" |
 | Start and End | `feature/home/HomeViewModel` | The press |
 | Start trip and End trip on the car's display | `platform/car/TripStatusScreen` | The press, as the same two triggers |
+| Start trip and End trip on the home-screen widget (since 2026-10-07) | Start: a `PendingIntent` for `TripService` built in `platform/widget/HomeWidgetViews`, as the tap on the "could not start" notification is. End: `platform/widget/HomeWidgetActionReceiver` | The press, as the same two triggers (ADR-002, amendment 35) |
 | A truck picked on the pairing screen | `platform/bluetooth/TruckPairing`, called by `feature/pairing/PairingViewModel` | "Read the truck", once the truck is stored |
 
-Three more things can start MilO's process and are deliberately not in this table, because none of them calls `TripController.onTrigger`: a report from the phone's driving detection (`DrivingReceiver`), the monthly reminder's daily alarm (`ReminderReceiver`) and the daily alarm of the "nothing recorded" check (`NothingRecordedReceiver`). Each is described below. A process they start runs `MiloApplication` like any other, so the reconcile at process start happens then too. **Android's backup is a fourth, and of another kind:** when MilO is not running, Android starts a process for the backup or the restore in which `MiloApplication` is not used at all and the container does not exist ("How backup, export and import stand beside everything", below).
+Four more things can start MilO's process and are deliberately not in this table, because none of them calls `TripController.onTrigger`: a report from the phone's driving detection (`DrivingReceiver`), the monthly reminder's daily alarm (`ReminderReceiver`), the daily alarm of the "nothing recorded" check (`NothingRecordedReceiver`), and, since 2026-10-07, the home screen asking for the widget to be drawn (`HomeWidgetProvider`, which only draws). Each is described below. A process they start runs `MiloApplication` like any other, so the reconcile at process start happens then too. **Android's backup is a fourth, and of another kind:** when MilO is not running, Android starts a process for the backup or the restore in which `MiloApplication` is not used at all and the container does not exist ("How backup, export and import stand beside everything", below).
 
 A broadcast or a callback names a device, and the receiver decides on the spot whether it is the truck (`platform/bluetooth/TruckSignals`, plain functions). That needs the truck's address, which is in the settings file, so `PairedTruck` reads it while `onReceive` waits, for one second at most. "Read the truck" is `TruckConnectionSource.read()`, which answers connected, not connected or unknown, with how it found out.
 
@@ -434,7 +435,7 @@ Until 2026-10-07 the bar's third screen was Setup, and Settings was opened with 
 
 **The setup checklist is shared, like the trip state.** `platform/system/SetupChecklist` holds the rows of the checklist as one flow. The Setup screen shows the rows; the home screen only asks `needsAttention` of them. What the phone reports is read when a screen asks; Shawn's confirmations (the settings store) and the truck's pairing (`TruckPairing.status`) arrive by themselves. The five facts that stop a trip from being recorded are read by `TripPreflight.facts()`, which the trip service's starter also uses.
 
-One exception, because Android gives no other way. The components Android creates itself have no constructor MilO can call: `TripService`, `TruckCompanionService`, `TruckBluetoothReceiver`, `TruckReconcileReceiver`, `DrivingReceiver` (where the phone's driving detection reports to), `ReminderReceiver` (where the monthly reminder's daily alarm arrives), `NothingRecordedReceiver` (where the daily check's alarm arrives) and `MiloCarAppService` (the Android Auto screen's service). Each fetches the container from the application object (`(application as MiloApplication).container`). `TripNotifications` names `MainActivity` as the screen a tap on the trip notification opens. (The reminder's notification opens it too, and is handed the class by `ReportObjects`, so `platform/reminder/` imports `app/` only for its receiver. The daily check's notification is handed it by `CheckObjects` in the same way.) Those are the only places where `platform/` imports `app/`, and no other class may reach for the container this way. **`MiloBackupAgent` is created by Android too, and is the one such component that must not fetch the container:** in the process Android starts for a backup or a restore the application object is not a `MiloApplication` (above).
+One exception, because Android gives no other way. The components Android creates itself have no constructor MilO can call: `TripService`, `TruckCompanionService`, `TruckBluetoothReceiver`, `TruckReconcileReceiver`, `DrivingReceiver` (where the phone's driving detection reports to), `ReminderReceiver` (where the monthly reminder's daily alarm arrives), `NothingRecordedReceiver` (where the daily check's alarm arrives), `HomeWidgetProvider` and `HomeWidgetActionReceiver` (the home-screen widget's, since 2026-10-07) and `MiloCarAppService` (the Android Auto screen's service). Each fetches the container from the application object (`(application as MiloApplication).container`). `TripNotifications` names `MainActivity` as the screen a tap on the trip notification opens. (The reminder's notification opens it too, and is handed the class by `ReportObjects`, so `platform/reminder/` imports `app/` only for its receiver. The daily check's notification is handed it by `CheckObjects` in the same way.) Those are the only places where `platform/` imports `app/`, and no other class may reach for the container this way. **`MiloBackupAgent` is created by Android too, and is the one such component that must not fetch the container:** in the process Android starts for a backup or a restore the application object is not a `MiloApplication` (above).
 
 ---
 
@@ -449,7 +450,8 @@ MilO has one platform and two UI surfaces. Both show the same trips and drive th
 | Which trips count, and today's totals | Business first, Personal apart | Every finished trip in one figure, as before | **Yes — `isCounted`, `categoryTotals` and `todayTrips` in `data/trip/TripTotals.kt`, used by Home, Trips and the car screen. Every total on either surface is added up by `sumOfTenths` (`core/util/`), the rule of the report for the accountant** |
 | Business or Personal | Shown, and changed by hand, on Trips; shown on Home | Not shown (the car screen was left unchanged on 2026-10-06) | **Yes — the rule is `core/schedule/`, the stored result is on the trip** |
 | Trips added or edited by hand | Typed in and changed on the edit screen; marked on Trips | Neither shown nor changed. Counted in Today like any finished trip | **Yes — the rules are pure functions in `data/trip/`, and `isCounted` knows no difference** |
-| Manual trip control | Start/Stop button | Start Trip / End Trip | **Yes — both drive the same trip logic** |
+| Manual trip control | Start/Stop button, and since 2026-10-07 the home-screen widget's Start trip / End trip | Start Trip / End Trip | **Yes — every one drives the same trip logic** |
+| Home-screen widget (since 2026-10-07) | The status line, the open trip's km and running time, the one button, and this month's and this year's Business km priced at the CRA's per-km rate | None: Android Auto has no widgets | **Yes — the status, the trip's figures and the button are `carScreenContent`'s, the car screen's own; the pricing is `core/allowance/`** |
 | Trip rules, distance, formatting | | | **Yes** |
 | Storage access | | | **Yes — repositories in `data/`** |
 | System services | | | **Yes — `platform/`** |
@@ -486,6 +488,28 @@ The shared trip logic is placed by ADR-002: the pure rules (state machine, dista
 - **`carScreenContent` is the only place that decides what is shown.** Its result is already rounded to what is printed, so "has anything changed?" is a plain comparison, and the screen redraws only then.
 - **Three fixed row titles and no second screen.** A car counts a redraw as a harmless refresh only while the header's title, the number of rows and every row's title stay the same; anything else uses up one of five steps, after which the car closes the app. This is why the changing words are under the titles and never in them.
 
+
+**How the home-screen widget is put together** (since 2026-10-07; a phone surface, but drawn from the car screen's own decisions).
+
+```
+ the home screen app  --- asks for a drawing (added, a reboot, every 3 hours) --->  [ HomeWidgetProvider ]
+        |                                                                                  |
+        |                       while MilO's process runs:                       HomeWidget.refresh()
+        |                       [ HomeWidget ] follows                                     |
+        |                           TripController.activity          (platform/trip)       |
+        |                           this year's trips                (data/trip)            |
+        |                           the month in force (looked at hourly)                  |
+        |                                  |                                               |
+        |                      homeWidgetContent()  pure: carScreenContent() + the dollars (core/allowance)
+        |                                  |
+        |                      homeWidgetViews()    RemoteViews: status, km, running clock, dollars, one button
+        |
+  Start  ->  PendingIntent for TripService (MANUAL_START)       End  ->  HomeWidgetActionReceiver -> TripController.onTrigger(MANUAL_END)
+```
+
+- **It decides nothing about a trip** and is handed no way to write one. Its two buttons send the triggers the app's buttons send, under sources of their own in the event log.
+- **Its running figures are drawn at most every 15 seconds,** as on the car; everything else at once. The running time is a `Chronometer`, which the home screen advances by itself.
+- **Its switch is a component state.** Off, `HomeWidget.applySwitch` draws every widget as switched off and then disables `HomeWidgetProvider`, which takes the widget out of the phone's list. The stored switch is applied again at every process start, after the reconcile, so a restore of the settings file takes effect.
 ---
 
 ## 5. Folder structure
@@ -494,9 +518,10 @@ One Gradle module, `:app`. Packages under `com.shawnkowalchuk.milo`:
 
 ```
 app/                 # MiloApplication, the AppContainer (with ReportObjects, TransferObjects,
-                     #   CarObjects and CheckObjects, the parts of it around the report,
-                     #   around backup, export and import, around Android Auto, and around
-                     #   the daily "nothing recorded" check), MainActivity, the navigation
+                     #   CarObjects, CheckObjects and WidgetObjects, the parts of it around
+                     #   the report, around backup, export and import, around Android Auto,
+                     #   around the daily "nothing recorded" check, and around the
+                     #   home-screen widget), MainActivity, the navigation
                      #   host, and the question before a screen is left with unsaved work
 feature/<name>/      # one package per feature: its Composable screens, its ViewModel,
                      #   its feature-only logic. Today: home/, trips/, tripedit/, report/,
@@ -519,6 +544,9 @@ core/report/         # the report for the accountant: a period, the report as pl
                      #   every word and figure of the PDF, where each stands and on which
                      #   page, the CSV text, the email's subject and the file's name. Pure
                      #   Kotlin, no Android imports, unit tested
+core/allowance/      # Business kilometres priced at the CRA's per-kilometre rate, for the
+                     #   home-screen widget's reference figure: the rates by year, the two
+                     #   tiers, whole dollars. Pure Kotlin, no Android imports, unit tested
 core/util/           # pure Kotlin helpers with unit tests: formatting of distances, times
                      #   and lengths of time, a month, a day or a run of days as a span of
                      #   stored time, and the one rule by which trips are added up
@@ -595,6 +623,12 @@ platform/transfer/   # Android's backup and the manual export and import: the ba
                      #   Nothing in it can start, end or change a trip that is being
                      #   recorded, and
                      #   a failure in it is caught there
+platform/widget/     # the home-screen widget: the provider Android knows it by, the receiver
+                     #   of its End button, the pure function that decides what it shows
+                     #   (from the car screen's), its drawing as RemoteViews, and the object
+                     #   that keeps it in step with the trip and applies its switch. It
+                     #   reads the trip and the trips and writes neither; its buttons reach
+                     #   the trip controller as every other button does
 platform/system/     # what the phone's permissions and settings say: the preflight check
                      #   before the service is started, the setup checklist's facts, rules
                      #   and shared rows, and the opening of the phone's settings screens
@@ -749,6 +783,7 @@ Each is one `UPDATE` that sets the status and matches on the status it starts fr
 | `reminder_shown_for_month_first_day`, `reminder_shown_on_day` | integer, integer | none | Since 2026-10-06 (phase 4). The month the reminder was last shown for (the first day of that month) and the day it was shown on, both as days since 1970-01-01 (`ReminderShown`). Written together each time the reminder is shown, and read at every look: no second reminder is shown for that month on that day, also after a restart of the process. A file that holds only one of them reads as "never shown". The keys are spelled out in `data/settings/ReminderStorage.kt` |
 | `nothing_recorded_enabled` | boolean | true | Since 2026-10-06 (evening). Whether the daily "nothing recorded" check is switched on |
 | `nothing_recorded_minute_of_day` | integer | 720 | Since 2026-10-06 (evening). The time of day from which a work day is checked, as whole minutes since local midnight (12:00). A day whose work hours start later is checked from their start. A stored number that is no minute of a day, which no setter can write, reads as 720 |
+| `home_widget_enabled` | boolean | true | Since 2026-10-07. Whether the home-screen widget is offered (its switch in Settings). Off: every widget on the home screen is drawn as switched off and the widget's provider component is disabled, at the press and again at every process start (`HomeWidget.applySwitch`). Not in an export file |
 | `nothing_recorded_shown_on_day` | integer | none | Since 2026-10-06 (evening). The day the check's notification was last shown, as days since 1970-01-01. Written each time it is shown, and read at every look: no second one is shown on that day, also after a restart of the process. The three keys are spelled out in `data/settings/NothingRecordedStorage.kt`, and are read as one value, `MiloSettings.nothingRecorded` |
 | `last_export_at_ms`, `last_export_with_points` | integer, boolean | none | Since 2026-10-06 (phase 4, part B). When "Export all data" last wrote a file, and whether the raw GPS points were in it (`LastExport`). Written together after an export that succeeded; absent before the first. The Settings screen shows it. The keys are spelled out in `data/settings/TransferStorage.kt` |
 | `auto_start_held_off_since_ms` | integer | none | ADR-002's hold-off: the time a trip was ended by hand with the truck still connected. Absent means not held off. The time is kept because two of the three things that release the hold-off are measured from it |
@@ -844,6 +879,7 @@ None of these is a service of our own. Each is a system or Google component alre
 | The phone's settings screens | The buttons of the setup checklist and the pairing screen | `platform/system/SystemScreens` | Android's own screens, and three HyperOS ones known only from other apps' source. Each is tried inside a try/catch and falls back on Android's page for MilO. Shawn went through Setup on the phone on 2026-10-05 and reported no problem; whether each button opened the right screen was not written down (device checks 54 to 66) |
 | HyperOS Autostart app-op | The "looks on / looks off" reading on the setup checklist | `platform/system/SetupFacts` | A hidden Android method reached by reflection with MIUI's app-op 10008. Advisory only; any failure reads as "unknown". On the phone it answered and followed the switch (2026-10-05) |
 | AlarmManager (system) | Having MilO look at the monthly reminder once a day, and ask once a day whether a trip has been recorded | `platform/reminder/ReminderAlarm`, delivered to `ReminderReceiver`; `platform/nothingrecorded/NothingRecordedAlarm`, delivered to `NothingRecordedReceiver` | **The daily check's** (2026-10-06, evening): one **inexact** alarm (`set`, type `RTC_WAKEUP`) for the moment the next day is checked from, noon out of the box; no permission; taken back while the check is switched off. On an emulator it started a MilO whose process had been ended, and was asked for again after a restart of the emulator; whether HyperOS lets it through is untested (section 10). **The reminder's:** built (2026-10-06). One **inexact** alarm (`set`, type `RTC`) for 09:00 of the next day: no permission, no exact-alarm permission declared, up to about an hour late, and not delivered to a sleeping phone until it wakes. Forgotten by Android at a reboot and a force stop, so asked for again at every process start. On an emulator it started a MilO whose process had been killed; whether HyperOS lets it do that with Autostart off is untested (section 10) |
+| AppWidgetManager (system) | The home-screen widget: drawing it, asking the home screen to add it, and its provider being disabled while its switch is off | `platform/widget/` | Built (2026-10-07), never run. The home screen app draws the widget; what HyperOS's does with a disabled provider's widget is not known (device check W-9) |
 | Android's backup (Auto Backup, and the transfer to a new phone) | An off-phone copy of the main database and the settings; the raw points too when a phone is moved to another | The `<application>` element of the manifest, `res/xml/data_extraction_rules.xml`, `platform/transfer/MiloBackupAgent` | Switched on (2026-10-06). 25 MB cap for the cloud, all or nothing (section 6). Android decides when, and restores only into a build signed with the same key. Ran on an emulator with Android's test transport (`bmgr`): backed up, removed, installed, restored. **Never on the phone**, and Google's own transports (the cloud, phone to phone) have not been used at all |
 | GitHub | Private repo, CI, Dependabot updates, and Dependabot alerts fed by the dependency graph workflow | `.github/` | Development only |
 

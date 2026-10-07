@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import com.shawnkowalchuk.milo.core.allowance.craRateFor
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
@@ -191,6 +192,18 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                     sample.check?.let { NothingRecordedTileContent(it, {}, { _, _ -> }) }
                 },
                 odometerTile = { OdometerTileContent(PREVIEW_ODOMETER) { true } },
+                widgetTile = {
+                    HomeWidgetTileContent(
+                        HomeWidgetCardState(
+                            enabled = true,
+                            canAskToAdd = true,
+                            rate = craRateFor(2026),
+                            couldNotSave = false,
+                        ),
+                        {},
+                        {},
+                    )
+                },
                 dataTile = {
                     DataTileContent(sample.data, DataActions({}, {}, {}, {}, {}, {}))
                 },
