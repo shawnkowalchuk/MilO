@@ -36,6 +36,8 @@ private val IconSize = 20.dp
  * nothing around it moves. The grey is that of secondary text, as on a main button that is
  * switched off, so the icon can still be made out: a button that has to wait is greyed, never
  * hidden. The design's own grey for an idle icon is too faint for that on a control's fill.
+ * @param greyedIcon the icon's colour while [enabled] is false. A square that stands on the
+ * page is passed the design's own idle grey, which can be made out there.
  */
 @Composable
 internal fun SquareIconButton(
@@ -45,6 +47,7 @@ internal fun SquareIconButton(
     modifier: Modifier = Modifier,
     fill: Color = MaterialTheme.colorScheme.surfaceContainer,
     enabled: Boolean = true,
+    greyedIcon: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     Surface(
         onClick = onClick,
@@ -56,7 +59,7 @@ internal fun SquareIconButton(
             if (enabled) {
                 MaterialTheme.colorScheme.onSurface
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                greyedIcon
             },
     ) {
         Box(modifier = Modifier.size(SquareSize), contentAlignment = Alignment.Center) {

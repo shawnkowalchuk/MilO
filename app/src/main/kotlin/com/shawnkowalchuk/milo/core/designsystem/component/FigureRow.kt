@@ -10,6 +10,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /**
@@ -18,8 +20,11 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
  *
  * @param figure the figure as it is to be read, unit included ("12.4 km"), or null to show
  * none, when a wrong figure would be worse than no figure.
- * @param counted false greys the figure, so that one that is in no total does not read as one
- * that is.
+ * @param counted false greys the figure, so that one that is in no total, or not in the total
+ * the row stands beside, does not read as one that is.
+ * @param figureSpoken what a screen reader says for the figure, where the design draws the
+ * number without its unit ("18.6") and the unit has to be said all the same. Null to have the
+ * figure read as it is written.
  * @param content what stands before the figure: the trip's times, and whatever belongs under
  * them.
  */
@@ -28,6 +33,7 @@ fun FigureRow(
     figure: String?,
     modifier: Modifier = Modifier,
     counted: Boolean = true,
+    figureSpoken: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -43,6 +49,12 @@ fun FigureRow(
         if (figure != null) {
             Text(
                 text = figure,
+                modifier =
+                    if (figureSpoken == null) {
+                        Modifier
+                    } else {
+                        Modifier.semantics { contentDescription = figureSpoken }
+                    },
                 // A step larger than the row's own text, as the design sets a row's figure.
                 style = MaterialTheme.typography.titleSmall,
                 color =

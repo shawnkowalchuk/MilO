@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 private const val DAY_MS = 24 * 60 * 60 * 1000L
@@ -145,7 +146,7 @@ class EventLogRepositoryTest {
         addLines(count = 5, newestAgeDays = 3, category = EventCategory.TRIP)
         addLines(count = 400, newestAgeDays = 0, category = EventCategory.TRIGGER)
 
-        val trips = log.observeNewest(limit = 201, category = EventCategory.TRIP).first()
+        val trips = log.observeNewest(limit = 201, categories = setOf(EventCategory.TRIP)).first()
         val all = log.observeNewest(limit = 201).first()
 
         // The five TRIP lines are older than every one of the newest 201 lines, and are found.
@@ -153,5 +154,34 @@ class EventLogRepositoryTest {
         assertEquals("line 4 of TRIP", trips.first().message)
         assertEquals(201, all.size)
         assertEquals(setOf(EventCategory.TRIGGER), all.map { it.category }.toSet())
+    }
+
+    @Test
+    fun `narrowed to several categories the lines of all of them are read, in the log's order`() =
+        runTest {
+            addLines(count = 3, newestAgeDays = 2, category = EventCategory.ADDRESS)
+            addLines(count = 400, newestAgeDays = 1, category = EventCategory.TRIGGER)
+            addLines(count = 2, newestAgeDays = 0, category = EventCategory.TRIP)
+
+            val found =
+                log
+                    .observeNewest(
+                        limit = 201,
+                        categories = setOf(EventCategory.TRIP, EventCategory.ADDRESS),
+                    ).first()
+
+            // Both kinds, however far apart they stand, and none of the 400 lines between them.
+            assertEquals(
+                listOf("line 1 of TRIP", "line 0 of TRIP", "line 2 of ADDRESS"),
+                found.take(3).map { it.message },
+            )
+            assertEquals(5, found.size)
+        }
+
+    @Test
+    fun `narrowing to no category at all is refused`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            log.observeNewest(limit = 10, categories = emptySet())
+        }
     }
 }

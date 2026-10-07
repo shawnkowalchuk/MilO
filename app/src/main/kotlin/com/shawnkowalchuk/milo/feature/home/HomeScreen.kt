@@ -1,222 +1,247 @@
 package com.shawnkowalchuk.milo.feature.home
 
+import android.annotation.SuppressLint
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
+import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
-import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleAction
 import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
-import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
+import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.core.trip.TripStartCause
-import com.shawnkowalchuk.milo.core.util.formatKilometres
-import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
-import com.shawnkowalchuk.milo.data.trip.TodaySession
-import com.shawnkowalchuk.milo.data.trip.TodayTrips
+import com.shawnkowalchuk.milo.core.util.formatShortDay
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
-import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
-import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
-import com.shawnkowalchuk.milo.platform.trip.TripActivity
+import java.time.YearMonth
 import java.time.ZoneId
+import java.util.Locale
+import kotlin.time.TimeSource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+
+/** How long the trip that the truck's arrival started takes to fade in. */
+private const val HAND_OVER_FADE_MS = 300
 
 /** What the home screen can ask for. */
-private class HomeActions(
+internal class HomeActions(
     val onOpenSetup: () -> Unit,
     val onOpenSettings: () -> Unit,
+    val onOpenPairing: () -> Unit,
+    val onOpenTrips: () -> Unit,
+    val onOpenReport: (YearMonth) -> Unit,
     val onStart: () -> Unit,
     val onEnd: () -> Unit,
 )
 
 /**
- * The home screen: a warning while the setup checklist needs attention, the trip in progress,
- * why the last start failed if it did, one button that starts or ends a trip by hand, and
- * today's finished trips. The cog beside the title leads to Settings.
+ * How this phone writes a time and a number.
  *
- * @param onOpenSetup the warning's button. Navigation belongs to the app, not the feature.
- * @param onOpenSettings the cog's.
+ * @param twentyFourHour whether the phone is set to write times with 24 hours.
+ */
+internal class HomeFormat(val locale: Locale, val zone: ZoneId, val twentyFourHour: Boolean)
+
+/**
+ * The home screen, laid out as the owner's design draws it: the app's mark and today's date,
+ * then tiles. With no trip open: the accent tile that starts one, today's and the month's
+ * Business kilometres side by side, the truck's connection, last month's report while it has
+ * not been sent, and the last trip of today. While a trip is being recorded: the accent tile
+ * with its kilometres and the button that ends it, the truck and today side by side, and
+ * today's finished trips. A warning while the setup checklist needs attention, and why the
+ * last start failed if it did, stand directly under the top line in both.
+ *
+ * When the truck arrives while the screen is open, the truck's tile plays the design's
+ * "Connecting…" and "Connected" before the screen changes to the trip ([homeShown]).
+ *
+ * Navigation belongs to the app, not the feature, so each way out is a plain function.
+ *
+ * @param onOpenSetup the setup warning's button.
+ * @param onOpenSettings the three sliders at the end of the top line.
+ * @param onOpenPairing the truck's tile, while no truck is paired.
+ * @param onOpenTrips the tile of the last trip, and the list of today's trips.
+ * @param onOpenReport the report tile's button, with the month the report is for.
  */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenSetup: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenPairing: () -> Unit,
+    onOpenTrips: () -> Unit,
+    onOpenReport: (YearMonth) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val activity by viewModel.activity.collectAsState()
-    val setupNeedsAttention by viewModel.setupNeedsAttention.collectAsState()
-    val today by viewModel.today.collectAsState()
+    // A press of Start is told to what is shown as well as to the trip controller, so that the
+    // screen changes to the trip at once even in the middle of the truck's arrival.
+    val startPresses = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    val shown by homeShownState(viewModel.ui, startPresses)
 
     // The warning follows the phone's settings, which change outside MilO without a word, and
     // "today" becomes another day while MilO sits in the background.
     CameToFrontEffect(viewModel::onCameToFront)
 
     HomeContent(
-        activity = activity,
-        today = today,
-        setupNeedsAttention = setupNeedsAttention,
+        shown = shown,
         actions =
             HomeActions(
                 onOpenSetup = onOpenSetup,
                 onOpenSettings = onOpenSettings,
-                onStart = viewModel::onStartPressed,
+                onOpenPairing = onOpenPairing,
+                onOpenTrips = onOpenTrips,
+                onOpenReport = onOpenReport,
+                onStart = {
+                    startPresses.tryEmit(Unit)
+                    viewModel.onStartPressed()
+                },
                 onEnd = viewModel::onEndPressed,
             ),
         modifier = modifier,
     )
 }
 
+/**
+ * What the screen draws, kept up from the view model's [ui] for as long as the screen is in
+ * the composition. "On screen" is the screen being resumed: what the truck does while MilO is
+ * in the background, or behind another app, is not played when MilO comes back.
+ */
+// Lint warns that reading a StateFlow's value while composing does not follow its changes. Here
+// the value is only what the state starts from, so that the first frame is not empty; the flow
+// itself is collected two lines further down, as `collectAsState` does it.
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-private fun HomeContent(
-    activity: TripActivity,
-    today: TodayTrips?,
-    setupNeedsAttention: Boolean,
-    actions: HomeActions,
-    modifier: Modifier = Modifier,
-) {
-    val trip = activity.trip
-    val twentyFourHour = rememberTwentyFourHourClock()
-    Column(
+private fun homeShownState(ui: StateFlow<HomeUi>, startPresses: Flow<Unit>): State<HomeShown> {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    return produceState(HomeShown(ui.value), ui, startPresses, lifecycle) {
+        val started = TimeSource.Monotonic.markNow()
+        val resumed = lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.RESUMED) }
+        homeShown(ui, resumed, startPresses) { started.elapsedNow().inWholeMilliseconds }
+            .collect { value = it }
+    }
+}
+
+@Composable
+internal fun HomeContent(shown: HomeShown, actions: HomeActions, modifier: Modifier = Modifier) {
+    val ui = shown.ui
+    val locale = LocalConfiguration.current.locales[0]
+    val format = HomeFormat(locale, ZoneId.systemDefault(), rememberTwentyFourHourClock())
+    TileColumn(
         modifier =
             modifier
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+                .padding(vertical = MiloTheme.spacing.small),
     ) {
-        ScreenTitle(
-            text = stringResource(R.string.app_name),
+        AppHeader(
+            mark = stringResource(R.string.app_mark),
+            name = stringResource(R.string.app_name),
+            line = formatShortDay(ui.date, locale),
             action =
                 ScreenTitleAction(
                     icon = MiloIcons.Settings,
                     description = stringResource(R.string.home_open_settings),
                     onClick = actions.onOpenSettings,
                 ),
+            // With the gap between two tiles, and the room the button keeps free around
+            // itself for a finger, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = MiloTheme.spacing.extraSmall),
         )
 
-        if (setupNeedsAttention) SetupWarningCard(actions.onOpenSetup)
+        // The two things that can stop a trip from being recorded come before everything else.
+        if (ui.setupNeedsAttention) SetupWarningTile(actions.onOpenSetup)
+        ui.activity.startFailure?.let { StartFailureTile(it) }
 
-        SectionCard(title = stringResource(R.string.home_trip_title)) {
-            if (trip == null) NoTrip(activity.parked) else TripInProgress(trip, twentyFourHour)
-        }
-
-        activity.startFailure?.let { StartFailureCard(it) }
-
-        // One button, because exactly one of the two actions makes sense at any moment. It
-        // stands above today's trips, so it does not move down the screen as the day fills up.
-        PrimaryButton(
-            text = stringResource(
-                if (trip ==
-                    null
-                ) {
-                    R.string.home_start_trip
-                } else {
-                    R.string.home_end_trip
-                },
-            ),
-            onClick = if (trip == null) actions.onStart else actions.onEnd,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        TodayCard(
-            today = today,
-            tripInProgress = trip != null,
-            zone = ZoneId.systemDefault(),
-            twentyFourHour = twentyFourHour,
-        )
+        TripOrNoTrip(shown, actions, format)
     }
 }
 
-/** The card with no trip open: for a truck that is connected and parked, what starts the next. */
+/**
+ * The tiles of the one layout or the other. A change between the two is made in one frame, as
+ * it always was, with one exception: the trip that the truck's arrival started fades in over
+ * the tiles that were showing, once the arrival has been played.
+ */
 @Composable
-private fun NoTrip(parked: ParkedTruckWatch?) {
-    val waiting = R.string.trip_status_parked to R.string.home_trip_parked_detail
-    val notWatched =
-        R.string.trip_status_parked_not_watched to R.string.home_trip_parked_not_watched_detail
-    val (status, detail) =
-        when (parked) {
-            null -> R.string.trip_status_idle to R.string.home_trip_idle_detail
-            ParkedTruckWatch.WAITING_TO_MOVE -> waiting
-            ParkedTruckWatch.NO_LONGER_WATCHED -> notWatched
+private fun TripOrNoTrip(shown: HomeShown, actions: HomeActions, format: HomeFormat) {
+    val trip = shown.ui.activity.trip.takeIf { shown.recordingLayout }
+    val layout = updateTransition(targetState = trip != null, label = "home layout")
+    // How far the trip's tiles have come in: 0 before they show, 1 when they are there.
+    val arrived =
+        layout.animateFloat(
+            transitionSpec = { if (targetState) tween(HAND_OVER_FADE_MS) else snap() },
+            label = "trip fades in",
+        ) { recording -> if (recording) 1f else 0f }
+    val fading = shown.fadesToRecording && layout.targetState && !layout.currentState
+    Box {
+        // Each layout has its own place here, so the tiles that fade out are the ones that
+        // were showing, with their movement, and not a second copy of them.
+        if (trip == null || fading) {
+            TileRows(alpha = { if (fading) 1f - arrived.value else 1f }) {
+                IdleTiles(shown, actions, format)
+            }
         }
-    Text(text = stringResource(status), style = MaterialTheme.typography.bodyLarge)
-    Text(
-        text = stringResource(detail),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+        if (trip != null) {
+            TileRows(alpha = { if (fading) arrived.value else 1f }) {
+                RecordingTiles(shown.ui, trip, actions, format)
+            }
+        }
+    }
 }
 
+/**
+ * The tiles of one layout, one under the other.
+ *
+ * @param alpha how clearly they show. Read while drawing, so a fade composes nothing again.
+ */
 @Composable
-private fun TripInProgress(trip: CurrentTrip, twentyFourHour: Boolean) {
-    val locale = LocalConfiguration.current.locales[0]
-    val zone = ZoneId.systemDefault()
-    Text(
-        text = stringResource(R.string.distance_km, formatKilometres(trip.distanceMetres, locale)),
-        style = MaterialTheme.typography.headlineSmall,
-    )
-    Text(
-        text =
-            stringResource(
-                if (trip.waitingForTruck) {
-                    R.string.trip_status_waiting_for_truck
-                } else {
-                    R.string.trip_status_in_progress
-                },
-            ),
-        style = MaterialTheme.typography.bodyLarge,
-    )
-    Text(
-        text =
-            stringResource(
-                R.string.trip_started_at,
-                formatTimeOfDay(trip.startedAtMs, zone, locale, twentyFourHour),
-            ),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun TileRows(alpha: () -> Float, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier.graphicsLayer { this.alpha = alpha() },
+        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.tileGap),
+        content = content,
     )
 }
 
 /**
  * Shown while a required row of the setup checklist is not in order, or no truck is paired: in
- * that state a trip may not start by itself. The checklist says what, so this card only points
+ * that state a trip may not start by itself. The checklist says what, so this tile only points
  * to it.
  */
 @Composable
-private fun SetupWarningCard(onOpenSetup: () -> Unit) {
-    SectionCard(title = stringResource(R.string.home_setup_warning_title)) {
-        StatusRow(
-            label = stringResource(R.string.home_setup_warning_text),
-            status = RowStatus.PROBLEM,
-            action = StatusRowAction(
-                stringResource(R.string.home_setup_warning_action),
-                onOpenSetup,
-            ),
-        )
-    }
+private fun SetupWarningTile(onOpenSetup: () -> Unit) {
+    AttentionTile(
+        title = stringResource(R.string.home_setup_warning_title),
+        text = stringResource(R.string.home_setup_warning_text),
+        actionLabel = stringResource(R.string.home_setup_warning_action),
+        onAction = onOpenSetup,
+    )
 }
 
 /**
@@ -224,7 +249,7 @@ private fun SetupWarningCard(onOpenSetup: () -> Unit) {
  * posted as a notification, but notifications may be switched off.
  */
 @Composable
-private fun StartFailureCard(failure: StartFailure) {
+private fun StartFailureTile(failure: StartFailure) {
     SectionCard(title = stringResource(R.string.start_problem_title)) {
         if (failure.problems.isEmpty()) {
             StatusRow(
@@ -244,55 +269,4 @@ private fun PreflightProblem.textRes(): Int = when (this) {
     PreflightProblem.LOCATION_SWITCHED_OFF -> R.string.start_problem_location_off
     PreflightProblem.BACKGROUND_RESTRICTED -> R.string.start_problem_background_restricted
     PreflightProblem.BLUETOOTH_PERMISSION_MISSING -> R.string.start_problem_bluetooth_permission
-}
-
-// Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
-@Composable
-private fun HomeIdlePreview() {
-    MiloTheme {
-        Surface {
-            HomeContent(
-                activity =
-                    TripActivity(
-                        startFailure = StartFailure(
-                            listOf(PreflightProblem.BACKGROUND_LOCATION_MISSING),
-                        ),
-                    ),
-                today = TodayTrips(emptyList()),
-                setupNeedsAttention = true,
-                actions = HomeActions({}, {}, {}, {}),
-            )
-        }
-    }
-}
-
-@PreviewLightDark
-@Composable
-private fun HomeRecordingPreview() {
-    val sessions =
-        listOf(
-            TodaySession(2, 1_791_020_000_000, 1_791_021_500_000, 24_900.0, TripCategory.BUSINESS),
-            TodaySession(1, 1_791_010_000_000, 1_791_011_200_000, 8_300.0, TripCategory.PERSONAL),
-        )
-    MiloTheme {
-        Surface {
-            HomeContent(
-                activity =
-                    TripActivity(
-                        trip =
-                            CurrentTrip(
-                                tripId = 1,
-                                startedAtMs = 1_791_028_800_000,
-                                startedBy = TripStartCause.MANUAL,
-                                distanceMetres = 12_340.0,
-                                waitingForTruck = false,
-                            ),
-                    ),
-                today = TodayTrips(sessions),
-                setupNeedsAttention = false,
-                actions = HomeActions({}, {}, {}, {}),
-            )
-        }
-    }
 }

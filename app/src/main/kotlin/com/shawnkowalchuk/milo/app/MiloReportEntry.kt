@@ -19,8 +19,9 @@ import java.time.ZoneId
  * [MiloNavigation], kept in a file of its own because that function is at its size limit
  * (ENGINEERING_STANDARDS section 3).
  *
- * Back leads to Trips, where the screen was opened. "Open Settings" puts Settings on top, so
- * that Back from there leads back to the report that was being made.
+ * Back leads to where the screen was opened: Trips, or Home when its tile for a report that
+ * has not been sent was pressed. "Open Settings" puts Settings on top, so that Back from there
+ * leads back to the report that was being made.
  */
 @Composable
 internal fun ReportEntry(container: AppContainer, backStack: NavBackStack<NavKey>, key: ReportKey) {

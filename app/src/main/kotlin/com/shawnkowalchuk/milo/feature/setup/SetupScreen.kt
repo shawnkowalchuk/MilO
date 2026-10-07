@@ -3,9 +3,9 @@ package com.shawnkowalchuk.milo.feature.setup
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,18 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
-import com.shawnkowalchuk.milo.core.designsystem.component.SectionCard
-import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
-import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.util.formatDate
 import com.shawnkowalchuk.milo.data.settings.ConfirmedStep
 import com.shawnkowalchuk.milo.platform.system.SetupDetail
 import com.shawnkowalchuk.milo.platform.system.SetupFix
@@ -35,19 +31,11 @@ import com.shawnkowalchuk.milo.platform.system.SetupItem
 import com.shawnkowalchuk.milo.platform.system.SetupRow
 import com.shawnkowalchuk.milo.platform.system.SetupState
 import com.shawnkowalchuk.milo.platform.system.SystemScreen
-import com.shawnkowalchuk.milo.platform.system.needsAttention
-import java.time.ZoneId
-
-/** What the rows of the checklist can ask the screen to do. */
-private class SetupActions(
-    val onFix: (SetupFix) -> Unit,
-    val onConfirm: (ConfirmedStep) -> Unit,
-    val onTakeBack: (ConfirmedStep) -> Unit,
-)
 
 /**
  * The permission checklist: one row for everything an automatic trip start depends on, each
- * with its state and a button that leads to the place to fix it.
+ * with its state and a button that leads to the place to fix it. Above the rows, how many of
+ * them are ready.
  *
  * @param onOpenPairing the truck row's button. Navigation belongs to the app, not the feature.
  */
@@ -99,119 +87,65 @@ fun SetupScreen(
     SetupContent(rows = rows, actions = actions, modifier = modifier)
 }
 
+/**
+ * Setup as the owner's design draws it: the title, the tile with the count, then each group of
+ * rows under its small label, the rows that are to be fixed first. While the phone is being
+ * read for the first time, one tile says so in place of all of them.
+ */
 @Composable
 private fun SetupContent(
     rows: List<SetupRow>?,
     actions: SetupActions,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val spacing = MiloTheme.spacing
+    TileColumn(
         modifier =
             modifier
                 .fillMaxSize()
+                // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+                .padding(top = spacing.tileGap, bottom = spacing.small),
     ) {
-        ScreenTitle(text = stringResource(R.string.setup_title))
-        if (rows == null) {
-            Text(
-                text = stringResource(R.string.setup_reading),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            return@Column
-        }
-
-        // The same rule as the home screen's warning, so the two always agree.
-        val open = rows.count { it.needsAttention() }
-        Text(
-            text =
-                if (open == 0) {
-                    stringResource(R.string.setup_summary_all_set)
-                } else {
-                    pluralStringResource(R.plurals.setup_summary_open, open, open)
-                },
-            style = MaterialTheme.typography.bodyLarge,
+        ScreenTitle(
+            text = stringResource(R.string.setup_title),
+            // With the gap between two tiles, the design's 16 under the title.
+            modifier = Modifier.padding(bottom = spacing.buttonGap),
         )
+        if (rows == null) {
+            Tile(modifier = Modifier.fillMaxWidth()) { Note(R.string.setup_reading) }
+            return@TileColumn
+        }
+        SummaryTile(setupSummary(rows))
 
         val (xiaomi, android) = rows.partition { it.item.xiaomiOnly }
-        SectionCard(title = stringResource(R.string.setup_section_android)) {
-            for (row in android) ChecklistRow(row, actions)
-        }
+        val androidLabel = stringResource(R.string.setup_section_android)
+        ChecklistGroup(androidLabel, toFixFirst(android), actions)
         if (xiaomi.isNotEmpty()) {
-            SectionCard(title = stringResource(R.string.setup_section_xiaomi)) {
-                Text(
-                    text = stringResource(R.string.setup_section_xiaomi_note),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                for (row in xiaomi) ChecklistRow(row, actions)
-            }
+            val xiaomiLabel = stringResource(R.string.setup_section_xiaomi)
+            ChecklistGroup(xiaomiLabel, toFixFirst(xiaomi), actions)
+            // Under the tile it explains, and in from the edge like the label above it.
+            Note(
+                R.string.setup_section_xiaomi_note,
+                Modifier.padding(horizontal = spacing.extraSmall),
+            )
         }
     }
 }
 
+/** A quiet sentence: what the screen is doing, or what a group of rows is about. */
 @Composable
-private fun ChecklistRow(row: SetupRow, actions: SetupActions) {
-    val fix = row.fix
-    val fixButton =
-        fix?.let { StatusRowAction(stringResource(row.fixLabelRes())) { actions.onFix(it) } }
-    val step = row.confirmStep
-    // A row Shawn can confirm has two buttons: the one that opens the setting, and the one that
-    // says he set it (or takes that back). The button for the next thing to do comes last.
-    val (main, second) =
-        when {
-            step == null -> fixButton to null
-
-            row.confirmedAtMs == null ->
-                StatusRowAction(stringResource(R.string.setup_action_confirm)) {
-                    actions.onConfirm(step)
-                } to fixButton
-
-            else -> {
-                val takeBack =
-                    StatusRowAction(stringResource(R.string.setup_action_take_back)) {
-                        actions.onTakeBack(step)
-                    }
-                if (fixButton == null) takeBack to null else fixButton to takeBack
-            }
-        }
-    StatusRow(
-        label = stringResource(row.item.labelRes()),
-        status = row.state.asRowStatus(),
-        supportingText = detailText(row),
-        action = main,
-        secondaryAction = second,
+private fun Note(@StringRes text: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(text),
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
-/** The sentence under the row's name, with the truck's name or the confirmation date filled in. */
-@Composable
-private fun detailText(row: SetupRow): String {
-    val confirmedAtMs = row.confirmedAtMs
-    return when {
-        row.detail == SetupDetail.CONFIRMED && confirmedAtMs != null -> {
-            val locale = LocalConfiguration.current.locales[0]
-            val day = formatDate(confirmedAtMs, ZoneId.systemDefault(), locale)
-            stringResource(row.detailRes(), day)
-        }
-
-        row.item == SetupItem.TRUCK && row.detail in TRUCK_DETAILS_WITH_A_NAME ->
-            stringResource(
-                row.detailRes(),
-                row.truckName ?: stringResource(R.string.truck_without_a_name),
-            )
-
-        else -> stringResource(row.detailRes())
-    }
-}
-
-/** The truck row's sentences that name the truck. */
-private val TRUCK_DETAILS_WITH_A_NAME =
-    setOf(SetupDetail.FINE, SetupDetail.TRUCK_ASSOCIATION_MISSING, SetupDetail.TRUCK_NOT_WATCHED)
-
 // Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+@Preview
 @Composable
 private fun SetupPreview() {
     val rows =

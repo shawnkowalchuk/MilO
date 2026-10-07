@@ -18,6 +18,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.shawnkowalchuk.milo.feature.eventlog.EventLogScreen
 import com.shawnkowalchuk.milo.feature.eventlog.EventLogViewModel
 import com.shawnkowalchuk.milo.feature.home.HomeScreen
+import com.shawnkowalchuk.milo.feature.home.HomeSources
 import com.shawnkowalchuk.milo.feature.home.HomeViewModel
 import com.shawnkowalchuk.milo.feature.pairing.PairingScreen
 import com.shawnkowalchuk.milo.feature.pairing.PairingViewModel
@@ -82,6 +83,7 @@ fun MiloNavigation(
                                             controller = container.tripController,
                                             checklist = container.setupChecklist,
                                             trips = container.tripRepository,
+                                            sources = homeSources(container),
                                             clock = System::currentTimeMillis,
                                             zone = ZoneId::systemDefault,
                                         )
@@ -90,6 +92,11 @@ fun MiloNavigation(
                             ),
                         onOpenSetup = { backStack.showTopLevel(SetupKey, HomeKey) },
                         onOpenSettings = { backStack.openOnTop(SettingsKey) },
+                        onOpenPairing = { backStack.openOnTop(PairingKey) },
+                        onOpenTrips = { backStack.showTopLevel(TripsKey, HomeKey) },
+                        onOpenReport = { month ->
+                            backStack.openOnTop(ReportKey(month.year, month.monthValue))
+                        },
                     )
                 }
                 entry<TripsKey> {
@@ -243,3 +250,15 @@ fun MiloNavigation(
             },
     )
 }
+
+/**
+ * What the home screen reads besides the trip controller, the checklist and the stored trips:
+ * the settings, the sent reports and the address lookup, each handed over as the plain flow
+ * or function Home needs of it.
+ */
+private fun homeSources(container: AppContainer) = HomeSources(
+    settings = container.settingsStore.settings,
+    sentReports = container.sentReportRepository.observeSent(),
+    openTripStart = container.tripAddresses.openTripStart,
+    lookUpAddresses = container.tripAddresses::catchUp,
+)

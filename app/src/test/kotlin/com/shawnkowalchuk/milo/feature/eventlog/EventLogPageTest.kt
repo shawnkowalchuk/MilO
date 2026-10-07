@@ -46,15 +46,15 @@ class EventLogPageTest {
     }
 
     @Test
-    fun `the page says which category it was read for, or that it was read for all`() {
+    fun `the page says which kind of line it was read for, or that it was read for all`() {
         assertEquals(null, eventLogPage(entries(3), wanted = 200).filter)
         assertEquals(
-            EventCategory.TRIGGER,
-            eventLogPage(entries(3), wanted = 200, filter = EventCategory.TRIGGER).filter,
+            LogGroup.BLUETOOTH,
+            eventLogPage(entries(3), wanted = 200, filter = LogGroup.BLUETOOTH).filter,
         )
-        // An empty page still says which category has no line.
-        val none = eventLogPage(emptyList(), wanted = 200, filter = EventCategory.CRASH)
-        assertEquals(EventCategory.CRASH, none.filter)
+        // An empty page still says which chip has no line.
+        val none = eventLogPage(emptyList(), wanted = 200, filter = LogGroup.ERRORS)
+        assertEquals(LogGroup.ERRORS, none.filter)
         assertTrue(none.entries.isEmpty())
         assertFalse(none.hasOlder)
     }

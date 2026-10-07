@@ -13,11 +13,11 @@ import androidx.compose.ui.unit.dp
  * 14 and 18 as well. Add a step here if a design truly needs one; do not write a dp value in a
  * screen.
  *
- * **The screens themselves are not spaced as the design draws them yet.** They still stand
- * [medium] (16) from the edge of the screen, with [small] (8) or [medium] between two tiles. The
- * design's 18 and 10 for those two are [gutter] and [tileGap]; the screens get them with their
- * own layouts, the next package. Below, each step is described by what uses it today, and what
- * the design also uses it for is said as that.
+ * **Only Home is spaced as the design draws it.** Its tiles stand [gutter] (18) from the edge of
+ * the screen with [tileGap] (10) between them, through `TileColumn` and `TilePair`. The other
+ * screens still stand [medium] (16) from the edge, with [small] (8) or [medium] between two
+ * tiles; they get the design's two with their own layouts. Below, each step is described by
+ * what uses it today, and what the design also uses it for is said as that.
  *
  * @param textGap between a row's main line and the quieter line under it.
  * @param extraSmall between a label and the thing it names, and above and below the words of
@@ -25,14 +25,16 @@ import androidx.compose.ui.unit.dp
  * @param buttonGap between two buttons or two chips that stand side by side, and inside the
  * bottom bar at its two ends. In the design also between a tile's label and its figure.
  * @param small between things that belong together, and above and below the words of a button.
- * @param tileGap between the rows inside a tile. In the design also between two tiles.
+ * @param tileGap between the rows inside a tile, and on Home between two tiles.
  * @param rowGap between a row's dot or button and its text, and above a bar that floats.
  * @param controlPadding inside a small button or a text field, left and right of its words.
+ * Also between the rows of a tile that the design gives more air: the truck's tile, and the
+ * tile of the trip being recorded.
  * @param medium inside a tile, from its edge to its content. Today also from the edge of the
  * screen to the tiles.
  * @param gutter the 18 of the design: beside the bottom bar, left and right of the main button's
- * words, and the wider padding of a tile (a dialog's buttons from its edge). In the design also
- * from the edge of the screen to the tiles.
+ * words, the wider padding of a tile (a dialog's buttons from its edge), and on Home from the
+ * edge of the screen to the tiles.
  * @param large between groups that do not belong together. Nothing uses it today.
  * @param extraLarge the widest gap. Nothing uses it today.
  */

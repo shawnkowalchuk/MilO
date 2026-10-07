@@ -2,7 +2,7 @@ package com.shawnkowalchuk.milo.feature.trips
 
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.data.trip.ByHandMark
@@ -13,11 +13,12 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 
-// The Trips screen as Android Studio draws it. In a file of its own because the screen's file
-// is at the size limit (ENGINEERING_STANDARDS section 3).
+// The Trips screen as Android Studio draws it: one day open, with a discarded trip listed,
+// and one day closed. In a file of its own to keep the screen's file under the size limit
+// (ENGINEERING_STANDARDS section 3).
 
 // Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+@Preview
 @Composable
 private fun TripsPreview() {
     val morning = 1_791_028_800_000
@@ -65,23 +66,30 @@ private fun TripsPreview() {
             totals = CategoryTotals(Tally(1, 249), Tally(1, 234), Tally(0, 0)),
             inProgress =
                 TripLine(4, morning + 9_000_000, null, 3_200.0, TripKind.IN_PROGRESS, from = shop),
-            days = listOf(TripDay(LocalDate.of(2026, 10, 3), trips, 2, 249)),
+            days =
+                listOf(
+                    TripDay(LocalDate.of(2026, 10, 3), trips, 2, 249),
+                    TripDay(LocalDate.of(2026, 10, 2), trips.takeLast(1), 1, 0),
+                ),
             hiddenLeftOut = 0,
         )
+    val day = LocalDate.of(2026, 10, 3)
     val state =
         TripsUiState(
             month = YearMonth.of(2026, 10),
+            today = day,
             zone = ZoneId.of("UTC"),
             canStepForward = false,
             showLeftOut = true,
             changeFailed = false,
             summary = summary,
+            openDays = setOf(day),
         )
     MiloTheme {
         Surface {
             TripsContent(
                 state = state,
-                actions = TripsActions({}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}),
+                actions = TripsActions({}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}),
             )
         }
     }

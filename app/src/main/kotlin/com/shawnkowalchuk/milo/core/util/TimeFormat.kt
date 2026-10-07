@@ -109,6 +109,20 @@ fun formatLogTime(epochMs: Long, zone: ZoneId): String =
 fun formatMonthAndYear(month: YearMonth, locale: Locale): String =
     DateTimeFormatter.ofPattern("LLLL yyyy", locale).format(month)
 
+/**
+ * A month by its name alone, for a place where the year goes without saying because the month
+ * is this one or the last: "October".
+ */
+fun formatMonthName(month: YearMonth, locale: Locale): String =
+    DateTimeFormatter.ofPattern("LLLL", locale).format(month)
+
+/**
+ * Today as the short line under the app's name: "Tue, Oct 6". The names of the weekday and the
+ * month are the language's own short ones; their order is the design's, in every language.
+ */
+fun formatShortDay(date: LocalDate, locale: Locale): String =
+    DateTimeFormatter.ofPattern("EEE, MMM d", locale).format(date)
+
 /** A day as a heading, in the long form of the user's language: "Monday, 5 October 2026". */
 fun formatDay(date: LocalDate, locale: Locale): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale).format(date)

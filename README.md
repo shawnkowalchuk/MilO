@@ -69,13 +69,15 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 
 ## First-time setup in the app
 
-Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
+Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
 On 2026-10-05 you went through this screen once, everything except pairing the truck. The Physical activity row was added after that.
 
 ### The rows, in order
 
-"Permissions and phone settings" (MilO reads the state of all ten by itself):
+A row that is to be fixed (a red mark) stands at the top of its group until it is in order; the tables give the order with nothing to fix.
+
+"Android" (MilO reads the state of all ten by itself):
 
 | # | Row | What to do |
 |---|---|---|
@@ -109,7 +111,7 @@ Do this at the truck, with every other row in order.
 2. In MilO: Setup, the row "Truck paired and watched", **Pair truck**.
 3. Under "Paired with this phone", find the truck and press **Pair**.
 4. Android shows a dialog of its own and asks you to allow it. Choose **Allow**.
-5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." Setup now says "Everything MilO needs is set", and the warning on Home is gone.
+5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." On Setup the truck's row now has its tick, and the warning on Home is gone.
 
 Bluetooth and Location must both be on for this, and the screen says so if one is not. **This step has never been done:** Android's dialog has not been shown by any build of MilO, on any device. If the screen fails, `docs/DEVICE_TEST_CHECKLIST.md` ("Pairing MilO with the truck") has a second way from the Mac.
 
@@ -208,22 +210,24 @@ This is what is built. A start by the truck and an end by its disconnect were se
 
 - the trip-start sound plays once from the phone (unless the phone is silenced);
 - a notification "Trip in progress" appears and stays, with the kilometres so far;
-- Home shows "Trip in progress", the distance and "Started at (time)".
+- Home turns its lime tile into the trip: "Recording", the kilometres so far, the minutes it has run and "since (time)", and the button End trip. Its small Truck tile says "Connected".
+
+If Home is open at that moment, its truck tile first says "Connecting…" and then "Connected", for about four seconds, and only then does the lime tile change. The trip is being recorded all that time. Built on 2026-10-07 and seen on an emulator only.
 
 **When a trip ends.** In one of two ways, whichever comes first.
 
 - **The truck disconnects.** Home and the notification say "Trip in progress. Waiting for the truck to reconnect" for two minutes; reconnecting in that time continues the same trip. Then the trip ends and the notification goes.
 - **The truck has not moved for ten minutes,** connected or not. The trip ends where and when the truck stopped, not ten minutes later. A stop of ten minutes or more therefore cuts a drive into two trips; the ten minutes can be set from 5 to 30 in Settings.
 
-Either way there is no sound, and the trip is in "Today" on Home and on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
+Either way there is no sound, and the trip is the "Last trip" on Home and a row on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
 
-**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and Home says the same. Nothing is being recorded. MilO looks at the phone's position every 30 seconds, and when the truck drives off a new trip starts by itself within about a minute, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time. While MilO waits there is no End trip button: the button reads Start trip.
+**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and the truck's tile on Home says the same. Nothing is being recorded. MilO looks at the phone's position every 30 seconds, and when the truck drives off a new trip starts by itself within about a minute, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time. While MilO waits there is no End trip button: the lime tile on Home reads Start trip.
 
-**If you end a trip yourself with End trip while the truck is still connected,** MilO does not wait. It starts nothing by itself until the truck has disconnected and connected again, or until twelve hours have passed and MilO is opened, or you press Start trip. If the truck stays connected all that time, as yours can, nothing tells you that the next drive is not being recorded: open MilO before you drive off, and press Start trip if Home says "No trip in progress". After a trip you started that way, a stop is waited out as before.
+**If you end a trip yourself with End trip while the truck is still connected,** MilO does not wait. It starts nothing by itself until the truck has disconnected and connected again, or until twelve hours have passed and MilO is opened, or you press Start trip. If the truck stays connected all that time, as yours can, nothing tells you that the next drive is not being recorded: open MilO before you drive off, and press Start trip if the lime tile on Home reads Start trip. After a trip you started that way, a stop is waited out as before.
 
-After three days of standing MilO stops watching, to spare the battery, and Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
+After three days of standing MilO stops watching, to spare the battery, and the truck's tile on Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
 
-**If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add a missed trip".
+**If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add missed trip".
 
 **If MilO has stopped noticing the truck.** Once a day MilO asks itself whether a trip has been started. On a work day (a day that is switched on in the work schedule) that has none by 12:00 noon, it posts one notification: "No trip recorded today". If the truck has not been driven that day, there is nothing to do. If it has, tap the notification: MilO opens on Home, which says "Setup needs attention" if something it needs is switched off. The time and the switch are in Settings, on the card "Daily check"; a trip you add by hand does not count. Built on 2026-10-06 and seen on an emulator only: whether this phone lets MilO wake up for it at noon is one of the things still to be tried.
 
@@ -231,16 +235,16 @@ After three days of standing MilO stops watching, to spare the battery, and Home
 
 | What | Where |
 |---|---|
-| The trip in progress, today's trips, Start trip / End trip | **Home**, the first button of the bottom bar (a house) |
-| Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button (a list) |
-| The report for the accountant | Trips, the month's card, **Report for the accountant** |
-| Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders beside the title on Home |
+| Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
+| Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
+| The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
+| Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders at the top of Home |
 | The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
 **The report.** Set your name and the accountant's address in Settings first. On the Report screen, "Create PDF" and "Open PDF" let you look at it; **Send to accountant** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Export CSV" makes the same trips as a spreadsheet file. No email draft has been seen yet, on any device: the emulator had no email account.
 
-**The log, and how to send it.** The Log screen lists the newest lines first. The chips under the title show one kind of line at a time (`ANDROID_AUTO`, `TRIGGER`, `ERROR` and so on); "Tap for details" opens what a line holds. **Share the whole log** makes a text file of every line and opens Android's share sheet: pick your email app and send it to whoever is helping you. The file names the truck and the phone's other Bluetooth devices with their addresses, and every address you typed on the edit screen. It holds no GPS position. Lines older than 90 days are removed, except the newest 1,000.
+**The log, and how to send it.** The Log screen lists the newest lines first. Each day's lines are one tile, with the day above it (today's has none). The chips under the title show one kind of line at a time (Trips, Bluetooth, Android Auto, Errors); "Tap for details" opens what a line holds. **The square button beside the title shares the whole log:** it asks first, saying what the file holds, then makes a text file of every line and opens Android's share sheet: pick your email app and send it to whoever is helping you. The file names the truck and the phone's other Bluetooth devices with their addresses, and every address you typed on the edit screen. It holds no GPS position. Lines older than 90 days are removed, except the newest 1,000.
 
 MilO only sees Android Auto connect or disconnect while MilO itself is running; a connection that came and went while it was closed is not in the log.
 

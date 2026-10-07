@@ -1,8 +1,14 @@
 package com.shawnkowalchuk.milo.platform.reminder
 
+import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.util.localDateOf
+import com.shawnkowalchuk.milo.data.report.SentReport
+import com.shawnkowalchuk.milo.data.report.monthSubmission
+import com.shawnkowalchuk.milo.data.report.selectForReport
+import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAYS
 import com.shawnkowalchuk.milo.data.settings.ReminderShown
+import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -73,6 +79,38 @@ data class ReminderMoment(
     val businessTrips: Int,
     val shown: ReminderShown?,
 )
+
+/**
+ * Everything [judgeReminder] goes by, gathered from what is stored. One function, so that the
+ * notification and the home screen's tile for the same report look at the same month, the
+ * same trips and the same sent reports, and cannot disagree about whether it is waiting.
+ *
+ * @param stored the settings: the switch, the reminder day, and what was last shown.
+ * @param sent every report recorded as sent.
+ * @param lastMonthTrips the stored trips that started in the month the reminder is about
+ * ([monthToRemindOf]), whatever their status. Which of them the month's report would list is
+ * decided by the report's own rule, so that the reminder and the Report screen cannot disagree
+ * about whether there is anything to send.
+ */
+fun reminderMoment(
+    nowMs: Long,
+    zone: ZoneId,
+    stored: MiloSettings,
+    sent: List<SentReport>,
+    lastMonthTrips: List<Trip>,
+): ReminderMoment {
+    val month = monthToRemindOf(nowMs, zone)
+    return ReminderMoment(
+        nowMs = nowMs,
+        zone = zone,
+        enabled = stored.reminderEnabled,
+        reminderDay = stored.reminderDay,
+        submitted = monthSubmission(month, sent) != null,
+        businessTrips =
+            selectForReport(lastMonthTrips, ReportPeriod.Month(month), zone).trips.size,
+        shown = stored.reminderShown,
+    )
+}
 
 /** What is done about the reminder's notification. */
 enum class ReminderStep {

@@ -224,8 +224,11 @@ class FakeEventLogDao : EventLogDao {
     override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> =
         flowOf(newestFirst().take(limit))
 
-    override fun observeNewestOf(category: EventCategory, limit: Int): Flow<List<EventLogEntry>> =
-        flowOf(newestFirst().filter { it.category == category }.take(limit))
+    override fun observeNewestOf(
+        categories: List<EventCategory>,
+        limit: Int,
+    ): Flow<List<EventLogEntry>> =
+        flowOf(newestFirst().filter { it.category in categories }.take(limit))
 
     override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) = entries
         .sortedWith(compareBy<EventLogEntry> { it.atMs }.thenBy { it.id })

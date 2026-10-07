@@ -14,12 +14,12 @@ interface EventLogDao {
     @Query("SELECT * FROM event_log ORDER BY atMs DESC, id DESC LIMIT :limit")
     fun observeNewest(limit: Int): Flow<List<EventLogEntry>>
 
-    /** The same, for the lines of one category only. */
+    /** The same, for the lines of the named categories only. */
     @Query(
-        "SELECT * FROM event_log WHERE category = :category " +
+        "SELECT * FROM event_log WHERE category IN (:categories) " +
             "ORDER BY atMs DESC, id DESC LIMIT :limit",
     )
-    fun observeNewestOf(category: EventCategory, limit: Int): Flow<List<EventLogEntry>>
+    fun observeNewestOf(categories: List<EventCategory>, limit: Int): Flow<List<EventLogEntry>>
 
     /**
      * The next [limit] entries after the one at ([afterAtMs], [afterId]), oldest first: how the

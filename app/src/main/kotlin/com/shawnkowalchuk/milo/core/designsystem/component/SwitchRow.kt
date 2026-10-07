@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +37,11 @@ private val ThumbSize = 22.dp
 /**
  * A labelled on/off switch. The whole row toggles it, and a screen reader reads the label and
  * the state as one item.
+ *
+ * @param quiet true for a switch that stands on the page between two tiles and only changes
+ * what is listed, as the design draws it on Trips: its label is small and grey, and the row
+ * takes up no more than the height of the switch. The place a finger can hit stays 48 dp high:
+ * it reaches into the room the tiles above and below keep free.
  */
 @Composable
 fun SwitchRow(
@@ -43,11 +49,13 @@ fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    quiet: Boolean = false,
 ) {
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
+                .then(if (quiet) Modifier.takesUpOnly(TrackHeight) else Modifier)
                 .heightIn(min = MinHeight)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
@@ -55,7 +63,18 @@ fun SwitchRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style =
+                if (quiet) {
+                    MiloTheme.textStyles.quietLabel
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                },
+            color =
+                if (quiet) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    LocalContentColor.current
+                },
             modifier = Modifier.weight(1f),
         )
         SwitchMark(checked = checked)

@@ -11,8 +11,8 @@ import androidx.compose.ui.unit.dp
  * The design's corner radii, each named after what it rounds. Components take a shape by that
  * name (`MiloTheme.shapes.tile`), never a radius, so a corner is decided here once.
  *
- * Three of them, [wideButton], [segment] and [appMark], round parts that come with the screens'
- * own layouts, the next package; no component uses them yet.
+ * Two of them, [wideButton] and [segment], round parts that come with the other screens' own
+ * layouts; no component uses them yet.
  *
  * @param tile a tile: the rounded panel every screen is built from. Also a dialog.
  * @param smallTile the bottom bar, and in the design a tile that shares a line with another.

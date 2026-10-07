@@ -16,7 +16,9 @@ import androidx.compose.ui.graphics.Color
 //
 // There are four exceptions, each explained where it is written:
 //   - the launcher icon drawables (res/drawable/ic_launcher_*.xml), which the launcher draws
-//     outside Compose and so cannot read these tokens;
+//     outside Compose and so cannot read these tokens. They repeat two colours of this file:
+//     the accent (C6F432) as the icon's background and the page colour (121316) as its letter.
+//     Change them together;
 //   - the notification icon (res/drawable/ic_stat_trip.xml), which Android draws itself, outside
 //     Compose, and tints as it likes;
 //   - the window's background (res/values/colors.xml, used by res/values/themes.xml), which
@@ -52,6 +54,10 @@ private val TextLog = Color(0xFFD8DBE0)
 
 private val Accent = Color(0xFFC6F432)
 private val AccentPressed = Color(0xFFDDFF7A)
+
+// The light that runs along the line between the phone and the truck while the two are
+// connected: the design's white at 85 percent.
+private val Glint = Color(0xD9FFFFFF)
 
 private val AttentionFill = Color(0xFF2A2416)
 private val AttentionText = Color(0xFFFFE7A8)
@@ -191,8 +197,7 @@ data class FillAndText(val fill: Color, val text: Color)
  * The fill and text of the small tag that names a line's kind on the Log screen. Each kind has
  * its own pair so that a column of lines can be scanned by colour.
  *
- * Nothing uses these yet: the Log screen's lines are restyled with the screens' own layouts,
- * the next package.
+ * In use since the Log was laid out as the design draws it: the `Tag` on each of its lines.
  *
  * @param service also the pair for any kind that has no colour of its own.
  */
@@ -209,10 +214,13 @@ data class MiloLogTagColors(
  * The design's colours that Material has no role for, or no role with a name that says what
  * they are for. Reach them through `MiloTheme.colors`.
  *
- * **Five of them are in use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and
- * [chip]. The others are the design's colours for parts that come with the screens' own layouts,
- * the next package. They are named here so that those parts find them; nothing uses them yet,
- * and what is said of each below is what the design draws with it.
+ * **In use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and [chip], and since
+ * Home was laid out as the design draws it, [quietFill], [idleOutline], [idleIcon], [linkGlint]
+ * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]),
+ * since Trips was, [danger], and since the Log was, [logText] and [logTags]. One more,
+ * [accentPressed], is the design's colour for a part that comes with another screen's own
+ * layout. It is named here so that the part finds it; nothing uses it yet, and what is said of
+ * it below is what the design draws with it.
  *
  * @param control a control sitting on a tile: a small button, a stepper's button, a switch's
  * track when it is off.
@@ -224,9 +232,13 @@ data class MiloLogTagColors(
  * @param idleOutline a dashed or idle outline: decoration, not something to be read.
  * @param idleIcon an icon that is idle, beside something that is switched off. Too faint to be
  * the only sign of a button that cannot be pressed (2.1 to 1 on a control), which is why
- * `SquareIconButton` greys its icon with the colour of secondary text instead.
+ * `SquareIconButton` greys its icon with the colour of secondary text instead. The one place it
+ * greys a button is the title's "next" square on the page, as drawn on Trips: there it is
+ * 2.5 to 1, and a screen reader is told that the button is switched off.
  * @param logText running text in the event log, a little softer than the main text.
  * @param accentPressed the accent while a link is pressed.
+ * @param linkGlint the light that runs along the line between the phone and the truck while
+ * they are connected. Decoration: nothing is read from it.
  * @param attentionTile the amber tile for something that is waiting for the user, and its title.
  * @param attentionSecondaryText the quieter line on that tile.
  * @param attentionButton the button on that tile.
@@ -244,6 +256,7 @@ data class MiloColors(
     val idleIcon: Color,
     val logText: Color,
     val accentPressed: Color,
+    val linkGlint: Color,
     val attentionTile: FillAndText,
     val attentionSecondaryText: Color,
     val attentionButton: FillAndText,
@@ -263,6 +276,7 @@ internal val MiloExtraColors =
         idleIcon = IdleIcon,
         logText = TextLog,
         accentPressed = AccentPressed,
+        linkGlint = Glint,
         attentionTile = FillAndText(fill = AttentionFill, text = AttentionText),
         attentionSecondaryText = AttentionSecondaryText,
         attentionButton = FillAndText(fill = AttentionText, text = AttentionFill),
