@@ -253,17 +253,16 @@ class AppContainer(context: Context) {
         )
     }
 
-    /**
-     * What makes a report for the accountant and hands it over, and the monthly reminder to
-     * send it. In a class of its own, because this file is at its size limit.
-     */
+    // Three parts of this container, each in a class of its own because this file is at its
+    // size limit: what makes a report for the accountant and hands it over, with the monthly
+    // reminder to send it; Android's backup, with the export and import of all data; and the
+    // watch on Android Auto outside trips, which only writes to the event log.
     val reports: ReportObjects by lazy { ReportObjects(appContext, this) }
-
-    /** Android's backup, and the export and import of all data. A class of its own, likewise. */
     val transfer: TransferObjects by lazy {
         val main = miloDatabase.mainTransferDao()
         TransferObjects(transferParts(appContext, this, main, pointsDatabase.pointsTransferDao()))
     }
+    val car: CarObjects by lazy { CarObjects(appContext, this) }
 
     /**
      * Makes an audio file Shawn picked the trip-start sound, by copying it into MilO's own

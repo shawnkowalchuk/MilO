@@ -11,14 +11,15 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does ten things only: it owns the [AppContainer], it has what Android's backup left
+ * It does eleven things only: it owns the [AppContainer], it has what Android's backup left
  * behind dealt with (a restore above all), it starts the crash and kill capture (which also
  * trims the event log), it has an import finished that the last process was ended in the
  * middle of, it has the trip controller look at what the last process left behind,
  * it checks that Android still watches for the truck, it has the addresses of finished trips
  * caught up, it has the trips that are not sorted into Business or Personal yet sorted, it has
- * the driving alert ask the phone again to report driving, and it has the monthly reminder ask
- * for its daily alarm again and look at whether a reminder is due.
+ * the driving alert ask the phone again to report driving, it has the monthly reminder ask
+ * for its daily alarm again and look at whether a reminder is due, and it starts the watch
+ * that writes Android Auto's connection changes to the event log outside trips.
  *
  * Android's backup and restore do not come through here: Android runs them in a process of
  * another kind, with a plain `Application` object in place of this one (`MiloBackupAgent`).
@@ -94,6 +95,15 @@ class MiloApplication : Application() {
         // runs on the trip controller's own worker.
         val reminder = container.reports.reminder
         container.tripController.whenCaughtUp { reminder.arm(PROCESS_START) }
+
+        // Android Auto's connection is watched from here on, for the event log only: while a
+        // trip is being recorded the trip service has a watch of its own, and outside a trip
+        // nothing else writes a change down. The watch can neither start nor hold a trip. It
+        // begins after the reconcile like the passes above, so that a process started by a trip
+        // trigger does the trigger's work first. Built here and not in the callback, which runs
+        // on the trip controller's own worker.
+        val androidAuto = container.car.connectionLog
+        container.tripController.whenCaughtUp { androidAuto.start() }
     }
 
     private companion object {
