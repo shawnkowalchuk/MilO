@@ -53,6 +53,13 @@ internal data class StoredTrip(val trip: ActiveTrip, val lastRecordedAtMs: Long)
 internal data class LogLine(val category: EventCategory, val message: String)
 
 /**
+ * The ends of a wait that a trip starting at the parked place follows in the same step: the
+ * truck drove off, or Start was pressed (`TripEffect.StartTrip.atParkedPlace`). The watch keeps
+ * its points for that trip.
+ */
+private val WAIT_ENDS_IN_A_TRIP = setOf(WaitingEnd.MOVED, WaitingEnd.START_PRESSED)
+
+/**
  * The storage side of the trip controller. It carries out the effects of the trip rules: each
  * one is a write through a repository, and each returns the line that records it in the event
  * log. It also stores the GPS fixes and keeps the running distance of the open trip.
@@ -138,10 +145,16 @@ internal class TripLedger(
                 // and is remembered as such until it closes: it may yet turn out to be a drive
                 // in another vehicle.
                 val progress =
-                    if (effect.fromParked) parking.startTrip(row.id) else TripProgress()
+                    if (effect.atParkedPlace) parking.startTrip(row.id) else TripProgress()
                 if (effect.fromParked) settings.setDrivenOffTripId(row.id)
                 open = OpenTrip(row.id, row.startedAtMs, row.startedBy, progress, effect.fromParked)
-                val text = startedText(row.id, row.startedBy, effect.fromParked, progress.fixCount)
+                val text =
+                    startedText(
+                        row.id,
+                        row.startedBy,
+                        effect.fromParked,
+                        progress.fixCount.takeIf { effect.atParkedPlace },
+                    )
                 LogLine(EventCategory.TRIP, text)
             }
 
@@ -151,7 +164,7 @@ internal class TripLedger(
             }
 
             is TripEffect.EndWaiting -> {
-                parking.end(tripFollows = effect.reason == WaitingEnd.MOVED)
+                parking.end(tripFollows = effect.reason in WAIT_ENDS_IN_A_TRIP)
                 LogLine(EventCategory.TRIP, waitingEndedText(effect.reason))
             }
 

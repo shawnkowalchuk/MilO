@@ -16,12 +16,19 @@ sealed interface TripEffect {
      * starts where the truck was parked: the caller gives it that position and the fixes that
      * showed the movement, so the first stretch is not lost. No trip-start sound is played for
      * it: the sound means "connected to the truck", and nothing connected.
+     * @param atParkedPlace true when the trip begins where the truck was parked, with the
+     * parked place and the watch's fixes as its first points. Always so with [fromParked]; and
+     * for a press of Start while MilO waits beside the parked truck (Shawn's choice of
+     * 2026-10-07, "At the parked spot"), so that the stretch driven before the press counts.
+     * Such a press is not [fromParked]: Shawn vouched for the trip, so it plays the sound and is
+     * never taken for a drive in another vehicle.
      */
     data class StartTrip(
         val startedBy: TripStartCause,
         val truckSeen: Boolean,
         val startedAtMs: Long,
         val fromParked: Boolean = false,
+        val atParkedPlace: Boolean = fromParked,
     ) : TripEffect
 
     /** The truck connected during a manual trip: record that on the open trip. */

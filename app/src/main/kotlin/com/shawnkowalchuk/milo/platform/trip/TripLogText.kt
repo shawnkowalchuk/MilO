@@ -137,19 +137,27 @@ internal fun parkedText(lastMovedAtMs: Long, parkedLimitMs: Long?, zone: ZoneId)
  * The line for a trip that has started.
  *
  * @param fromParked true if the truck, connected and parked, moved again.
- * @param carriedOver how many points such a trip was given: the parked place and the fixes that
- * showed the movement.
+ * @param carriedOver how many points a trip that begins at the parked place was given: the
+ * place and the fixes the watch kept. Null for a trip that begins where it was started.
  */
 internal fun startedText(
     tripId: Long,
     startedBy: TripStartCause,
     fromParked: Boolean,
-    carriedOver: Int,
+    carriedOver: Int?,
 ): String {
     val started = "Trip $tripId started by $startedBy"
-    if (!fromParked) return started
-    return "$started: it was connected and parked, and it moved. The trip starts where it " +
-        "was parked ($carriedOver points carried over), with no trip-start sound"
+    return when {
+        fromParked ->
+            "$started: it was connected and parked, and it moved. The trip starts where it " +
+                "was parked ($carriedOver points carried over), with no trip-start sound"
+
+        carriedOver != null ->
+            "$started while MilO waited beside the parked truck. The trip starts where it " +
+                "was parked ($carriedOver points carried over)"
+
+        else -> started
+    }
 }
 
 /** The line for the beginning of a wait beside the parked truck. */

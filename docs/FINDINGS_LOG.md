@@ -24,6 +24,9 @@
 
 ### 2026-10-07
 
+**`[CHANGE]` Start pressed beside the parked truck begins the trip at the parked spot** (ADR-002, amendment 33)
+From the missed trip's diagnosis (below): asked where a Start press during the wait should begin the trip, Shawn chose "At the parked spot". `ButtonRules.startByHand` passes `atParkedPlace` when MilO is watching the parked truck, and the ledger hands such a trip the watch's points, as for a drive-off start, and keeps the watch's fixes through the end of the wait (`WAIT_ENDS_IN_A_TRIP`). `fromParked` keeps its meaning (the truck's movement started the trip: no sound, and amendment 31's removal), and a press is not that. Phone and Android Auto alike: the Start of both goes through the same trigger. The rule's 308 tests ran here; the controller's two tests in CI. Device check NL-122.
+
 **`[DECISION]` The truck's odometer, reversing the kickoff's "no odometer readings"**
 Shawn: "we should also track vehicle mileage, have a way to custom adjust it too. This should also show monthly start and finish mileage on the vehicle's report to the accountant." Asked four things, he chose: "I enter it, MilO adds trips" (over typing it at the start and end of each month); "Every truck trip" moves it (Business, Personal and unsorted, recorded with the truck connected or added by hand; over Business only, which would fall behind by his personal driving); "Start and end, marked if estimated" on the report (over printing only readings typed that day); and "Settings, truck tile" for entering it (over Home and the Report screen). Phone only.
 

@@ -231,11 +231,37 @@ class TripControllerWaitingTest {
         scene.controller.onTrigger(TripTrigger.MANUAL_START, "Start button")
         runCurrent()
 
-        val second = world.trips.rows.last()
+        val (first, second) = world.trips.rows
         assertEquals(TripStatus.OPEN, second.status)
         assertEquals(TripStartCause.MANUAL, second.startedBy)
         assertEquals(world.nowMs, second.startedAtMs)
         assertEquals(2, scene.service.tripStartsAnnounced)
         assertNull(world.settings.current().parkedTruck)
+        // It begins where the truck was parked (Shawn's choice of 2026-10-07).
+        val carried = world.points.rows.filter { it.tripId == second.id }
+        assertEquals(first.endLatitude, carried.first().latitude)
+        // A press vouches for the trip: it is never taken for a drive in another vehicle.
+        assertNull(world.settings.current().drivenOffTripId)
     }
+
+    @Test
+    fun `the stretch driven before Start was pressed is counted, from the parked place`() =
+        runTest {
+            val scene = ParkedScene(this, world)
+            scene.driveAndPark()
+
+            // The truck pulls out; one fix sees it 150 m on before Shawn presses Start, as on
+            // 2026-10-07, when the press came 244 m down the road.
+            scene.fix(northMetres = DRIVEN_METRES + 150, second = STOPPED_AT_SECOND + 660)
+            scene.controller.onTrigger(TripTrigger.MANUAL_START, "Start button")
+            runCurrent()
+
+            val trip = checkNotNull(scene.controller.activity.value.trip)
+            assertEquals(150.0, trip.distanceMetres, 1.0)
+            assertTrue(
+                world.logged(EventCategory.TRIP).any {
+                    "started by MANUAL while MilO waited beside the parked truck" in it
+                },
+            )
+        }
 }

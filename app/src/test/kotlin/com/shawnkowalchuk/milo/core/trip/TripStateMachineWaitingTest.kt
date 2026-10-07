@@ -161,13 +161,15 @@ class TripStateMachineWaitingTest {
     // ---- The buttons, and the hold-off -----------------------------------------------------------------
 
     @Test
-    fun `Start pressed while waiting starts a trip at once`() {
+    fun `Start pressed while waiting starts a trip at once, where the truck was parked`() {
         val result = WAITING.onParked(ManualStart(truckConnected = true, later))
 
+        // At the parked place (Shawn's choice of 2026-10-07), but not "from parked": the press
+        // vouches for the trip, so it has the sound and is never taken for another vehicle.
         assertEquals(
             listOf(
                 EndWaiting(WaitingEnd.START_PRESSED),
-                StartTrip(TripStartCause.MANUAL, truckSeen = true, later),
+                StartTrip(TripStartCause.MANUAL, truckSeen = true, later, atParkedPlace = true),
             ),
             result.effects,
         )
