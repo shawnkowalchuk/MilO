@@ -48,7 +48,7 @@ class DataViewModelTest {
         transfer.exportTo("content://files/MilO-export.json", includePoints = false)
         transfer.settled()
 
-        // The Settings screen is opened: a new ViewModel, as after Back and the cog again.
+        // The Settings screen is opened: a new ViewModel, as after leaving it and coming back.
         val viewModel =
             DataViewModel(transfer, world.settings.settings, flowOf(false), { 0L }) {
                 ZoneId.of("America/Edmonton")

@@ -154,7 +154,8 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                 state = sample.screen,
                 actions =
                     SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
-                onBack = {},
+                onBack = null,
+                setupTile = {},
                 checkTile = {
                     sample.check?.let { NothingRecordedTileContent(it, {}, { _, _ -> }) }
                 },

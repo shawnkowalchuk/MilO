@@ -23,7 +23,9 @@ import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowButtons
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileLinkLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
+import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TileRow
 import com.shawnkowalchuk.milo.core.designsystem.component.tileRowPlace
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
@@ -49,14 +51,32 @@ internal class SetupActions(
  * The tile at the top: how many rows are ready out of how many, what is the matter with the
  * others, and a bar that is filled by the share that is ready. A screen reader reads it as one
  * sentence; the bar says nothing the words do not.
+ *
+ * The same tile is the way into Setup from Settings ([SetupLinkTile]): given a [link], it has
+ * the screen's name and an arrowhead on its first line, the whole tile opens the checklist, and
+ * "2 to fix" is red, since the rows that say what is wrong are not on that screen.
+ *
+ * @param summary null while the phone is being read for the first time. Only Settings shows
+ * the tile then: Setup itself has one tile that says so in place of all of them.
  */
 @Composable
-internal fun SummaryTile(summary: SetupSummary) {
+internal fun SummaryTile(summary: SetupSummary?, link: TilePress? = null) {
     Tile(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         padding = TilePadding.ROOMY,
+        press = link,
         gap = MiloTheme.spacing.rowGap,
     ) {
+        if (link != null) TileLinkLabel(stringResource(R.string.setup_title))
+        if (summary == null) {
+            Text(
+                text = stringResource(R.string.setup_reading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Tile
+        }
+        val toFixIsRed = link != null && summary.toFix > 0
         // Side by side, as drawn, while both fit. With a large font the words move under the
         // count instead of being squeezed beside it.
         FlowRow(
@@ -79,7 +99,12 @@ internal fun SummaryTile(summary: SetupSummary) {
                 text = summaryWords(summary),
                 modifier = Modifier.align(Alignment.Bottom),
                 style = MiloTheme.textStyles.tileLabel,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color =
+                    if (toFixIsRed) {
+                        MiloTheme.statusColors.problem
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
         }
         ProgressLine(fraction = summary.readyShare, thick = true)

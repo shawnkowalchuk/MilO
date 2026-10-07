@@ -18,8 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitleWithLine
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
@@ -32,11 +32,12 @@ import com.shawnkowalchuk.milo.core.util.formatMonthName
 // limit with it (ENGINEERING_STANDARDS section 3).
 
 /**
- * The Report screen as the owner's design draws it: the title over "For the accountant", the
- * two tiles for the Business kilometres and the status, the PDF, who it is sent to, the main
- * button with two quiet ones under it, and the sentence that says what sending does. Two
- * things the drawing does not have stand in the same style: the period's tile, directly under
- * the title, and the list of sent reports at the end.
+ * The Report screen as the owner's design draws it: the title over "For the accountant" (since
+ * 2026-10-07 at the end of the top line every screen has, as the way back), the two tiles for
+ * the Business kilometres and the status, the PDF, who it is sent to, the main button with two
+ * quiet ones under it, and the sentence that says what sending does. Two things the drawing
+ * does not have stand in the same style: the period's tile, directly under the title, and the
+ * list of sent reports at the end.
  */
 @Composable
 internal fun ReportContent(
@@ -54,21 +55,21 @@ internal fun ReportContent(
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(top = spacing.tileGap, bottom = spacing.small),
+                .padding(vertical = spacing.small),
     ) {
-        ScreenTitleWithLine(
+        AppHeader(
             // The month by its name, as drawn; a date range has no short name of its own.
-            text =
+            title =
                 if (ready != null && ready.choice.kind == PeriodKind.MONTH) {
                     val month = formatMonthName(ready.choice.month, locale)
                     stringResource(R.string.report_month_title, month)
                 } else {
                     stringResource(R.string.report_title)
                 },
-            line = stringResource(R.string.report_for_accountant),
             onBack = onBack,
-            // With the gap between two tiles, the design's 16 under the title.
-            modifier = Modifier.padding(bottom = spacing.buttonGap),
+            line = stringResource(R.string.report_for_accountant),
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = spacing.extraSmall),
         )
         when (state) {
             ReportUiState.Reading ->

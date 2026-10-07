@@ -35,13 +35,17 @@
     <string name="status_problem">Needs attention</string>
     <string name="status_unknown">Could not be checked</string>
     <string name="status_needs_confirmation">Waiting for you to confirm</string>
-    <!-- Design system: the back arrow of a screen that was opened from another one. -->
-    <string name="navigate_back">Back</string>
+    <!--
+        Design system: what a screen reader says the screen's name at the top of a screen
+        opened from another one does when pressed, after "double tap to". Name and arrowhead
+        are one button that goes back.
+    -->
+    <string name="navigate_back_press">go back</string>
 
     <!-- The bottom navigation bar. -->
     <string name="nav_home">Home</string>
     <string name="nav_trips">Trips</string>
-    <string name="nav_setup">Setup</string>
+    <string name="nav_settings">Settings</string>
     <string name="nav_log">Log</string>
 
     <!-- Shared: what a truck is called when the phone knows no name for it. -->
@@ -65,10 +69,8 @@
     <!-- The argument is a time of day from formatTimeOfDay(), such as 08:14. -->
     <string name="trip_started_at">Started at %1$s</string>
 
-    <!-- Home: the top of the screen. The mark is the app's initial, on a square of the accent. -->
+    <!-- The top line of every screen: the app's initial, on a square of the accent. -->
     <string name="app_mark">M</string>
-    <!-- Home: spoken by the screen reader for the three sliders at the end of the top line. -->
-    <string name="home_open_settings">Settings</string>
     <!--
         Home: the accent tile that starts a trip by hand, and the dark button that ends one.
         The first line under "Start trip" is only shown while a paired truck is not connected
@@ -205,6 +207,8 @@
 
     <!-- Setup: the permission checklist. -->
     <string name="setup_title">Setup</string>
+    <!-- Settings: what a screen reader says the Setup tile at its top does, after "double tap to". -->
+    <string name="setup_open">open Setup</string>
     <string name="setup_reading">Reading the phone\'s settings…</string>
     <!-- The words of the tile with the count are in strings_setup_log.xml. -->
     <string name="setup_section_android">Android</string>

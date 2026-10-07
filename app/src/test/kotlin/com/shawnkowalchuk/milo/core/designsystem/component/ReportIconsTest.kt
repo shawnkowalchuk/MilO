@@ -21,7 +21,6 @@ class ReportIconsTest {
             listOf(
                 MiloIcons.Home,
                 MiloIcons.Trips,
-                MiloIcons.Setup,
                 MiloIcons.Log,
                 MiloIcons.Back,
                 MiloIcons.Settings,

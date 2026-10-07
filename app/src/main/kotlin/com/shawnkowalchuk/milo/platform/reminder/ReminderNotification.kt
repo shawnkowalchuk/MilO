@@ -68,6 +68,7 @@ class ReminderNotification(private val context: Context, private val opens: Clas
             Notification
                 .Builder(context, REMINDER_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_trip)
+                .setColor(context.getColor(R.color.milo_notification_accent))
                 .setContentTitle(context.getString(R.string.notification_reminder_title, monthName))
                 .setContentText(context.getString(R.string.notification_reminder_text))
                 .setContentIntent(openReport(month))

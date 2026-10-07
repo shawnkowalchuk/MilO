@@ -22,9 +22,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
-import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
@@ -131,14 +131,14 @@ internal fun TripEditContent(
                 .fillMaxSize()
                 // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(top = spacing.tileGap, bottom = spacing.small),
+                .padding(vertical = spacing.small),
     ) {
-        ScreenTitle(
-            text =
+        AppHeader(
+            title =
                 stringResource(if (adding) R.string.trip_add_title else R.string.trip_edit_title),
             onBack = onBack,
-            // With the gap between two tiles, the design's 16 under the title.
-            modifier = Modifier.padding(bottom = spacing.buttonGap),
+            // As on Home: with the gap between two tiles, the design's 16 under the top line.
+            modifier = Modifier.padding(bottom = spacing.extraSmall),
         )
         when (state) {
             TripEditUiState.Reading ->
