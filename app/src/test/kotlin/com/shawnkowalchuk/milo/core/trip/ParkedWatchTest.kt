@@ -115,7 +115,7 @@ class ParkedWatchTest {
     }
 
     @Test
-    fun `one displaced fix that nothing bears out in time is dropped, not kept for later`() {
+    fun `a displaced fix that nothing bears out in time never dates the trip`() {
         // One usable fix 60 m off, a quarter of an hour of fixes too poor to use (the phone
         // indoors), then the truck drives off. Kept, the old fix would be "borne out" by the
         // first good one, and the trip would be dated fifteen minutes before it began.
@@ -129,18 +129,22 @@ class ParkedWatchTest {
 
         val waiting = ParkedWatch.at(place).after(stray, *poor.toTypedArray())
         assertNull(waiting.movedAtMs)
-        val oneGoodFix = waiting.after(first)
-        assertNull(oneGoodFix.movedAtMs)
-        val moved = oneGoodFix.after(second)
-
+        // The first good fix is the second one to show the truck away from its place, so the
+        // truck has moved: now, not a quarter of an hour ago.
+        val moved = waiting.after(first)
         assertEquals(timeOf(4_560), moved.movedAtMs)
-        // The trip starts at the parked place with the two fixes of the drive, and nothing of
-        // the quarter of an hour before it.
-        assertEquals(listOf(place, first, second), moved.tripStart)
+        // The trip starts at the parked place with the fix of the drive, and nothing of the
+        // quarter of an hour before it.
+        assertEquals(listOf(place, first), moved.tripStart)
+
+        // Had the trip not been started on that fix, the next one changes nothing about it.
+        val later = moved.after(second)
+        assertEquals(timeOf(4_560), later.movedAtMs)
+        assertEquals(listOf(place, first, second), later.tripStart)
     }
 
     @Test
-    fun `a fix that is borne out within two minutes still dates the trip`() {
+    fun `a fix that is borne out within two minutes dates the trip, a later one dates it itself`() {
         // One fix of the watch was too poor to use; the one after it bears the first out.
         val first = fixAt(northMetres = 150.0, second = 3_630)
         val poor = fixAt(northMetres = 400.0, second = 3_660, accuracyMetres = 80f)
@@ -150,7 +154,66 @@ class ParkedWatchTest {
 
         assertEquals(timeOf(3_630), ParkedWatch.at(place).after(first, poor, third).movedAtMs)
         assertEquals(timeOf(3_630), ParkedWatch.at(place).after(first, edge).movedAtMs)
-        assertNull(ParkedWatch.at(place).after(first, tooLate).movedAtMs)
+        // A second later the first fix is too old to date the trip. The truck has moved all
+        // the same: the trip starts at the later fix, and from the parked place.
+        val late = ParkedWatch.at(place).after(first, tooLate)
+        assertEquals(timeOf(3_630 + 121), late.movedAtMs)
+        assertEquals(listOf(place, tooLate), late.tripStart)
+        assertEquals(700.0, DistanceCalculator.measure(late.tripStart).metres, 0.5)
+    }
+
+    @Test
+    fun `a truck driven off is seen to move however far apart the usable fixes come`() {
+        // 90 km/h, and only one usable fix every two and a half minutes. Each fix alone is a
+        // first sighting that the next comes too late to bear out. Counted only in pairs
+        // inside two minutes, the truck would never be seen to move and the drive be lost.
+        val first = fixAt(northMetres = 3_750.0, second = 3_750)
+        val second = fixAt(northMetres = 7_500.0, second = 3_900)
+
+        val one = ParkedWatch.at(place).after(first)
+        assertNull(one.movedAtMs)
+        val two = one.after(second)
+
+        assertEquals(timeOf(3_900), two.movedAtMs)
+        // From the parked place in one straight line: late, coarse, and nothing left out.
+        assertEquals(listOf(place, second), two.tripStart)
+        assertEquals(7_500.0, DistanceCalculator.measure(two.tripStart).metres, 1.0)
+    }
+
+    @Test
+    fun `fixes too poor to use in between do not make the watch forget the first sighting`() {
+        val first = fixAt(northMetres = 400.0, second = 3_630)
+        val poor =
+            (1..6).map { index ->
+                fixAt(northMetres = 900.0, second = 3_630 + index * 30, accuracyMetres = 80f)
+            }
+        val second = fixAt(northMetres = 5_000.0, second = 3_840)
+
+        val waiting = ParkedWatch.at(place).after(first, *poor.toTypedArray())
+        assertNull(waiting.movedAtMs)
+
+        assertEquals(timeOf(3_840), waiting.after(second).movedAtMs)
+    }
+
+    @Test
+    fun `a fix back at the parked place takes a dropped sighting back`() {
+        // One stray fix, minutes of silence, then the truck is seen standing where it was.
+        // The stray fix is forgotten, and the next fix somewhere else is a first sighting
+        // again: one bad fix every few minutes all night starts no trip.
+        val fixes =
+            listOf(
+                fixAt(northMetres = 80.0, second = 3_630),
+                fixAt(northMetres = 2.0, second = 3_900),
+                fixAt(northMetres = -90.0, second = 3_930),
+                fixAt(northMetres = 1.0, second = 4_200),
+                fixAt(northMetres = 85.0, second = 4_230),
+            )
+
+        var watch = ParkedWatch.at(place)
+        for (fix in fixes) {
+            watch = watch.plus(fix)
+            assertNull("after the fix at ${fix.elapsedRealtimeMs / 1000} s", watch.movedAtMs)
+        }
     }
 
     @Test

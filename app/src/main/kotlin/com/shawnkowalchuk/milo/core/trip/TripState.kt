@@ -185,6 +185,14 @@ const val LATE_CHECK_TOLERANCE_MS = 30_000L
  * was killed and came back, with the truck connected again or still). Beyond it nobody can say
  * the truck stayed connected, and the old trip is closed at that last point. 30 minutes is a
  * judgement, and Shawn's to change.
+ *
+ * Since the parked rule a shorter limit comes first. A trip that carries on is judged by
+ * [TripRules.parkedLimitMs] in the same step, and time nobody watched counts as standing: if the
+ * trip last moved longer ago than that (10 minutes out of the box), it is closed there. With the
+ * truck still connected MilO then waits beside it, and if it was in fact being driven, the
+ * first fixes show it far from that place and a new trip starts from it. So a gap of more than
+ * the parked limit in the middle of a drive makes two trips of it, the gap counted as one
+ * straight line, and the second is sorted into Business or Personal by its own start.
  */
 const val RESTART_GAP_LIMIT_MS = 30L * 60L * 1000L
 

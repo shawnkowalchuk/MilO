@@ -17,8 +17,9 @@ import org.junit.Test
  * The wait beside a parked truck through the trip controller, continued from
  * [TripControllerWaitingTest]: the drives the review of 2026-10-06 found would have gone
  * unrecorded or been cut short. A stop after End and Start, a stop on Android Auto's cable with
- * Bluetooth down, a truck that stops again at once, one that never moved in its trip, and one
- * stray fix long before the truck drives off.
+ * Bluetooth down, a truck that stops again at once, one that never moved in its trip, one
+ * stray fix long before the truck drives off, and, found by the verification of the same
+ * evening, a drive during which usable fixes come more than two minutes apart.
  */
 // See TripControllerTest for why runCurrent() needs the opt-in.
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -187,5 +188,41 @@ class TripControllerWaitingEdgesTest {
         assertEquals(world.trips.rows.first().endLatitude, carried.first().latitude)
         val current = checkNotNull(scene.controller.activity.value.trip)
         assertEquals(650.0, current.distanceMetres, 1.0)
+    }
+
+    @Test
+    fun `a drive with usable fixes more than two minutes apart is still recorded`() = runTest {
+        val scene = ParkedScene(this, world)
+        scene.driveAndPark()
+        val pointsBefore = world.points.rows.size
+
+        // The truck drives off at 90 km/h, and four fixes in five are too poor to use: one
+        // usable fix every two and a half minutes. Each comes too late to bear out the one
+        // before it, and as first built no trip ever started.
+        val drivesOff = 1_000
+        fun watchFix(index: Int) {
+            val sinceDrivingOff = index * 30
+            scene.fix(
+                northMetres = DRIVEN_METRES + sinceDrivingOff * 25.0,
+                second = drivesOff + sinceDrivingOff,
+                accuracyMetres = if (index % 5 == 0) 5f else 80f,
+            )
+        }
+        (1..5).forEach(::watchFix)
+        assertEquals(1, world.trips.rows.size)
+        (6..10).forEach(::watchFix)
+
+        // The second usable fix starts the trip: dated at that fix, from the parked place.
+        val (first, second) = world.trips.rows
+        assertEquals(TripStatus.OPEN, second.status)
+        assertEquals(scene.timeOf(drivesOff + 300), second.startedAtMs)
+        val carried = world.points.rows.drop(pointsBefore)
+        assertEquals(2, carried.size)
+        assertEquals(first.endLatitude, carried.first().latitude)
+        val current = checkNotNull(scene.controller.activity.value.trip)
+        assertEquals(7_500.0, current.distanceMetres, 1.0)
+        assertTrue(scene.service.recording)
+        assertFalse(scene.service.watchingParked)
+        assertEquals(scene.timeOf(drivesOff + 300) + PARKED_LIMIT_MS, scene.service.checkAtMs)
     }
 }

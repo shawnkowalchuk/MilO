@@ -54,6 +54,10 @@ internal fun storedWaitStandsUnread(
  * the parked truck), takes a fresh reading of the truck, and asks the trip rules what carries
  * on (ADR-002, "State survives the process"). Nothing is changed here: [TripWorker] carries the
  * answer out. This is a part of the worker, in a file of its own only to keep both readable.
+ *
+ * TODO(debt): after a restore by Android's backup, the stored wait is taken out of the settings
+ *  on another thread (`BackupAftermath`), and nothing orders that with this read: a wait from
+ *  the other installation can be picked up here first. See docs/FINDINGS_LOG.md, 2026-10-06.
  */
 internal suspend fun pickUpStored(
     ledger: TripLedger,

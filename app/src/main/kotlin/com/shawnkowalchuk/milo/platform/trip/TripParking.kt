@@ -57,6 +57,11 @@ internal class TripParking(
      * The wait was found in storage after a restart. The place's time since boot is not stored
      * and may be from before a reboot, so it is given none: the first fix is then never taken
      * for an impossible jump from it, which is right after any length of standing.
+     *
+     * TODO(debt): if the truck was driven while MilO's process was dead, the first fixes after
+     *  this are far from the stored place and start a trip dated now, which holds the straight
+     *  line between the two places. Whether to keep, mark or drop such a trip is the owner's
+     *  to decide. See docs/FINDINGS_LOG.md, 2026-10-06 (evening).
      */
     fun resume(stored: ParkedTruck?) {
         val place =
