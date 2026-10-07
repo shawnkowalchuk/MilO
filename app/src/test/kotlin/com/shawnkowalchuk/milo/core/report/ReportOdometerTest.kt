@@ -3,6 +3,8 @@ package com.shawnkowalchuk.milo.core.report
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
+import com.shawnkowalchuk.milo.core.util.formatMediumDay
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,10 +33,14 @@ class ReportOdometerTest {
                 FORMAT,
             )
 
+        // The day as the phone's language writes it; Java's versions differ in the details
+        // ("Oct 1" or "Oct. 1"), so it is not spelled out here.
+        val first = formatMediumDay(LocalDate.of(2026, 10, 1), FORMAT.locale)
+        val last = formatMediumDay(LocalDate.of(2026, 10, 31), FORMAT.locale)
         assertEquals(
             listOf(
-                "Odometer, Oct 1, 2026" to "120,000 km",
-                "Odometer, Oct 31, 2026" to "121,234 km est.",
+                "Odometer, $first" to "120,000 km",
+                "Odometer, $last" to "121,234 km est.",
             ),
             printed.odometer,
         )
