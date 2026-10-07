@@ -1,6 +1,8 @@
 package com.shawnkowalchuk.milo.platform.report
 
 import android.content.Context
+import android.graphics.Typeface
+import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.layoutReport
 import com.shawnkowalchuk.milo.core.report.printedReport
@@ -37,8 +39,13 @@ data class ReportFile(val file: File, val pageCount: Int)
  *
  * @param texts the report's words, and how the phone writes dates and times.
  * @param files where the files are kept: the app's cache.
+ * @param typeface reads the app's typeface, which the PDF is written in.
  */
-class ReportDocuments(private val texts: ReportTexts, private val files: ReportFileStore) {
+class ReportDocuments(
+    private val texts: ReportTexts,
+    private val files: ReportFileStore,
+    private val typeface: () -> Typeface,
+) {
     // Android's PdfDocument is not thread safe, and making a PDF is real work that must stay
     // off the main thread. One file at a time, on a background thread.
     private val oneAtATime = Dispatchers.IO.limitedParallelism(1)
@@ -51,8 +58,9 @@ class ReportDocuments(private val texts: ReportTexts, private val files: ReportF
      */
     suspend fun createPdf(report: MileageReport): ReportFile = withContext(oneAtATime) {
         val format = texts.format()
-        val printed = printedReport(report, texts.words(report.tripCount), format)
-        val paints = ReportPaints()
+        val words = texts.words(report.tripCount, report.personal.tripCount)
+        val printed = printedReport(report, words, format)
+        val paints = ReportPaints(typeface())
         val pages = layoutReport(printed, paints, format.locale)
         val file = files.write(fileName(report, PDF_EXTENSION)) { out ->
             writeReportPdf(pages, paints, out)
@@ -106,6 +114,12 @@ class ReportDocuments(private val texts: ReportTexts, private val files: ReportF
     )
 }
 
-/** Builds [ReportDocuments] on the report files in the app's cache. */
-fun buildReportDocuments(context: Context, texts: ReportTexts): ReportDocuments =
-    ReportDocuments(texts = texts, files = buildReportFileStore(context))
+/** Builds [ReportDocuments] on the report files in the app's cache, in the app's typeface. */
+fun buildReportDocuments(context: Context, texts: ReportTexts): ReportDocuments {
+    val appContext = context.applicationContext
+    return ReportDocuments(
+        texts = texts,
+        files = buildReportFileStore(appContext),
+        typeface = { appContext.resources.getFont(R.font.sora) },
+    )
+}

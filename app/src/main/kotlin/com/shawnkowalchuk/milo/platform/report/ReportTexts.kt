@@ -33,17 +33,23 @@ class ReportTexts(context: Context) {
         twentyFourHour = DateFormat.is24HourFormat(appContext),
     )
 
-    /** The words of the PDF, for a report that lists [tripCount] trips. */
-    fun words(tripCount: Int): ReportWords = ReportWords(
+    /**
+     * The words of the PDF, for a report that lists [tripCount] trips and sums
+     * [personalTripCount] Personal ones at its top.
+     */
+    fun words(tripCount: Int, personalTripCount: Int): ReportWords = ReportWords(
+        appName = text(R.string.app_name),
+        appMark = text(R.string.app_mark),
         title = text(R.string.report_pdf_title),
         name = text(R.string.report_pdf_name),
         company = text(R.string.report_pdf_company),
         vehicle = text(R.string.report_pdf_vehicle),
-        period = text(R.string.report_pdf_period),
-        generated = text(R.string.report_pdf_generated),
+        generatedOn = text(R.string.report_pdf_generated_on),
         businessOnly = text(R.string.report_pdf_business_only),
         revisionNote = text(R.string.report_pdf_revision),
         periodRange = text(R.string.report_period_range_words),
+        business = text(R.string.report_pdf_business),
+        personal = text(R.string.report_pdf_personal),
         columnStart = text(R.string.report_pdf_column_start),
         columnEnd = text(R.string.report_pdf_column_end),
         columnFrom = text(R.string.report_pdf_column_from),
@@ -57,6 +63,12 @@ class ReportTexts(context: Context) {
                 R.plurals.report_pdf_trip_count,
                 tripCount,
                 tripCount,
+            ),
+        personalTripCount =
+            appContext.resources.getQuantityString(
+                R.plurals.report_pdf_personal_trip_count,
+                personalTripCount,
+                personalTripCount,
             ),
         noTrips = text(R.string.report_pdf_no_trips),
         noAddress = text(R.string.report_pdf_no_address),

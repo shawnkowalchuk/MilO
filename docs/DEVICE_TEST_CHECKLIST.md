@@ -1143,6 +1143,17 @@ Four requests of Shawn's on 2026-10-07 (FINDINGS_LOG): the notification icon is 
 | NL-107 | **Settings from the Report screen.** On the Report screen, press "Change" beside who it is sent to (or "Open Settings"), then the name "‹ Settings" at the top. | Settings opens with an arrowhead before "Settings" and the bar's Trips icon lime; the name leads back to the report. | not run |
 | NL-108 | **A large font.** Set the phone's font size to its largest; look at the top line of the Report screen and of the edit screen ("Add a missed trip"); set it back. | The screen's name may take two lines; "MilO" and the date are not squeezed or cut off. | not run |
 
+### The report PDF in the app's look (2026-10-07)
+
+Shawn asked the same day for the PDF to have "the logo and app name at the top", the Business and the Personal kilometres "separate" at the top, and to be "similar to the app design and beautifully designed". The layout ran here as plain Kotlin: its 84 unit tests, and a drawing of its pages in Sora on a computer (FINDINGS_LOG). **Android's own drawing of it has not run anywhere:** that the variable font comes out in its four weights in the PDF, and how a PDF viewer and a printer show the lime, are for the phone.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| NL-109 | **The top of the PDF.** On the Report screen for last month, press "Preview PDF". | At the top a dark tile: the lime square with "M", "MilO" over "Mileage report", and the month in large white type over "Generated (today)". Under it, side by side: a lime tile "Business" with the km and the trips, and a grey tile "Personal" with the km and the trips. Then a grey tile with Name, Company, Vehicle side by side. Everything in the app's typeface, in four weights: the large figures clearly heavier than the words. | not run |
+| NL-110 | **The Personal figure.** On Trips, for the same month, read the Personal tile. | The PDF's Personal km and trips are the Trips screen's. (A trip not marked Business or Personal is in neither.) | not run |
+| NL-111 | **The days and the end.** Scroll through the PDF to its end. | Each day on a grey bar, its trips under small grey column titles with fine rules between them, its subtotal under a dark rule. At the end a dark tile "Total business kilometres for (month)" with the total in lime, then the legend if a trip has an asterisk, and the two lines to sign on. Every page ends with a small lime "M", the name and the month, and "Page n of N". The times read like the phone's ("7:00 a.m."), with no empty box in them. | not run |
+| NL-112 | **Printed, and sent.** Print one page (or open the PDF on a computer), and send one report to yourself with "Email the report". | The lime and the dark tiles print; the words can be selected and copied in a PDF viewer on the computer. Write down if the words come out as pictures that cannot be selected: Android may draw a variable font's weights as shapes. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.report
 
+import com.shawnkowalchuk.milo.core.report.PersonalDriving
 import com.shawnkowalchuk.milo.core.report.ReportMark
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.ReportRevision
@@ -54,6 +55,7 @@ class ReportUiStateTest {
             unsortedLeftOut = 1,
             withoutAddress = 1,
             tripInProgress = true,
+            personalTenths = 341,
         )
 
     private fun sent(period: ReportPeriod, revision: Int, sentAt: String, id: Long = 1) =
@@ -117,6 +119,8 @@ class ReportUiStateTest {
         val dates = report.days.map { it.date }
         assertEquals(listOf(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2)), dates)
         assertEquals(listOf(20L, 234L), report.days.map { it.tenths })
+        // The Personal trips are not listed; their count and kilometres are carried along.
+        assertEquals(PersonalDriving(tripCount = 2, tenths = 341), report.personal)
     }
 
     @Test

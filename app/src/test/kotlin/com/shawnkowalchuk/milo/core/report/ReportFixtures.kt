@@ -25,15 +25,18 @@ internal fun edmonton(text: String): Long =
 /** The words the string resources hold, written out here so the tests need no Android. */
 internal val WORDS =
     ReportWords(
+        appName = "MilO",
+        appMark = "M",
         title = "Mileage report",
         name = "Name",
         company = "Company",
         vehicle = "Vehicle",
-        period = "Period",
-        generated = "Generated",
+        generatedOn = "Generated %1\$s",
         businessOnly = "Business trips only. Distances are in kilometres.",
         revisionNote = "Revision %1\$d. It replaces the report sent on %2\$s.",
         periodRange = "%1\$s to %2\$s",
+        business = "Business",
+        personal = "Personal",
         columnStart = "Start",
         columnEnd = "End",
         columnFrom = "From",
@@ -41,8 +44,9 @@ internal val WORDS =
         columnKm = "km",
         dayContinued = "%1\$s (continued)",
         subtotal = "Subtotal",
-        total = "Total kilometres for %1\$s",
+        total = "Total business kilometres for %1\$s",
         tripCount = "3 business trips",
+        personalTripCount = "2 personal trips",
         noTrips = "No business trips in this period.",
         noAddress = "No address recorded",
         legend = "* This trip was added by hand, or changed by hand after it was recorded.",
@@ -77,12 +81,16 @@ internal fun trip(
     return ReportTrip(startedAtMs, startedAtMs + minutes * 60_000, from, to, metres, mark)
 }
 
+/** Two Personal trips of 18.2 km in all, which the report sums at its top and does not list. */
+internal val PERSONAL = PersonalDriving(tripCount = 2, tenths = 182)
+
 /** A report of [trips] for [period], made on 6 October 2026. */
 internal fun report(
     trips: List<ReportTrip>,
     period: ReportPeriod = ReportPeriod.Month(OCTOBER),
     sender: ReportSender = SENDER,
     revision: ReportRevision? = null,
+    personal: PersonalDriving = PERSONAL,
 ): MileageReport = MileageReport(
     sender = sender,
     period = period,
@@ -90,4 +98,5 @@ internal fun report(
     revision = revision,
     zone = EDMONTON,
     days = reportDays(trips, EDMONTON),
+    personal = personal,
 )

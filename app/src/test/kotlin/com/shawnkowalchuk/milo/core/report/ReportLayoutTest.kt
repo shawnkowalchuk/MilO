@@ -17,7 +17,8 @@ class ReportLayoutTest {
     fun `a short report is one page that holds everything`() {
         val page = layout(reportOf(2, 1)).single()
 
-        for (text in listOf("Mileage report", "Sam Driver", "October 2026", "October 6, 2026")) {
+        val top = listOf("MilO", "Mileage report", "Sam Driver", "October 2026")
+        for (text in top + "Generated October 6, 2026") {
             assertTrue(text, page.has(text))
         }
         assertTrue(page.has("Thursday, October 1, 2026"))
@@ -25,7 +26,7 @@ class ReportLayoutTest {
         // The column titles once for each day, a subtotal for each, and one total.
         assertEquals(2, page.texts.count { it.text == "Start" })
         assertEquals(2, page.texts.count { it.text == "Subtotal" })
-        assertTrue(page.has("Total kilometres for October 2026"))
+        assertTrue(page.has("Total business kilometres for October 2026"))
         assertTrue(page.has("Signature"))
         assertTrue(page.has("Date"))
         assertTrue(page.has("Page 1 of 1"))
@@ -41,7 +42,7 @@ class ReportLayoutTest {
         assertEquals(page.find("Start").x, entry("00:00").x, 0f)
         assertEquals(page.find("End").x, entry("00:01").x, 0f)
         assertEquals(page.find("To").x, entry("T").x, 0f)
-        assertEquals(page.find("km").x, entry("12.3").x, 0f)
+        assertEquals(page.kmTitle().x, entry("12.3").x, 0f)
         // From left to right, each entry ends before the next column starts.
         val inOrder = listOf("00:00", "00:01", fromOf(0, 0), "T").map(::entry)
         inOrder.zipWithNext { left, right -> assertTrue(left.text, left.end() < right.x) }
@@ -153,7 +154,7 @@ class ReportLayoutTest {
         val long = page.find("123.4")
         val subtotal = page.texts.single { it.text == "124.6" && it.style == ReportTextStyle.SUM }
         val total = page.texts.single { it.text == "124.6" && it.style == ReportTextStyle.TOTAL }
-        for (figure in listOf(short, long, subtotal, total, page.find("km"))) {
+        for (figure in listOf(short, long, subtotal, total, page.kmTitle())) {
             assertTrue(figure.text, figure.rightAligned)
             assertEquals(figure.text, short.x, figure.x, 0f)
         }
@@ -185,22 +186,103 @@ class ReportLayoutTest {
     }
 
     @Test
-    fun `a long vehicle description wraps beside its label`() {
+    fun `a long vehicle description wraps under its label, inside its column`() {
         val vehicle = "2019 Ford F-150 XLT SuperCrew four wheel drive, white, " +
             "Alberta plate ABC-1234, unit 17 of the Northside Electric service fleet"
         val sender = SENDER.copy(vehicle = vehicle)
         val page = layout(report(listOf(trip(DAY_ONE, "08:00")), sender = sender)).single()
 
-        val valueX = page.find("Sam Driver").x
+        val label = page.find("Vehicle")
         val lines =
             page.texts
-                .filter { it.style == ReportTextStyle.VALUE && it.x == valueX }
-                .filter { vehicle.contains(it.text) }
+                .filter { it.style == ReportTextStyle.VALUE && it.x == label.x }
                 .sortedBy { it.baseline }
         assertTrue(lines.size >= 2)
         assertEquals(vehicle, lines.joinToString(" ") { it.text })
+        assertTrue(lines.first().baseline > label.baseline)
         for (line in lines) assertTrue(line.text, line.end() <= CONTENT_RIGHT)
-        // The period's line comes after all of them.
-        assertTrue(page.find("Period").baseline > lines.last().baseline)
+        // The name and the company stand beside it, in columns of their own, on its first line.
+        val name = page.find("Sam Driver")
+        assertEquals(lines.first().baseline, name.baseline, 0f)
+        assertTrue(name.end() < page.find("Northside Electric Ltd.").x)
+        assertTrue(page.find("Northside Electric Ltd.").end() < label.x)
+        // The days start under all of it.
+        assertTrue(page.find("Thursday, October 1, 2026").baseline > lines.last().baseline)
     }
+
+    @Test
+    fun `the top tile holds the app's mark and name, the period and the day it was made`() {
+        val page = layout(reportOf(1)).single()
+
+        val tile = page.items.filterIsInstance<PageItem.Box>().first()
+        assertEquals(ReportInk.DARK, tile.ink)
+        assertEquals(CONTENT_TOP, tile.top, 0f)
+        for (text in listOf(
+            "MilO",
+            "Mileage report",
+            "October 2026",
+            "Generated October 6, 2026",
+        )) {
+            val line = page.find(text)
+            assertTrue(text, line.baseline > tile.top && line.baseline < tile.bottom)
+        }
+        // The mark is the accent's square with the initial in it, at the tile's start.
+        val mark = page.items.filterIsInstance<PageItem.Box>()[1]
+        assertEquals(ReportInk.ACCENT, mark.ink)
+        val initial = page.texts.first { it.style == ReportTextStyle.MARK }
+        assertEquals("M", initial.text)
+        assertTrue(initial.x > mark.left && initial.end() < mark.right)
+        assertTrue(page.find("MilO").x > mark.right)
+        // The period ends where the tile's words end, on the right.
+        assertTrue(page.find("October 2026").rightAligned)
+    }
+
+    @Test
+    fun `Business and Personal stand side by side, Business on the accent`() {
+        val page = layout(reportOf(2)).single()
+
+        val business = page.find("Business")
+        val personal = page.find("Personal")
+        assertEquals(business.baseline, personal.baseline, 0f)
+        assertTrue(business.x < personal.x)
+        val tiles = page.items.filterIsInstance<PageItem.Box>()
+        fun tileOf(text: PageItem.Text) = tiles.single {
+            text.x > it.left && text.x < it.right &&
+                text.baseline in it.top..it.bottom
+        }
+        assertEquals(ReportInk.ACCENT, tileOf(business).ink)
+        assertEquals(ReportInk.PANEL, tileOf(personal).ink)
+        // Each with its kilometres in large figures, and its trips.
+        val figures = page.texts.filter { it.style == ReportTextStyle.FIGURE }.map { it.text }
+        assertEquals(listOf("24.6", "18.2"), figures)
+        assertTrue(page.has("3 business trips"))
+        assertTrue(page.has("2 personal trips"))
+    }
+
+    @Test
+    fun `a period too long for one line takes more on the top tile, which grows to hold them`() {
+        // A language that joins the two days of a range with more words than English does.
+        val words = WORDS.copy(periodRange = "from %1\$s up to and including %2\$s")
+        val range = ReportPeriod.Range(DAY_ONE, DAY_ONE.plusDays(17))
+        val printed = printedReport(report(listOf(trip(DAY_ONE, "08:00")), range), words, FORMAT)
+        val page = layoutReport(printed, MEASURE, Locale.CANADA).single()
+
+        val tile = page.items.filterIsInstance<PageItem.Box>().first()
+        val period = page.texts.filter { it.style == ReportTextStyle.PERIOD }
+        assertTrue(period.size >= 2)
+        assertEquals(
+            "from October 1, 2026 up to and including October 18, 2026",
+            period.joinToString(" ") { it.text },
+        )
+        val generated = page.find("Generated October 6, 2026")
+        assertTrue(generated.baseline > period.last().baseline && generated.baseline < tile.bottom)
+        for (line in period) {
+            val start = line.x - MEASURE.width(line.text, line.style)
+            assertTrue(line.text, start > page.find("Mileage report").end())
+        }
+    }
+
+    /** The column title of the kilometres: the first, where a page has more than one day. */
+    private fun ReportPage.kmTitle(): PageItem.Text =
+        texts.first { it.text == "km" && it.style == ReportTextStyle.COLUMN }
 }

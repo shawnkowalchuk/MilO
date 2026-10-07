@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.MileageReport
+import com.shawnkowalchuk.milo.core.report.PersonalDriving
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.ReportRevision
 import com.shawnkowalchuk.milo.core.report.ReportSender
@@ -54,6 +55,7 @@ fun mileageReport(
             },
         zone = zone,
         days = reportDays(selection.trips, zone),
+        personal = PersonalDriving(selection.personalLeftOut, selection.personalTenths),
     )
 }
 

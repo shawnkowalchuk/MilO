@@ -620,8 +620,15 @@
     <string name="report_pdf_name">Name</string>
     <string name="report_pdf_company">Company</string>
     <string name="report_pdf_vehicle">Vehicle</string>
-    <string name="report_pdf_period">Period</string>
-    <string name="report_pdf_generated">Generated</string>
+    <!-- Under the period at the top of the PDF. The argument is the day, such as October 6, 2026. -->
+    <string name="report_pdf_generated_on">Generated %1$s</string>
+    <!-- The two tiles of figures at the top of the PDF: what the Business and the Personal trips add up to. -->
+    <string name="report_pdf_business">Business</string>
+    <string name="report_pdf_personal">Personal</string>
+    <plurals name="report_pdf_personal_trip_count">
+        <item quantity="one">%d personal trip</item>
+        <item quantity="other">%d personal trips</item>
+    </plurals>
     <string name="report_pdf_business_only">Business trips only. Distances are in kilometres.</string>
     <!-- The arguments are the revision's number and the day the report it replaces was sent. -->
     <string name="report_pdf_revision">Revision %1$d. It replaces the report sent on %2$s.</string>
@@ -634,7 +641,7 @@
     <string name="report_pdf_day_continued">%1$s (continued)</string>
     <string name="report_pdf_subtotal">Subtotal</string>
     <!-- The argument is the period, such as October 2026. -->
-    <string name="report_pdf_total">Total kilometres for %1$s</string>
+    <string name="report_pdf_total">Total business kilometres for %1$s</string>
     <plurals name="report_pdf_trip_count">
         <item quantity="one">%d business trip</item>
         <item quantity="other">%d business trips</item>

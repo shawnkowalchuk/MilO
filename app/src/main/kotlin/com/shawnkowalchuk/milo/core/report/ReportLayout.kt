@@ -10,6 +10,14 @@ import java.util.Locale
 /** The least room between the two halves of the footer. */
 private const val FOOTER_GAP = 16f
 
+/** The app's mark at the start of the footer, small, and the room after it. */
+private const val FOOTER_MARK_SIZE = 9f
+private const val FOOTER_MARK_RADIUS = 2.5f
+private const val FOOTER_MARK_GAP = 5f
+
+/** How far a capital's middle stands above its baseline, as a share of the font size. */
+private const val CAP_MIDDLE = 0.36f
+
 private const val ELLIPSIS = "…"
 
 /** The pages being filled, and how far down the present one is. */
@@ -120,9 +128,9 @@ private fun Pages.placeDay(
 }
 
 /**
- * The line at the bottom of page [number] of [count]: whose report and which period on the
- * left, the page on the right. A name and a period too long to stand beside the page number
- * are cut short, with an ellipsis, so the two never run into each other.
+ * The line at the bottom of page [number] of [count]: the app's mark, small, then whose report
+ * and which period on the left, the page on the right. A name and a period too long to stand
+ * beside the page number are cut short, with an ellipsis, so the two never run into each other.
  */
 private fun footer(
     report: PrintedReport,
@@ -132,16 +140,44 @@ private fun footer(
     locale: Locale,
 ): List<PageItem> {
     val style = ReportTextStyle.FOOTER
+    val markStyle = ReportTextStyle.FOOTER_MARK
+    val quiet = ReportInk.QUIET
     val page = String.format(locale, report.words.page, number, count)
-    val room = CONTENT_RIGHT - CONTENT_LEFT - measure.width(page, style) - FOOTER_GAP
+    val textX = CONTENT_LEFT + FOOTER_MARK_SIZE + FOOTER_MARK_GAP
+    val room = CONTENT_RIGHT - textX - measure.width(page, style) - FOOTER_GAP
+    // The mark's middle is level with the middle of the words' capitals.
+    val middle = FOOTER_BASELINE - style.size * CAP_MIDDLE
+    val mark = report.words.appMark
     return listOf(
+        PageItem.Box(
+            CONTENT_LEFT,
+            middle - FOOTER_MARK_SIZE / 2,
+            CONTENT_LEFT + FOOTER_MARK_SIZE,
+            middle + FOOTER_MARK_SIZE / 2,
+            FOOTER_MARK_RADIUS,
+            ReportInk.ACCENT,
+        ),
+        PageItem.Text(
+            mark,
+            CONTENT_LEFT + (FOOTER_MARK_SIZE - measure.width(mark, markStyle)) / 2,
+            middle + markStyle.size * CAP_MIDDLE,
+            markStyle,
+        ),
         PageItem.Text(
             cutToFit(report.footer, room, style, measure),
-            CONTENT_LEFT,
+            textX,
             FOOTER_BASELINE,
             style,
+            ink = quiet,
         ),
-        PageItem.Text(page, CONTENT_RIGHT, FOOTER_BASELINE, style, rightAligned = true),
+        PageItem.Text(
+            page,
+            CONTENT_RIGHT,
+            FOOTER_BASELINE,
+            style,
+            rightAligned = true,
+            ink = quiet,
+        ),
     )
 }
 
