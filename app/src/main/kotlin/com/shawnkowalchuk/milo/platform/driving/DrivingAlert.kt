@@ -6,6 +6,7 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
+import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.io.IOException
 import java.time.ZoneId
@@ -187,6 +188,8 @@ class DrivingAlert(
                 nowMs = clock(),
                 schedule = stored.settings.schedule,
                 zone = zone(),
+                truckNoLongerWatched =
+                    tripActivity.value.parked == ParkedTruckWatch.NO_LONGER_WATCHED,
             )
         val verdict = judgeDriving(moment)
         var seen = true

@@ -11,10 +11,8 @@ import com.shawnkowalchuk.milo.core.trip.POLL_INTERVAL_MS
 import com.shawnkowalchuk.milo.core.trip.PollPacer
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
-import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckBluetoothReceiver
 import com.shawnkowalchuk.milo.platform.car.AndroidAutoWatcher
-import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,7 +34,8 @@ private const val MINUTE_CHECK = "minute check"
  * The foreground service that records a trip (ADR-002, "The service"). It is the part of the app
  * Android keeps alive during a drive, and everything that only makes sense while a trip is open
  * lives in it: the GPS fixes, the timers, the watch on Android Auto and on the truck's Bluetooth
- * broadcasts, the notification and the trip-start sound.
+ * broadcasts, the notification and the trip-start sound. It stays up, doing less, while MilO
+ * waits beside a truck that is connected and parked ([Work.WATCHING_PARKED]).
  *
  * It decides nothing. It reports to the [TripController] (a fix, a timer running out, Android
  * Auto changing) and does what the controller tells it through [TripRecorder].
@@ -44,7 +43,7 @@ private const val MINUTE_CHECK = "minute check"
  * Its life: a trigger asks Android to start it with the trigger in the intent
  * ([tripServiceIntent]). [onStartCommand] enters the foreground first and only then hands the
  * trigger to the controller, so no trip is ever opened by a service that Android refused. The
- * controller answers with [record] or [stop].
+ * controller answers with [record], [watchParked] or [stop].
  *
  * In the manifest it has `stopWithTask="false"`: swiping MilO out of the recent apps must not
  * end a trip. It is `START_STICKY`: if Android kills the process, it creates the service again
@@ -66,14 +65,20 @@ class TripService :
     /** Hears the truck disconnect during a trip, even if the manifest receiver does not. */
     private val truckReceiver = TruckBluetoothReceiver()
 
+    /**
+     * What the controller last asked for. While [WATCHING_PARKED] no trip is open: the truck is
+     * connected and parked, and its position is read at a low rate until it moves. Android Auto
+     * is watched then as during a trip: with the truck's Bluetooth gone it holds the wait.
+     */
+    private enum class Work { NONE, RECORDING, WATCHING_PARKED }
+
     // Everything below is touched on the main thread only.
     private var inForeground = false
     private var newestStartId = 0
-    private var recording = false
+    private var work = Work.NONE
     private var destroyed = false
     private var session: Job? = null
-    private var checkTimer: Job? = null
-    private var checkTimerFor: Long? = null
+    private val checkTimer = TripCheckTimer(scope) { controller.onCheckDue(it) }
     private var androidAutoConnected = false
     private val pollPacer = PollPacer()
 
@@ -104,7 +109,7 @@ class TripService :
             // service started this way only seconds to get here.
             startForeground(
                 TRIP_NOTIFICATION_ID,
-                container.tripNotifications.tripInProgress(controller.activity.value.trip),
+                container.tripNotifications.ongoingFor(controller.activity.value),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
             )
         } catch (notAllowed: ForegroundServiceStartNotAllowedException) {
@@ -141,9 +146,17 @@ class TripService :
     override fun record(checkAtMs: Long?, tripJustStarted: Boolean) {
         mainExecutor.execute {
             if (destroyed) return@execute
-            if (!recording) beginSession()
+            turnTo(Work.RECORDING)
             if (tripJustStarted) announceTripStart()
-            setCheckTimer(checkAtMs)
+            checkTimer.set(checkAtMs)
+        }
+    }
+
+    override fun watchParked(checkAtMs: Long?) {
+        mainExecutor.execute {
+            if (destroyed) return@execute
+            turnTo(Work.WATCHING_PARKED)
+            checkTimer.set(checkAtMs)
         }
     }
 
@@ -161,12 +174,28 @@ class TripService :
 
     // ---- One recording session -------------------------------------------------------------------
 
-    private fun beginSession() {
-        recording = true
-        // Recording is under way, so a warning that it could not start is out of date.
-        container.tripNotifications.cancelCouldNotStart()
-        location.start()
+    /** Begins the session with the first order, and moves between recording and watching. */
+    private fun turnTo(next: Work) {
+        if (work == next) return
+        val wasWatching = work == Work.WATCHING_PARKED
+        if (work == Work.NONE) beginSession()
+        work = next
+        location.start(if (next == Work.RECORDING) FixRate.RECORDING else FixRate.WATCHING_PARKED)
+        // For the whole session. Starting a watch that is running does nothing.
         androidAuto.start()
+        if (next == Work.RECORDING) {
+            // At once, not when the trip's figures next change: the notification must not go
+            // on saying that the truck is parked.
+            val trip = controller.activity.value.trip
+            if (wasWatching) container.tripNotifications.updateTripInProgress(trip)
+        } else {
+            container.tripNotifications.showParkedWaiting()
+        }
+    }
+
+    private fun beginSession() {
+        // The service is at work, so a warning that it could not start is out of date.
+        container.tripNotifications.cancelCouldNotStart()
         truckReceiver.registerIn(this)
         pollPacer.start(SystemClock.elapsedRealtime())
         session =
@@ -177,54 +206,23 @@ class TripService :
     }
 
     private fun endSession() {
-        if (!recording) return
-        recording = false
+        if (work == Work.NONE) return
+        work = Work.NONE
         location.stop()
         androidAuto.stop()
         truckReceiver.unregisterFrom(this)
         session?.cancel()
-        setCheckTimer(null)
+        checkTimer.set(null)
     }
 
     /** Recording has really begun: the moment for the trip-start sound, once per trip. */
     private fun announceTripStart() {
-        scope.launch {
-            val settings =
-                try {
-                    container.settingsStore.current()
-                } catch (unreadable: IOException) {
-                    // The controller logs the unreadable file. The sound is on by default, so
-                    // the bundled chirp plays.
-                    controller.note(EventCategory.ERROR, "Sound settings unreadable: $unreadable")
-                    MiloSettings()
-                }
-            if (settings.soundEnabled) mainExecutor.execute { sound.play(settings.customSoundUri) }
-        }
+        val unreadable = { what: String -> controller.note(EventCategory.ERROR, what) }
+        scope.launch { sound.playAsSet(container.settingsStore, mainExecutor, unreadable) }
     }
 
-    /**
-     * The timer the trip rules ask for: the end of a grace period, the confirmation deadline of
-     * a companion start, or the no-movement limit of a manual trip. When it runs out the
-     * controller reads the truck's connection, and the rules decide.
-     */
-    private fun setCheckTimer(checkAtMs: Long?) {
-        if (checkAtMs == checkTimerFor) return
-        checkTimerFor = checkAtMs
-        checkTimer?.cancel()
-        if (checkAtMs == null) return
-        checkTimer =
-            scope.launch {
-                delay((checkAtMs - System.currentTimeMillis()).coerceAtLeast(0))
-                controller.onCheckDue(checkAtMs)
-            }
-    }
-
-    // TODO(debt): the timers here are coroutines, and a coroutine's delay does not count time
-    //  the phone spends asleep. With the screen off they can fire late. A GPS fix stands in for
-    //  a late timer (a deadline in TripWorker.onFix, the minute check in onFix below), but with
-    //  no fixes arriving a trip can stay open past its grace period, and a disconnect that was
-    //  never reported is noticed late. The cure, if the phone shows it is needed, is a wake
-    //  lock for the length of a trip. See docs/FINDINGS_LOG.md.
+    // The debt of this timer and of the check timer, which can both fire late while the phone
+    // sleeps, is set out in TripCheckTimer.kt.
     private suspend fun pollTheTruck() {
         // Ends when the session is cancelled: delay() stops waiting and the loop is left.
         while (true) {
@@ -243,9 +241,12 @@ class TripService :
         }
     }
 
-    /** ADR-002, amendment 6: the truck's connection is read again about once a minute. */
+    /**
+     * ADR-002, amendment 6: the truck's connection is read again about once a minute. Beside a
+     * parked truck too: it is how a disconnect that was never reported ends the wait.
+     */
     private fun readTheTruck(source: String) {
-        if (!recording) return
+        if (work == Work.NONE) return
         controller.onTrigger(TripTrigger.POLL, source)
         // While Android Auto is believed connected, ask it again: a missed "disconnected"
         // would otherwise hold the trip open (see AndroidAutoWatcher.refresh).
@@ -266,8 +267,11 @@ class TripService :
             .collect { trip ->
                 // Posted on the main thread and only while recording. Posted from here, it
                 // could land just after the service stopped and leave a "Trip in progress"
-                // notification behind that nothing would ever take away.
-                mainExecutor.execute { if (recording) notifications.updateTripInProgress(trip) }
+                // notification behind that nothing would ever take away, or replace the one
+                // that says the truck is parked.
+                mainExecutor.execute {
+                    if (work == Work.RECORDING) notifications.updateTripInProgress(trip)
+                }
                 delay(NOTIFICATION_MIN_GAP_MS)
             }
     }

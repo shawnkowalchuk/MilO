@@ -72,6 +72,10 @@ private fun DrivingVerdict.inWords(): String = when (this) {
     DrivingVerdict.DRIVING_TRUCK_UNKNOWN ->
         "Alert shown: no trip is being recorded, and the phone could not say whether the " +
             "truck is connected"
+
+    DrivingVerdict.DRIVING_TRUCK_NOT_WATCHED ->
+        "Alert shown: no trip is being recorded, and the truck is connected but has stood so " +
+            "long that MilO stopped watching it"
 }
 
 /**
@@ -113,12 +117,14 @@ internal fun momentText(
             TruckReading.Answer.NOT_CONNECTED -> "not connected"
             TruckReading.Answer.UNKNOWN -> "could not be read"
         }
+    val notWatched =
+        if (moment.truckNoLongerWatched) "; it stood so long that MilO stopped watching it" else ""
     val facts =
         listOf(
             "The driving alert is switched ${if (moment.alertEnabled) "on" else "off"}.",
             "A trip is being recorded: ${if (moment.tripInProgress) "yes" else "no"}.",
             "A truck is paired: ${if (moment.truckPaired) "yes" else "no"}.",
-            "The truck: $truck ($truckEvidence).",
+            "The truck: $truck ($truckEvidence)$notWatched.",
             "A trip started now would be saved as $hours.",
             "The last trip ended: ${agoText(moment.lastTripEndedAtMs, moment.nowMs)}.",
             "The last alert: ${agoText(moment.lastAlertAtMs, moment.nowMs)}.",

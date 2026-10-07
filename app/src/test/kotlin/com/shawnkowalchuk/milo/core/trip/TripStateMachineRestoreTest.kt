@@ -145,7 +145,8 @@ class TripStateMachineRestoreTest {
     fun `a forgotten manual trip is closed where it last moved`() {
         val manualTrip = checkNotNull(MANUAL_NO_TRUCK.trip).copy(lastMovementAtMs = T0 + HOUR)
 
-        val result = restore(manualTrip, truckConnected = false, atMs = T0 + 9 * HOUR)
+        val result =
+            restore(manualTrip, truckConnected = false, atMs = T0 + 9 * HOUR, rules = PARKED_RULES)
 
         assertEquals(listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0 + HOUR)), result.effects)
     }

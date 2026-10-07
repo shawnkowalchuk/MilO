@@ -4,7 +4,6 @@ import com.shawnkowalchuk.milo.core.schedule.FilingRules
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
-import com.shawnkowalchuk.milo.data.settings.DEFAULT_GRACE_PERIOD_SECONDS
 import com.shawnkowalchuk.milo.data.settings.DEFAULT_MINIMUM_TRIP_DISTANCE_METRES
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -32,7 +31,7 @@ internal class TripRuleSettings(
     private val clock: () -> Long,
 ) {
     @Volatile
-    var rules = TripRules(gracePeriodMs = DEFAULT_GRACE_PERIOD_SECONDS * MILLIS_PER_SECOND)
+    var rules = rulesFor(MiloSettings())
         private set
 
     var minimumTripDistanceMetres = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES
@@ -72,8 +71,17 @@ internal class TripRuleSettings(
                 }
                 MiloSettings()
             }
-        rules = TripRules(gracePeriodMs = now.gracePeriodSeconds * MILLIS_PER_SECOND)
+        rules = rulesFor(now)
         minimumTripDistanceMetres = now.minimumTripDistanceMetres
         return now
     }
+
+    /**
+     * The two settings of the trip rules, in the rules' own unit. The parked limit is always
+     * passed: the rules themselves leave it off, and a trip would then never end for standing.
+     */
+    private fun rulesFor(stored: MiloSettings) = TripRules(
+        gracePeriodMs = stored.gracePeriodSeconds * MILLIS_PER_SECOND,
+        parkedLimitMs = stored.parkedLimitSeconds * MILLIS_PER_SECOND,
+    )
 }

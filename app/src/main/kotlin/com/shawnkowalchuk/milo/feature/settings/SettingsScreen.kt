@@ -33,6 +33,7 @@ private const val ANY_AUDIO = "audio/*"
 internal class SettingsActions(
     val onChangeTruck: () -> Unit,
     val onGraceStep: (longer: Boolean) -> Unit,
+    val onParkedLimitStep: (longer: Boolean) -> Unit,
     val onMinimumDistanceStep: (longer: Boolean) -> Unit,
     val onSoundEnabled: (Boolean) -> Unit,
     val onPlaySound: () -> Unit,
@@ -68,10 +69,11 @@ internal class ScheduleActions(
 
 /**
  * The settings: which truck, who the report for the accountant is from and where it goes, how
- * long a trip waits for the truck to reconnect, how short a trip may be, the work schedule that
- * makes a trip Business or Personal, what becomes of a trip outside it, the driving alert, the
- * daily check that a work day has a trip, the monthly reminder to send last month's report,
- * the sound of a trip start, and, last, Android's backup with the export and import of all data.
+ * long a trip waits for the truck to reconnect, how long the truck may stand still before a
+ * trip ends, how short a trip may be, the work schedule that makes a trip Business or Personal,
+ * what becomes of a trip outside it, the driving alert, the daily check that a work day has a
+ * trip, the monthly reminder to send last month's report, the sound of a trip start, and, last,
+ * Android's backup with the export and import of all data.
  *
  * @param dataViewModel the last card's own ViewModel: see [DataViewModel].
  * @param checkViewModel the daily check's card has one of its own too.
@@ -101,6 +103,7 @@ fun SettingsScreen(
         SettingsActions(
             onChangeTruck = onChangeTruck,
             onGraceStep = viewModel::onGraceStep,
+            onParkedLimitStep = viewModel::onParkedLimitStep,
             onMinimumDistanceStep = viewModel::onMinimumDistanceStep,
             onSoundEnabled = viewModel::onSoundEnabled,
             onPlaySound = viewModel::onPlaySound,
@@ -221,6 +224,9 @@ private fun SettingsPreview() {
             gracePeriodSeconds = 150,
             canShortenGrace = true,
             canLengthenGrace = true,
+            parkedLimitSeconds = 600,
+            canShortenParked = true,
+            canLengthenParked = true,
             minimumDistanceMetres = 300,
             canLowerMinimum = true,
             canRaiseMinimum = true,
@@ -263,7 +269,7 @@ private fun SettingsPreview() {
             SettingsContent(
                 state = state,
                 actions =
-                    SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
+                    SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
                 onBack = {},
                 checkCard = {},
                 dataCard = {},

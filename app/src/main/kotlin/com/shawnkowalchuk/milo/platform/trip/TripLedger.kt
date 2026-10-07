@@ -1,20 +1,24 @@
 package com.shawnkowalchuk.milo.platform.trip
 
-import com.shawnkowalchuk.milo.core.schedule.FilingRules
 import com.shawnkowalchuk.milo.core.schedule.fileTrip
 import com.shawnkowalchuk.milo.core.trip.ActiveTrip
 import com.shawnkowalchuk.milo.core.trip.Grace
+import com.shawnkowalchuk.milo.core.trip.ParkedWatch
 import com.shawnkowalchuk.milo.core.trip.TripClosing
 import com.shawnkowalchuk.milo.core.trip.TripEffect
 import com.shawnkowalchuk.milo.core.trip.TripEndReason
+import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripProgress
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.trip.WaitingEnd
 import com.shawnkowalchuk.milo.core.trip.confirmByMsFor
+import com.shawnkowalchuk.milo.core.trip.movementSince
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
+import com.shawnkowalchuk.milo.data.settings.ParkedTruck
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import java.time.ZoneId
@@ -46,6 +50,9 @@ internal data class LogLine(val category: EventCategory, val message: String)
  * It holds [open] in memory so that a fix every five seconds does not need a database read to
  * learn which trip it belongs to. Not thread-safe: only the controller's worker calls it.
  *
+ * The wait beside a parked truck, which has no trip to store anything under, is kept by
+ * [TripParking]; the ledger passes the effects that concern it on.
+ *
  * @param zone the phone's time zone, asked for only when a trip is closed.
  */
 internal class TripLedger(
@@ -57,6 +64,8 @@ internal class TripLedger(
     /** The open trip, or null when idle or before [load]. */
     var open: OpenTrip? = null
         private set
+
+    private val parking = TripParking(settings, points)
 
     /** Reads the open trip and its fixes from storage. Called once per process, before any rule. */
     suspend fun load(rules: TripRules): StoredTrip? {
@@ -85,7 +94,17 @@ internal class TripLedger(
     /** Forgets what was loaded. The next [load] starts from storage again. */
     fun forget() {
         open = null
+        parking.forget()
     }
+
+    /** A restart found MilO waiting beside the parked truck: the watch starts again. */
+    fun resumeWaiting(stored: ParkedTruck?) = parking.resume(stored)
+
+    /** One fix while waiting beside the parked truck. See [TripParking.onFix]. */
+    fun watchFix(fix: RawPoint): Long? = parking.onFix(fix)
+
+    /** When the open trip last really moved, as its stored fixes say, or null if it has not. */
+    val lastMovementAtMs: Long? get() = open?.progress?.lastMovementAtMs
 
     /**
      * Makes one effect of the trip rules real.
@@ -99,8 +118,22 @@ internal class TripLedger(
         when (effect) {
             is TripEffect.StartTrip -> {
                 val row = trips.startTrip(effect.startedAtMs, effect.startedBy, effect.truckSeen)
-                open = OpenTrip(row.id, row.startedAtMs, row.startedBy)
-                LogLine(EventCategory.TRIP, "Trip ${row.id} started by ${row.startedBy}")
+                // A trip that starts because the parked truck moved begins where it was parked.
+                val progress =
+                    if (effect.fromParked) parking.startTrip(row.id) else TripProgress()
+                open = OpenTrip(row.id, row.startedAtMs, row.startedBy, progress)
+                val text = startedText(row.id, row.startedBy, effect.fromParked, progress.fixCount)
+                LogLine(EventCategory.TRIP, text)
+            }
+
+            is TripEffect.StartWaiting -> {
+                parking.begin(effect.sinceMs)
+                LogLine(EventCategory.TRIP, WAITING_BEGAN)
+            }
+
+            is TripEffect.EndWaiting -> {
+                parking.end(tripFollows = effect.reason == WaitingEnd.MOVED)
+                LogLine(EventCategory.TRIP, waitingEndedText(effect.reason))
             }
 
             TripEffect.MarkTruckSeen -> {
@@ -123,12 +156,7 @@ internal class TripLedger(
             }
 
             is TripEffect.EndTrip ->
-                close(
-                    trip = openTrip(effect),
-                    effect = effect,
-                    minimumTripDistanceMetres = settingsNow.minimumTripDistanceMetres,
-                    filingRules = settingsNow.filingRules,
-                )
+                close(openTrip(effect), effect, settingsNow)
 
             is TripEffect.HoldOffAutoStart -> {
                 settings.setAutoStartHeldOffSinceMs(effect.sinceMs)
@@ -149,15 +177,17 @@ internal class TripLedger(
      *
      * @param fix as the location recorder built it. Its trip id is filled in here, because only
      * the controller's side knows which trip is open.
-     * @return true if the fix added distance: the truck really moved.
+     * @return what the trip rules have to be told about the truck's movement, or null if the
+     * fix changed nothing about it: the truck really moved, or the movement last reported was
+     * one bad fix and has been taken back.
      */
-    suspend fun addFix(fix: RawPoint): Boolean {
-        val trip = open ?: return false
+    suspend fun addFix(fix: RawPoint): TripEvent? {
+        val trip = open ?: return null
         val stored = fix.copy(tripId = trip.id)
         points.add(stored)
         val progress = trip.progress.plus(stored.toTrackPoint())
         open = trip.copy(progress = progress)
-        return progress.distance.metres > trip.progress.distance.metres
+        return progress.movementSince(trip.progress, trip.startedAtMs, fix.wallClockMs)
     }
 
     /**
@@ -174,9 +204,10 @@ internal class TripLedger(
     private suspend fun close(
         trip: OpenTrip,
         effect: TripEffect.EndTrip,
-        minimumTripDistanceMetres: Int,
-        filingRules: FilingRules?,
+        settingsNow: TripRuleSettings,
     ): LogLine {
+        val minimumTripDistanceMetres = settingsNow.minimumTripDistanceMetres
+        val filingRules = settingsNow.filingRules
         val fixes = points.pointsForTrip(trip.id).map { it.toTrackPoint() }
         val closed =
             TripClosing.close(
@@ -191,8 +222,21 @@ internal class TripLedger(
             fileTrip(trip.startedAtMs, closed.endedAtMs, keptByTripRules, filingRules, zoneNow)
         val changed = trips.closeTrip(trip.id, closed, filing)
         open = null
+        // Where the truck stands now. If the trip rules go on to wait beside it, in this same
+        // step, this is the place the wait watches and the next trip starts from.
+        parking.tripEndedAt(ParkedWatch.placeAfter(closed, fixes))
+        val parked =
+            parkedText(effect.lastPointNotAfterMs, settingsNow.rules.parkedLimitMs, zoneNow)
+                .takeIf { effect.reason == TripEndReason.NO_MOVEMENT }
         val measured =
-            closedText(closed, effect.reason, fixes.size, minimumTripDistanceMetres, filing.ignored)
+            closedText(
+                closed = closed,
+                reason = effect.reason,
+                storedFixes = fixes.size,
+                minimumTripDistanceMetres = minimumTripDistanceMetres,
+                ignored = filing.ignored,
+                parked = parked,
+            )
         val sorted =
             filedText(
                 filing = filing,

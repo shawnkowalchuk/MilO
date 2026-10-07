@@ -17,6 +17,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 private const val RANDOM_SEQUENCES = 3_000
@@ -166,6 +167,12 @@ class TripStateMachineRandomTest {
                         assertNotNull("hold-off released but not set", heldOffSinceMs)
                         heldOffSinceMs = null
                     }
+
+                    // The parked rule is off in the rules this test runs with (RULES sets no
+                    // parked limit), so nothing here may ever wait beside a parked truck. With
+                    // the rule on, random sequences run in TripStateMachineParkedRandomTest.
+                    is TripEffect.StartWaiting, is TripEffect.EndWaiting ->
+                        fail("the parked rule is off, yet the rules asked for $effect")
                 }
             }
         }

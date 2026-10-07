@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.trip.ActiveTrip
+import com.shawnkowalchuk.milo.core.trip.Parked
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripState
 import org.junit.Assert.assertEquals
@@ -57,5 +58,27 @@ class TripActivityTest {
         assertNotNull(without.trip)
         assertEquals(false, without.truckConnected)
         assertEquals(true, with.truckConnected)
+    }
+
+    @Test
+    fun `a truck that is parked and waited for is shown as that, and one no longer watched too`() {
+        val beside = rulesKnow(tripOpen = false, truckConnected = true)
+        val waiting = tripActivityOf(null, beside.copy(parked = Parked(STARTED_AT_MS)), null)
+        val left =
+            tripActivityOf(
+                null,
+                beside.copy(parked = Parked(STARTED_AT_MS, watching = false)),
+                null,
+            )
+
+        assertEquals(ParkedTruckWatch.WAITING_TO_MOVE, waiting.parked)
+        assertEquals(ParkedTruckWatch.NO_LONGER_WATCHED, left.parked)
+        assertNull(waiting.trip)
+        assertEquals(true, waiting.truckConnected)
+        // And never in any other state.
+        assertNull(tripActivityOf(null, beside, null).parked)
+        assertNull(
+            tripActivityOf(open, rulesKnow(tripOpen = true, truckConnected = true), null).parked,
+        )
     }
 }

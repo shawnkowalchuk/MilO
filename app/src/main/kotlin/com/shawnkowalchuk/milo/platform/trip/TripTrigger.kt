@@ -34,9 +34,19 @@ enum class TripTrigger {
     /** A timer the trip rules asked for has run out. Reads the truck. Sent by the service. */
     CHECK_DUE,
 
-    /** The once-a-minute look at the truck during a trip. Reads the truck. Sent by the service. */
+    /**
+     * The once-a-minute look at the truck during a trip, and while MilO waits beside the parked
+     * truck. Reads the truck. Sent by the service.
+     */
     POLL,
 }
+
+/**
+ * Whether the trigger is one of the trip service's own timers. Such a trigger means something
+ * only while the service is wanted: for a trip, or for the watch on a parked truck.
+ */
+val TripTrigger.isServiceTimer: Boolean
+    get() = this == TripTrigger.CHECK_DUE || this == TripTrigger.POLL
 
 /**
  * A trigger on its way to the controller through the trip service. When recording has to begin,
@@ -62,7 +72,7 @@ fun interface RecordingStarter {
 }
 
 /**
- * What the controller needs from the trip service while it is in the foreground. Both functions
+ * What the controller needs from the trip service while it is in the foreground. Every function
  * may be called from any thread.
  */
 interface TripRecorder {
@@ -75,6 +85,17 @@ interface TripRecorder {
      * (`TripTransition.tripReallyBegan`). This is the moment for the trip-start sound.
      */
     fun record(checkAtMs: Long?, tripJustStarted: Boolean)
+
+    /**
+     * No trip is open, and the truck is connected and parked: stay in the foreground, stop
+     * recording, and watch the truck's position at a low rate until the controller says
+     * otherwise. Every fix is still handed to the controller, which decides whether the truck
+     * has moved, and so is every change of Android Auto, which holds the wait as it holds a
+     * trip.
+     *
+     * @param checkAtMs as in [record]: when the wait has lasted too long.
+     */
+    fun watchParked(checkAtMs: Long?)
 
     /**
      * No trip is open: stop recording and stop the service, unless the service has reported in

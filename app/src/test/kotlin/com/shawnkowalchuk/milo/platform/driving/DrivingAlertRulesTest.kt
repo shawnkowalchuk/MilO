@@ -38,11 +38,15 @@ class DrivingAlertRulesTest {
     }
 
     @Test
-    fun `only two verdicts show the alert, and both need a report of driving`() {
+    fun `only three verdicts show the alert, and each needs a report of driving`() {
         val showing = DrivingVerdict.entries.filter { it.step == DrivingAlertStep.SHOW }
 
         assertEquals(
-            listOf(DrivingVerdict.DRIVING_WITHOUT_THE_TRUCK, DrivingVerdict.DRIVING_TRUCK_UNKNOWN),
+            listOf(
+                DrivingVerdict.DRIVING_WITHOUT_THE_TRUCK,
+                DrivingVerdict.DRIVING_TRUCK_UNKNOWN,
+                DrivingVerdict.DRIVING_TRUCK_NOT_WATCHED,
+            ),
             showing,
         )
     }
@@ -55,6 +59,20 @@ class DrivingAlertRulesTest {
 
         assertEquals(DrivingVerdict.TRIP_IN_PROGRESS, verdict)
         assertEquals(DrivingAlertStep.WITHDRAW, verdict.step)
+    }
+
+    @Test
+    fun `a connected truck that MilO has stopped watching does need the alert`() {
+        // Parked and connected for so long that nothing starts a trip when it drives off.
+        val connected = TruckReading.Answer.CONNECTED
+        val verdict = judgeDriving(drivingMoment(truck = connected, truckNoLongerWatched = true))
+
+        assertEquals(DrivingVerdict.DRIVING_TRUCK_NOT_WATCHED, verdict)
+        assertEquals(DrivingAlertStep.SHOW, verdict.step)
+        // Every other reason for keeping quiet still comes first.
+        val recording =
+            drivingMoment(truck = connected, truckNoLongerWatched = true, tripInProgress = true)
+        assertEquals(DrivingVerdict.TRIP_IN_PROGRESS, judgeDriving(recording))
     }
 
     @Test

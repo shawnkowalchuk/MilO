@@ -33,16 +33,20 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Seven fields are not settings Shawn chooses: [lastDrivingAlertAtMs], [reminderShown],
- * [lastExport] and the last four; and one value inside [nothingRecorded] is not either. They
- * are small pieces of state that must outlive the process, and the settings store is where
- * such values live.
+ * Eight fields are not settings Shawn chooses: [parkedTruck], [lastDrivingAlertAtMs],
+ * [reportHandOver], [reminderShown], [lastExport] and the last three; and one value inside
+ * [nothingRecorded] is not either. They are small pieces of state that must outlive the
+ * process, and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
  * @param truckAssociationId the id of the companion device association, or null without one.
  * @param gracePeriodSeconds how long a trip waits after the truck disconnects.
  * @param minimumTripDistanceMetres trips shorter than this are discarded.
+ * @param parkedLimitSeconds how long a trip may go without real movement before it is closed
+ * where it last moved, even with the truck still connected.
+ * @param parkedTruck set while MilO is waiting beside the parked truck for it to move, with no
+ * trip open. Not a setting: see [ParkedTruck].
  * @param soundEnabled whether the trip-start sound plays.
  * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp. It names
  * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
@@ -94,6 +98,8 @@ data class MiloSettings(
     val truckAssociationId: Int? = null,
     val gracePeriodSeconds: Int = DEFAULT_GRACE_PERIOD_SECONDS,
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
+    val parkedLimitSeconds: Int = DEFAULT_PARKED_LIMIT_SECONDS,
+    val parkedTruck: ParkedTruck? = null,
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
     val customSoundName: String? = null,

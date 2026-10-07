@@ -15,8 +15,27 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.shawnkowalchuk.milo.data.point.RawPoint
 
-/** A fix every 5 seconds, as the brief asks. */
-private const val FIX_INTERVAL_MS = 5_000L
+/**
+ * How often the phone is asked for a GPS fix.
+ *
+ * @param intervalMs the time between two fixes.
+ */
+enum class FixRate(val intervalMs: Long) {
+    /** During a trip: a fix every 5 seconds, as the brief asks. */
+    RECORDING(5_000L),
+
+    /**
+     * While MilO waits beside a parked, connected truck (ADR-002, amendment 28): a fix every 30
+     * seconds, a sixth of the recording rate. They are the same high-accuracy fixes, because
+     * the rule that tells movement from GPS jitter was built on their stated accuracy; a
+     * coarser, cheaper kind of position would start trips on its own errors. The truck has
+     * moved once two fixes in a row say so, which is up to a minute after it drove off, and
+     * the trip then starts where it was parked. What a night of these fixes costs the battery
+     * has not been measured on the phone (device check 271); the wait ends after three days
+     * at the latest (`WAITING_LIMIT_MS`).
+     */
+    WATCHING_PARKED(30_000L),
+}
 
 /** A loss of location is written to the event log once it has lasted this long: two fixes. */
 private const val LOSS_WORTH_LOGGING_MS = 10_000L
@@ -25,15 +44,15 @@ private const val NANOS_PER_MILLI = 1_000_000L
 private const val MILLIS_PER_SECOND = 1000.0
 
 /**
- * Asks the fused location provider for GPS fixes while a trip is recorded, and hands each one
- * on as a [RawPoint]. The trip service owns it: it starts it when recording begins and stops it
- * when the trip ends.
+ * Asks the fused location provider for GPS fixes while a trip is recorded, and at a lower rate
+ * while MilO waits beside a parked truck, and hands each one on as a [RawPoint]. The trip
+ * service owns it: it starts it when recording or waiting begins and stops it when both are over.
  *
  * The request (docs/research/2026-10-03-location-and-car.md, findings A1 to A5):
- * - **High accuracy, every 5 seconds, no minimum distance.** The provider combines interval and
+ * - **High accuracy, every 5 seconds during a trip ([FixRate]), no minimum distance.** The provider combines interval and
  *   distance as "and", so asking for 10 m as well would deliver nothing while the truck stands
  *   still. The 10 m rule lives in the distance calculation, and every fix is stored.
- * - **Never faster than 5 seconds.** Without this, another app asking for faster fixes (Maps
+ * - **Never faster than asked.** Without this, another app asking for faster fixes (Maps
  *   navigating) would double MilO's rate.
  * - **No batching**, so fixes arrive one at a time and in order.
  * - **No cached position.** The first fix must be a new one, not where the phone was earlier:
@@ -56,6 +75,7 @@ class LocationRecorder(
 
     /** Elapsed-realtime clock at the moment fixes were asked for, or null while stopped. */
     private var requestedAtElapsedMs: Long? = null
+    private var requestedRate: FixRate? = null
     private var firstFixSeen = false
 
     private val callback =
@@ -80,9 +100,13 @@ class LocationRecorder(
     private val mainThread = Handler(Looper.getMainLooper())
     private var lossReported = false
 
-    /** Starts the fixes. Calling it again while they are running does nothing. */
-    fun start() {
-        if (requestedAtElapsedMs != null) return
+    /**
+     * Starts the fixes at [rate], or changes the rate of fixes that are running. Calling it
+     * again with the rate they are running at does nothing.
+     */
+    fun start(rate: FixRate) {
+        val running = requestedAtElapsedMs != null
+        if (running && requestedRate == rate) return
         // The preflight checked this before the service was started. It is checked again here
         // because the permission can be taken away at any time, and the request would throw.
         val granted =
@@ -94,28 +118,36 @@ class LocationRecorder(
         }
         val request =
             LocationRequest
-                .Builder(Priority.PRIORITY_HIGH_ACCURACY, FIX_INTERVAL_MS)
-                .setMinUpdateIntervalMillis(FIX_INTERVAL_MS)
+                .Builder(Priority.PRIORITY_HIGH_ACCURACY, rate.intervalMs)
+                .setMinUpdateIntervalMillis(rate.intervalMs)
                 .setMinUpdateDistanceMeters(0f)
                 .setMaxUpdateDelayMillis(0)
                 .setMaxUpdateAgeMillis(0)
                 .setWaitForAccurateLocation(true)
                 .build()
-        requestedAtElapsedMs = SystemClock.elapsedRealtime()
-        firstFixSeen = false
+        if (!running) {
+            requestedAtElapsedMs = SystemClock.elapsedRealtime()
+            firstFixSeen = false
+        }
+        requestedRate = rate
+        // Asked for again with the same callback, the provider replaces the request it holds,
+        // so a change of rate needs no removal first, and no fix can fall between the two.
         client
             .requestLocationUpdates(request, context.mainExecutor, callback)
             .addOnFailureListener { failure ->
                 requestedAtElapsedMs = null
+                requestedRate = null
                 onNote("Location fixes could not be requested: $failure")
             }
-        onNote("Location fixes requested, one every ${FIX_INTERVAL_MS / MILLIS_PER_SECOND} s")
+        val every = "one every ${rate.intervalMs / MILLIS_PER_SECOND} s"
+        onNote(if (running) "Location fixes are now $every" else "Location fixes requested, $every")
     }
 
     /** Stops the fixes. Safe to call when they are not running. */
     fun stop() {
         if (requestedAtElapsedMs == null) return
         requestedAtElapsedMs = null
+        requestedRate = null
         client.removeLocationUpdates(callback)
         mainThread.removeCallbacks(reportLoss)
         lossReported = false

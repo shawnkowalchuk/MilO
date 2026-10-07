@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.schedule.DayHours
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -67,6 +68,20 @@ class SettingsUiStateTest {
 
         assertTrue(state.canShortenGrace && state.canLengthenGrace)
         assertTrue(state.canLowerMinimum && state.canRaiseMinimum)
+    }
+
+    @Test
+    fun `the parked limit is shown as stored, with its two buttons`() {
+        val default = shown()
+        val lowest = shown(MiloSettings(parkedLimitSeconds = PARKED_LIMIT_CHOICE.min))
+        val highest = shown(MiloSettings(parkedLimitSeconds = PARKED_LIMIT_CHOICE.max))
+
+        assertEquals(600, default.parkedLimitSeconds)
+        assertTrue(default.canShortenParked && default.canLengthenParked)
+        assertFalse(lowest.canShortenParked)
+        assertTrue(lowest.canLengthenParked)
+        assertFalse(highest.canLengthenParked)
+        assertTrue(highest.canShortenParked)
     }
 
     @Test

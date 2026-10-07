@@ -14,16 +14,42 @@ package com.shawnkowalchuk.milo.core.trip
  * @param autoStartHeldOffSinceMs when Shawn pressed End with the truck still connected, or null
  * when automatic start is not held off. While it is set a connected truck does not start a trip.
  * What releases it is in [HoldOffRelease].
+ * @param parked set while no trip is open because the truck, still connected, stood still for
+ * [TripRules.parkedLimitMs]. See [Parked]. Null in every other case, and never set together with
+ * [trip] or with the hold-off: a trip that is parked while the hold-off stands releases it, and
+ * the wait takes its place.
  */
 data class TripState(
     val trip: ActiveTrip? = null,
     val truckConnected: Boolean = false,
     val androidAutoConnected: Boolean = false,
     val autoStartHeldOffSinceMs: Long? = null,
+    val parked: Parked? = null,
 ) {
     /** Whether automatic start is held off (see [autoStartHeldOffSinceMs]). */
     val autoStartHeldOff: Boolean get() = autoStartHeldOffSinceMs != null
+
+    /** Whether MilO is waiting for a parked truck to move (see [Parked.watching]). */
+    val waitingToMove: Boolean get() = trip == null && parked?.watching == true
 }
+
+/**
+ * The truck is connected and standing still, and the trip it was on has been closed (the owner's
+ * decision of 2026-10-06: Bluetooth staying connected no longer keeps a trip open). A reading
+ * that shows the truck connected starts nothing while this is set and [watching] is true: only
+ * movement does, or a new link, or a press of Start. "Connected" is the truck's Bluetooth or,
+ * while MilO is watching, Android Auto: whatever would have held the trip open against a
+ * disconnect holds the wait.
+ *
+ * @param sinceMs wall-clock time the wait began: when the trip was closed, not when the truck
+ * stopped. The limit on waiting ([TripRules.waitingLimitMs]) is counted from it. It is stored,
+ * with the place the truck is parked at, so a restart of the process finds the wait again.
+ * @param watching true while the trip service is watching the truck's position for movement.
+ * False once the wait has lasted [TripRules.waitingLimitMs]: MilO has stopped watching, so that
+ * a truck which never disconnects cannot drain the battery. That state is not stored and is
+ * left by anything that reads the truck or names it: see [ParkedRules].
+ */
+data class Parked(val sinceMs: Long, val watching: Boolean = true)
 
 /**
  * The trip that is open.
@@ -35,8 +61,8 @@ data class TripState(
  * start, with one exception: see [confirmByMs].
  * @param grace the running grace period, or null while something is holding the trip open.
  * @param lastMovementAtMs wall-clock time the truck last really moved (the trip's start, until
- * it has). Only the no-movement guard for manual trips reads it. It is not stored: after a
- * restart it is worked out again from the stored points.
+ * it has). The parked rule reads it: a trip that has not moved for [TripRules.parkedLimitMs] is
+ * closed there. It is not stored: after a restart it is worked out again from the stored points.
  * @param confirmByMs set only on a trip opened by the companion "appeared" callback alone, which
  * can fire when the truck is merely nearby. If nothing trustworthy has shown the truck connected
  * by this time, the trip was a false start. Null on every other trip, and once the truck has
@@ -74,7 +100,7 @@ fun confirmByMsFor(
  * reboot, when the elapsed-realtime clock has started again from zero.
  *
  * TODO(debt): a wall clock corrected by more than the time left stretches or cuts short this
- *  deadline (and the no-movement limit), and moves the point a trip is cut at. Rare, and it needs
+ *  deadline (and the parked limit), and moves the point a trip is cut at. Rare, and it needs
  *  elapsed realtime carried beside every wall-clock time. See docs/FINDINGS_LOG.md.
  *
  * @param startedAtMs when the truck was found gone. If the grace period runs out, this is where
@@ -87,7 +113,12 @@ data class Grace(val startedAtMs: Long, val deadlineMs: Long)
  *
  * @param gracePeriodMs how long a trip waits for the truck to come back. It has no default here:
  * the value comes from the settings store, which owns the default.
- * @param noMovementLimitMs how long a manual trip with no truck may sit still before it is ended.
+ * @param parkedLimitMs how long a trip that is being recorded may go without real movement
+ * before it is closed where it last moved, whatever started it and whatever is connected. Like
+ * the grace period it is a setting, and the settings store owns its default: the trip controller
+ * always passes it. Null switches the rule off, which is how a trip ran before 2026-10-06 (from
+ * connect to disconnect, however long it stood) and what the tests of the other rules run with.
+ * @param waitingLimitMs see [WAITING_LIMIT_MS].
  * @param lateCheckToleranceMs see [LATE_CHECK_TOLERANCE_MS].
  * @param restartGapLimitMs see [RESTART_GAP_LIMIT_MS].
  * @param holdOffNewLinkAfterMs see [HOLD_OFF_NEW_LINK_AFTER_MS].
@@ -96,7 +127,8 @@ data class Grace(val startedAtMs: Long, val deadlineMs: Long)
  */
 data class TripRules(
     val gracePeriodMs: Long,
-    val noMovementLimitMs: Long = NO_MOVEMENT_LIMIT_MS,
+    val parkedLimitMs: Long? = null,
+    val waitingLimitMs: Long = WAITING_LIMIT_MS,
     val lateCheckToleranceMs: Long = LATE_CHECK_TOLERANCE_MS,
     val restartGapLimitMs: Long = RESTART_GAP_LIMIT_MS,
     val holdOffNewLinkAfterMs: Long = HOLD_OFF_NEW_LINK_AFTER_MS,
@@ -105,9 +137,10 @@ data class TripRules(
 ) {
     init {
         require(gracePeriodMs >= 0) { "The grace period cannot be negative: $gracePeriodMs ms" }
-        require(noMovementLimitMs > 0) {
-            "The no-movement limit must be positive: $noMovementLimitMs ms"
+        require(parkedLimitMs == null || parkedLimitMs > 0) {
+            "The parked limit must be positive: $parkedLimitMs ms"
         }
+        require(waitingLimitMs > 0) { "The waiting limit must be positive: $waitingLimitMs ms" }
         require(lateCheckToleranceMs >= 0) {
             "The late-check tolerance cannot be negative: $lateCheckToleranceMs ms"
         }
@@ -120,8 +153,20 @@ data class TripRules(
     }
 }
 
-/** ADR-002: a forgotten manual trip ends after 30 minutes without movement. */
-const val NO_MOVEMENT_LIMIT_MS = 30L * 60L * 1000L
+/**
+ * How long MilO watches a parked, connected truck for movement before it stops watching (ADR-002,
+ * amendment 28). The watch costs a GPS fix every 30 seconds, and a truck that never disconnects
+ * would otherwise cost that for ever.
+ *
+ * What the limit must outlast is the time the truck stands at home with the phone in range. By
+ * the times of 2026-10-06 (driven off at 07:18, parked at 17:08) a night is 14 hours 10 minutes,
+ * and from a Friday evening to a Monday morning it is 62 hours. Once MilO has stopped watching,
+ * a truck that is still connected starts nothing when it drives off, so the limit is three
+ * days: longer than a weekend. It was 12 hours as first built, which ended in the small hours
+ * of every night. A judgement, and Shawn's to change: the price is up to three days of the
+ * watch.
+ */
+const val WAITING_LIMIT_MS = 72L * 60L * 60L * 1000L
 
 /**
  * How long after a grace deadline a reading of "the truck is connected" still saves the trip.

@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.core.trip
 
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The trip rules of ADR-002 as a pure function: a state and an event go in, the new state and a
@@ -12,12 +13,13 @@ import kotlin.math.max
  * 2. [settle] then works out what the trip should be doing from what is known. It never asks
  *    "what just happened", only "what is true now", so it gives the same answer however the
  *    events arrived, and running it again changes nothing.
- * 3. A timeout (the grace period, the no-movement limit, the wait for a companion start to be
+ * 3. A timeout (the grace period, the parked limit, the wait for a companion start to be
  *    confirmed) closes a trip only on an event that brings a fresh reading of the truck. What
  *    the rules believe about the truck can be out of date, and ADR-002 has the connection read
  *    again before a trip is closed.
  *
- * The rules for an open trip are in [OpenTripRules], and those for the hold-off in
+ * The rules for an open trip are in [OpenTripRules], those for a truck that stands still in
+ * [ParkedRules], those for the two buttons in [ButtonRules], and those for the hold-off in
  * [HoldOffRules].
  */
 object TripStateMachine {
@@ -25,8 +27,13 @@ object TripStateMachine {
     fun step(state: TripState, event: TripEvent, rules: TripRules): TripTransition {
         val effects = mutableListOf<TripEffect>()
         val informed = applyEvent(state, event, rules, effects)
-        val settled = settle(informed, event.atMs, rules, event.readsTheTruck(), effects)
-        return TripTransition(settled, effects)
+        // A new link starts a trip as every connect does. If it finds a trip that has stood too
+        // long, that trip is closed and the new one starts in this same step, with no wait in
+        // between: both Bluetooth receivers deliver the broadcast during a trip, and the
+        // second delivery must find nothing left to do.
+        val mayWait = event !is TripEvent.TruckLinkConnected
+        val read = event.readsTheTruck()
+        return TripTransition(settle(informed, event.atMs, rules, read, effects, mayWait), effects)
     }
 
     /**
@@ -44,9 +51,15 @@ object TripStateMachine {
      * boot" case, for which no Bluetooth event ever arrives); truck gone means the grace period
      * keeps running, or starts now for a trip that was recording when the process died.
      *
+     * A stored wait beside a parked truck ([parkedSinceMs]) is found again as a wait, not as a
+     * new trip, as long as the truck is still connected and the wait is inside its limit. Past
+     * the limit nobody was watching, and this is a restart with the truck connected like any
+     * other: a trip starts, and the parked rule closes it if the truck is still standing.
+     *
      * @param lastRecordedAtMs wall-clock time of the stored trip's newest point, or of its start
      * if it has no point yet. Null only when there is no stored trip. Wall clock, because the
      * elapsed-realtime clock does not survive a reboot.
+     * @param parkedSinceMs the stored [Parked.sinceMs], or null if MilO was not waiting.
      */
     fun restore(
         storedTrip: ActiveTrip?,
@@ -56,6 +69,7 @@ object TripStateMachine {
         androidAutoConnected: Boolean,
         atMs: Long,
         rules: TripRules,
+        parkedSinceMs: Long? = null,
     ): TripTransition {
         val effects = mutableListOf<TripEffect>()
         var trip = storedTrip
@@ -67,7 +81,17 @@ object TripStateMachine {
                 trip = null
             }
         }
-        val stored = TripState(trip, truckConnected, androidAutoConnected, autoStartHeldOffSinceMs)
+        val stillWaiting =
+            when {
+                parkedSinceMs == null -> null
+                storedTrip != null -> WaitingEnd.TRIP_OPEN
+                atMs - parkedSinceMs >= rules.waitingLimitMs -> WaitingEnd.TIME_LIMIT
+                else -> null
+            }
+        if (stillWaiting != null) effects += TripEffect.EndWaiting(stillWaiting)
+        val parked = parkedSinceMs?.takeIf { stillWaiting == null }?.let { Parked(sinceMs = it) }
+        val stored =
+            TripState(trip, truckConnected, androidAutoConnected, autoStartHeldOffSinceMs, parked)
         return TripTransition(settle(stored, atMs, rules, truckWasRead = true, effects), effects)
     }
 
@@ -80,16 +104,11 @@ object TripStateMachine {
      * process is simply set again from the restored state.
      */
     fun nextCheckAtMs(state: TripState, rules: TripRules): Long? {
-        val trip = state.trip ?: return null
+        val trip = state.trip ?: return ParkedRules.waitingDeadlineMs(state, rules)
         return when {
             trip.confirmByMs != null -> trip.confirmByMs
-
             trip.grace != null -> trip.grace.deadlineMs
-
-            OpenTripRules.noMovementGuardApplies(state, trip) ->
-                trip.lastMovementAtMs + rules.noMovementLimitMs
-
-            else -> null
+            else -> ParkedRules.parkedDeadlineMs(trip, rules)
         }
     }
 
@@ -100,17 +119,26 @@ object TripStateMachine {
         rules: TripRules,
         effects: MutableList<TripEffect>,
     ): TripState = when (event) {
-        is TripEvent.TruckConnection -> state.copy(truckConnected = event.connected)
+        is TripEvent.TruckConnection -> {
+            val informed = state.copy(truckConnected = event.connected)
+            if (event.connected) ParkedRules.readConnected(informed) else informed
+        }
 
-        is TripEvent.TruckLinkConnected ->
-            HoldOffRules
-                .releaseForNewLink(state, event.atMs, rules, effects)
-                .copy(truckConnected = true)
+        is TripEvent.TruckLinkConnected -> {
+            // A new link while MilO waits beside the parked truck: the old link dropped unseen,
+            // and the truck starts a trip as it does on every connect.
+            val released = HoldOffRules.releaseForNewLink(state, event.atMs, rules, effects)
+            ParkedRules.leave(released, WaitingEnd.NEW_LINK, effects).copy(truckConnected = true)
+        }
 
         is TripEvent.TruckAppeared -> {
             val released = HoldOffRules.releaseForNewLink(state, event.atMs, rules, effects)
             if (state.trip == null) {
-                startUnconfirmed(released, event.atMs, rules, effects)
+                // Beside a parked truck the callback means what it means when idle: a new
+                // link, to be confirmed. What was believed about the old link is out of date.
+                val left = ParkedRules.leave(released, WaitingEnd.NEW_LINK, effects)
+                val fresh = if (released.parked != null) left.copy(truckConnected = false) else left
+                startUnconfirmed(fresh, event.atMs, rules, effects)
             } else {
                 // With a trip open the callback is not believed (see startUnconfirmed). It
                 // still shows that an old hold-off is out of date, but what is believed about
@@ -123,69 +151,40 @@ object TripStateMachine {
         is TripEvent.AndroidAutoConnection -> state.copy(androidAutoConnected = event.connected)
 
         is TripEvent.ManualStart -> {
-            val pressed = pressedWith(state, event.truckConnected, event.atMs, rules, effects)
-            startByHand(pressed, event.atMs, effects)
+            val pressed =
+                ButtonRules.pressedWith(state, event.truckConnected, event.atMs, rules, effects)
+            ButtonRules.startByHand(pressed, event.atMs, effects)
         }
 
         is TripEvent.ManualEnd -> {
-            val pressed = pressedWith(state, event.truckConnected, event.atMs, rules, effects)
-            endByHand(pressed, event.atMs, effects)
+            val pressed =
+                ButtonRules.pressedWith(state, event.truckConnected, event.atMs, rules, effects)
+            ButtonRules.endByHand(pressed, event.atMs, effects)
         }
 
-        is TripEvent.Moved ->
-            // max(), so a late or repeated report can never move the time backwards.
+        is TripEvent.Moved -> {
+            val open = state.trip
+            if (open == null) {
+                ParkedRules.startBecauseMoved(state, event.atMs, effects)
+            } else {
+                // max(), so a late or repeated report can never move the time backwards.
+                val movedAtMs = max(open.lastMovementAtMs, event.atMs)
+                state.copy(trip = open.copy(lastMovementAtMs = movedAtMs))
+            }
+        }
+
+        is TripEvent.MoveTakenBack ->
+            // min(): taking a movement back can only make the truck have stood for longer.
             state.copy(
                 trip =
                     state.trip?.let {
-                        it.copy(lastMovementAtMs = max(it.lastMovementAtMs, event.atMs))
+                        it.copy(lastMovementAtMs = min(it.lastMovementAtMs, event.lastMovedAtMs))
                     },
             )
     }
 
-    /**
-     * The state a button press acts on: the fresh truck reading taken in, and an open trip
-     * brought up to date with it first. Without this, a press could act on a trip whose time
-     * had already run out: Start would be swallowed by a trip that is about to close, and End
-     * would stretch a forgotten trip to the moment of the press.
-     */
-    private fun pressedWith(
-        state: TripState,
-        truckConnected: Boolean,
-        atMs: Long,
-        rules: TripRules,
-        effects: MutableList<TripEffect>,
-    ): TripState {
-        val informed = state.copy(truckConnected = truckConnected)
-        val trip = informed.trip ?: return informed
-        return OpenTripRules.settle(informed, trip, atMs, rules, truckWasRead = true, effects)
-    }
-
-    private fun startByHand(
-        state: TripState,
-        atMs: Long,
-        effects: MutableList<TripEffect>,
-    ): TripState {
-        val open = state.trip
-        return when {
-            open == null -> startTrip(state, TripStartCause.MANUAL, atMs, effects)
-
-            // The open trip is only waiting out its grace period: the truck is gone, and Shawn
-            // says he is driving. Left alone, the press would be swallowed and the waiting trip
-            // would close a moment later with nothing recording. So that trip ends where the
-            // truck was found gone, and the press starts a trip of its own.
-            open.grace != null -> {
-                val reason = TripEndReason.REPLACED_BY_MANUAL_START
-                effects += TripEffect.EndTrip(reason, open.grace.startedAtMs)
-                startTrip(state.copy(trip = null), TripStartCause.MANUAL, atMs, effects)
-            }
-
-            // A second press, or a press that crossed with an automatic start. There is still
-            // exactly one trip.
-            else -> state
-        }
-    }
-
-    private fun startTrip(
+    /** Opens a trip now. Whether the truck has been seen in it is what is known at this moment. */
+    internal fun startTrip(
         state: TripState,
         startedBy: TripStartCause,
         atMs: Long,
@@ -225,35 +224,12 @@ object TripStateMachine {
         return state.copy(trip = trip)
     }
 
-    private fun endByHand(
-        state: TripState,
-        atMs: Long,
-        effects: MutableList<TripEffect>,
-    ): TripState {
-        val trip = state.trip
-        if (trip != null) {
-            // If the grace period is running the truck has gone, and the drive ended when it
-            // went, not when the button was pressed. Otherwise the trip ends now.
-            effects += TripEffect.EndTrip(TripEndReason.MANUAL, trip.grace?.startedAtMs ?: atMs)
-        }
-
-        // The truck is still connected, so the very next look at the connection would start a
-        // new trip. Hold automatic start off (what releases it is in HoldOffRelease). This
-        // applies even when no trip was open: End must never be the press that starts one. For
-        // the same reason a hold-off that is already set starts again from this press: an old
-        // one could be at its time limit, and the press itself would then start a trip.
-        if (!state.truckConnected || state.autoStartHeldOffSinceMs == atMs) {
-            return state.copy(trip = null)
-        }
-        effects += TripEffect.HoldOffAutoStart(atMs)
-        return state.copy(trip = null, autoStartHeldOffSinceMs = atMs)
-    }
-
     /**
      * Step 2: make the trip agree with what is known.
      *
      * @param truckWasRead whether what is known about the truck was read just now (see point 3
      * at the top of this file).
+     * @param mayWait see [ParkedRules.closeIfParked].
      */
     private fun settle(
         state: TripState,
@@ -261,18 +237,23 @@ object TripStateMachine {
         rules: TripRules,
         truckWasRead: Boolean,
         effects: MutableList<TripEffect>,
+        mayWait: Boolean = true,
     ): TripState {
         var current = HoldOffRules.releaseIfDue(state, atMs, rules, truckWasRead, effects)
+        current = ParkedRules.settle(current, atMs, rules, truckWasRead, effects)
 
         val trip = current.trip
         if (trip != null) {
-            current = OpenTripRules.settle(current, trip, atMs, rules, truckWasRead, effects)
+            current =
+                OpenTripRules.settle(current, trip, atMs, rules, truckWasRead, effects, mayWait)
         }
 
         // Idle and the truck is connected: a trip starts. This one rule covers a connect event,
         // every reconcile, and a truck found connected when a long-expired trip has just been
-        // closed above. Only the truck starts a trip; Android Auto never does.
-        val startNow = current.trip == null && current.truckConnected && !current.autoStartHeldOff
+        // closed above. Only the truck starts a trip; Android Auto never does. A truck that is
+        // parked and waited for is not idle: there the trip starts when it moves.
+        val idle = current.trip == null && current.parked == null
+        val startNow = idle && current.truckConnected && !current.autoStartHeldOff
         return if (startNow) startTrip(current, TripStartCause.TRUCK, atMs, effects) else current
     }
 }

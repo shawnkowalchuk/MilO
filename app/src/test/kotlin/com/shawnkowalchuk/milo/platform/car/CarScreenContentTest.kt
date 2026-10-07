@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
+import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
@@ -27,6 +28,34 @@ class CarScreenContentTest {
         assertEquals(CarStatus.NOT_RECORDING, shown.status)
         assertNull(shown.trip)
         assertEquals(CarAction.START_TRIP, shown.action)
+    }
+
+    @Test
+    fun `no trip beside a parked, connected truck says that a trip starts when it moves`() {
+        val waiting = TripActivity(truckConnected = true, parked = ParkedTruckWatch.WAITING_TO_MOVE)
+
+        val shown = carContent(waiting)
+
+        assertEquals(CarStatus.PARKED_WAITING, shown.status)
+        assertNull(shown.trip)
+        // Start is still the button: a press starts a trip at once.
+        assertEquals(CarAction.START_TRIP, shown.action)
+        // That is no failure, so it is said even while the setup checklist has something open.
+        assertEquals(
+            CarStatus.PARKED_WAITING,
+            carContent(waiting, setupNeedsAttention = true).status,
+        )
+    }
+
+    @Test
+    fun `a truck MilO has stopped watching says so, and what to press`() {
+        val left = TripActivity(truckConnected = true, parked = ParkedTruckWatch.NO_LONGER_WATCHED)
+
+        assertEquals(CarStatus.PARKED_NOT_WATCHED, carContent(left).status)
+        assertEquals(CarAction.START_TRIP, carContent(left).action)
+        // A setup that is not in order explains more, and comes first.
+        val incomplete = carContent(left, setupNeedsAttention = true)
+        assertEquals(CarStatus.SETUP_INCOMPLETE, incomplete.status)
     }
 
     @Test

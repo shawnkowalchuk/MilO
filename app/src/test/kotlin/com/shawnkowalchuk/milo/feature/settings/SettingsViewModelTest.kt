@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setParkedLimitSeconds
 import com.shawnkowalchuk.milo.data.sound.OwnSoundStore
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
@@ -145,6 +146,30 @@ class SettingsViewModelTest {
         runCurrent()
         assertEquals(31, SettingsStore(file).current().reminderDay)
     }
+
+    @Test
+    fun `the parked limit goes down and up five minutes at a press, and stops at 5 and at 30`() =
+        runTest {
+            val file = FakeSettingsFile()
+            val viewModel = viewModel(file)
+
+            // Ten minutes out of the box. Minus leads to five, and stays there.
+            viewModel.onParkedLimitStep(longer = false)
+            runCurrent()
+            assertEquals(5 * 60, SettingsStore(file).current().parkedLimitSeconds)
+            viewModel.onParkedLimitStep(longer = false)
+            runCurrent()
+            assertEquals(5 * 60, SettingsStore(file).current().parkedLimitSeconds)
+
+            viewModel.onParkedLimitStep(longer = true)
+            runCurrent()
+            assertEquals(10 * 60, SettingsStore(file).current().parkedLimitSeconds)
+
+            SettingsStore(file).setParkedLimitSeconds(30 * 60)
+            viewModel.onParkedLimitStep(longer = true)
+            runCurrent()
+            assertEquals(30 * 60, SettingsStore(file).current().parkedLimitSeconds)
+        }
 
     @Test
     fun `a switch that could not be stored tells the alert nothing`() = runTest {

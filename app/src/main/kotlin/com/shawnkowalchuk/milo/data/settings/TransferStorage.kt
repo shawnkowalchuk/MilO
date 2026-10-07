@@ -31,12 +31,19 @@ data class TransferredTruck(val address: String, val name: String?)
  *
  * Left out, because each is about one phone or one moment: the companion association, MilO's
  * copy of a chosen trip-start sound, the confirmations of the setup checklist, the hold-off
- * after a manual end, the times of the last driving alert and the last reminder, the report
- * that waits for "Did you send it?", and how far the process-exit records were imported.
+ * after a manual end, the wait beside a parked truck, the times of the last driving alert and
+ * the last reminder, the report that waits for "Did you send it?", and how far the process-exit
+ * records were imported.
  *
- * Two settings are missing that do mean the same anywhere: the switch and the time of the
- * daily "nothing recorded" check. That is a gap, not a rule (`NothingRecordedStorage.kt` says
- * why): an import leaves them as this phone has them.
+ * Three settings are missing that do mean the same anywhere: the switch and the time of the
+ * daily "nothing recorded" check, and the parked limit. That is a gap, not a rule
+ * (`NothingRecordedStorage.kt` says why for the first two, the note below for the third): an
+ * import leaves them as this phone has them.
+ *
+ * TODO(debt): the parked limit ([MiloSettings.parkedLimitSeconds]) is a setting that would mean
+ *  the same on another phone, and it is not here: adding it changes the export file's form,
+ *  which needs a new format version and a reader for both. An import leaves the phone's own
+ *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening).
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,
@@ -150,7 +157,7 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
  * Takes out of a settings file that Android restored what was only ever true of the
  * installation it was backed up from. The four confirmations of the setup checklist go in any
  * case: they are Shawn's word about switches of that phone, and an uninstall resets the same
- * switches on this one.
+ * switches on this one. So does a wait beside the parked truck.
  *
  * @param dropAssociation true if Android on this phone holds no association for the stored
  * truck. The truck's address and name stay, so that the phone knows which device to pair again.
@@ -160,6 +167,8 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
 suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, dropOwnSound: Boolean) {
     dataStore.edit { stored ->
         for (step in ConfirmedStep.entries) stored.remove(longPreferencesKey(step.key))
+        // A wait beside the truck was true of the moment the backup was made, nothing more.
+        stored.forgetParkedTruck()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
         if (dropOwnSound) {
             stored.remove(SettingsStore.CUSTOM_SOUND_URI)

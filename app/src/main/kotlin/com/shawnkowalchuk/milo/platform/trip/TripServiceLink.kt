@@ -29,7 +29,14 @@ internal class TripServiceLink {
     /** Set by the worker when a trip has really begun. The next [sync] passes it on. */
     var tripJustStarted = false
 
-    private var lastOrders: Pair<TripRecorder, Long?>? = null
+    private var lastOrders: Orders? = null
+
+    /** What a service was last told: to record or to watch the parked truck, and until when. */
+    private data class Orders(
+        val service: TripRecorder,
+        val watching: Boolean,
+        val checkAtMs: Long?,
+    )
 
     /** The service is in the foreground and is handing a trigger over. */
     @Synchronized
@@ -44,15 +51,23 @@ internal class TripServiceLink {
         owedTriggers--
     }
 
-    /** Tells the service what the state now asks of it: keep recording, or stop. */
+    /**
+     * Tells the service what the state now asks of it: keep recording, watch the parked truck,
+     * or stop.
+     */
     fun sync(state: TripState?, rules: TripRules) {
         val service = recorder
         if (service == null || state == null) return
-        if (state.trip != null) {
-            val orders = service to TripStateMachine.nextCheckAtMs(state, rules)
+        if (state.wantsService) {
+            val watching = state.trip == null
+            val orders = Orders(service, watching, TripStateMachine.nextCheckAtMs(state, rules))
             // Told again only when something changed: this runs after every GPS fix.
             if (tripJustStarted || orders != lastOrders) {
-                service.record(orders.second, tripJustStarted)
+                if (watching) {
+                    service.watchParked(orders.checkAtMs)
+                } else {
+                    service.record(orders.checkAtMs, tripJustStarted)
+                }
             }
             lastOrders = orders
         } else if (letGoIfIdle()) {
@@ -84,3 +99,9 @@ internal class TripServiceLink {
         return true
     }
 }
+
+/**
+ * Whether the trip service has work to do: a trip is open, or MilO is watching a parked truck
+ * for movement. With neither, the service stops.
+ */
+internal val TripState.wantsService: Boolean get() = trip != null || waitingToMove

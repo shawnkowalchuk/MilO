@@ -8,8 +8,11 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.Executor
 
 /**
  * Plays the trip-start sound once: Shawn's audible proof that a trip is being recorded.
@@ -155,4 +158,27 @@ fun playbackProblem(file: File): String? {
     } finally {
         player.release()
     }
+}
+
+/**
+ * Plays the trip-start sound as the settings have it: not at all if it is switched off, and
+ * otherwise the file Shawn chose, or the bundled chirp.
+ *
+ * @param mainThread where the sound is played ([TripStartSound.play] must run there).
+ * @param onUnreadable a line for the event log if the settings cannot be read. The controller
+ * logs the unreadable file itself; the sound is on by default, so the bundled chirp plays.
+ */
+internal suspend fun TripStartSound.playAsSet(
+    settings: SettingsStore,
+    mainThread: Executor,
+    onUnreadable: (String) -> Unit,
+) {
+    val now =
+        try {
+            settings.current()
+        } catch (unreadable: IOException) {
+            onUnreadable("Sound settings unreadable: $unreadable")
+            MiloSettings()
+        }
+    if (now.soundEnabled) mainThread.execute { play(now.customSoundUri) }
 }

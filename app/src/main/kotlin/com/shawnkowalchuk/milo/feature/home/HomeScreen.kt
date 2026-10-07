@@ -37,6 +37,7 @@ import com.shawnkowalchuk.milo.data.trip.TodaySession
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
+import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.ZoneId
@@ -119,7 +120,7 @@ private fun HomeContent(
         if (setupNeedsAttention) SetupWarningCard(actions.onOpenSetup)
 
         SectionCard(title = stringResource(R.string.home_trip_title)) {
-            if (trip == null) IdleTrip() else TripInProgress(trip, twentyFourHour)
+            if (trip == null) NoTrip(activity.parked) else TripInProgress(trip, twentyFourHour)
         }
 
         activity.startFailure?.let { StartFailureCard(it) }
@@ -149,14 +150,21 @@ private fun HomeContent(
     }
 }
 
+/** The card with no trip open: for a truck that is connected and parked, what starts the next. */
 @Composable
-private fun IdleTrip() {
+private fun NoTrip(parked: ParkedTruckWatch?) {
+    val waiting = R.string.trip_status_parked to R.string.home_trip_parked_detail
+    val notWatched =
+        R.string.trip_status_parked_not_watched to R.string.home_trip_parked_not_watched_detail
+    val (status, detail) =
+        when (parked) {
+            null -> R.string.trip_status_idle to R.string.home_trip_idle_detail
+            ParkedTruckWatch.WAITING_TO_MOVE -> waiting
+            ParkedTruckWatch.NO_LONGER_WATCHED -> notWatched
+        }
+    Text(text = stringResource(status), style = MaterialTheme.typography.bodyLarge)
     Text(
-        text = stringResource(R.string.trip_status_idle),
-        style = MaterialTheme.typography.bodyLarge,
-    )
-    Text(
-        text = stringResource(R.string.home_trip_idle_detail),
+        text = stringResource(detail),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

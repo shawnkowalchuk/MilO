@@ -15,7 +15,8 @@ import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
  * @param routine true for a poll that only confirms what is already believed about the truck.
  * One arrives every minute of every trip, so it is not worth a line in the event log.
  * @param linkNotSeenYet true when the reading said "not connected" and was not passed on
- * because no reading has yet shown the truck connected on its present link.
+ * because no reading has yet shown the truck connected on its present link. A timer still tells
+ * the rules something then: what they already believe.
  */
 internal data class Evidence(
     val event: TripEvent?,
@@ -77,14 +78,26 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
     }
 
     /**
+     * A stored wait beside the parked truck is carried on although the truck could not be read
+     * at this process start (`storedWaitStandsUnread`). The reading that decides is still to
+     * come, and it must count as it would have counted here, where a known "not connected"
+     * ends the wait. Left out, amendment 18 would set every such reading aside, and a truck
+     * that had really gone would be waited for until the wait's time limit.
+     */
+    fun waitCarriedOnUnread() {
+        truckSeenOnThisLink = true
+    }
+
+    /**
      * What [request] tells the trip rules, reading the truck where the trigger calls for it.
      *
      * What an unknown reading becomes depends on the trigger:
      * - **A reconcile or a poll** tells the rules nothing. Whatever is believed stands.
      * - **A timer or a button** has to act, so the rules are told what they already believe
-     *   about the truck. A timer only runs while the truck is believed gone, so a grace period
-     *   that runs out still closes its trip, and a companion start that nothing confirmed is
-     *   still a false start.
+     *   about the truck. A grace period that runs out still closes its trip, and a companion
+     *   start that nothing confirmed is still a false start: those timers run while the truck
+     *   is believed gone. The timers of the parked rule run while it is believed connected, and
+     *   they close the trip, or stop the watch, on that belief.
      *
      * [arrived] must have been called for [request] first.
      */
@@ -108,7 +121,13 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
 
             TripTrigger.CHECK_DUE -> {
                 val reading = readTruck()
-                Evidence(TripEvent.TruckConnection(reading.orBelieved(state), atMs), reading)
+                // The timer of the parked rule runs while the truck is believed connected,
+                // which no timer did before it. A "not connected" that proves nothing must
+                // not end such a trip through its grace period: the timer goes by the belief.
+                val unseen = provesNothingYet(reading, state)
+                val connected = if (unseen) state.truckConnected else reading.orBelieved(state)
+                val event = TripEvent.TruckConnection(connected, atMs)
+                Evidence(event, reading, linkNotSeenYet = unseen)
             }
 
             TripTrigger.MANUAL_START -> {
@@ -130,8 +149,10 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
 
     /**
      * Whether [reading] is a "not connected" that says nothing about the trip (ADR-002,
-     * amendment 18): a trip is open, the truck is believed connected, and no reading has yet
-     * shown it connected on its present link. Then the belief rests on a link-level connect
+     * amendment 18): a trip is open, or MilO is waiting beside the parked truck (where the same
+     * reading would end the wait, and nothing would start the next trip on a truck whose link
+     * never drops); the truck is believed connected; and no reading has yet shown it connected
+     * on its present link. Then the belief rests on a link-level connect
      * event, and this reading has not proved that it can see that link. Either the profiles
      * are not up yet (they follow the link by seconds), or this truck is connected without
      * them, and every reading would say "not connected" for the whole drive.
@@ -142,7 +163,7 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
     private fun provesNothingYet(reading: TruckReading, state: TripState): Boolean =
         reading.known &&
             !reading.connected &&
-            state.trip != null &&
+            (state.trip != null || state.waitingToMove) &&
             state.truckConnected &&
             !truckSeenOnThisLink
 

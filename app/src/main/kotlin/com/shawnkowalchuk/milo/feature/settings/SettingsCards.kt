@@ -63,7 +63,7 @@ internal fun TruckCard(state: SettingsUiState.Ready, actions: SettingsActions) {
     }
 }
 
-/** The two numbers the trip rules run with. */
+/** The three numbers the trip rules run with. */
 @Composable
 internal fun TripRulesCard(state: SettingsUiState.Ready, actions: SettingsActions) {
     val locale = LocalConfiguration.current.locales[0]
@@ -89,6 +89,27 @@ internal fun TripRulesCard(state: SettingsUiState.Ready, actions: SettingsAction
                     enabled = state.canLengthenGrace,
                 ),
             supportingText = stringResource(R.string.settings_grace_detail),
+        )
+        StepperRow(
+            label = stringResource(R.string.settings_parked_label),
+            value =
+                stringResource(
+                    R.string.settings_grace_value,
+                    formatMinutes(state.parkedLimitSeconds, locale),
+                ),
+            decrease =
+                StepperButton(
+                    description = stringResource(R.string.settings_parked_less),
+                    onClick = { actions.onParkedLimitStep(false) },
+                    enabled = state.canShortenParked,
+                ),
+            increase =
+                StepperButton(
+                    description = stringResource(R.string.settings_parked_more),
+                    onClick = { actions.onParkedLimitStep(true) },
+                    enabled = state.canLengthenParked,
+                ),
+            supportingText = stringResource(R.string.settings_parked_detail),
         )
         StepperRow(
             label = stringResource(R.string.settings_minimum_label),

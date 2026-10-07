@@ -81,7 +81,9 @@ class DrivingAlertQuietTest {
             val alert = alertBeside(controller)
             controller.onTrigger(TripTrigger.MANUAL_START, "Start button")
             runCurrent()
-            world.nowMs += 12 * MINUTE_MS
+            // Eight minutes, not more: a trip that stands still for ten is over where it last
+            // moved (the parked rule), and End would then close it at its start.
+            world.nowMs += 8 * MINUTE_MS
             controller.onTrigger(TripTrigger.MANUAL_END, "End button")
             runCurrent()
             assertEquals(emptyList<Any>(), world.openTrips)

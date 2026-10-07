@@ -39,7 +39,9 @@ private const val DRIVING_ALERT_TAP_REQUEST = 1
  *
  * - **Trip in progress**: low importance, so it never makes a sound or pops up. The trip-start
  *   sound is played by the service itself and not through this channel, because MIUI is reported
- *   to switch channel sounds off (docs/research/2026-10-03-miui-dev-bluetooth-audio.md).
+ *   to switch channel sounds off (docs/research/2026-10-03-miui-dev-bluetooth-audio.md). It is
+ *   the trip service's own notification, so while the service waits beside a parked truck with
+ *   no trip open it says that in its place ([parkedWaiting]), as quietly.
  * - **Could not start this trip**: high importance. It is the only way MilO can tell Shawn that
  *   a trip is not being recorded, and tapping it starts the trip.
  * - **Driving alert**: high importance. The phone reports driving during the work hours while
@@ -86,18 +88,7 @@ class TripNotifications(private val context: Context) {
      * trip being opened.
      */
     fun tripInProgress(trip: CurrentTrip?): Notification {
-        val builder =
-            Notification
-                .Builder(context, TRIP_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_trip)
-                .setContentTitle(context.getString(titleFor(trip)))
-                .setContentIntent(openApp())
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                // Android 12 and later may hold a foreground notification back for ten seconds.
-                // This one is Shawn's sign that the trip started, so it is shown at once.
-                .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        val builder = ongoing(titleFor(trip))
         if (trip != null) {
             val locale = context.resources.configuration.locales[0]
             val kilometres = formatKilometres(trip.distanceMetres, locale)
@@ -112,9 +103,40 @@ class TripNotifications(private val context: Context) {
         return builder.build()
     }
 
+    /**
+     * The ongoing notification while no trip is open and the service watches a truck that is
+     * connected and parked: it says so, and that a trip starts when the truck moves.
+     */
+    fun parkedWaiting(): Notification = ongoing(R.string.trip_status_parked)
+        .setContentText(context.getString(R.string.notification_parked_text))
+        .build()
+
+    /** The ongoing notification for what the controller shows at this moment. */
+    fun ongoingFor(activity: TripActivity): Notification {
+        val waiting = activity.trip == null && activity.parked == ParkedTruckWatch.WAITING_TO_MOVE
+        return if (waiting) parkedWaiting() else tripInProgress(activity.trip)
+    }
+
+    private fun ongoing(titleRes: Int): Notification.Builder = Notification
+        .Builder(context, TRIP_CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_stat_trip)
+        .setContentTitle(context.getString(titleRes))
+        .setContentIntent(openApp())
+        .setOngoing(true)
+        .setOnlyAlertOnce(true)
+        .setCategory(Notification.CATEGORY_SERVICE)
+        // Android 12 and later may hold a foreground notification back for ten seconds.
+        // This one is Shawn's sign that the trip started, so it is shown at once.
+        .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+
     /** Replaces the ongoing notification's content. */
     fun updateTripInProgress(trip: CurrentTrip?) {
         manager.notify(TRIP_NOTIFICATION_ID, tripInProgress(trip))
+    }
+
+    /** Replaces the ongoing notification's content with [parkedWaiting]. */
+    fun showParkedWaiting() {
+        manager.notify(TRIP_NOTIFICATION_ID, parkedWaiting())
     }
 
     /**

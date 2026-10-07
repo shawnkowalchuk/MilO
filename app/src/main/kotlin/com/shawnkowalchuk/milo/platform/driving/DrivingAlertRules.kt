@@ -88,6 +88,9 @@ fun vehicleReport(
  * @param truckPaired whether MilO knows a truck at all. Without one there is nothing a trip
  * could be for, and every ride in any vehicle would otherwise alert.
  * @param truck a fresh reading of the truck's Bluetooth connection.
+ * @param truckNoLongerWatched true when the truck is connected and parked, and has stood for so
+ * long that MilO has stopped watching it for movement (ADR-002, amendment 28). Nothing then
+ * starts a trip when it drives off, although it reads as connected.
  * @param lastTripEndedAtMs when the newest closed trip ended, or null if there is none.
  * @param lastAlertAtMs when the alert was last posted, or null if it never was.
  * @param nowMs wall-clock milliseconds, read against [schedule] in [zone]. The two times above
@@ -104,6 +107,7 @@ data class DrivingMoment(
     val nowMs: Long,
     val schedule: WorkSchedule,
     val zone: ZoneId,
+    val truckNoLongerWatched: Boolean = false,
 )
 
 /** What is done with the alert's notification. */
@@ -158,6 +162,12 @@ enum class DrivingVerdict(val step: DrivingAlertStep) {
      * alert is shown: one notification too many costs less than a drive that is not logged.
      */
     DRIVING_TRUCK_UNKNOWN(DrivingAlertStep.SHOW),
+
+    /**
+     * The truck is connected, but it stood for so long that MilO stopped watching it, and no
+     * trip is being recorded. Its own triggers will not start one, so the alert is shown.
+     */
+    DRIVING_TRUCK_NOT_WATCHED(DrivingAlertStep.SHOW),
 }
 
 /**
@@ -165,7 +175,8 @@ enum class DrivingVerdict(val step: DrivingAlertStep) {
  *
  * It is shown when all of these hold: the newest report says Shawn has entered a vehicle, and
  * recently; the alert is switched on; no trip is being recorded; a truck is paired; the truck
- * is not known to be connected; a trip that started now would be saved as Business by the work
+ * is not known to be connected, or is connected but no longer watched by MilO
+ * ([DrivingMoment.truckNoLongerWatched]); a trip that started now would be saved as Business by the work
  * schedule (`classifyTrip`, the same rule that sorts a finished trip, so the alert and the
  * Trips screen cannot disagree about what the work hours are); no trip ended in the last
  * [AFTER_TRIP_QUIET_MS]; and no alert was posted in the last [ALERT_QUIET_MS].
@@ -182,6 +193,7 @@ fun judgeDriving(moment: DrivingMoment): DrivingVerdict {
     val newest = moment.reports.lastOrNull() ?: return DrivingVerdict.NOTHING_REPORTED
     val now = moment.nowMs
     val startedNow = classifyTrip(now, endedAtMs = null, moment.schedule, moment.zone)
+    val connected = moment.truck == TruckReading.Answer.CONNECTED
     return when {
         !newest.entered -> DrivingVerdict.LEFT_THE_VEHICLE
 
@@ -193,7 +205,7 @@ fun judgeDriving(moment: DrivingMoment): DrivingVerdict {
 
         !moment.truckPaired -> DrivingVerdict.NO_TRUCK_PAIRED
 
-        moment.truck == TruckReading.Answer.CONNECTED -> DrivingVerdict.TRUCK_CONNECTED
+        connected && !moment.truckNoLongerWatched -> DrivingVerdict.TRUCK_CONNECTED
 
         startedNow.category != TripCategory.BUSINESS -> DrivingVerdict.OUTSIDE_WORK_HOURS
 
@@ -204,6 +216,8 @@ fun judgeDriving(moment: DrivingMoment): DrivingVerdict {
             DrivingVerdict.ALERTED_RECENTLY
 
         moment.truck == TruckReading.Answer.UNKNOWN -> DrivingVerdict.DRIVING_TRUCK_UNKNOWN
+
+        connected -> DrivingVerdict.DRIVING_TRUCK_NOT_WATCHED
 
         else -> DrivingVerdict.DRIVING_WITHOUT_THE_TRUCK
     }

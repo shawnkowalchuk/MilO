@@ -10,10 +10,10 @@ package com.shawnkowalchuk.milo.core.trip
  *
  * @property atMs wall-clock time of the event. Every event is also a look at the clock, but a
  * deadline that has passed closes a trip only on an event that brings a fresh reading of the
- * truck: [TruckConnection], [TruckLinkConnected], [ManualStart] or [ManualEnd]. [Moved] and
- * [AndroidAutoConnection] know nothing new about the truck, and [TruckAppeared] cannot be
- * trusted as a reading, so they leave an overdue trip for the reading that
- * [TripStateMachine.nextCheckAtMs] asks for.
+ * truck: [TruckConnection], [TruckLinkConnected], [ManualStart] or [ManualEnd]. [Moved],
+ * [MoveTakenBack] and [AndroidAutoConnection] know nothing new about the truck, and
+ * [TruckAppeared] cannot be trusted as a reading, so they leave an overdue trip for the reading
+ * that [TripStateMachine.nextCheckAtMs] asks for.
  */
 sealed interface TripEvent {
     val atMs: Long
@@ -68,8 +68,23 @@ sealed interface TripEvent {
      */
     data class ManualEnd(val truckConnected: Boolean, override val atMs: Long) : TripEvent
 
-    /** The distance calculation counted real movement at this time. For the no-movement guard. */
+    /**
+     * The truck really moved at this time, judged the way the distance is: beyond what GPS
+     * jitter can explain (`DistanceCalculator`, rule 3). During a trip it moves the parked limit
+     * on. While MilO waits beside a parked, connected truck it is what starts the next trip; the
+     * caller sends it then only once a second fix has borne the movement out.
+     */
     data class Moved(override val atMs: Long) : TripEvent
+
+    /**
+     * The movement last reported during a trip was one bad fix, and the distance calculation has
+     * taken it back (its rule 4). Without this, a single stray fix every few minutes would keep a
+     * parked trip open for ever.
+     *
+     * @param lastMovedAtMs when the truck last really moved, now that the bad fix is gone: the
+     * trip's start, if it has not moved at all.
+     */
+    data class MoveTakenBack(val lastMovedAtMs: Long, override val atMs: Long) : TripEvent
 }
 
 /**
@@ -84,5 +99,9 @@ internal fun TripEvent.readsTheTruck(): Boolean = when (this) {
     is TripEvent.ManualEnd,
     -> true
 
-    is TripEvent.TruckAppeared, is TripEvent.AndroidAutoConnection, is TripEvent.Moved -> false
+    is TripEvent.TruckAppeared,
+    is TripEvent.AndroidAutoConnection,
+    is TripEvent.Moved,
+    is TripEvent.MoveTakenBack,
+    -> false
 }
