@@ -170,6 +170,8 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 - **An address that is Shawn's own is kept away from the lookup** by a mark on the row for each end. The rule that decides what is due (`platform/address/AddressRetry.kt`), the query that finds the trips and the update that stores an answer all carry it.
 - **Every change leaves one line in the event log** that names each value before and after (`data/trip/TripEditLogText.kt`).
 
+**The truck's odometer (since 2026-10-07)** is worked out, never stored: `core/odometer/` takes the readings Shawn typed (kept in the settings file, `data/settings/OdometerStorage.kt`) and the trips that moved the truck (`data/trip/TruckTrips.kt`, `movesOdometer`), and gives the figure at any moment. The Settings tile (`OdometerViewModel`) and the report (`ReportSources` → `mileageReport` → `MileageReport.odometer`) both ask it, from every finished trip, so the two cannot disagree. It touches no trip and no trip rule.
+
 **How the driving alert stands beside the recording.** It is a second thing the system can start MilO for, and it is deliberately not in the table of entry points above: it never calls `TripController.onTrigger`.
 
 ```

@@ -43,7 +43,9 @@ data class TransferredTruck(val address: String, val name: String?)
  * TODO(debt): the parked limit ([MiloSettings.parkedLimitSeconds]) is a setting that would mean
  *  the same on another phone, and it is not here: adding it changes the export file's form,
  *  which needs a new format version and a reader for both. An import leaves the phone's own
- *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening).
+ *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening). The odometer readings
+ *  ([MiloSettings.odometerReadings], 2026-10-07) are left out on the same terms: Android's
+ *  backup carries them, an export file does not. See docs/FINDINGS_LOG.md, 2026-10-07.
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,

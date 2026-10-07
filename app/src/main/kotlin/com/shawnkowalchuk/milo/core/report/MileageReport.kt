@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.sumOfTenths
 import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
@@ -86,6 +87,8 @@ data class PersonalDriving(val tripCount: Int, val tenths: Long)
  * @param zone the time zone its days and times of day are worked out in: the phone's.
  * @param days oldest first, and only days that have a trip.
  * @param personal what the period's Personal trips add up to. They are not listed.
+ * @param odometer the truck's odometer at the start and the end of the period, or null while
+ * no reading has been typed in (Shawn's decision of 2026-10-07).
  */
 data class MileageReport(
     val sender: ReportSender,
@@ -95,6 +98,7 @@ data class MileageReport(
     val zone: ZoneId,
     val days: List<ReportDay>,
     val personal: PersonalDriving,
+    val odometer: OdometerSpan? = null,
 ) {
     val tripCount: Int get() = days.sumOf { it.trips.size }
 

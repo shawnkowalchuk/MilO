@@ -1177,6 +1177,19 @@ Shawn's choice "GPS 1 hour, then sensor" (ADR-002, amendment 32). The times ran 
 | NL-120 | **Without the motion sensor GPS stays on.** Switch the driving alert off in Settings. Park as in NL-116 for more than an hour. | No "GPS is off beside the parked truck" line; fixes run for the whole wait, as before. Switch the alert back on afterwards. | not run |
 | NL-121 | **A short stop is unchanged.** Stop for 15 to 50 minutes with the truck connected, then drive off. | The trip starts within about half a minute of driving off, as in NL-114, with no report needed. | not run |
 
+## The truck's odometer (2026-10-07)
+
+Shawn's decisions of 2026-10-07: he types the reading, MilO adds every truck trip, the report prints the start and the end of its period. The rules ran here in unit tests; the tile and the PDF have not been drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| OD-1 | **The first reading.** Settings: under the Truck and Driving alert tiles, the Odometer tile. Tap "Enter reading", type the dashboard's kilometres, tap "Save reading". | The figure is your reading, in large type, with "Your reading of … km, typed today" under it. | not run |
+| OD-2 | **A slip is refused.** Tap Adjust, type "12a" and tap Save reading. | "Type the kilometres the dashboard shows, such as 123456." in red under the field; the figure does not change. Cancel closes the field. | not run |
+| OD-3 | **Trips are added.** Drive a trip in the truck, and after it has ended open Settings again. Compare with the dashboard. | The figure is the reading plus the trip, with "Your reading of … km on (day), plus … km of truck trips since". Write down how far it is from the dashboard. | not run |
+| OD-4 | **A correction.** Tap Adjust and type the dashboard's figure. | The figure is the new reading, "typed today". | not run |
+| OD-5 | **On the report.** Report screen, this month, View the PDF. | Under the Name, Company and Vehicle tile, a tile "Odometer, (1st of the month): … km est." and "Odometer, (last day): … km est.", and the note that says what "est." means. A figure typed on that day with no trip after it on the end day would have no "est.". | not run |
+| OD-6 | **After a week of driving.** Compare the Settings figure with the dashboard. | Write down the difference. Over a week it should be within a few kilometres; a larger gap means trips are missed or GPS counts short, and the readings will show it. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

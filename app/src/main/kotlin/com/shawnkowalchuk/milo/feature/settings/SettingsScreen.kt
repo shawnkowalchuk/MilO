@@ -78,6 +78,7 @@ internal class ScheduleActions(
  *
  * @param dataViewModel the last tile's own ViewModel: see [DataViewModel].
  * @param checkViewModel the daily check's tile has one of its own too.
+ * @param odometerViewModel and so has the odometer's.
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
  * @param onBack leaves the screen, when it was opened from another one (the Report screen's
@@ -90,6 +91,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     dataViewModel: DataViewModel,
     checkViewModel: NothingRecordedViewModel,
+    odometerViewModel: OdometerViewModel,
     onChangeTruck: () -> Unit,
     onBack: (() -> Unit)?,
     setupTile: @Composable () -> Unit,
@@ -150,6 +152,7 @@ fun SettingsScreen(
         modifier = modifier,
         setupTile = setupTile,
         checkTile = { NothingRecordedTile(checkViewModel) },
+        odometerTile = { OdometerTile(odometerViewModel) },
         dataTile = { DataTile(dataViewModel) },
     )
 }
@@ -164,6 +167,8 @@ fun SettingsScreen(
  * the checklist does not come from it.
  * @param checkTile the tile of the daily check, handed in whole because it has a state of its
  * own.
+ * @param odometerTile the truck's odometer, under the truck's tile, handed in whole for the
+ * same reason.
  * @param dataTile the tile for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
@@ -176,6 +181,7 @@ internal fun SettingsContent(
     modifier: Modifier = Modifier,
     setupTile: @Composable () -> Unit,
     checkTile: @Composable () -> Unit,
+    odometerTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
 ) {
     val spacing = MiloTheme.spacing
@@ -215,6 +221,8 @@ internal fun SettingsContent(
                     }
                 }
                 TruckAndAlertTiles(state, actions)
+                // Under the truck: it is the truck's.
+                odometerTile()
                 // Second, and not last: the Report screen sends Shawn here for his name and
                 // the accountant's address.
                 ReportDetailsTile(state.report, actions.report)

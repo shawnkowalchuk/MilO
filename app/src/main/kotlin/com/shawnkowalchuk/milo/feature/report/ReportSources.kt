@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.report
 
+import com.shawnkowalchuk.milo.core.odometer.DrivenTrip
 import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.span
@@ -10,6 +11,7 @@ import com.shawnkowalchuk.milo.data.report.selectForReport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.data.trip.drivenTrips
 import java.io.IOException
 import java.time.LocalDate
 import java.time.ZoneId
@@ -30,12 +32,15 @@ data class ReportChosen(val choice: ReportChoice, val today: LocalDate, val zone
  * @param selection the trips of the chosen period, or null while they are being read.
  * @param settings null once the settings file has turned out to be unreadable.
  * @param sent every report that was sent, newest first.
+ * @param truckTrips every trip that moved the truck's odometer, whenever it started: the
+ * odometer at the start and the end of the period is worked out from them.
  */
 data class ReportSources(
     val chosen: ReportChosen,
     val selection: ReportSelection?,
     val settings: MiloSettings?,
     val sent: List<SentReport>,
+    val truckTrips: List<DrivenTrip> = emptyList(),
 ) {
     /**
      * The report as it would be made now, or null while its trips are being read, while the
@@ -58,6 +63,7 @@ data class ReportSources(
                 sent = sent,
                 today = chosen.today,
                 zone = chosen.zone,
+                truckTrips = truckTrips,
             )
         // A CSV is the period's trips as they are now, for a spreadsheet. It replaces no report
         // that was sent, and exporting one sends nothing. With the PDF's next number in its
@@ -68,8 +74,10 @@ data class ReportSources(
 
 /**
  * Reads what a report is made from, and again each time any of it changes: the trips of the
- * chosen period, the settings, and the list of sent reports. Only the chosen period's trips
- * are read from storage, by its span of time, like a month on the Trips screen.
+ * chosen period, the settings, the list of sent reports, and the trips that moved the truck's
+ * odometer. The chosen period's trips are read from storage by its span of time, like a month
+ * on the Trips screen; the odometer needs every finished trip, because the reading it starts
+ * from can lie outside the period.
  *
  * @param records where a settings file that cannot be read is written to the event log.
  */
@@ -87,18 +95,18 @@ class ReportReading(
     )
 
     /** The sources for whatever [chosen] holds, following it as it changes. */
-    fun sources(chosen: Flow<ReportChosen>): Flow<ReportSources> =
-        combine(chosen, periodTrips(chosen), storedSettings(), sentReports.observeSent()) {
-                now,
-                read,
-                stored,
-                sent,
-            ->
-            // Right after a change of period the trips in hand are still the last period's.
-            // They are not shown under the new one: the screen says it is reading.
-            val current = read.period == now.choice.period && read.zone == now.zone
-            ReportSources(now, read.selection.takeIf { current }, stored, sent)
-        }
+    fun sources(chosen: Flow<ReportChosen>): Flow<ReportSources> = combine(
+        chosen,
+        periodTrips(chosen),
+        storedSettings(),
+        sentReports.observeSent(),
+        trips.observeFinishedTrips().map(::drivenTrips),
+    ) { now, read, stored, sent, driven ->
+        // Right after a change of period the trips in hand are still the last period's.
+        // They are not shown under the new one: the screen says it is reading.
+        val current = read.period == now.choice.period && read.zone == now.zone
+        ReportSources(now, read.selection.takeIf { current }, stored, sent, driven)
+    }
 
     // flatMapLatest is how a Flow switches to a new query when the period changes. It is marked
     // experimental by the coroutines library and has no stable equivalent.

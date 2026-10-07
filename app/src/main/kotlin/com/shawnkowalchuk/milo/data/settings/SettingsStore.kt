@@ -236,6 +236,7 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             reportName = preferences[REPORT_NAME],
             reportCompany = preferences[REPORT_COMPANY],
             reportVehicle = preferences[REPORT_VEHICLE],
+            odometerReadings = preferences.readOdometerReadings(),
             accountantEmail = preferences[ACCOUNTANT_EMAIL],
             reportHandOver = preferences.readReportHandOver(),
             reminderEnabled = preferences.readReminderEnabled(),

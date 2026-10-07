@@ -52,6 +52,11 @@ internal val WORDS =
         legend = "* This trip was added by hand, or changed by hand after it was recorded.",
         signature = "Signature",
         signatureDate = "Date",
+        odometerOn = "Odometer, %1\$s",
+        odometerKm = "%1\$s km",
+        odometerEstimated = "%1\$s km est.",
+        odometerNote = "est.: worked out by MilO from a reading of the dashboard and the truck " +
+            "trips recorded since, not read off the dashboard on that day.",
         footer = "%1\$s · %2\$s",
         page = "Page %1\$d of %2\$d",
     )

@@ -75,6 +75,10 @@ class ReportTexts(context: Context) {
         legend = text(R.string.report_pdf_legend),
         signature = text(R.string.report_pdf_signature),
         signatureDate = text(R.string.report_pdf_signature_date),
+        odometerOn = text(R.string.report_pdf_odometer_on),
+        odometerKm = text(R.string.report_pdf_odometer_km),
+        odometerEstimated = text(R.string.report_pdf_odometer_estimated),
+        odometerNote = text(R.string.report_pdf_odometer_note),
         footer = text(R.string.report_pdf_footer),
         page = text(R.string.report_pdf_page),
     )

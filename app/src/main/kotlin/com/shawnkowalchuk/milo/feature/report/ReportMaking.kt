@@ -1,5 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
+import com.shawnkowalchuk.milo.core.odometer.DrivenTrip
+import com.shawnkowalchuk.milo.core.odometer.odometerOver
 import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.PersonalDriving
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
@@ -34,6 +36,8 @@ import java.time.ZoneId
  * @param name printed as the sender. The caller decides what a report may be made without.
  * @param sent every report sent so far.
  * @param today the day the report is generated on, in [zone].
+ * @param truckTrips every trip that moved the truck's odometer, for its figures at the start
+ * and the end of the period (`odometerOver`).
  */
 fun mileageReport(
     period: ReportPeriod,
@@ -43,6 +47,7 @@ fun mileageReport(
     sent: List<SentReport>,
     today: LocalDate,
     zone: ZoneId,
+    truckTrips: List<DrivenTrip> = emptyList(),
 ): MileageReport {
     val sentBefore = sentFor(period, sent)
     return MileageReport(
@@ -56,6 +61,14 @@ fun mileageReport(
         zone = zone,
         days = reportDays(selection.trips, zone),
         personal = PersonalDriving(selection.personalLeftOut, selection.personalTenths),
+        odometer =
+            odometerOver(
+                period.firstDay,
+                period.lastDay,
+                zone,
+                settings.odometerReadings,
+                truckTrips,
+            ),
     )
 }
 

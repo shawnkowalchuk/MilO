@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.data.settings
 
+import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 
@@ -71,6 +72,9 @@ enum class ConfirmedStep(val key: String) {
  * @param reportCompany his company, for the report's heading, or null to leave the line out.
  * @param reportVehicle a description of the vehicle, for the report's heading, or null to
  * leave the line out.
+ * @param odometerReadings every reading of the truck's odometer Shawn typed in, oldest first,
+ * corrections too. MilO works the odometer out from them and the truck trips
+ * (`core/odometer/`); kept in `OdometerStorage.kt`.
  * @param accountantEmail where the report is sent: the address the email app is opened with,
  * or null while it is not set. MilO itself sends nothing.
  * @param reportHandOver the report that was handed to the email app and not answered for
@@ -113,6 +117,7 @@ data class MiloSettings(
     val reportName: String? = null,
     val reportCompany: String? = null,
     val reportVehicle: String? = null,
+    val odometerReadings: List<OdometerReading> = emptyList(),
     val accountantEmail: String? = null,
     val reportHandOver: ReportHandOver? = null,
     val reminderEnabled: Boolean = true,

@@ -6,6 +6,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
+import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.withHoursOnEveryDay
 import com.shawnkowalchuk.milo.data.settings.LastExport
@@ -14,6 +16,7 @@ import com.shawnkowalchuk.milo.platform.transfer.PointsTaken
 import com.shawnkowalchuk.milo.platform.transfer.TransferWork
 import java.time.DayOfWeek
 import java.time.LocalTime
+import java.time.ZoneId
 
 // The Settings screen as Android Studio draws it, in the states an emulator cannot be brought
 // into by hand (a paired truck, a sound of Shawn's own, an import that was made). In a file of
@@ -142,6 +145,20 @@ internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
         )
 }
 
+/** The odometer as the previews show it: a reading of a few days before, and trips since. */
+private val PREVIEW_ODOMETER =
+    OdometerCardState(
+        figure =
+            OdometerFigure(
+                km = 123_802,
+                reading = OdometerReading(atMs = 1_791_000_000_000, km = 123_456),
+                drivenTenths = 3_462,
+                estimated = true,
+            ),
+        zone = ZoneId.of("America/Edmonton"),
+        couldNotSave = false,
+    )
+
 @Preview
 @Composable
 private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: SettingsSample) {
@@ -159,6 +176,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                 checkTile = {
                     sample.check?.let { NothingRecordedTileContent(it, {}, { _, _ -> }) }
                 },
+                odometerTile = { OdometerTileContent(PREVIEW_ODOMETER) { true } },
                 dataTile = {
                     DataTileContent(sample.data, DataActions({}, {}, {}, {}, {}, {}))
                 },

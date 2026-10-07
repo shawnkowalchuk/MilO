@@ -200,8 +200,9 @@ internal fun columnsFor(report: PrintedReport, measure: TextMeasure): Columns {
 /**
  * The top of the first page, as the app's own screens start: the dark tile with the app's
  * mark, its name and the period; the period's Business and Personal kilometres on two tiles
- * side by side, Business in the accent as on the Trips screen; who the report is from; and
- * the notes.
+ * side by side, Business in the accent as on the Trips screen; who the report is from; the
+ * truck's odometer at the start and the end of the period, on a tile like the sender's, once
+ * a reading has been typed in; and the notes.
  */
 internal fun headingBlock(report: PrintedReport, measure: TextMeasure): Block = block {
     brandTile(report, measure)
@@ -210,6 +211,10 @@ internal fun headingBlock(report: PrintedReport, measure: TextMeasure): Block = 
     down(TILE_GAP)
     senderTile(report.fields, measure)
     down(TILE_GAP)
+    if (report.odometer.isNotEmpty()) {
+        senderTile(report.odometer, measure)
+        down(TILE_GAP)
+    }
     for (note in report.notes) {
         val lines = wrap(note, CONTENT_RIGHT - CONTENT_LEFT, ReportTextStyle.NOTE, measure)
         column(lines, CONTENT_LEFT, ReportTextStyle.NOTE, ReportInk.QUIET)
@@ -309,7 +314,8 @@ private fun BlockBuilder.tallyTiles(report: PrintedReport, measure: TextMeasure)
 
 /**
  * Who the report is from, on a quiet tile: each detail under its small label, side by side in
- * equal columns. A long one (a vehicle described with its plate) wraps inside its column.
+ * equal columns. A long one (a vehicle described with its plate) wraps inside its column. The
+ * odometer's two figures are set on a tile of this kind too.
  */
 private fun BlockBuilder.senderTile(fields: List<Pair<String, String>>, measure: TextMeasure) {
     val label = ReportTextStyle.LABEL
