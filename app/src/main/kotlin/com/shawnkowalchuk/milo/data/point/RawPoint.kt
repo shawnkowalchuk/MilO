@@ -19,8 +19,8 @@ import com.shawnkowalchuk.milo.core.trip.TrackPoint
  * @param wallClockMs time of day of the fix, milliseconds since 1970.
  * @param elapsedRealtimeMs time since boot. Used for the speed between fixes.
  * @param accuracyMetres null if the phone gave none. Such a fix is stored but never counted.
- * @param speedMetresPerSecond the phone's own speed reading, null if it gave none. Nothing uses
- * it yet; it is kept because it is the best evidence for tuning the parked-truck rule later.
+ * @param speedMetresPerSecond the phone's own speed reading, null if it gave none. Since
+ * 2026-10-07 the watch on a parked truck goes by it (`ParkedWatch`); a trip's distance does not.
  */
 @Entity(tableName = "raw_points", indices = [Index("tripId")])
 data class RawPoint(
@@ -40,5 +40,6 @@ data class RawPoint(
         latitude = latitude,
         longitude = longitude,
         accuracyMetres = accuracyMetres ?: Float.POSITIVE_INFINITY,
+        speedMetresPerSecond = speedMetresPerSecond,
     )
 }

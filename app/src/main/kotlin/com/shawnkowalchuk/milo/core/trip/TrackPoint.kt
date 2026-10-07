@@ -13,6 +13,9 @@ package com.shawnkowalchuk.milo.core.trip
  * @param accuracyMetres the radius the phone is 68 % sure the true position lies within. A fix
  * that reported no accuracy is given [Float.POSITIVE_INFINITY], so it is rejected the same way
  * as any other fix that cannot be trusted.
+ * @param speedMetresPerSecond the phone's own speed reading, from the satellites' Doppler shift,
+ * or null if it gave none. Only the watch on a parked truck reads it (`ParkedWatch`): the
+ * distance of a trip is worked out from the positions alone.
  */
 data class TrackPoint(
     val wallClockMs: Long,
@@ -20,6 +23,7 @@ data class TrackPoint(
     val latitude: Double,
     val longitude: Double,
     val accuracyMetres: Float,
+    val speedMetresPerSecond: Float? = null,
 )
 
 /** The straight-line distance in metres from this fix to [other]. */

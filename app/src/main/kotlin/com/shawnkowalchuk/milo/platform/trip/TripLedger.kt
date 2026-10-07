@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.schedule.fileTrip
 import com.shawnkowalchuk.milo.core.trip.ActiveTrip
+import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.Grace
 import com.shawnkowalchuk.milo.core.trip.ParkedWatch
 import com.shawnkowalchuk.milo.core.trip.TripClosing
@@ -14,21 +15,30 @@ import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.trip.WaitingEnd
 import com.shawnkowalchuk.milo.core.trip.confirmByMsFor
+import com.shawnkowalchuk.milo.core.trip.leftInAnotherVehicle
 import com.shawnkowalchuk.milo.core.trip.movementSince
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.ParkedTruck
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setDrivenOffTripId
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import java.time.ZoneId
 
-/** The open trip as the controller holds it between events: its row, and how far it has got. */
+/**
+ * The open trip as the controller holds it between events: its row, and how far it has got.
+ *
+ * @param fromParked true if a parked truck's moving started it. Such a trip is removed for good
+ * if it loses the truck within its first kilometre (`leftInAnotherVehicle`). Kept in the
+ * settings file as well (`setDrivenOffTripId`), so that a restart knows it too.
+ */
 internal data class OpenTrip(
     val id: Long,
     val startedAtMs: Long,
     val startedBy: TripStartCause,
     val progress: TripProgress = TripProgress(),
+    val fromParked: Boolean = false,
 )
 
 /**
@@ -67,12 +77,18 @@ internal class TripLedger(
 
     private val parking = TripParking(settings, points)
 
-    /** Reads the open trip and its fixes from storage. Called once per process, before any rule. */
-    suspend fun load(rules: TripRules): StoredTrip? {
+    /**
+     * Reads the open trip and its fixes from storage. Called once per process, before any rule.
+     *
+     * @param drivenOffTripId the trip the settings file names as started by a parked truck's
+     * moving (`MiloSettings.drivenOffTripId`).
+     */
+    suspend fun load(rules: TripRules, drivenOffTripId: Long?): StoredTrip? {
         open = null
         val row = trips.findOpenTrip() ?: return null
         val progress = TripProgress.of(points.pointsForTrip(row.id).map { it.toTrackPoint() })
-        open = OpenTrip(row.id, row.startedAtMs, row.startedBy, progress)
+        open =
+            OpenTrip(row.id, row.startedAtMs, row.startedBy, progress, row.id == drivenOffTripId)
         val graceStartedAtMs = row.graceStartedAtMs
         val graceDeadlineMs = row.graceDeadlineMs
         val trip =
@@ -118,10 +134,13 @@ internal class TripLedger(
         when (effect) {
             is TripEffect.StartTrip -> {
                 val row = trips.startTrip(effect.startedAtMs, effect.startedBy, effect.truckSeen)
-                // A trip that starts because the parked truck moved begins where it was parked.
+                // A trip that starts because the parked truck moved begins where it was parked,
+                // and is remembered as such until it closes: it may yet turn out to be a drive
+                // in another vehicle.
                 val progress =
                     if (effect.fromParked) parking.startTrip(row.id) else TripProgress()
-                open = OpenTrip(row.id, row.startedAtMs, row.startedBy, progress)
+                if (effect.fromParked) settings.setDrivenOffTripId(row.id)
+                open = OpenTrip(row.id, row.startedAtMs, row.startedBy, progress, effect.fromParked)
                 val text = startedText(row.id, row.startedBy, effect.fromParked, progress.fixCount)
                 LogLine(EventCategory.TRIP, text)
             }
@@ -217,6 +236,10 @@ internal class TripLedger(
                 falseStart = effect.reason == TripEndReason.FALSE_START,
             )
         val zoneNow = zone()
+        if (trip.fromParked) settings.setDrivenOffTripId(null)
+        if (leftInAnotherVehicle(trip.fromParked, effect.reason, closed)) {
+            return removeForGood(trip, closed, zoneNow)
+        }
         val keptByTripRules = closed.status == TripStatus.FINISHED
         val filing =
             fileTrip(trip.startedAtMs, closed.endedAtMs, keptByTripRules, filingRules, zoneNow)
@@ -246,6 +269,24 @@ internal class TripLedger(
                 zone = zoneNow,
             )
         return tripLine(EventCategory.TRIP, trip, "$measured; $sorted", changed)
+    }
+
+    /**
+     * Removes a trip that was a drive in another vehicle, row and points (Shawn's decision of
+     * 2026-10-07: deleted for good, not kept as discarded). The row goes first: if the points
+     * cannot be removed after it, they are left where nothing reads them, and the trip is gone
+     * all the same. No wait follows: the truck's connection is gone.
+     */
+    private suspend fun removeForGood(
+        trip: OpenTrip,
+        closed: ClosedTrip,
+        zoneNow: ZoneId,
+    ): LogLine {
+        val removed = trips.removeOpenTripForGood(trip.id)
+        open = null
+        points.removeForTrip(trip.id)
+        val text = anotherVehicleText(closed, trip.startedAtMs, zoneNow)
+        return tripLine(EventCategory.TRIP, trip, text, removed)
     }
 
     private fun openTrip(effect: TripEffect): OpenTrip =

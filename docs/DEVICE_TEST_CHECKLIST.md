@@ -1154,6 +1154,16 @@ Shawn asked the same day for the PDF to have "the logo and app name at the top",
 | NL-111 | **The days and the end.** Scroll through the PDF to its end. | Each day on a grey bar, its trips under small grey column titles with fine rules between them, its subtotal under a dark rule. At the end a dark tile "Total business kilometres for (month)" with the total in lime, then the legend if a trip has an asterisk, and the two lines to sign on. Every page ends with a small lime "M", the name and the month, and "Page n of N". The times read like the phone's ("7:00 a.m."), with no empty box in them. | not run |
 | NL-112 | **Printed, and sent.** Print one page (or open the PDF on a computer), and send one report to yourself with "Email the report". | The lime and the dark tiles print; the words can be selected and copied in a PDF viewer on the computer. Write down if the words come out as pictures that cannot be selected: Android may draw a variable font's weights as shapes. | not run |
 
+## A parked truck drives off by speed; another vehicle (2026-10-07)
+
+Two of Shawn's decisions after the missed trip of 2026-10-07 (ADR-002, amendment 31). The rules ran here in their 304 unit tests, the storage side only in CI. Run these with the build that has them; NL-113 and NL-114 need a stop of more than the parked limit (10 minutes) with the truck left connected.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| NL-113 | **Walking does not start a trip.** Park, engine off, truck still connected. Wait past 10 minutes until the notification says "Truck connected and parked". Walk about the yard with the phone for five minutes, 50 m or more from the truck. | Still "Truck connected and parked". No new trip on Trips, no "Trip in progress". | not run |
+| NL-114 | **Driving off starts a trip from the parked spot.** After NL-113, get in and drive off. Afterwards open the trip on Trips, and the Log with "Trip". | "Trip in progress" within about half a minute of driving off, with no sound. The trip starts at the parked spot, its time the moment you drove off (not when you parked), its km counted from there. The Log: "No longer waiting for the truck to move: it moved" and "Trip n started by TRUCK: it was connected and parked, and it moved". | not run |
+| NL-115 | **Another vehicle (only if the chance comes).** Truck parked and connected, MilO waiting beside it as in NL-113. Leave in another vehicle with the phone. | A "Trip in progress" may start as you drive off; when the truck's Bluetooth is lost and two minutes pass, the trip is gone from Trips, and the Log has "removed for good as a drive in another vehicle" with the times and the distance. Write down the distance it gives: if it is near 1000 m, the limit is too tight. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

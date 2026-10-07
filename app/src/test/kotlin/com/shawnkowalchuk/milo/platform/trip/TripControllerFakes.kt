@@ -206,6 +206,12 @@ class FakeRawPointDao : RawPointDao {
 
     override suspend fun findForTrip(tripId: Long): List<RawPoint> =
         rows.filter { it.tripId == tripId }
+
+    override suspend fun deleteForTrip(tripId: Long): Int {
+        val before = rows.size
+        rows.removeAll { it.tripId == tripId }
+        return before - rows.size
+    }
 }
 
 class FakeEventLogDao : EventLogDao {

@@ -104,6 +104,18 @@ class TripRepository(private val dao: TripDao) {
         ) == 1
 
     /**
+     * Removes a trip that is still open, for good: the one exception to "a row is never
+     * removed" (see [Trip]). Only a drive in another vehicle goes this way
+     * (`leftInAnotherVehicle`, Shawn's decision of 2026-10-07: such a trip is to be deleted for
+     * good, not kept as discarded). Its points are the caller's to remove
+     * (`RawPointRepository.removeForTrip`).
+     *
+     * @return false if the trip was no longer open, in which case nothing was removed.
+     */
+    suspend fun removeOpenTripForGood(tripId: Long): Boolean =
+        dao.deleteOpen(tripId, TripStatus.OPEN) == 1
+
+    /**
      * The finished trips that still lack a start or an end address and have had fewer than
      * [maxAttempts] failed lookups, newest first. A discarded or a deleted trip is never among
      * them: neither is looked up.

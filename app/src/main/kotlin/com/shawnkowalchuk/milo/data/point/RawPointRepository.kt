@@ -9,4 +9,12 @@ class RawPointRepository(private val dao: RawPointDao) {
 
     /** Every stored fix of a trip, in the order recorded. */
     suspend fun pointsForTrip(tripId: Long): List<RawPoint> = dao.findForTrip(tripId)
+
+    /**
+     * Removes every fix of a trip that was removed for good. The points are in a database file
+     * of their own, so nothing removes them with the trip's row.
+     */
+    suspend fun removeForTrip(tripId: Long) {
+        dao.deleteForTrip(tripId)
+    }
 }

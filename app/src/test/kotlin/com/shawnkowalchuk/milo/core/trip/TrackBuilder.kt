@@ -21,12 +21,14 @@ const val GOOD_ACCURACY_METRES = 5f
 /**
  * A GPS fix a given number of metres north and east of the test origin, a given number of seconds
  * into the track. Tests describe a drive in metres and seconds and leave the degrees to this.
+ * The phone's own speed reading is left out unless a test gives one.
  */
 fun fixAt(
     northMetres: Double,
     eastMetres: Double = 0.0,
     second: Int,
     accuracyMetres: Float = GOOD_ACCURACY_METRES,
+    speedMetresPerSecond: Float? = null,
 ): TrackPoint = TrackPoint(
     wallClockMs = TRACK_START_WALL_CLOCK_MS + second * 1000L,
     elapsedRealtimeMs = second * 1000L,
@@ -35,6 +37,7 @@ fun fixAt(
         ORIGIN_LONGITUDE +
             eastMetres / (METRES_PER_DEGREE * cos(Math.toRadians(ORIGIN_LATITUDE))),
     accuracyMetres = accuracyMetres,
+    speedMetresPerSecond = speedMetresPerSecond,
 )
 
 /**

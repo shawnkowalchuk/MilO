@@ -167,8 +167,10 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
 suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, dropOwnSound: Boolean) {
     dataStore.edit { stored ->
         for (step in ConfirmedStep.entries) stored.remove(longPreferencesKey(step.key))
-        // A wait beside the truck was true of the moment the backup was made, nothing more.
+        // A wait beside the truck was true of the moment the backup was made, nothing more; so
+        // was the trip that a parked truck's moving had started.
         stored.forgetParkedTruck()
+        stored.forgetDrivenOffTrip()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
         if (dropOwnSound) {
             stored.remove(SettingsStore.CUSTOM_SOUND_URI)

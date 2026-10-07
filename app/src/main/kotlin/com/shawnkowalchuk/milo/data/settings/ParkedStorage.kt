@@ -52,6 +52,7 @@ private val PLACE_AT_MS = longPreferencesKey("parked_place_at_ms")
 private val PLACE_LATITUDE = doublePreferencesKey("parked_place_latitude")
 private val PLACE_LONGITUDE = doublePreferencesKey("parked_place_longitude")
 private val PLACE_ACCURACY_METRES = floatPreferencesKey("parked_place_accuracy_metres")
+private val DRIVEN_OFF_TRIP_ID = longPreferencesKey("driven_off_trip_id")
 
 /**
  * How long a trip may stand still before it is closed. A stored number that is not positive,
@@ -76,6 +77,33 @@ internal fun Preferences.readParkedTruck(): ParkedTruck? {
         sinceMs = sinceMs,
         place = if (whole) ParkedPlace(atMs, latitude, longitude, accuracy) else null,
     )
+}
+
+/**
+ * The open trip that a parked truck's moving started, or null if the open trip (if any) started
+ * any other way. Kept beside the wait because a restart of the process in the middle of that
+ * trip must still know how it began: the trip is removed for good if it loses the truck within
+ * its first kilometre (`leftInAnotherVehicle`), and nothing in its row says how it started.
+ */
+internal fun Preferences.readDrivenOffTripId(): Long? = this[DRIVEN_OFF_TRIP_ID]
+
+/**
+ * Stores [tripId] as the open trip that a parked truck's moving started, or with null that no
+ * such trip is open. See [readDrivenOffTripId].
+ */
+suspend fun SettingsStore.setDrivenOffTripId(tripId: Long?) {
+    dataStore.edit { stored ->
+        if (tripId == null) {
+            stored.forgetDrivenOffTrip()
+        } else {
+            stored[DRIVEN_OFF_TRIP_ID] = tripId
+        }
+    }
+}
+
+/** Takes the trip that a parked truck's moving started out of the file. */
+internal fun MutablePreferences.forgetDrivenOffTrip() {
+    remove(DRIVEN_OFF_TRIP_ID)
 }
 
 /** Stores how long a trip may stand still before it is closed. */

@@ -155,6 +155,13 @@ interface TripDao {
     suspend fun changeStatus(tripId: Long, from: TripStatus, to: TripStatus): Int
 
     /**
+     * Removes a trip that is still open, row and all: the one delete of the table, for a drive
+     * in another vehicle (`leftInAnotherVehicle`). A trip that has been closed is never removed.
+     */
+    @Query("DELETE FROM trips WHERE id = :tripId AND status = :open")
+    suspend fun deleteOpen(tripId: Long, open: TripStatus): Int
+
+    /**
      * The closed trips that have never been sorted into Business or Personal, oldest first:
      * every status but [open], no category, and not set by hand. The same three conditions
      * guard [sortUnsorted], and `needsSorting` in `TripCategoryCatchUp.kt` is the rule in

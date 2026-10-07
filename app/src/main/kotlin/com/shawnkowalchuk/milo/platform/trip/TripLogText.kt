@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.schedule.TripFiling
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+import com.shawnkowalchuk.milo.core.trip.ANOTHER_VEHICLE_WITHIN_METRES
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripEndReason
 import com.shawnkowalchuk.milo.core.trip.TripEvent
@@ -102,6 +103,21 @@ internal fun closedText(
         "$storedFixes fixes stored, ${distance.acceptedCount} used, " +
             "${distance.rejectedForAccuracy} too inaccurate, ${distance.rejectedAsJump} jumps"
     return "$outcome; ended by $reason${parked.orEmpty()}; $fixes"
+}
+
+/**
+ * A trip removed for good as a drive in another vehicle (`leftInAnotherVehicle`): what it was
+ * removed for, with the figures that decided it, so the log keeps what the trips table no longer
+ * holds.
+ */
+internal fun anotherVehicleText(closed: ClosedTrip, startedAtMs: Long, zone: ZoneId): String {
+    val metres = closed.distance.metres.roundToInt()
+    val within = ANOTHER_VEHICLE_WITHIN_METRES.roundToInt()
+    val started = TIME_OF_DAY.format(Instant.ofEpochMilli(startedAtMs).atZone(zone))
+    val lost = TIME_OF_DAY.format(Instant.ofEpochMilli(closed.endedAtMs).atZone(zone))
+    return "removed for good as a drive in another vehicle: it started at $started when the " +
+        "parked truck seemed to drive off, and the truck's connection was lost for good at " +
+        "$lost, $metres m on, under $within m. Its row and its points are deleted"
 }
 
 private const val MILLIS_PER_MINUTE = 60_000L

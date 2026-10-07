@@ -33,10 +33,10 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Eight fields are not settings Shawn chooses: [parkedTruck], [lastDrivingAlertAtMs],
- * [reportHandOver], [reminderShown], [lastExport] and the last three; and one value inside
- * [nothingRecorded] is not either. They are small pieces of state that must outlive the
- * process, and the settings store is where such values live.
+ * Nine fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
+ * [lastDrivingAlertAtMs], [reportHandOver], [reminderShown], [lastExport] and the last three;
+ * and one value inside [nothingRecorded] is not either. They are small pieces of state that
+ * must outlive the process, and the settings store is where such values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -47,6 +47,8 @@ enum class ConfirmedStep(val key: String) {
  * where it last moved, even with the truck still connected.
  * @param parkedTruck set while MilO is waiting beside the parked truck for it to move, with no
  * trip open. Not a setting: see [ParkedTruck].
+ * @param drivenOffTripId the open trip that the parked truck's moving started, if one is open.
+ * Not a setting: see `readDrivenOffTripId`.
  * @param soundEnabled whether the trip-start sound plays.
  * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp. It names
  * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
@@ -100,6 +102,7 @@ data class MiloSettings(
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val parkedLimitSeconds: Int = DEFAULT_PARKED_LIMIT_SECONDS,
     val parkedTruck: ParkedTruck? = null,
+    val drivenOffTripId: Long? = null,
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
     val customSoundName: String? = null,

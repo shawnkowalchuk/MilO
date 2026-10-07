@@ -13,6 +13,20 @@ class ParkedWatchTest {
     /** Where the truck is parked: the last counted fix of the trip before, an hour ago. */
     private val place = fixAt(northMetres = 0.0, second = 0)
 
+    /** What the phone reads in a truck driving off: 36 km/h. */
+    private val driving = 10f
+
+    /** What it reads in the pocket of someone walking: 5 km/h. */
+    private val walking = 1.4f
+
+    /** A fix [northMetres] from the parked place, read in a truck that is driving. */
+    private fun drivingAt(northMetres: Double, second: Int, accuracyMetres: Float = 5f) = fixAt(
+        northMetres,
+        second = second,
+        accuracyMetres = accuracyMetres,
+        speedMetresPerSecond = driving,
+    )
+
     /** The wall-clock time of the fix taken [second] seconds into the track. */
     private fun timeOf(second: Int) = TRACK_START_WALL_CLOCK_MS + second * 1000L
 
@@ -70,18 +84,120 @@ class ParkedWatchTest {
     }
 
     @Test
-    fun `a crawl out of the yard is movement once it is further than jitter can be`() {
-        // Two metres every half minute. With 5 m fixes the truck has moved at 20 m.
-        var watch = ParkedWatch.at(place)
-        var movedAtFix: Int? = null
-        for (index in 1..20) {
-            watch = watch.plus(fixAt(northMetres = index * 2.0, second = 3_600 + index * 30))
-            if (watch.movedAtMs != null && movedAtFix == null) movedAtFix = index
-        }
+    fun `one fix away from the place at driving speed is enough, dated at itself`() {
+        val off = drivingAt(northMetres = 150.0, second = 3_630)
 
-        // The tenth fix is 20 m away; the eleventh bears it out.
-        assertEquals(11, movedAtFix)
-        assertEquals(timeOf(3_600 + 10 * 30), watch.movedAtMs)
+        val watch = ParkedWatch.at(place).after(fixAt(2.0, second = 3_600), off)
+
+        // The phone's speed reading says what a second fix would have had to bear out.
+        assertEquals(timeOf(3_630), watch.movedAtMs)
+        assertEquals(listOf(place, off), watch.tripStart)
+    }
+
+    @Test
+    fun `walking about near the connected truck never starts a trip`() {
+        // Half an hour on foot around a site, up to 150 m from the truck: far past what GPS
+        // jitter can be, and until 2026-10-07 enough to start a trip.
+        var watch = ParkedWatch.at(place)
+        for (index in 1..60) {
+            val north = 150.0 * kotlin.math.sin(index / 6.0)
+            watch =
+                watch.plus(
+                    fixAt(north, second = 3_600 + index * 30, speedMetresPerSecond = walking),
+                )
+            assertNull("fix $index", watch.movedAtMs)
+        }
+    }
+
+    @Test
+    fun `a speed reading at the parked place is not driving off`() {
+        // A reading of speed with the position where the truck stands: the phone was shaken,
+        // or the reading is wrong. Nothing has left the place.
+        val watch = ParkedWatch.at(place).after(drivingAt(northMetres = 3.0, second = 3_630))
+
+        assertNull(watch.movedAtMs)
+    }
+
+    @Test
+    fun `a crawl out of the yard starts the trip once it is fast, from the parked place`() {
+        // Two metres every half minute for ten minutes, at walking pace, then away at speed.
+        var watch = ParkedWatch.at(place)
+        for (index in 1..20) {
+            watch =
+                watch.plus(
+                    fixAt(index * 2.0, second = 3_600 + index * 30, speedMetresPerSecond = 0.1f),
+                )
+            assertNull("fix $index", watch.movedAtMs)
+        }
+        val away = drivingAt(northMetres = 200.0, second = 4_230)
+        watch = watch.plus(away)
+
+        // Dated when it went fast, not ten minutes before: the crawl, which read as standing,
+        // was not this drive. The stretch from the parked place is counted all the same.
+        assertEquals(timeOf(4_230), watch.movedAtMs)
+        assertEquals(place, watch.tripStart.first())
+        assertEquals(away, watch.tripStart.last())
+        assertEquals(200.0, DistanceCalculator.measure(watch.tripStart).metres, 1.0)
+    }
+
+    @Test
+    fun `a truck that rolled on and stood an hour is not given that hour`() {
+        // The trip before ended at its last counted fix; the truck came to rest 40 m on and
+        // stood there an hour, every fix "away" from the place. Then it was driven off.
+        var watch = ParkedWatch.at(place)
+        for (index in 1..120) {
+            watch = watch.plus(fixAt(40.0, second = 3_600 + index * 30, speedMetresPerSecond = 0f))
+        }
+        assertNull(watch.movedAtMs)
+        val off = drivingAt(northMetres = 300.0, second = 7_230)
+
+        val moved = watch.plus(off)
+
+        assertEquals(timeOf(7_230), moved.movedAtMs)
+        assertEquals(listOf(place, off), moved.tripStart)
+        assertEquals(300.0, DistanceCalculator.measure(moved.tripStart).metres, 1.0)
+    }
+
+    @Test
+    fun `a drive that built up speed over its first minute is dated at its first moving fix`() {
+        val standing = fixAt(40.0, second = 3_600, speedMetresPerSecond = 0f)
+        val pulling = fixAt(70.0, second = 3_630, speedMetresPerSecond = 2.5f)
+        val off = drivingAt(northMetres = 300.0, second = 3_660)
+
+        val moved = ParkedWatch.at(place).after(standing, pulling, off)
+
+        assertEquals(timeOf(3_630), moved.movedAtMs)
+        assertEquals(listOf(place, pulling, off), moved.tripStart)
+    }
+
+    @Test
+    fun `without a speed reading the step from the fix before has to be as fast`() {
+        // Two fixes that bear each other out, 40 m apart in half a minute: 5 km/h.
+        val slow =
+            ParkedWatch.at(place).after(
+                fixAt(northMetres = 60.0, second = 3_630),
+                fixAt(northMetres = 100.0, second = 3_660),
+            )
+        // The same at 36 km/h.
+        val fast =
+            ParkedWatch.at(place).after(
+                fixAt(northMetres = 60.0, second = 3_630),
+                fixAt(northMetres = 360.0, second = 3_660),
+            )
+
+        assertNull(slow.movedAtMs)
+        assertEquals(timeOf(3_630), fast.movedAtMs)
+    }
+
+    @Test
+    fun `fixes that cross with the trip being opened are part of the drive`() {
+        val off = drivingAt(northMetres = 150.0, second = 3_630)
+        val next = drivingAt(northMetres = 450.0, second = 3_660)
+
+        val watch = ParkedWatch.at(place).after(off, next)
+
+        assertEquals(timeOf(3_630), watch.movedAtMs)
+        assertEquals(listOf(place, off, next), watch.tripStart)
     }
 
     @Test
@@ -90,13 +206,12 @@ class ParkedWatchTest {
         val poorPlace = fixAt(northMetres = 0.0, second = 0, accuracyMetres = 20f)
         val near =
             ParkedWatch.at(poorPlace).after(
-                fixAt(northMetres = 60.0, second = 3_630, accuracyMetres = 20f),
-                fixAt(northMetres = 70.0, second = 3_660, accuracyMetres = 20f),
+                drivingAt(northMetres = 60.0, second = 3_630, accuracyMetres = 20f),
+                drivingAt(northMetres = 70.0, second = 3_660, accuracyMetres = 20f),
             )
         val far =
             ParkedWatch.at(poorPlace).after(
-                fixAt(northMetres = 90.0, second = 3_630, accuracyMetres = 20f),
-                fixAt(northMetres = 180.0, second = 3_660, accuracyMetres = 20f),
+                drivingAt(northMetres = 90.0, second = 3_630, accuracyMetres = 20f),
             )
 
         assertNull(near.movedAtMs)
@@ -124,8 +239,8 @@ class ParkedWatchTest {
             (1..30).map { index ->
                 fixAt(northMetres = 500.0, second = 3_630 + index * 30, accuracyMetres = 80f)
             }
-        val first = fixAt(northMetres = 300.0, second = 4_560)
-        val second = fixAt(northMetres = 650.0, second = 4_590)
+        val first = drivingAt(northMetres = 300.0, second = 4_560)
+        val second = drivingAt(northMetres = 650.0, second = 4_590)
 
         val waiting = ParkedWatch.at(place).after(stray, *poor.toTypedArray())
         assertNull(waiting.movedAtMs)
@@ -145,7 +260,8 @@ class ParkedWatchTest {
 
     @Test
     fun `a fix that is borne out within two minutes dates the trip, a later one dates it itself`() {
-        // One fix of the watch was too poor to use; the one after it bears the first out.
+        // Without speed readings. One fix of the watch was too poor to use; the one after it
+        // bears the first out, and its step from the first is at driving speed.
         val first = fixAt(northMetres = 150.0, second = 3_630)
         val poor = fixAt(northMetres = 400.0, second = 3_660, accuracyMetres = 80f)
         val third = fixAt(northMetres = 700.0, second = 3_690)
@@ -164,9 +280,10 @@ class ParkedWatchTest {
 
     @Test
     fun `a truck driven off is seen to move however far apart the usable fixes come`() {
-        // 90 km/h, and only one usable fix every two and a half minutes. Each fix alone is a
-        // first sighting that the next comes too late to bear out. Counted only in pairs
-        // inside two minutes, the truck would never be seen to move and the drive be lost.
+        // Without speed readings: 90 km/h, and only one usable fix every two and a half
+        // minutes. Each fix alone is a first sighting that the next comes too late to bear
+        // out. Counted only in pairs inside two minutes, the truck would never be seen to
+        // move and the drive be lost. The speed is worked out from the dropped sighting.
         val first = fixAt(northMetres = 3_750.0, second = 3_750)
         val second = fixAt(northMetres = 7_500.0, second = 3_900)
 
@@ -187,7 +304,7 @@ class ParkedWatchTest {
             (1..6).map { index ->
                 fixAt(northMetres = 900.0, second = 3_630 + index * 30, accuracyMetres = 80f)
             }
-        val second = fixAt(northMetres = 5_000.0, second = 3_840)
+        val second = drivingAt(northMetres = 5_000.0, second = 3_840)
 
         val waiting = ParkedWatch.at(place).after(first, *poor.toTypedArray())
         assertNull(waiting.movedAtMs)

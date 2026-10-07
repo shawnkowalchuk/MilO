@@ -223,6 +223,7 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
                 preferences[MINIMUM_TRIP_DISTANCE_METRES] ?: defaults.minimumTripDistanceMetres,
             parkedLimitSeconds = preferences.readParkedLimitSeconds(),
             parkedTruck = preferences.readParkedTruck(),
+            drivenOffTripId = preferences.readDrivenOffTripId(),
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
             customSoundName = preferences[CUSTOM_SOUND_NAME],

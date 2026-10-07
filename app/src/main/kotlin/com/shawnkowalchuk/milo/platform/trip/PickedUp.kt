@@ -66,7 +66,7 @@ internal suspend fun pickUpStored(
     settingsNow: MiloSettings,
     atMs: Long,
 ): PickedUp {
-    val stored = ledger.load(rules)
+    val stored = ledger.load(rules, settingsNow.drivenOffTripId)
     val reading = evidence.readTruck()
     val heldOffSinceMs = settingsNow.autoStartHeldOffSinceMs
     val parkedSinceMs = settingsNow.parkedTruck?.sinceMs
