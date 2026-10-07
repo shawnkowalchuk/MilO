@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 // light variant, so there is no second scheme and the phone's light or dark setting changes
 // nothing (FINDINGS_LOG, 2026-10-06).
 //
-// There are four exceptions, each explained where it is written:
+// There are five exceptions, each explained where it is written:
 //   - the launcher icon drawables (res/drawable/ic_launcher_*.xml), which the launcher draws
 //     outside Compose and so cannot read these tokens. They repeat two colours of this file:
 //     the accent (C6F432) as the icon's background and the page colour (121316) as its letter.
@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.Color
 //   - the window's background (res/values/colors.xml, used by res/values/themes.xml), which
 //     Android paints before Compose has drawn anything. It repeats the page colour below so that
 //     a launch never flashes white, and a unit test (WindowBackgroundTest) keeps the two equal;
+//   - the home-screen widget's colours (res/values/colors.xml, milo_widget_*), which the home
+//     screen app draws outside Compose. They repeat the tile, the two text colours, the accent,
+//     the page colour and the control fill, and a unit test (WidgetColorsTest) keeps them equal;
 //   - the placeholder stroke in component/MiloIcons.kt, which Icon() always replaces with a tint.
 
 // The design's colours. Each value is written once, here, and given to one or more roles below.

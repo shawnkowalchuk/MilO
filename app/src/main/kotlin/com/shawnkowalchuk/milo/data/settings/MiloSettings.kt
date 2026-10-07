@@ -55,6 +55,8 @@ enum class ConfirmedStep(val key: String) {
  * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
  * @param customSoundName what the file he picked was called, for display only. Null with no
  * custom sound, and when the phone gave no name for the file.
+ * @param homeWidgetEnabled whether MilO's home-screen widget is offered (since 2026-10-07; kept
+ * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
  * @param ownSounds every sound of his own he has added, the one in use among them, to choose
  * from (since 2026-10-07; kept in `SoundListStorage.kt`).
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
@@ -113,6 +115,7 @@ data class MiloSettings(
     val customSoundUri: String? = null,
     val customSoundName: String? = null,
     val ownSounds: List<OwnSound> = emptyList(),
+    val homeWidgetEnabled: Boolean = true,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,
     val drivingAlertEnabled: Boolean = true,

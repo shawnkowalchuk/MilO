@@ -112,6 +112,13 @@ class MiloApplication : Application() {
         // on the trip controller's own worker.
         val androidAuto = container.car.connectionLog
         container.tripController.whenCaughtUp { androidAuto.start() }
+
+        // The home-screen widget is kept in step with the trip for the life of the process,
+        // and its switch in Settings is applied again (a restore can have changed it). It only
+        // draws: its buttons reach the trip controller like every other button. After the
+        // reconcile, like the passes above.
+        val widget = container.widgets.homeWidget
+        container.tripController.whenCaughtUp { widget.start() }
     }
 
     private companion object {

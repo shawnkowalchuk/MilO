@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The home-screen widget (Shawn's request of 2026-10-07): its name and line in the phone's
+        list of widgets, its dollar line, and its tile in Settings. The status line and the
+        button are the Android Auto screen's words (car_status_*, home_start_trip, home_end_trip).
+    -->
+    <string name="widget_label">MilO trip</string>
+    <string name="widget_description">The trip in progress, Start and End, and business kilometres at the CRA rate</string>
+    <!--
+        The arguments: the month, short (Oct), its business kilometres at the CRA rate in whole
+        dollars ($412), the year (2026), and the year's ($3,980).
+    -->
+    <string name="widget_dollars">%1$s %2$s · %3$s %4$s at the CRA rate</string>
+    <!--
+        When MilO has no rate for this year yet: the line above, then the year of the rate used
+        ("(2026 rate)"). The year is passed as text: it is a name, not a quantity, so it takes no
+        plural.
+    -->
+    <string name="widget_dollars_older_rate">%1$s (%2$s rate)</string>
+    <string name="widget_dollars_unknown">Business at the CRA rate: not available</string>
+    <string name="widget_switched_off">MilO\'s widget is switched off. Turn it on in MilO, Settings.</string>
+
+    <!-- Settings: the widget's tile. -->
+    <string name="settings_widget_title">Home-screen widget</string>
+    <string name="settings_widget_line">The trip, Start and End, and business dollars at the CRA rate</string>
+    <string name="settings_widget_add">Add to home screen</string>
+    <string name="settings_widget_how">To add it yourself: touch and hold an empty spot on the home screen, then Widgets, then MilO.</string>
+    <string name="settings_about_widget">About the widget</string>
+    <!--
+        The arguments: the year of the rate, its cents for the first 5,000 km and its cents
+        after, as in 2026, 73 and 67.
+    -->
+    <string name="settings_widget_detail">The dollars are this month\'s and this year\'s Business kilometres at the CRA\'s per-kilometre rate (%1$d: %2$d¢ for the first 5,000 km of the year, %3$d¢ after). They are for reference only: the report for the accountant stays in kilometres. Switched off, the widget cannot be added, and one already on the home screen says so, or is removed by the home screen.</string>
+</resources>

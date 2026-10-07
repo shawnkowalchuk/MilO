@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    MilO's home-screen widget, for Android (platform/widget/). Three cells by two out of the box,
+    and resizable. While MilO's process runs, MilO draws it at every change, and at the turn of a
+    month within the hour. The home screen also asks for it to be drawn every three hours
+    (updatePeriodMillis), which moves the month's figure on while the process is not running.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_home"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:previewLayout="@layout/widget_home"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="10800000"
+    android:widgetCategory="home_screen" />

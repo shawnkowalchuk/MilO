@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        The two colours in a values file, and neither is for a screen. Every colour of a screen
-        is a token in core/designsystem/theme/Color.kt; these two are read by Android, outside
+        The colours in a values file, and none is for a screen. Every colour of a screen
+        is a token in core/designsystem/theme/Color.kt; these are read by Android, outside
         Compose, where those tokens cannot be reached. Each repeats a colour of the theme, and a
         unit test fails if the two ever differ. The only other colours in XML are inside the
         launcher icon's and the notification icon's drawables (res/drawable/).
@@ -21,4 +21,16 @@
         so that the icon stays readable.
     -->
     <color name="milo_notification_accent">#C6F432</color>
+    <!--
+        The home-screen widget's colours (res/layout/widget_home.xml): the home screen app draws
+        it, outside Compose. Each is a colour of the theme, kept equal by WidgetColorsTest: the
+        tile, the main and the secondary text, the accent, the text on the accent, and the fill
+        of a quiet control.
+    -->
+    <color name="milo_widget_tile">#1E2025</color>
+    <color name="milo_widget_text">#F2F3F5</color>
+    <color name="milo_widget_text_secondary">#9298A3</color>
+    <color name="milo_widget_accent">#C6F432</color>
+    <color name="milo_widget_on_accent">#121316</color>
+    <color name="milo_widget_control">#2C2F36</color>
 </resources>
