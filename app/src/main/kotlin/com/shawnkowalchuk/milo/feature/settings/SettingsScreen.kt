@@ -3,33 +3,30 @@ package com.shawnkowalchuk.milo.feature.settings
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
 import com.shawnkowalchuk.milo.core.designsystem.component.ScreenTitle
 import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
+import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
+import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import java.time.DayOfWeek
-import java.time.LocalTime
 
 /** The kind of file the picker offers for the trip-start sound. */
 private const val ANY_AUDIO = "audio/*"
 
-/** What the cards of the Settings screen can ask for. */
+/** What the tiles of the Settings screen can ask for. */
 internal class SettingsActions(
     val onChangeTruck: () -> Unit,
     val onGraceStep: (longer: Boolean) -> Unit,
@@ -45,7 +42,7 @@ internal class SettingsActions(
     val reminder: ReminderActions,
 )
 
-/** What the card of the report for the accountant can ask for: each field reports its text. */
+/** What the tile of the report for the accountant can ask for: each field reports its text. */
 internal class ReportDetailActions(
     val onName: (String) -> Unit,
     val onCompany: (String) -> Unit,
@@ -54,29 +51,30 @@ internal class ReportDetailActions(
 )
 
 /**
- * What the two cards of the work schedule can ask for.
+ * What the two tiles of the work schedule can ask for.
  *
- * @param onDayStart and [onDayEnd] carry the time picker's answer: an hour from 0 to 23 and a
- * minute.
+ * @param onDayStart and [onDayEnd] carry a new time from a slider or from the time picker: an
+ * hour from 0 to 23 and a minute, for one day, or for every day at once if the day is null.
  */
 internal class ScheduleActions(
     val onDayTracked: (DayOfWeek, Boolean) -> Unit,
-    val onDayStart: (DayOfWeek, hour: Int, minute: Int) -> Unit,
-    val onDayEnd: (DayOfWeek, hour: Int, minute: Int) -> Unit,
+    val onDayStart: (DayOfWeek?, hour: Int, minute: Int) -> Unit,
+    val onDayEnd: (DayOfWeek?, hour: Int, minute: Int) -> Unit,
     val onCopyHours: (DayOfWeek) -> Unit,
     val onIgnoreOutside: (Boolean) -> Unit,
 )
 
 /**
- * The settings: which truck, who the report for the accountant is from and where it goes, how
- * long a trip waits for the truck to reconnect, how long the truck may stand still before a
- * trip ends, how short a trip may be, the work schedule that makes a trip Business or Personal,
- * what becomes of a trip outside it, the driving alert, the daily check that a work day has a
- * trip, the monthly reminder to send last month's report, the sound of a trip start, and, last,
- * Android's backup with the export and import of all data.
+ * The settings, laid out as the owner's design draws them: which truck, beside the driving
+ * alert; who the report for the accountant is from and where it goes; the monthly reminder to
+ * send last month's report; how long a trip waits for the truck to reconnect, how long the
+ * truck may stand still before a trip ends and how short a trip may be; the work schedule that
+ * makes a trip Business or Personal; what becomes of a trip outside it; the daily check that a
+ * work day has a trip; the sound of a trip start; and, last, Android's backup with the export
+ * and import of all data.
  *
- * @param dataViewModel the last card's own ViewModel: see [DataViewModel].
- * @param checkViewModel the daily check's card has one of its own too.
+ * @param dataViewModel the last tile's own ViewModel: see [DataViewModel].
+ * @param checkViewModel the daily check's tile has one of its own too.
  * @param onChangeTruck opens the truck pairing screen. Navigation belongs to the app, not the
  * feature.
  * @param onBack leaves the screen.
@@ -143,137 +141,88 @@ fun SettingsScreen(
         actions = actions,
         onBack = onBack,
         modifier = modifier,
-        checkCard = { NothingRecordedCard(checkViewModel) },
-        dataCard = { DataCard(dataViewModel) },
+        checkTile = { NothingRecordedTile(checkViewModel) },
+        dataTile = { DataTile(dataViewModel) },
     )
 }
 
 /**
- * @param checkCard the card of the daily check, handed in whole because it has a state of its
- * own. It stands with the driving alert: both speak up when a trip is not being recorded.
- * @param dataCard the card for backup, export and import. It is handed in whole, because it
+ * The screen's tiles, top to bottom in the design's order. The two tiles the design does not
+ * draw stand where they belong: the daily check under the work schedule it goes by, and the
+ * tile for backup, export and import last.
+ *
+ * @param checkTile the tile of the daily check, handed in whole because it has a state of its
+ * own.
+ * @param dataTile the tile for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
  */
 @Composable
-private fun SettingsContent(
+internal fun SettingsContent(
     state: SettingsUiState,
     actions: SettingsActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    checkCard: @Composable () -> Unit,
-    dataCard: @Composable () -> Unit,
+    checkTile: @Composable () -> Unit,
+    dataTile: @Composable () -> Unit,
 ) {
-    Column(
+    val spacing = MiloTheme.spacing
+    TileColumn(
         modifier =
             modifier
                 .fillMaxSize()
+                // Large font settings or a small window must scroll rather than cut content off.
                 .verticalScroll(rememberScrollState())
-                .padding(MiloTheme.spacing.medium),
-        verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.medium),
+                .padding(top = spacing.tileGap, bottom = spacing.small),
     ) {
-        ScreenTitle(text = stringResource(R.string.settings_title), onBack = onBack)
+        ScreenTitle(
+            text = stringResource(R.string.settings_title),
+            // With the gap between two tiles, the design's 16 under the title.
+            modifier = Modifier.padding(bottom = spacing.buttonGap),
+            onBack = onBack,
+        )
         when (state) {
-            SettingsUiState.Reading ->
-                Text(
-                    text = stringResource(R.string.settings_reading),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+            SettingsUiState.Reading -> NoteTile { Note(stringResource(R.string.settings_reading)) }
 
             SettingsUiState.Unreadable ->
-                StatusRow(
-                    label = stringResource(R.string.settings_unreadable),
-                    status = RowStatus.PROBLEM,
-                )
-
-            is SettingsUiState.Ready -> {
-                if (state.problem == SettingsProblem.COULD_NOT_SAVE) {
+                NoteTile {
                     StatusRow(
-                        label = stringResource(R.string.settings_could_not_save),
+                        label = stringResource(R.string.settings_unreadable),
                         status = RowStatus.PROBLEM,
                     )
                 }
-                TruckCard(state, actions)
+
+            is SettingsUiState.Ready -> {
+                if (state.problem == SettingsProblem.COULD_NOT_SAVE) {
+                    NoteTile {
+                        StatusRow(
+                            label = stringResource(R.string.settings_could_not_save),
+                            status = RowStatus.PROBLEM,
+                        )
+                    }
+                }
+                TruckAndAlertTiles(state, actions)
                 // Second, and not last: the Report screen sends Shawn here for his name and
-                // the accountant's address, and the long schedule card would bury them.
-                ReportDetailsCard(state.report, actions.report)
-                // Under the report's own card: it is the reminder to send that report.
-                ReminderCard(state, actions.reminder)
-                TripRulesCard(state, actions)
-                ScheduleCard(state, actions.schedule)
-                OutsideScheduleCard(state, actions.schedule)
-                DrivingAlertCard(state, actions)
-                checkCard()
-                SoundCard(state, actions)
+                // the accountant's address.
+                ReportDetailsTile(state.report, actions.report)
+                // Under the report's own tile: it is the reminder to send that report.
+                ReminderTile(state, actions.reminder)
+                TripRulesTile(state, actions)
+                ScheduleTile(state, actions.schedule)
+                OutsideHoursTile(state, actions.schedule)
+                // Under the schedule: the check goes by its work days and their start.
+                checkTile()
+                SoundTile(state, actions)
             }
         }
-        // Last: it is used a few times a year, and it is the one card that can replace
+        // Last: it is used a few times a year, and it is the one tile that can replace
         // everything, so it is not among the settings that are changed in passing.
-        if (state != SettingsUiState.Reading) dataCard()
+        if (state != SettingsUiState.Reading) dataTile()
     }
 }
 
-// Sample values are written inline because a preview is never shown to a user or shipped.
-@PreviewLightDark
+/** A tile for one thing the screen has to say in place of, or above, its settings. */
 @Composable
-private fun SettingsPreview() {
-    val state =
-        SettingsUiState.Ready(
-            truckPaired = true,
-            truckName = "Work truck",
-            gracePeriodSeconds = 150,
-            canShortenGrace = true,
-            canLengthenGrace = true,
-            parkedLimitSeconds = 600,
-            canShortenParked = true,
-            canLengthenParked = true,
-            minimumDistanceMetres = 300,
-            canLowerMinimum = true,
-            canRaiseMinimum = true,
-            soundEnabled = true,
-            usesOwnSound = true,
-            ownSoundName = "r2d2.mp3",
-            copyingSound = false,
-            schedule =
-                DayOfWeek.entries.map { day ->
-                    ScheduleDay(
-                        day = day,
-                        tracked = day < DayOfWeek.SATURDAY,
-                        start = LocalTime.of(if (day == DayOfWeek.FRIDAY) 7 else 8, 0),
-                        end = LocalTime.of(16, 30),
-                        canCopy = day < DayOfWeek.SATURDAY,
-                        hoursRefused = false,
-                    )
-                },
-            ignoreOutsideSchedule = false,
-            drivingAlertEnabled = true,
-            report =
-                ReportFields(
-                    name = "Sam Driver",
-                    company = "",
-                    vehicle = "Ford F-150, plate ABC-123",
-                    accountantEmail = "accounts@example",
-                    emailRefused = true,
-                ),
-            reminderEnabled = true,
-            reminderDay = 1,
-            canRemindEarlier = false,
-            canRemindLater = true,
-            problem = SettingsProblem.SOUND_NOT_PLAYABLE,
-        )
-    val schedule = ScheduleActions({ _, _ -> }, { _, _, _ -> }, { _, _, _ -> }, {}, {})
-    val report = ReportDetailActions({}, {}, {}, {})
-    val reminder = ReminderActions({}, {})
-    MiloTheme {
-        Surface {
-            SettingsContent(
-                state = state,
-                actions =
-                    SettingsActions({}, {}, {}, {}, {}, {}, {}, {}, {}, schedule, report, reminder),
-                onBack = {},
-                checkCard = {},
-                dataCard = {},
-            )
-        }
-    }
+private fun NoteTile(content: @Composable () -> Unit) {
+    Tile(modifier = Modifier.fillMaxWidth(), padding = TilePadding.EVEN) { content() }
 }

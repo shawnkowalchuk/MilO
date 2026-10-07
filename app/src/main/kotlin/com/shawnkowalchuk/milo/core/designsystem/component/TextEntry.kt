@@ -67,6 +67,9 @@ private val StrongBorder = 2.dp
  * @param error what is wrong with what the field holds, or null while nothing is. It is said
  * in red directly under the field, the field is outlined in red, and a screen reader is told
  * that the field is in error: what is wrong is said where it is put right.
+ * @param placeholder grey words inside the field while it is empty, as the design draws them:
+ * an example of what goes in ("name@example.com"). They go with the first letter typed. A
+ * screen reader is not told them: the label says what the field is.
  */
 @Composable
 fun TextEntry(
@@ -79,6 +82,7 @@ fun TextEntry(
     email: Boolean = false,
     lastField: Boolean = false,
     error: String? = null,
+    placeholder: String? = null,
 ) {
     var text by remember { mutableStateOf(initialText) }
     val interactions = remember { MutableInteractionSource() }
@@ -151,6 +155,15 @@ fun TextEntry(
                             ).padding(horizontal = MiloTheme.spacing.controlPadding),
                     contentAlignment = Alignment.CenterStart,
                 ) {
+                    if (placeholder != null && text.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MiloTheme.textStyles.fieldText,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
+                    }
                     typedText()
                 }
                 if (error != null) {

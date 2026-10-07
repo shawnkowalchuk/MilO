@@ -11,11 +11,11 @@ import com.shawnkowalchuk.milo.platform.transfer.TransferStatus
 import com.shawnkowalchuk.milo.platform.transfer.TransferWork
 import java.time.ZoneId
 
-// What the Settings screen's card for backup, export and import shows, and the functions that
+// What the Settings screen's tile for backup, export and import shows, and the functions that
 // decide it. Pure, so they are tested without a phone.
 
 /**
- * The card.
+ * The tile.
  *
  * @param lastExport when the last export was written, or null if none was, or if the settings
  * cannot be read.
@@ -27,7 +27,7 @@ import java.time.ZoneId
  * @param lines what the last export or import came to, one sentence each, until the next.
  * @param safetyCopiesAtMs when MilO kept each of its safety copies, newest first. Each can be
  * put back, so that an import made after a wrong one does not put the first out of reach.
- * @param zone the phone's time zone, for the dates and times the card writes.
+ * @param zone the phone's time zone, for the dates and times the tile writes.
  */
 data class DataCardState(
     val lastExport: LastExport? = null,
@@ -162,7 +162,7 @@ fun outcomeLines(outcome: TransferOutcome?): List<OutcomeLine> = when (outcome) 
 }
 
 /**
- * The card for what is stored and what `DataTransfer` reports.
+ * The tile for what is stored and what `DataTransfer` reports.
  *
  * @param noFilePicker true if the last press could not open a file picker. It is said in place
  * of an outcome, until the next press.

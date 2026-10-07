@@ -87,12 +87,13 @@ fun SwitchRow(
  * thumb's place says the state as well as the colours do.
  *
  * It only shows the state. It has no handler and says nothing to a screen reader: the row
- * around it is what is pressed and what is read out.
+ * around it is what is pressed and what is read out. The tiles of `SwitchTiles.kt` draw their
+ * switch with it too.
  *
  * Material's own `Switch` is not used because its size is fixed and is not the design's.
  */
 @Composable
-private fun SwitchMark(checked: Boolean) {
+internal fun SwitchMark(checked: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val track by animateColorAsState(
         targetValue = if (checked) scheme.primary else MiloTheme.colors.control.fill,

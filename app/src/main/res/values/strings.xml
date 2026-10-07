@@ -700,7 +700,6 @@
     <string name="settings_could_not_save">That change could not be saved. The Log screen says why.</string>
     <string name="settings_truck_title">Truck</string>
     <string name="settings_truck_detail">A trip starts by itself when this truck connects.</string>
-    <string name="settings_trips_title">Trips</string>
     <string name="settings_applies_next_trip">A change applies from the next trip. A trip that is being recorded may already use it.</string>
     <string name="settings_grace_label">Wait after the truck disconnects</string>
     <string name="settings_grace_detail">How long a trip stays open for the truck to reconnect. If it does, the same trip carries on.</string>
@@ -725,8 +724,7 @@
     <string name="settings_driving_needs">It needs the Physical activity permission, which the Setup screen asks for. The phone can take a minute or more to notice that you are driving.</string>
     <!-- Settings: the monthly reminder to send last month's report. -->
     <string name="settings_reminder_title">Monthly reminder</string>
-    <string name="settings_reminder_enabled">Remind me to send last month\'s report</string>
-    <string name="settings_reminder_detail">A notification once a day, from the day below until the report for last month is recorded as sent. Tap it to open that report. A month without a Business trip brings no reminder.</string>
+    <string name="settings_reminder_detail">A notification once a day, from the day set above until the report for last month is recorded as sent. Tap it to open that report. A month without a Business trip brings no reminder.</string>
     <string name="settings_reminder_day_label">Start on this day of the month</string>
     <string name="settings_reminder_day_detail">In a month that has fewer days, the reminder starts on its last day.</string>
     <!-- The argument is the day of the month, 1 to 31. -->
@@ -735,12 +733,6 @@
     <string name="settings_reminder_day_earlier">An earlier day</string>
     <string name="settings_reminder_day_later">A later day</string>
     <string name="settings_sound_title">Trip-start sound</string>
-    <string name="settings_sound_enabled">Play a sound when a trip starts</string>
-    <string name="settings_sound_built_in">Sound in use: the built-in sound</string>
-    <string name="settings_sound_own">Sound in use: your own sound</string>
-    <!-- The argument is the name of the audio file that was picked. -->
-    <string name="settings_sound_own_named">Sound in use: your own sound, %1$s</string>
-    <string name="settings_sound_note">It plays at the phone\'s notification volume, so it is silent when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode.</string>
     <string name="settings_sound_copying">Copying the sound…</string>
     <string name="settings_sound_play">Play</string>
     <string name="settings_sound_use_own">Use my own sound</string>
@@ -847,7 +839,6 @@
     <string name="settings_report_email_refused">Not saved: this is not a complete email address. It has to look like name@example.com, with nothing else in the field.</string>
 
     <!-- Settings: the work schedule. -->
-    <string name="settings_schedule_title">Work schedule</string>
     <string name="settings_schedule_intro">A trip that starts on a tracked day, between that day\'s start and end, is saved as Business. Any other trip is Personal. A trip that is still running at the end time is recorded to its end and marked \"ran past schedule\".</string>
     <string name="settings_schedule_applies">A change applies to trips that end after it. Trips already saved keep what they are; you can change any of them on the Trips screen.</string>
     <!-- The argument is a time of day from formatClockTime(), such as 08:00. -->

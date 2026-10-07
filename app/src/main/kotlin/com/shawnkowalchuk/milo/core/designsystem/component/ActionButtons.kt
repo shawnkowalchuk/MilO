@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,7 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +43,9 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 /** How high the design draws one of these buttons. It grows when a large font needs more. */
 private val ButtonHeight = 44.dp
+
+/** The small icon the design draws before the word of some of these buttons ("Play"). */
+private val IconSize = 12.dp
 
 /** The design draws three side by side. A fourth starts a second line. */
 private const val MOST_IN_A_LINE = 3
@@ -57,6 +69,9 @@ enum class ActionKind {
  * @param label the word on the button, as short as the design has it: "Edit", "Personal".
  * @param spokenName what a screen reader says the button is, where the short word alone would
  * not say enough: "Mark as Personal".
+ * @param icon a small icon before the word, where the design draws one: the triangle of "Play".
+ * @param enabled false greys the word and takes the press away while the button has to wait.
+ * The button stays where it is: one that has to wait is greyed, never hidden.
  */
 @Immutable
 data class ActionButton(
@@ -64,6 +79,8 @@ data class ActionButton(
     val kind: ActionKind,
     val onClick: () -> Unit,
     val spokenName: String = label,
+    val icon: ImageVector? = null,
+    val enabled: Boolean = true,
 )
 
 /**
@@ -98,12 +115,14 @@ fun ActionButtonRow(actions: List<ActionButton>, modifier: Modifier = Modifier) 
 @Composable
 private fun OneButton(action: ActionButton, modifier: Modifier) {
     val colors = action.kind.colors()
+    // Greyed with the grey of secondary text, which can still be read on the button's fill.
+    val words = if (action.enabled) colors.text else MaterialTheme.colorScheme.onSurfaceVariant
     val presses = remember { MutableInteractionSource() }
     // The drawn button is handed the box's own height, so that all of a line are equally high.
     Box(modifier = modifier, propagateMinConstraints = true) {
         // The ripple of a press takes the colour of the button's own words.
-        CompositionLocalProvider(LocalContentColor provides colors.text) {
-            Box(
+        CompositionLocalProvider(LocalContentColor provides words) {
+            Row(
                 modifier =
                     Modifier
                         .clip(MiloTheme.shapes.control)
@@ -116,21 +135,49 @@ private fun OneButton(action: ActionButton, modifier: Modifier) {
                         )
                         // The button over it is what is read out.
                         .clearAndSetSemantics {},
-                contentAlignment = Alignment.Center,
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        MiloTheme.spacing.buttonGap,
+                        Alignment.CenterHorizontally,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (action.icon != null) {
+                    // The word beside it says what the button does.
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(IconSize),
+                    )
+                }
                 Text(
                     text = action.label,
+                    // Words that need a second line take it, and the icon keeps its place.
+                    modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.labelMedium,
-                    color = colors.text,
+                    color = words,
                     textAlign = TextAlign.Center,
                 )
             }
         }
-        PressArea(
-            spokenName = action.spokenName,
-            onClick = action.onClick,
-            interactionSource = presses,
-        )
+        if (action.enabled) {
+            PressArea(
+                spokenName = action.spokenName,
+                onClick = action.onClick,
+                interactionSource = presses,
+            )
+        } else {
+            // Nothing to press. A screen reader still finds the button, and is told that it
+            // is switched off.
+            Spacer(
+                modifier =
+                    Modifier.matchParentSize().semantics {
+                        contentDescription = action.spokenName
+                        role = Role.Button
+                        disabled()
+                    },
+            )
+        }
     }
 }
 

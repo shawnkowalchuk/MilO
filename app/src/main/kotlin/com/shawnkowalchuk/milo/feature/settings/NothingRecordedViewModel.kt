@@ -24,16 +24,16 @@ import kotlinx.coroutines.launch
 /** How long the state stays current after the screen stopped watching it (a rotation). */
 private const val KEEP_WATCHING_MS = 5_000L
 
-/** What the event log calls the look that a change of the card prompted. */
+/** What the event log calls the look that a change of the tile prompted. */
 private const val CARD_CHANGED = "the check was changed in Settings"
 
 /**
- * What the card of the daily check shows.
+ * What the tile of the daily check shows.
  *
  * @param enabled whether MilO says when a work day has no trip by [checkAt].
  * @param checkAt the time of day from which a work day is checked. Shown only while the check
  * is switched on; kept, and back with the switch.
- * @param couldNotSave true if the last press could not be stored. Said on the card, where the
+ * @param couldNotSave true if the last press could not be stored. Said on the tile, where the
  * press was made.
  */
 data class NothingRecordedCardState(
@@ -42,7 +42,7 @@ data class NothingRecordedCardState(
     val couldNotSave: Boolean,
 )
 
-/** The card for the check as it is stored. Pure, so it is tested without a phone. */
+/** The tile for the check as it is stored. Pure, so it is tested without a phone. */
 fun nothingRecordedCardState(
     stored: NothingRecordedStored,
     couldNotSave: Boolean,
@@ -53,20 +53,20 @@ fun nothingRecordedCardState(
 )
 
 /**
- * The Settings screen's card for the daily "nothing recorded" check: its link to the two stored
- * settings. It keeps no copy of them: what the card shows is the settings store's own flow, and
+ * The Settings screen's tile for the daily "nothing recorded" check: its link to the two stored
+ * settings. It keeps no copy of them: what the tile shows is the settings store's own flow, and
  * every press writes to the store.
  *
- * It has a ViewModel of its own, beside the one of the other cards, like the card for backup,
- * export and import: that one is at its size limit, and this card shares nothing with the
+ * It has a ViewModel of its own, beside the one of the other tiles, like the tile for backup,
+ * export and import: that one is at its size limit, and this tile shares nothing with the
  * others but the screen.
  *
- * **A press tells the check,** as a press on the monthly reminder's card tells the reminder.
+ * **A press tells the check,** as a press on the monthly reminder's tile tells the reminder.
  * The check has to ask for its daily alarm at the new time, or take the alarm back, and a
  * notification that is showing must go the moment the check is switched off.
  *
  * [state] is null until the settings have been read, and while they cannot be: the screen
- * itself says that, above the cards.
+ * itself says that, above the tiles.
  *
  * @param armCheck has the check ask for its alarm and look again, from the stored settings.
  * Its argument says what prompted it, for the event log.
@@ -95,7 +95,7 @@ class NothingRecordedViewModel(
     /**
      * Stores one press, and then tells the check: stored first, so that the check finds the
      * new value when it reads the settings. A settings file that cannot be written is said on
-     * the card and written to the event log; left alone, the exception would end the process,
+     * the tile and written to the event log; left alone, the exception would end the process,
      * and the trip service runs in it.
      */
     private fun change(write: suspend () -> Unit) {
