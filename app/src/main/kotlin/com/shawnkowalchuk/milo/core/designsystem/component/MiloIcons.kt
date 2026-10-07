@@ -8,8 +8,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
-// The icons of the bottom bar, the back arrow, the way to Settings, the two buttons of a
-// stepper, and the icons of Home's tiles. Like the marks of the status dots (StatusIcons.kt)
+// The icons of the bottom bar, the back arrow, the way to Settings, sharing, the two buttons of
+// a stepper, and the icons of Home's tiles. Like the marks of the status dots (StatusIcons.kt)
 // they are built from path data here, because the material-icons library is frozen and a
 // handful of icons does not justify a dependency.
 //
@@ -26,8 +26,8 @@ private const val VIEWPORT_SIZE = 24f
 private const val LINE_WIDTH = 1.8f
 
 /**
- * The design draws a chevron, a plus, a minus and the Bluetooth mark a little thicker: they are
- * simpler shapes, or drawn small.
+ * The design draws a chevron, a plus, a minus, the share arrow and the Bluetooth mark a little
+ * thicker: they are simpler shapes, or drawn small.
  */
 private const val BOLD_LINE_WIDTH = 2f
 
@@ -59,6 +59,11 @@ private const val SETTINGS_PATH =
         "M14,6a2,2 0 1 0 4,0a2,2 0 1 0 -4,0" +
         "M8,12a2,2 0 1 0 4,0a2,2 0 1 0 -4,0" +
         "M16,18a2,2 0 1 0 4,0a2,2 0 1 0 -4,0"
+
+// An open box with an arrow that leaves it upwards: hand something to another app.
+private const val SHARE_PATH =
+    "M4,12v7a2,2 0 0 0 2,2h12a2,2 0 0 0 2,-2v-7" +
+        "M16,6l-4,-4l-4,4M12,2v13"
 
 // Plus and minus: one step up and one step down in a StepperRow.
 private const val ADD_PATH = "M12,5v14M5,12h14"
@@ -99,6 +104,9 @@ object MiloIcons {
         lineIcon(name = "Back", pathData = BACK_PATH, lineWidth = BOLD_LINE_WIDTH)
     }
     val Settings: ImageVector by lazy { lineIcon(name = "Settings", pathData = SETTINGS_PATH) }
+    val Share: ImageVector by lazy {
+        lineIcon(name = "Share", pathData = SHARE_PATH, lineWidth = BOLD_LINE_WIDTH)
+    }
     val Add: ImageVector by lazy {
         lineIcon(name = "Add", pathData = ADD_PATH, lineWidth = BOLD_LINE_WIDTH)
     }

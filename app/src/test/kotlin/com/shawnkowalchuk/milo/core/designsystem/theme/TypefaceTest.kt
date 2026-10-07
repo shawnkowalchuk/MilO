@@ -130,6 +130,7 @@ class TypefaceTest {
             "appName" to own.appName,
             "rowFigure" to own.rowFigure,
             "sideFigure" to own.sideFigure,
+            "countWords" to own.countWords,
             "spanFigure" to own.spanFigure,
             "tileLabel" to own.tileLabel,
             "accentNote" to own.accentNote,

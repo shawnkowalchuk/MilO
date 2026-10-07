@@ -46,14 +46,19 @@ class EventLogRepository(private val dao: EventLogDao) {
      * is what keeps the screen fast when the log holds thousands of lines: the query stops at it
      * and reads them through the index on the time.
      *
-     * @param category only the lines of this category, or null for every line.
+     * @param categories only the lines of these categories, or null for every line. The Log
+     * screen's chips each stand for one or more of them.
      */
-    fun observeNewest(limit: Int, category: EventCategory? = null): Flow<List<EventLogEntry>> {
+    fun observeNewest(
+        limit: Int,
+        categories: Collection<EventCategory>? = null,
+    ): Flow<List<EventLogEntry>> {
         require(limit > 0) { "The number of entries to read must be positive: $limit" }
-        return if (category == null) {
+        return if (categories == null) {
             dao.observeNewest(limit)
         } else {
-            dao.observeNewestOf(category, limit)
+            require(categories.isNotEmpty()) { "Narrowing the log to no category shows nothing" }
+            dao.observeNewestOf(categories.toList(), limit)
         }
     }
 

@@ -682,7 +682,7 @@ Each is one `UPDATE` that sets the status and matches on the status it starts fr
 | `message` | text | One short line |
 | `detail` | text, null | Anything longer, such as a stack trace |
 
-**Rows of `event_log` are removed in one way: the trimming at process start** (since 2026-10-06; `EventLogRepository.trim`, called by `StartupDiagnostics`). A row goes when it is older than 90 days **and** is not among the newest 1,000 rows (`trimBeforeMs`). The second condition keeps a start with a wrong clock from emptying the table. Nothing else deletes from it. The Log screen can read one category at a time (`observeNewestOf`; no index on `category`, the table is bounded now), and the whole table is read oldest first in pieces of a few hundred rows, keyed by time and id, when the log is written to a text file (`readAfter`).
+**Rows of `event_log` are removed in one way: the trimming at process start** (since 2026-10-06; `EventLogRepository.trim`, called by `StartupDiagnostics`). A row goes when it is older than 90 days **and** is not among the newest 1,000 rows (`trimBeforeMs`). The second condition keeps a start with a wrong clock from emptying the table. Nothing else deletes from it. The Log screen can read the lines of a few categories at a time (`observeNewestOf`, since 2026-10-07 for a list of categories: each of the screen's chips stands for one or more; no index on `category`, the table is bounded now), and the whole table is read oldest first in pieces of a few hundred rows, keyed by time and id, when the log is written to a text file (`readAfter`).
 
 **`sent_reports`** (`data/report/SentReport`), since version 5. One row for every report Shawn has said he sent. No index: the table grows by a dozen rows a year.
 

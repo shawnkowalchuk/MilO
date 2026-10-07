@@ -22,8 +22,10 @@ private object UnwritableEventLog : EventLogDao {
 
     override fun observeNewest(limit: Int): Flow<List<EventLogEntry>> = flowOf(emptyList())
 
-    override fun observeNewestOf(category: EventCategory, limit: Int): Flow<List<EventLogEntry>> =
-        flowOf(emptyList())
+    override fun observeNewestOf(
+        categories: List<EventCategory>,
+        limit: Int,
+    ): Flow<List<EventLogEntry>> = flowOf(emptyList())
 
     override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) =
         emptyList<EventLogEntry>()

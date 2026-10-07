@@ -16,7 +16,9 @@ import androidx.compose.ui.graphics.Color
 //
 // There are four exceptions, each explained where it is written:
 //   - the launcher icon drawables (res/drawable/ic_launcher_*.xml), which the launcher draws
-//     outside Compose and so cannot read these tokens;
+//     outside Compose and so cannot read these tokens. They repeat two colours of this file:
+//     the accent (C6F432) as the icon's background and the page colour (121316) as its letter.
+//     Change them together;
 //   - the notification icon (res/drawable/ic_stat_trip.xml), which Android draws itself, outside
 //     Compose, and tints as it likes;
 //   - the window's background (res/values/colors.xml, used by res/values/themes.xml), which
@@ -195,8 +197,7 @@ data class FillAndText(val fill: Color, val text: Color)
  * The fill and text of the small tag that names a line's kind on the Log screen. Each kind has
  * its own pair so that a column of lines can be scanned by colour.
  *
- * Nothing uses these yet: the Log screen's lines are restyled with the screens' own layouts,
- * the next package.
+ * In use since the Log was laid out as the design draws it: the `Tag` on each of its lines.
  *
  * @param service also the pair for any kind that has no colour of its own.
  */
@@ -216,10 +217,10 @@ data class MiloLogTagColors(
  * **In use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and [chip], and since
  * Home was laid out as the design draws it, [quietFill], [idleOutline], [idleIcon], [linkGlint]
  * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]),
- * and since Trips was, [danger]. The others ([logText], [accentPressed], [logTags]) are the
- * design's colours for parts that come with the other screens' own layouts. They are named here
- * so that those parts find them; nothing uses them yet, and what is said of each below is what
- * the design draws with it.
+ * since Trips was, [danger], and since the Log was, [logText] and [logTags]. One more,
+ * [accentPressed], is the design's colour for a part that comes with another screen's own
+ * layout. It is named here so that the part finds it; nothing uses it yet, and what is said of
+ * it below is what the design draws with it.
  *
  * @param control a control sitting on a tile: a small button, a stepper's button, a switch's
  * track when it is off.

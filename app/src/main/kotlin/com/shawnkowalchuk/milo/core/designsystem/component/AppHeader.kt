@@ -80,6 +80,7 @@ fun AppHeader(
             description = action.description,
             onClick = action.onClick,
             modifier = Modifier.offset(x = ButtonOverhang),
+            enabled = action.enabled,
         )
     }
 }

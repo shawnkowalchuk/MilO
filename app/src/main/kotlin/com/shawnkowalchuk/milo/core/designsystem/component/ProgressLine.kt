@@ -12,8 +12,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
-/** How thick the design draws the line. */
+/** How thick the design draws the line, and the thicker one under Setup's count. */
 private val LineHeight = 5.dp
+private val ThickLineHeight = 8.dp
 
 /**
  * The design's thin bar: a share of a whole, drawn as a line that is filled with the accent
@@ -21,15 +22,16 @@ private val LineHeight = 5.dp
  * number ("89% business"), so a screen reader is told nothing about it: the words say it.
  *
  * @param fraction the filled share, from 0 to 1. A value outside is drawn as the nearer end.
+ * @param thick true for the 8 dp bar the design draws under a large count; otherwise 5 dp.
  */
 @Composable
-fun ProgressLine(fraction: Float, modifier: Modifier = Modifier) {
+fun ProgressLine(fraction: Float, modifier: Modifier = Modifier, thick: Boolean = false) {
     val round = MiloTheme.shapes.pill
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(LineHeight)
+                .height(if (thick) ThickLineHeight else LineHeight)
                 .background(MiloTheme.colors.control.fill, round)
                 .clearAndSetSemantics {},
     ) {

@@ -20,6 +20,12 @@ enum class FigureSize {
     /** 26 with a unit of 13: a figure in a tile that holds more. */
     MEDIUM,
 
+    /**
+     * 36 with words of 16 after it, a little lighter than a unit: a count and what it is a
+     * count of ("11 of 14 ready"), in the tile at the top of Setup.
+     */
+    COUNT,
+
     /** 56 with a unit of 18: the kilometres of the trip being recorded, on the accent tile. */
     HERO,
 
@@ -68,6 +74,11 @@ fun FigureText(
         FigureSize.MEDIUM -> {
             figureStyle = typography.headlineSmall
             unitStyle = typography.labelLarge
+        }
+
+        FigureSize.COUNT -> {
+            figureStyle = typography.displaySmall
+            unitStyle = MiloTheme.textStyles.countWords
         }
 
         FigureSize.HERO -> {

@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    A single stroked "M". The 108 x 108 canvas is larger than what is shown: launchers crop to a
-    shape inside it, so the whole letter sits within the central 66 x 66 safe zone.
+    The "M" of the app's mark at the top of Home, as a filled shape: the letter M of Sora, the
+    app's typeface, at weight 700. Its outline was read from res/font/sora.ttf (the letter's
+    sixteen points, moved by the font's own weight axis to 700), so it is the same letter the
+    mark on Home is written with. The font's licence is licenses/Sora-OFL.txt.
+
+    It is as large on the icon as on the mark: there the letter is 15 sp on a 36 dp square, and
+    a launcher shows the middle 72 of this 108 x 108 canvas, so one em is 30 here. The letter is
+    24.2 wide and 21.9 high, in the middle, well inside the central 66 x 66 safe zone that every
+    launcher shape leaves uncut.
+
+    The dark is copied from the design system: the page colour (121316) in
+    core/designsystem/theme/Color.kt, which is also the colour of the letter in the mark.
+    Change both together. As the monochrome layer only the shape is used.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -9,9 +20,6 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:pathData="M34,72L34,38L54,60L74,38L74,72"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="9" />
+        android:fillColor="#FF121316"
+        android:pathData="M41.89,64.95L41.89,43.05L48.67,43.05L53.67,55.37L54.24,55.37L59.2,43.05L66.11,43.05L66.11,64.95L61.23,64.95L61.23,46.26L61.94,46.32L56.15,60.51L51.45,60.51L45.64,46.32L46.4,46.26L46.4,64.95z" />
 </vector>

@@ -220,10 +220,10 @@ class StartupDiagnosticsTest {
             flowOf(entries.sortedByDescending { it.atMs }.take(limit))
 
         override fun observeNewestOf(
-            category: EventCategory,
+            categories: List<EventCategory>,
             limit: Int,
         ): Flow<List<EventLogEntry>> =
-            flowOf(entries.filter { it.category == category }.sortedByDescending { it.atMs })
+            flowOf(entries.filter { it.category in categories }.sortedByDescending { it.atMs })
 
         override suspend fun readAfter(afterAtMs: Long, afterId: Long, limit: Int) =
             entries.filter { it.atMs > afterAtMs }.sortedBy { it.atMs }.take(limit)

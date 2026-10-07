@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The words that came with Setup and the Log being laid out as the owner's design draws
+        them (2026-10-07). They are in a file of their own, beside strings.xml, because three
+        screens were laid out at the same time and each kept out of the others' files.
+    -->
+
+    <!--
+        Setup: the tile with the count. The large figure before the first is the number of rows
+        that are ready; its argument is the number of rows there are: "11 of 14 ready".
+        All four are plurals because each is a number with words after it. In English the
+        words are the same for one and for many; another language may need two forms.
+    -->
+    <plurals name="setup_summary_of_ready">
+        <item quantity="one">of %d ready</item>
+        <item quantity="other">of %d ready</item>
+    </plurals>
+    <!-- What is the matter with the rows that are not ready. A count of zero is left out. -->
+    <plurals name="setup_summary_to_fix">
+        <item quantity="one">%d to fix</item>
+        <item quantity="other">%d to fix</item>
+    </plurals>
+    <plurals name="setup_summary_to_confirm">
+        <item quantity="one">%d to confirm</item>
+        <item quantity="other">%d to confirm</item>
+    </plurals>
+    <!-- Rows MilO tried to read and could not, or has not finished reading. -->
+    <plurals name="setup_summary_not_checked">
+        <item quantity="one">%d not checked</item>
+        <item quantity="other">%d not checked</item>
+    </plurals>
+    <!-- Stands between two of the counts above: "2 to fix · 1 to confirm". -->
+    <string name="setup_summary_separator">" · "</string>
+    <!-- In place of the counts when every row is ready. -->
+    <string name="setup_summary_all_ready">Everything is set</string>
+
+    <!--
+        Log: the four chips after "All". Each stands for one or more of the log's categories
+        (feature/eventlog/LogGroups.kt). The words on a line's tag are not here: they are the
+        log's own English, like the lines.
+    -->
+    <string name="log_filter_trips">Trips</string>
+    <string name="log_filter_bluetooth">Bluetooth</string>
+    <string name="log_filter_android_auto">Android Auto</string>
+    <string name="log_filter_errors">Errors</string>
+    <!-- Log: a chip that has no line to show. -->
+    <string name="log_empty_trips">The log has no line about a trip.</string>
+    <string name="log_empty_bluetooth">The log has no line about the truck\'s Bluetooth connection or its pairing.</string>
+    <string name="log_empty_android_auto">The log has no line about Android Auto.</string>
+    <string name="log_empty_errors">The log has no error and no crash.</string>
+    <!--
+        Log: the question after the share button is pressed. Its text is log_share_detail, and
+        its other button is action_cancel.
+    -->
+    <string name="log_share_question">Share the whole log?</string>
+    <string name="log_share_confirm">Share</string>
+    <!-- Log: what a screen reader says a press on a line does, after "double tap to". -->
+    <string name="log_detail_show">show the details</string>
+    <string name="log_detail_hide">hide the details</string>
+</resources>

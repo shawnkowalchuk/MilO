@@ -206,12 +206,8 @@
     <!-- Setup: the permission checklist. -->
     <string name="setup_title">Setup</string>
     <string name="setup_reading">Reading the phone\'s settings…</string>
-    <string name="setup_summary_all_set">Everything MilO needs is set.</string>
-    <plurals name="setup_summary_open">
-        <item quantity="one">%d thing MilO needs is not set. A trip may not start by itself.</item>
-        <item quantity="other">%d things MilO needs are not set. A trip may not start by itself.</item>
-    </plurals>
-    <string name="setup_section_android">Permissions and phone settings</string>
+    <!-- The words of the tile with the count are in strings_setup_log.xml. -->
+    <string name="setup_section_android">Android</string>
     <string name="setup_section_xiaomi">This Xiaomi phone (HyperOS)</string>
     <string name="setup_section_xiaomi_note">HyperOS has settings of its own that stop a closed app from being started. MilO can read only the first of them, and not with certainty. Set each one, then confirm it here.</string>
 
@@ -319,7 +315,7 @@
     <string name="pairing_action_switch">Use this one</string>
 
     <!-- Event log. The entries themselves are stored in English and shown as stored. -->
-    <string name="log_title">Event log</string>
+    <string name="log_title">Log</string>
     <string name="log_reading">Reading the log…</string>
     <string name="log_empty">The event log is empty.</string>
     <string name="log_has_detail">Tap for details</string>
@@ -331,10 +327,8 @@
     <string name="log_share_failed">The log could not be written to a file. Its newest line says why.</string>
     <!-- What the share sheet and the receiving app are told the file is. -->
     <string name="log_share_title">MilO event log</string>
-    <!-- Event log: the first of the filter's choices. The others are the stored names of the categories. -->
+    <!-- Event log: the first of the filter's choices. The other four are in strings_setup_log.xml. -->
     <string name="log_filter_all">All</string>
-    <!-- The argument is a category by its stored name, such as TRIP. -->
-    <string name="log_empty_filtered">The log has no %1$s line.</string>
 
     <!-- Trips: one month at a time. -->
     <string name="trips_title">Trips</string>

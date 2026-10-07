@@ -2,8 +2,9 @@
 <!--
     Adaptive launcher icon made only of vectors, so there are no PNGs to regenerate.
     minSdk is 31 and every such phone supports adaptive icons, which is why there is no bitmap
-    fallback and no separate round icon. The monochrome layer is what Android 13 and later tint
-    when "themed icons" is switched on; the white foreground doubles as that layer.
+    fallback and no separate round icon. It is the app's mark: the dark "M" on the lime. The
+    monochrome layer is what Android 13 and later tint when "themed icons" is switched on;
+    Android uses only its shape, so the letter doubles as that layer.
 -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background" />

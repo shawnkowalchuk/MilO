@@ -7,6 +7,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -83,6 +84,23 @@ private val NoteLine = 1.5.em
 // nothing of it is cut off. It suits one line of digits, not a sentence.
 private val FigureLine = 1.em
 
+// What it takes for a line of text to really be lower than its typeface asks for. Told only the
+// line height, Compose keeps the room above the first line and under the last one as the
+// typeface has it, so that no letter is cut off there: a figure of one line then stands in a box
+// 1.26 times its size, whatever its line height says (measured on an emulator, 2026-10-07, on
+// Setup's count). The mode "Tight", with the trimming of both ends, takes that room away as
+// well. Only the smallest of the three largest figures asks for it today, since Setup was laid
+// out. The other two say a line of 1 and still take up 1.26: the largest is on Home's tile of a
+// trip being recorded, which was laid out before this was known.
+private val TightLine =
+    LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+        mode = LineHeightStyle.Mode.Tight,
+    )
+
+private fun tight(style: TextStyle): TextStyle = style.copy(lineHeightStyle = TightLine)
+
 private fun style(
     size: Int,
     weight: FontWeight,
@@ -105,9 +123,9 @@ private fun style(
  * Which role is which part of the design:
  * - `displayLarge`, `displayMedium`, `displaySmall`: the three largest figures (the kilometres
  *   of the trip being recorded, a month's total, the count on Setup). Their line is as high as
- *   the figure itself, as drawn, so they are for one line of digits. Home uses the largest;
- *   the other two wait for their screens. Material's own clock dialog uses `displayLarge` too,
- *   for its two large numbers.
+ *   the figure itself, as drawn, so they are for one line of digits. Home uses the largest and
+ *   Setup the smallest; the middle one waits for its screen. Material's own clock dialog uses
+ *   `displayLarge` too, for its two large numbers.
  * - `headlineLarge` and `headlineSmall`: a figure in a tile, larger and smaller (Material's
  *   calendar also sets the chosen date at its top in the larger).
  *   `headlineMedium`: the title of a bottom-bar screen, and the few words of a hero tile.
@@ -142,7 +160,7 @@ internal val MiloTypography: Typography =
     Typography(
         displayLarge = style(56, FontWeight.Bold, FigureLine, FigureTracking),
         displayMedium = style(44, FontWeight.Bold, FigureLine, FigureTracking),
-        displaySmall = style(36, FontWeight.Bold, FigureLine, FigureTracking),
+        displaySmall = tight(style(36, FontWeight.Bold, FigureLine, FigureTracking)),
         headlineLarge = style(30, FontWeight.SemiBold, tracking = HeadlineTracking),
         headlineMedium = style(26, FontWeight.Bold, tracking = HeadlineTracking),
         headlineSmall = style(26, FontWeight.SemiBold, tracking = HeadlineTracking),
@@ -161,19 +179,18 @@ internal val MiloTypography: Typography =
  * The design's text styles that Material's fifteen roles have no room for. Reach them through
  * `MiloTheme.textStyles`.
  *
- * **Nine are in use today:** [mainButton], [fieldText], [sentence], and since Home was laid out
+ * **Twelve are in use today:** [mainButton], [fieldText], [sentence], since Home was laid out
  * as the design draws it, [appName], [rowFigure], [sideFigure], [tileLabel], [accentNote] and
- * [markLetter]. The other three ([spanFigure], [logTime], [logTag]) are the design's styles for
- * parts that come with the other screens' own layouts. Nothing uses them yet, and what is said
- * of each below is what the design sets in it.
+ * [markLetter], and since Setup and the Log were, [countWords], [logTime] and [logTag]. One,
+ * [spanFigure], is the design's style for a part that comes with another screen's own layout.
+ * Nothing uses it yet, and what is said of it below is what the design sets in it.
  *
  * Two more came with the Trips screen's own layout, and are in use: [quietLabel] and
  * [standInWords].
  *
- * Three sizes of the design have no style at all, because nothing that is built is set in
- * them: 28 at weight 600 (the Report screen's figure), 20 at 600 (the distance typed on the
- * edit screen) and 16 at 500 ("of 14 ready" on Setup). Each is added here with the part that
- * needs it.
+ * Two sizes of the design have no style at all, because nothing that is built is set in
+ * them: 28 at weight 600 (the Report screen's figure) and 20 at 600 (the distance typed on
+ * the edit screen). Each is added here with the part that needs it.
  *
  * @param mainButton the words on the one main button of a screen.
  * @param fieldText what is typed into a text field.
@@ -187,6 +204,8 @@ internal val MiloTypography: Typography =
  * @param rowFigure a figure or a status word that stands alone at the end of a tile's row, and
  * the unit after the largest figure.
  * @param sideFigure a second figure beside a large one: the minutes beside the kilometres.
+ * @param countWords the words after a large count, which say what it counts: "of 14 ready" on
+ * Setup. Lighter than a unit after a figure, as drawn.
  * @param spanFigure a span written out in a tile, such as the hours of a work day.
  * @param tileLabel a tile's small grey label, and the quieter line under a tile's title. The
  * same size as `bodyMedium`, but at Sora's own line, as the design draws a label: `bodyMedium`
@@ -207,6 +226,7 @@ data class MiloTextStyles(
     val appName: TextStyle = style(17, FontWeight.SemiBold),
     val rowFigure: TextStyle = style(18, FontWeight.SemiBold),
     val sideFigure: TextStyle = style(20, FontWeight.Bold),
+    val countWords: TextStyle = style(16, FontWeight.Medium),
     val spanFigure: TextStyle = style(22, FontWeight.SemiBold, tracking = TitleTracking),
     val tileLabel: TextStyle = style(12, FontWeight.Normal),
     val accentNote: TextStyle = style(12, FontWeight.Medium),

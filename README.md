@@ -69,13 +69,15 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 
 ## First-time setup in the app
 
-Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
+Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
 On 2026-10-05 you went through this screen once, everything except pairing the truck. The Physical activity row was added after that.
 
 ### The rows, in order
 
-"Permissions and phone settings" (MilO reads the state of all ten by itself):
+A row that is to be fixed (a red mark) stands at the top of its group until it is in order; the tables give the order with nothing to fix.
+
+"Android" (MilO reads the state of all ten by itself):
 
 | # | Row | What to do |
 |---|---|---|
@@ -109,7 +111,7 @@ Do this at the truck, with every other row in order.
 2. In MilO: Setup, the row "Truck paired and watched", **Pair truck**.
 3. Under "Paired with this phone", find the truck and press **Pair**.
 4. Android shows a dialog of its own and asks you to allow it. Choose **Allow**.
-5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." Setup now says "Everything MilO needs is set", and the warning on Home is gone.
+5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." On Setup the truck's row now has its tick, and the warning on Home is gone.
 
 Bluetooth and Location must both be on for this, and the screen says so if one is not. **This step has never been done:** Android's dialog has not been shown by any build of MilO, on any device. If the screen fails, `docs/DEVICE_TEST_CHECKLIST.md` ("Pairing MilO with the truck") has a second way from the Mac.
 
@@ -242,7 +244,7 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 
 **The report.** Set your name and the accountant's address in Settings first. On the Report screen, "Create PDF" and "Open PDF" let you look at it; **Send to accountant** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Export CSV" makes the same trips as a spreadsheet file. No email draft has been seen yet, on any device: the emulator had no email account.
 
-**The log, and how to send it.** The Log screen lists the newest lines first. The chips under the title show one kind of line at a time (`ANDROID_AUTO`, `TRIGGER`, `ERROR` and so on); "Tap for details" opens what a line holds. **Share the whole log** makes a text file of every line and opens Android's share sheet: pick your email app and send it to whoever is helping you. The file names the truck and the phone's other Bluetooth devices with their addresses, and every address you typed on the edit screen. It holds no GPS position. Lines older than 90 days are removed, except the newest 1,000.
+**The log, and how to send it.** The Log screen lists the newest lines first. Each day's lines are one tile, with the day above it (today's has none). The chips under the title show one kind of line at a time (Trips, Bluetooth, Android Auto, Errors); "Tap for details" opens what a line holds. **The square button beside the title shares the whole log:** it asks first, saying what the file holds, then makes a text file of every line and opens Android's share sheet: pick your email app and send it to whoever is helping you. The file names the truck and the phone's other Bluetooth devices with their addresses, and every address you typed on the edit screen. It holds no GPS position. Lines older than 90 days are removed, except the newest 1,000.
 
 MilO only sees Android Auto connect or disconnect while MilO itself is running; a connection that came and went while it was closed is not in the log.
 

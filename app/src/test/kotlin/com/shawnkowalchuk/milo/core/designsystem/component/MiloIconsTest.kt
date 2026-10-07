@@ -17,6 +17,7 @@ class MiloIconsTest {
             MiloIcons.Log,
             MiloIcons.Back,
             MiloIcons.Settings,
+            MiloIcons.Share,
             MiloIcons.Add,
             MiloIcons.Remove,
             MiloIcons.Play,

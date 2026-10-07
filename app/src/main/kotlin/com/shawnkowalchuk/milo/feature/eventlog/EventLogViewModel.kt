@@ -34,24 +34,24 @@ private const val KEEP_WATCHING_MS = 5_000L
  *
  * @param entries newest first.
  * @param hasOlder true if the log holds entries older than the ones shown.
- * @param filter the one category whose lines are shown, or null for every line.
+ * @param filter the kind of line the list is narrowed to, or null for every line.
  */
 data class EventLogUiState(
     val entries: List<EventLogEntry>,
     val hasOlder: Boolean,
-    val filter: EventCategory? = null,
+    val filter: LogGroup? = null,
 )
 
 /**
  * Cuts what was read down to what is shown. One entry more than [wanted] is read on purpose:
  * if it arrives, the log has older entries, and the "Show older" button is offered.
  *
- * @param filter the category the entries were read for, or null for all of them.
+ * @param filter the kind of line the entries were read for, or null for all of them.
  */
 fun eventLogPage(
     read: List<EventLogEntry>,
     wanted: Int,
-    filter: EventCategory? = null,
+    filter: LogGroup? = null,
 ): EventLogUiState =
     EventLogUiState(entries = read.take(wanted), hasOlder = read.size > wanted, filter = filter)
 
@@ -90,7 +90,7 @@ data class LogShare(
  * The log is never read whole for the screen. Only the newest entries are, up to a limit that
  * grows when Shawn asks for older ones, so the screen opens as fast with ten thousand entries
  * as with ten. The list follows the log: a line written while the screen is open appears at the
- * top. Narrowed to one category, the same holds for that category's lines.
+ * top. Narrowed to one kind of line, the same holds for the lines of that kind.
  *
  * @param files writes the whole log to a text file, for sharing.
  * @param shareRequest builds the request that offers that file to Android's share sheet, under
@@ -105,22 +105,24 @@ class EventLogViewModel(
     private val zone: () -> ZoneId,
 ) : ViewModel() {
     /** Which lines are wanted, and how many of them. */
-    private data class Wanted(val category: EventCategory?, val limit: Int)
+    private data class Wanted(val group: LogGroup?, val limit: Int)
 
-    private val wanted = MutableStateFlow(Wanted(category = null, limit = EVENT_LOG_PAGE_SIZE))
+    private val wanted = MutableStateFlow(Wanted(group = null, limit = EVENT_LOG_PAGE_SIZE))
     private val sharing = MutableStateFlow(LogShare())
     private var launches = 0
 
     /** Null until the log has been read for the first time. */
-    // flatMapLatest is how a Flow switches to a new query when the limit or the category
+    // flatMapLatest is how a Flow switches to a new query when the limit or the filter
     // changes. It is marked experimental by the coroutines library and has no stable equivalent.
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<EventLogUiState?> =
         wanted
-            .flatMapLatest { (category, limit) ->
+            .flatMapLatest { (group, limit) ->
+                // The filter is part of the query, not a sieve over the lines in hand, so a
+                // kind's lines are found however far back they are.
                 eventLog
-                    .observeNewest(limit + 1, category)
-                    .map { eventLogPage(it, limit, category) }
+                    .observeNewest(limit + 1, group?.categories())
+                    .map { eventLogPage(it, limit, group) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), null)
 
     /** Where a press of "Share the log" stands. */
@@ -131,11 +133,11 @@ class EventLogViewModel(
     }
 
     /**
-     * Narrows the list to one category, or with null shows every line again. The list starts
-     * over at one page: "older" means something else in another category.
+     * Narrows the list to one kind of line, or with null shows every line again. The list
+     * starts over at one page: "older" means something else among other lines.
      */
-    fun onFilter(category: EventCategory?) {
-        wanted.value = Wanted(category, EVENT_LOG_PAGE_SIZE)
+    fun onFilter(group: LogGroup?) {
+        wanted.value = Wanted(group, EVENT_LOG_PAGE_SIZE)
     }
 
     /**
