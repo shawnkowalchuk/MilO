@@ -13,6 +13,7 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.point.RawPointDao
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
+import com.shawnkowalchuk.milo.data.settings.DEFAULT_PARKED_LIMIT_SECONDS
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
@@ -29,6 +30,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.yield
+
+/** The parked limit the controller runs with out of the box: 10 minutes. */
+const val PARKED_LIMIT_MS = DEFAULT_PARKED_LIMIT_SECONDS * 1000L
 
 /**
  * Everything the trip controller touches, replaced by stand-ins held in memory: the two
@@ -126,6 +130,9 @@ class FakeService :
 
     /** What the controller last asked for: true while it wants recording, false after a stop. */
     var recording = false
+
+    /** True while the controller wants the parked truck watched, with no trip open. */
+    var watchingParked = false
     var stops = 0
     var tripStartsAnnounced = 0
     var checkAtMs: Long? = null
@@ -150,13 +157,22 @@ class FakeService :
     @Synchronized
     override fun record(checkAtMs: Long?, tripJustStarted: Boolean) {
         recording = true
+        watchingParked = false
         this.checkAtMs = checkAtMs
         if (tripJustStarted) tripStartsAnnounced++
     }
 
     @Synchronized
+    override fun watchParked(checkAtMs: Long?) {
+        recording = false
+        watchingParked = true
+        this.checkAtMs = checkAtMs
+    }
+
+    @Synchronized
     override fun stop() {
         recording = false
+        watchingParked = false
         stops++
     }
 }

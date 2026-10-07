@@ -5,11 +5,15 @@ import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
 import com.shawnkowalchuk.milo.core.trip.TripEndReason
 import com.shawnkowalchuk.milo.core.trip.TripEvent
+import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.trip.WaitingEnd
 import com.shawnkowalchuk.milo.data.trip.classificationText
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
+import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 // How the trip controller words its event-log lines. Plain functions, kept apart from the
@@ -31,7 +35,13 @@ internal fun TripState.describe(): String {
     val autoText =
         if (androidAutoConnected) "Android Auto connected" else "Android Auto not connected"
     val holdOffText = if (autoStartHeldOff) "; automatic start held off" else ""
-    return "$tripText; $truckText; $autoText$holdOffText"
+    val parkedText =
+        when (parked?.watching) {
+            null -> ""
+            true -> "; waiting for the parked truck to move"
+            false -> "; the truck is parked and no longer watched"
+        }
+    return "$tripText; $truckText; $autoText$holdOffText$parkedText"
 }
 
 /** What an event told the trip rules, in words. */
@@ -51,6 +61,8 @@ internal fun TripEvent.describe(): String = when (this) {
     is TripEvent.ManualEnd -> "End pressed, ${connectedText(truckConnected)}"
 
     is TripEvent.Moved -> "the truck moved"
+
+    is TripEvent.MoveTakenBack -> "the movement last counted was one bad GPS fix"
 }
 
 private fun connectedText(truckConnected: Boolean): String =
@@ -61,6 +73,7 @@ private fun connectedText(truckConnected: Boolean): String =
  *
  * @param ignored true if the trip rules kept the trip and it is stored as discarded all the
  * same, because it started outside the work schedule and such trips are set to be ignored.
+ * @param parked for a trip the parked rule closed, when the truck last moved ([parkedText]).
  */
 internal fun closedText(
     closed: ClosedTrip,
@@ -68,6 +81,7 @@ internal fun closedText(
     storedFixes: Int,
     minimumTripDistanceMetres: Int,
     ignored: Boolean,
+    parked: String? = null,
 ): String {
     val metres = closed.distance.metres.roundToInt()
     val outcome =
@@ -87,7 +101,68 @@ internal fun closedText(
     val fixes =
         "$storedFixes fixes stored, ${distance.acceptedCount} used, " +
             "${distance.rejectedForAccuracy} too inaccurate, ${distance.rejectedAsJump} jumps"
-    return "$outcome; ended by $reason; $fixes"
+    return "$outcome; ended by $reason${parked.orEmpty()}; $fixes"
+}
+
+private const val MILLIS_PER_MINUTE = 60_000L
+private val TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm:ss")
+
+/**
+ * Why the parked rule closed a trip, to follow its reason in [closedText]: when the truck last
+ * moved, which is where the trip was cut, and the limit it stood still for.
+ */
+internal fun parkedText(lastMovedAtMs: Long, parkedLimitMs: Long?, zone: ZoneId): String {
+    val lastMoved = TIME_OF_DAY.format(Instant.ofEpochMilli(lastMovedAtMs).atZone(zone))
+    val limit = parkedLimitMs?.let { " for ${it / MILLIS_PER_MINUTE} min" }.orEmpty()
+    return " (the truck was parked: it last moved at $lastMoved and then stood still$limit)"
+}
+
+/**
+ * The line for a trip that has started.
+ *
+ * @param fromParked true if the truck, connected and parked, moved again.
+ * @param carriedOver how many points such a trip was given: the parked place and the fixes that
+ * showed the movement.
+ */
+internal fun startedText(
+    tripId: Long,
+    startedBy: TripStartCause,
+    fromParked: Boolean,
+    carriedOver: Int,
+): String {
+    val started = "Trip $tripId started by $startedBy"
+    if (!fromParked) return started
+    return "$started: it was connected and parked, and it moved. The trip starts where it " +
+        "was parked ($carriedOver points carried over), with no trip-start sound"
+}
+
+/** The line for the beginning of a wait beside the parked truck. */
+internal const val WAITING_BEGAN =
+    "Waiting for the truck to move: it is still connected. Its position is read at a low " +
+        "rate, and a trip starts when it moves"
+
+/** The line for the end of a wait beside the parked truck, with the reason. */
+internal fun waitingEndedText(reason: WaitingEnd): String {
+    val why =
+        when (reason) {
+            WaitingEnd.MOVED -> "it moved"
+
+            WaitingEnd.TRUCK_DISCONNECTED -> "it is no longer connected. Nothing was recorded"
+
+            WaitingEnd.NEW_LINK -> "a new link to it was reported, which starts a trip"
+
+            WaitingEnd.START_PRESSED -> "Start was pressed"
+
+            WaitingEnd.END_PRESSED -> "End was pressed"
+
+            WaitingEnd.TIME_LIMIT ->
+                "it has stood too long, and MilO has stopped watching it to spare the battery. " +
+                    "The next trip starts when the truck reconnects, when MilO is opened or " +
+                    "restarted, or with Start"
+
+            WaitingEnd.TRIP_OPEN -> "a trip is open"
+        }
+    return "No longer waiting for the truck to move: $why"
 }
 
 /**
@@ -129,14 +204,27 @@ internal fun androidAutoRecheckText(believed: Boolean): String = if (believed) {
     "Android Auto has held the trip open alone for too long, taken for stuck"
 }
 
-/** A reading of the truck in words, with how it was reached. */
-internal fun TruckReading.describe(): String = when (answer) {
+/**
+ * A reading of the truck taken at a process start, in words, with how it was reached.
+ *
+ * @param waitStands true if it could not be had and a stored wait beside the parked truck
+ * carries on all the same (`storedWaitStandsUnread`).
+ */
+internal fun TruckReading.describe(waitStands: Boolean = false): String = when (answer) {
     TruckReading.Answer.CONNECTED -> "the truck is connected ($evidence)"
 
     TruckReading.Answer.NOT_CONNECTED -> "the truck is not connected ($evidence)"
 
-    TruckReading.Answer.UNKNOWN ->
-        "the truck's connection could not be read ($evidence), so it counts as not connected"
+    TruckReading.Answer.UNKNOWN -> {
+        val unread = "the truck's connection could not be read ($evidence)"
+        val then =
+            if (waitStands) {
+                "MilO was waiting beside the parked truck, and waits on until it can be read"
+            } else {
+                "so it counts as not connected"
+            }
+        "$unread, $then"
+    }
 }
 
 /**
@@ -147,6 +235,16 @@ internal fun TruckReading?.inWords(): String = when {
     this == null -> ""
     known -> " ($evidence)"
     else -> " (the truck's connection could not be read: $evidence)"
+}
+
+/**
+ * The same for the reading a trigger took, which may have been set aside: a timer's reading of
+ * "not connected" before any reading has shown the truck on its present link (amendment 18).
+ */
+internal fun Evidence.readingInWords(): String {
+    if (!linkNotSeenYet) return reading.inWords()
+    return " (it reads as not connected, ${reading?.evidence}, but no reading has shown it " +
+        "connected since its link was made, so that proves nothing and what is believed stands)"
 }
 
 /**
@@ -168,4 +266,24 @@ internal fun noNewsText(request: StartRequest, found: Evidence): String {
 
         else -> "$notConnected. One reading alone proves nothing"
     }
+}
+
+/** Why a step that needs the trip service was not carried out: the service has to come up first. */
+internal fun serviceNeededText(recording: Boolean): String = if (recording) {
+    "Recording needs the trip service, which is not running"
+} else {
+    "Watching the parked truck needs the trip service, which is not running"
+}
+
+/** The line for a trip service that Android destroyed while it was needed. */
+internal fun serviceLostText(recording: Boolean): String {
+    val during = if (recording) "a trip is open" else "MilO is watching the parked truck"
+    return "The trip service stopped while $during. Asking Android to start it again"
+}
+
+/** The line for what the controller holds in memory being dropped: nothing is doing the work. */
+internal fun droppedText(recording: Boolean): String = if (recording) {
+    "The open trip is not being recorded. The next trigger picks it up"
+} else {
+    "The parked truck is not being watched. The next trigger picks the wait up"
 }

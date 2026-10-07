@@ -8,11 +8,13 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
 import com.shawnkowalchuk.milo.data.settings.isEmailAddress
 import com.shawnkowalchuk.milo.data.settings.reportTextOrNull
+import com.shawnkowalchuk.milo.data.settings.setParkedLimitSeconds
 import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import java.io.IOException
 import java.time.DayOfWeek
@@ -43,8 +45,8 @@ private const val REMINDER_CARD = "the reminder was changed in Settings"
  * The Settings screen's link to the stored settings. It keeps no copy of them: what the screen
  * shows is the settings store's own flow, and every press writes to the store.
  *
- * Nothing here tells the trip engine about a change. The trip controller reads the grace period
- * and the minimum distance at every trigger, and the trip service reads the sound at every trip
+ * Nothing here tells the trip engine about a change. The trip controller reads the grace period,
+ * the parked limit and the minimum distance at every trigger, and the trip service reads the sound at every trip
  * start, so a stored value is simply the one in force from the next event on. The work schedule
  * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
  * sorted again because the schedule changed.
@@ -120,6 +122,10 @@ class SettingsViewModel(
 
     fun onGraceStep(longer: Boolean) = change {
         settings.setGracePeriodSeconds(GRACE_PERIOD_CHOICE.step(it.gracePeriodSeconds, longer))
+    }
+
+    fun onParkedLimitStep(longer: Boolean) = change {
+        settings.setParkedLimitSeconds(PARKED_LIMIT_CHOICE.step(it.parkedLimitSeconds, longer))
     }
 
     fun onMinimumDistanceStep(longer: Boolean) = change {

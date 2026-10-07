@@ -16,12 +16,30 @@ import com.shawnkowalchuk.milo.platform.system.PreflightProblem
  * null before the stored state has been picked up. The Android Auto screen shows it. It is a
  * belief, not a fresh reading: while no trip is open nothing reads the truck unless an event
  * arrives or MilO is opened on the phone.
+ * @param parked what MilO is doing about a truck that is connected and standing still, or null
+ * when that is not the case. Never set while [trip] is.
  */
 data class TripActivity(
     val trip: CurrentTrip? = null,
     val startFailure: StartFailure? = null,
     val truckConnected: Boolean? = null,
+    val parked: ParkedTruckWatch? = null,
 )
+
+/**
+ * The truck is connected and parked, and the trip it was on has been closed (ADR-002, amendment
+ * 28). Both screens say which of the two it is, in plain words.
+ */
+enum class ParkedTruckWatch {
+    /** MilO is watching the truck's position, and a trip starts when it moves. */
+    WAITING_TO_MOVE,
+
+    /**
+     * The truck has stood for so long that MilO has stopped watching it. A trip starts when the
+     * truck reconnects, when MilO is opened or restarted, or with Start.
+     */
+    NO_LONGER_WATCHED,
+}
 
 /**
  * The trip in progress.
@@ -66,7 +84,13 @@ internal fun tripActivityOf(
     val trip = known?.trip
     val truckConnected = known?.truckConnected
     if (open == null || trip == null) {
-        return TripActivity(startFailure = startFailure, truckConnected = truckConnected)
+        val parked =
+            when (known?.parked?.takeIf { trip == null }?.watching) {
+                null -> null
+                true -> ParkedTruckWatch.WAITING_TO_MOVE
+                false -> ParkedTruckWatch.NO_LONGER_WATCHED
+            }
+        return TripActivity(null, startFailure, truckConnected, parked)
     }
     return TripActivity(
         trip =

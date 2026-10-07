@@ -46,12 +46,17 @@
     <string name="trip_status_idle">No trip in progress</string>
     <string name="trip_status_in_progress">Trip in progress</string>
     <string name="trip_status_waiting_for_truck">Trip in progress. Waiting for the truck to reconnect</string>
+    <!-- No trip is open: the truck stood still, so its trip was ended, and Bluetooth or Android Auto is still connected. -->
+    <string name="trip_status_parked">Truck connected and parked</string>
+    <string name="trip_status_parked_not_watched">Truck connected. MilO has stopped watching it</string>
     <!-- The argument is a time of day from formatTimeOfDay(), such as 08:14. -->
     <string name="trip_started_at">Started at %1$s</string>
 
     <!-- Home. -->
     <string name="home_trip_title">Current trip</string>
     <string name="home_trip_idle_detail">Press Start trip to record one by hand.</string>
+    <string name="home_trip_parked_detail">The last trip ended where the truck stopped. A new trip starts by itself when the truck moves.</string>
+    <string name="home_trip_parked_not_watched_detail">The truck has not moved for a long time. Press Start trip before you drive off.</string>
     <string name="home_start_trip">Start trip</string>
     <string name="home_end_trip">End trip</string>
     <!-- Home: shown while a required row of the Setup checklist is not in order. -->
@@ -84,6 +89,8 @@
     <string name="notification_channel_failures">Trip problems</string>
     <string name="notification_channel_driving">Driving alert</string>
     <string name="notification_trip_starting">Starting a trip</string>
+    <!-- Under trip_status_parked, in the trip notification while no trip is open. -->
+    <string name="notification_parked_text">A trip starts when the truck moves</string>
     <string name="notification_could_not_start_title">MilO could not start this trip</string>
     <string name="notification_could_not_start_text">Tap to start</string>
     <!-- The driving alert. Tapping it starts a trip; nothing starts until it is tapped. -->
@@ -613,6 +620,11 @@
     <!-- Settings: spoken by the screen reader for the minus and the plus of each number. -->
     <string name="settings_grace_less">Wait less</string>
     <string name="settings_grace_more">Wait longer</string>
+    <!-- Its value is shown with settings_grace_value: whole minutes, such as 10. -->
+    <string name="settings_parked_label">End a trip after the truck has not moved for</string>
+    <string name="settings_parked_detail">The trip ends where and when the truck stopped, even if Bluetooth stays connected. A new trip starts when the truck moves again.</string>
+    <string name="settings_parked_less">End a trip sooner</string>
+    <string name="settings_parked_more">End a trip later</string>
     <string name="settings_minimum_label">Shortest trip that counts</string>
     <string name="settings_minimum_detail">A shorter trip is discarded, such as moving the truck around the yard. A discarded trip can still be counted on the Trips screen.</string>
     <string name="settings_minimum_less">Count shorter trips</string>
@@ -781,6 +793,8 @@
     <string name="car_status_recording">Recording</string>
     <string name="car_status_recording_without_truck">Recording. Truck not connected</string>
     <string name="car_status_waiting_for_truck">Truck disconnected. Waiting for it to reconnect</string>
+    <string name="car_status_parked_waiting">Truck parked. A trip starts when it moves</string>
+    <string name="car_status_parked_not_watched">Truck parked a long time. Press Start trip</string>
     <string name="car_status_not_recording">Not recording</string>
     <string name="car_status_truck_not_connected">Not recording. Truck not connected</string>
     <string name="car_status_setup_incomplete">Not recording. MilO\'s setup is incomplete</string>

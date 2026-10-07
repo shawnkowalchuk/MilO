@@ -7,6 +7,7 @@ import com.shawnkowalchuk.milo.core.trip.TripEffect.MarkTruckSeen
 import com.shawnkowalchuk.milo.core.trip.TripEffect.ReleaseHoldOff
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartGrace
 import com.shawnkowalchuk.milo.core.trip.TripEffect.StartTrip
+import com.shawnkowalchuk.milo.core.trip.TripEffect.StartWaiting
 import com.shawnkowalchuk.milo.core.trip.TripEvent.AndroidAutoConnection
 import com.shawnkowalchuk.milo.core.trip.TripEvent.ManualEnd
 import com.shawnkowalchuk.milo.core.trip.TripEvent.ManualStart
@@ -19,7 +20,8 @@ import org.junit.Test
 
 /**
  * The rules of ADR-002's "Trip rules" that involve the Start and End buttons: manual start,
- * manual end with its hold-off, and the no-movement guard for a manual trip with no truck.
+ * manual end with its hold-off, and the parked rule for a manual trip with no truck. The parked
+ * rule for every other trip, and the wait that follows it, are in [TripStateMachineParkedTest].
  */
 class TripStateMachineManualTest {
     // ---- Manual start -------------------------------------------------------------------------
@@ -166,7 +168,7 @@ class TripStateMachineManualTest {
     @Test
     fun `End pressed on a forgotten manual trip closes it where it last moved, not at the press`() {
         // Five hours in, the timer was missed and Shawn presses End. The trip was over long ago.
-        val result = MANUAL_NO_TRUCK.on(ManualEnd(truckConnected = false, T0 + 5 * HOUR))
+        val result = MANUAL_NO_TRUCK.onParked(ManualEnd(truckConnected = false, T0 + 5 * HOUR))
 
         assertEquals(listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0)), result.effects)
     }
@@ -202,22 +204,26 @@ class TripStateMachineManualTest {
     }
 
     @Test
-    fun `a manual trip with no truck ends after 30 minutes without movement`() {
-        val result = MANUAL_NO_TRUCK.on(TruckConnection(false, T0 + 30 * MINUTE))
+    fun `a manual trip with no truck ends after the parked limit without movement`() {
+        val tooEarly = MANUAL_NO_TRUCK.onParked(TruckConnection(false, T0 + PARKED_LIMIT - 1))
+        assertEquals(emptyList<TripEffect>(), tooEarly.effects)
 
-        // Closed where it last moved (here it never did, so at its start), not 30 minutes later.
+        val result = MANUAL_NO_TRUCK.onParked(TruckConnection(false, T0 + PARKED_LIMIT))
+
+        // Closed where it last moved (here it never did, so at its start), not at the limit.
+        // The truck is not connected, so there is nothing to wait beside.
         assertEquals(listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0)), result.effects)
         assertEquals(IDLE, result.state)
     }
 
     @Test
-    fun `movement restarts the 30 minutes`() {
-        val moving = MANUAL_NO_TRUCK.on(Moved(T0 + 20 * MINUTE)).state
+    fun `movement restarts the parked limit`() {
+        val moving = MANUAL_NO_TRUCK.onParked(Moved(T0 + 20 * MINUTE)).state
 
-        val stillOpen = moving.on(TruckConnection(false, T0 + 49 * MINUTE))
+        val stillOpen = moving.onParked(TruckConnection(false, T0 + 29 * MINUTE))
         assertEquals(emptyList<TripEffect>(), stillOpen.effects)
 
-        val closed = moving.on(TruckConnection(false, T0 + 50 * MINUTE))
+        val closed = moving.onParked(TruckConnection(false, T0 + 30 * MINUTE))
         assertEquals(
             listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0 + 20 * MINUTE)),
             closed.effects,
@@ -237,8 +243,9 @@ class TripStateMachineManualTest {
     }
 
     @Test
-    fun `a truck trip is never ended for standing still`() {
-        // Decided at kickoff: a long stop with the engine running stays inside one trip.
+    fun `rules that set no parked limit never end a truck trip for standing still`() {
+        // How a trip ran until 2026-10-06, and what the tests of the other rules rely on. The
+        // trip controller always sets the limit: see TripStateMachineParkedTest.
         val result = RECORDING.on(TruckConnection(true, T0 + 9 * HOUR))
 
         assertEquals(emptyList<TripEffect>(), result.effects)
@@ -246,20 +253,20 @@ class TripStateMachineManualTest {
     }
 
     @Test
-    fun `the no-movement guard waits while Android Auto is connected`() {
-        val plugged = MANUAL_NO_TRUCK.on(AndroidAutoConnection(true, T0 + MINUTE)).state
+    fun `Android Auto does not hold a manual trip open that stands still`() {
+        // Until 2026-10-06 the guard waited while Android Auto was connected. A parked truck
+        // is parked, whatever the phone is plugged into.
+        val plugged = MANUAL_NO_TRUCK.onParked(AndroidAutoConnection(true, T0 + MINUTE)).state
+        assertEquals(T0 + PARKED_LIMIT, TripStateMachine.nextCheckAtMs(plugged, PARKED_RULES))
 
-        val held = plugged.on(TruckConnection(false, T0 + 2 * HOUR))
-        assertEquals(emptyList<TripEffect>(), held.effects)
+        val read = plugged.onParked(TruckConnection(false, T0 + 2 * HOUR))
 
-        // Unplugged, the guard applies again, counted from the last movement. The limit is
-        // long past, but unplugging says nothing about the truck: the trip waits for a reading.
-        val unplugged = held.state.on(AndroidAutoConnection(false, T0 + 3 * HOUR))
-        assertEquals(emptyList<TripEffect>(), unplugged.effects)
-        assertEquals(T0 + 30 * MINUTE, TripStateMachine.nextCheckAtMs(unplugged.state, RULES))
-
-        val read = unplugged.state.on(TruckConnection(false, T0 + 3 * HOUR + 1))
-        assertEquals(listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0)), read.effects)
+        // What Android Auto does hold is the wait that follows: the phone is still plugged
+        // into the truck, so its moving again starts the next trip.
+        assertEquals(
+            listOf(EndTrip(TripEndReason.NO_MOVEMENT, T0), StartWaiting(T0 + 2 * HOUR)),
+            read.effects,
+        )
     }
 
     @Test

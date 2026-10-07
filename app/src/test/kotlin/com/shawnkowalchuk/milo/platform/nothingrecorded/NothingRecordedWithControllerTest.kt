@@ -1,10 +1,13 @@
 package com.shawnkowalchuk.milo.platform.nothingrecorded
 
+import com.shawnkowalchuk.milo.core.trip.TRACK_START_WALL_CLOCK_MS
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.platform.trip.DRIVEN_METRES
 import com.shawnkowalchuk.milo.platform.trip.FakeWorld
+import com.shawnkowalchuk.milo.platform.trip.ParkedScene
 import com.shawnkowalchuk.milo.platform.trip.TripController
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import com.shawnkowalchuk.milo.platform.trip.process
@@ -17,6 +20,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -38,6 +42,9 @@ private const val SERVICE_START_MS = 1_000L
  *
  * It is Tuesday 6 October 2026, 12:30, a work day out of the box and past noon, with no trip
  * stored and the truck connected: a notification is due, and a trip is about to start.
+ *
+ * The last test is here for the other place where the check meets the controller: a wait beside
+ * the parked truck (ADR-002, amendment 28), which is not a trip.
  */
 // runCurrent() and advanceTimeBy() are how a test lets the coroutines of the check and of the
 // controller run. The API is marked experimental by the coroutines library; there is no stable
@@ -214,5 +221,38 @@ class NothingRecordedWithControllerTest {
             assertEquals(1, shown)
             assertEquals(0, service.startRequests.size)
             assertTrue(askings().single().contains("notify: no trip has been started today"))
+        }
+
+    @Test
+    fun `a wait beside the parked truck is not a trip, and the trip that movement starts is`() =
+        runTest {
+            // Saturday noon: a drive, and the truck stays connected where it is parked.
+            world.nowMs = TRACK_START_WALL_CLOCK_MS
+            val scene = ParkedScene(this, world)
+            scene.driveAndPark()
+            val check = checkBeside(scene.controller)
+            assertNotNull(scene.controller.activity.value.parked)
+
+            // Monday, 12:30, a work day. The truck has not been driven since, and MilO still
+            // waits beside it: the wait's three days are not over.
+            val mondaySecond = 48 * 3_600 + 30 * 60
+            world.nowMs = scene.timeOf(mondaySecond)
+            check.look("daily alarm")
+            advanceTimeBy(TRIP_START_WAIT_MS)
+            runCurrent()
+
+            // No trip was started today, so the notification comes, beside "Truck connected
+            // and parked".
+            assertEquals(1, shown)
+            assertTrue(askings().single().contains("notify: no trip has been started today"))
+            assertNotNull(scene.controller.activity.value.parked)
+
+            // The truck drives off. The trip from the parked place takes the notification away.
+            scene.fix(northMetres = DRIVEN_METRES + 150, second = mondaySecond + 60)
+            scene.fix(northMetres = DRIVEN_METRES + 450, second = mondaySecond + 90)
+            runCurrent()
+
+            assertEquals(2, world.trips.rows.size)
+            assertEquals(1, withdrawn)
         }
 }

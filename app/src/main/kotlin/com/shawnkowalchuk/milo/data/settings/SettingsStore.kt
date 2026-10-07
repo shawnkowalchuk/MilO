@@ -31,7 +31,8 @@ const val SETTINGS_FILE_NAME = "settings"
  *
  * @param dataStore created once by the `AppContainer`. DataStore allows only one instance per
  * file in a process. It is `internal` for the setters that stand beside their own keys, in
- * `TransferStorage.kt` and `NothingRecordedStorage.kt`; nothing outside this package may touch it.
+ * `TransferStorage.kt` (an export, an import and a restore), `NothingRecordedStorage.kt` and
+ * `ParkedStorage.kt` (the parked rule); nothing outside this package may touch it.
  */
 class SettingsStore(internal val dataStore: DataStore<Preferences>) {
     /** The current settings, and again each time one changes. */
@@ -220,6 +221,8 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             gracePeriodSeconds = preferences[GRACE_PERIOD_SECONDS] ?: defaults.gracePeriodSeconds,
             minimumTripDistanceMetres =
                 preferences[MINIMUM_TRIP_DISTANCE_METRES] ?: defaults.minimumTripDistanceMetres,
+            parkedLimitSeconds = preferences.readParkedLimitSeconds(),
+            parkedTruck = preferences.readParkedTruck(),
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
             customSoundName = preferences[CUSTOM_SOUND_NAME],
@@ -253,9 +256,9 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
     }
 
     // The key names are what is written to the file. Renaming one silently resets that setting.
-    // The keys of the confirmed setup steps are on ConfirmedStep itself. Five files hold their
+    // The keys of the confirmed setup steps are on ConfirmedStep itself. Six files hold their
     // own keys beside their values: ScheduleStorage.kt, ReportHandOver.kt, ReminderStorage.kt,
-    // TransferStorage.kt (the last export) and NothingRecordedStorage.kt.
+    // TransferStorage.kt (the last export), NothingRecordedStorage.kt and ParkedStorage.kt.
     internal companion object {
         val TRUCK_ADDRESS = stringPreferencesKey("truck_address")
         val TRUCK_NAME = stringPreferencesKey("truck_name")

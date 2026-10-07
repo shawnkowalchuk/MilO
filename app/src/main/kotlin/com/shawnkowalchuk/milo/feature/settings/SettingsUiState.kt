@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.settings
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
 import java.time.DayOfWeek
@@ -84,8 +85,9 @@ sealed interface SettingsUiState {
      *
      * @param truckPaired false while no truck is stored.
      * @param truckName the truck's name as the phone gave it, or null if it has none.
-     * @param canShortenGrace false at the lower end of the range, and so for the other three:
+     * @param canShortenGrace false at the lower end of the range, and so for the other five:
      * the button is greyed out there.
+     * @param parkedLimitSeconds how long a trip may stand still before it is ended.
      * @param usesOwnSound true if a trip start plays the file Shawn chose, false for the
      * built-in sound.
      * @param ownSoundName what that file was called, or null if the phone gave no name.
@@ -108,6 +110,9 @@ sealed interface SettingsUiState {
         val gracePeriodSeconds: Int,
         val canShortenGrace: Boolean,
         val canLengthenGrace: Boolean,
+        val parkedLimitSeconds: Int,
+        val canShortenParked: Boolean,
+        val canLengthenParked: Boolean,
         val minimumDistanceMetres: Int,
         val canLowerMinimum: Boolean,
         val canRaiseMinimum: Boolean,
@@ -128,7 +133,7 @@ sealed interface SettingsUiState {
 }
 
 /**
- * The screen for the settings as they are stored. The two figures are shown as stored, even if
+ * The screen for the settings as they are stored. The three figures are shown as stored, even if
  * a value is outside what the screen offers; the first press of a button brings it inside.
  *
  * @param problemDay the day of the schedule the press that did not work was about, or null
@@ -148,6 +153,9 @@ fun settingsUiState(
     gracePeriodSeconds = settings.gracePeriodSeconds,
     canShortenGrace = GRACE_PERIOD_CHOICE.canStepDown(settings.gracePeriodSeconds),
     canLengthenGrace = GRACE_PERIOD_CHOICE.canStepUp(settings.gracePeriodSeconds),
+    parkedLimitSeconds = settings.parkedLimitSeconds,
+    canShortenParked = PARKED_LIMIT_CHOICE.canStepDown(settings.parkedLimitSeconds),
+    canLengthenParked = PARKED_LIMIT_CHOICE.canStepUp(settings.parkedLimitSeconds),
     minimumDistanceMetres = settings.minimumTripDistanceMetres,
     canLowerMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepDown(settings.minimumTripDistanceMetres),
     canRaiseMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepUp(settings.minimumTripDistanceMetres),

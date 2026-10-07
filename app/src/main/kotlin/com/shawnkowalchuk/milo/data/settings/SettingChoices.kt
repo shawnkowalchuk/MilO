@@ -1,8 +1,9 @@
 package com.shawnkowalchuk.milo.data.settings
 
-// The values the Settings screen offers for the two trip settings and for the reminder's day,
-// and the arithmetic of stepping through them. Pure, so the ranges are tested without a phone. The settings store
-// itself accepts any value that is not negative; these are what Shawn can choose.
+// The values the Settings screen offers for the three trip settings and for the reminder's day,
+// and the arithmetic of stepping through them. Pure, so the ranges are tested without a phone.
+// The settings store itself accepts any value that is not negative; these are what Shawn can
+// choose.
 
 /**
  * A setting that is chosen in even steps between two limits. The unit is the stored one
@@ -60,6 +61,13 @@ val GRACE_PERIOD_CHOICE = SteppedChoice(min = 30, max = 600, step = 30)
  * zero: with no minimum, a start that never left the yard would be a counted trip.
  */
 val MINIMUM_TRIP_DISTANCE_CHOICE = SteppedChoice(min = 100, max = 2000, step = 100)
+
+/**
+ * How long a trip may stand still before it is closed, in seconds: 5 to 30 minutes, in steps of
+ * 5. Under 5 minutes a long red light or a level crossing would cut a drive in two; over 30, a
+ * truck parked at home with Bluetooth still connected records for most of an hour.
+ */
+val PARKED_LIMIT_CHOICE = SteppedChoice(min = 300, max = 1800, step = 300)
 
 /**
  * The reminder's day of the month: the 1st to the 31st, a day at a time. A month that is

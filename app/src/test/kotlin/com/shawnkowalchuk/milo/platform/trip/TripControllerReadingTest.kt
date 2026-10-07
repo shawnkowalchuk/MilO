@@ -77,6 +77,7 @@ class TripControllerReadingTest {
     fun `a companion start is confirmed by the link connect broadcast`() = runTest {
         val (controller, service) = process(world)
         service.comesUpAtOnce = true
+        val startedAtMs = world.nowMs
         controller.onTrigger(TripTrigger.TRUCK_APPEARED, "companion service")
         runCurrent()
         assertNotNull(service.checkAtMs)
@@ -87,7 +88,8 @@ class TripControllerReadingTest {
         runCurrent()
 
         assertTrue(world.openTrips.single().truckSeen)
-        assertNull(service.checkAtMs)
+        // The confirmation timer is gone. What is left is the parked limit of every trip.
+        assertEquals(startedAtMs + PARKED_LIMIT_MS, service.checkAtMs)
         assertEquals(1, service.tripStartsAnnounced)
     }
 

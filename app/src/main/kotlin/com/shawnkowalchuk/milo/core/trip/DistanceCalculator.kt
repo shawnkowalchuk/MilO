@@ -67,7 +67,25 @@ data class DistanceState(
     val acceptedCount: Int = 0,
     val rejectedForAccuracy: Int = 0,
     val rejectedAsJump: Int = 0,
-)
+) {
+    /**
+     * Wall-clock time of the fix distance was last counted up to, or null if none has been
+     * counted: when the truck last really moved, as far as the fixes so far can say. It goes
+     * back to the step before when the newest step is taken back (rule 4), so one bad fix
+     * leaves no trace in it.
+     */
+    val lastCountedAtMs: Long? get() = anchor?.wallClockMs?.takeIf { metres > 0.0 }
+
+    /**
+     * The distance that no later fix can take back: everything but the newest step while that
+     * is still open to rule 4. Above zero, it says the truck has moved and a second fix has
+     * borne it out, which is what MilO waits for beside a parked truck ([ParkedWatch]).
+     */
+    val settledMetres: Double get() = lastStep?.metresBefore ?: metres
+
+    /** Where counting stood at [settledMetres]: the fix that distance was last counted up to. */
+    val settledAnchor: TrackPoint? get() = lastStep?.from ?: anchor
+}
 
 /**
  * A counted step that the next fix can still take back.

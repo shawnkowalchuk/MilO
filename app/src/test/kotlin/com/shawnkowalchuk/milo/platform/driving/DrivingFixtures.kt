@@ -59,6 +59,7 @@ internal fun drivingMoment(
     nowMs: Long = TUESDAY_MORNING,
     schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     zone: ZoneId = EDMONTON,
+    truckNoLongerWatched: Boolean = false,
 ) = DrivingMoment(
     reports = reports,
     alertEnabled = alertEnabled,
@@ -70,6 +71,7 @@ internal fun drivingMoment(
     nowMs = nowMs,
     schedule = schedule,
     zone = zone,
+    truckNoLongerWatched = truckNoLongerWatched,
 )
 
 /** Stands in for the phone's driving detection: what it was asked, and what it answers. */

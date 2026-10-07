@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.platform.trip
 
+import com.shawnkowalchuk.milo.core.trip.TripEffect
 import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripState
@@ -11,7 +12,6 @@ import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
-import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.max
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,6 +122,10 @@ internal class TripWorker(
     }
 
     private suspend fun onTrigger(request: StartRequest) {
+        // A timer of the service that watched the parked truck, arriving after MilO has stopped
+        // watching. It must not count as a reconcile: there a reconcile starts a trip, and the
+        // minute check still under way would start one in the moment watching stopped.
+        if (request.trigger.isServiceTimer && known?.parked?.watching == false) return
         val settingsNow = ruleSettings.read()
         evidence.arrived(request)
         if (known == null) {
@@ -135,7 +139,8 @@ internal class TripWorker(
         if (event == null) {
             eventLog.add(clock(), EventCategory.TRIGGER, noNewsText(request, found))
         } else {
-            advance(request.source, event, request, quiet = found.routine, reading = found.reading)
+            val read = found.readingInWords()
+            advance(request.source, event, request, quiet = found.routine, reading = read)
         }
         if (request.trigger == TripTrigger.POLL) recheckAndroidAuto(request)
     }
@@ -154,30 +159,16 @@ internal class TripWorker(
      * service then hands [request] back, and this runs again.
      */
     private suspend fun restore(request: StartRequest, settingsNow: MiloSettings): Boolean {
-        val stored = ledger.load(rules)
-        val reading = evidence.readTruck()
-        // A reading of "unknown" counts as "not connected" here: nothing starts on it, and a
-        // trip that was recording waits out a grace period, in which a later reading can
-        // still show the truck. The price: it also releases a hold-off, as "not connected" does.
-        val truckConnected = reading.connected
-        val transition =
-            TripStateMachine.restore(
-                storedTrip = stored?.trip,
-                lastRecordedAtMs = stored?.lastRecordedAtMs,
-                autoStartHeldOffSinceMs = settingsNow.autoStartHeldOffSinceMs,
-                truckConnected = truckConnected,
-                // Android Auto can only be watched from the running service. If it is connected
-                // the service says so a moment after it starts, in time to cancel a grace period
-                // that was begun here.
-                androidAutoConnected = false,
-                atMs = request.atMs,
-                rules = rules,
-            )
-        val found =
-            TripState(stored?.trip, truckConnected, false, settingsNow.autoStartHeldOffSinceMs)
-        val what = "${request.source}: picked up the stored state; ${reading.describe()}"
-        val done = commit(what, found.describe(), transition, request)
+        val stored = pickUpStored(ledger, evidence, rules, settingsNow, request.atMs)
+        val what = "${request.source}: picked up the stored state; ${stored.readingText}"
+        val done = commit(what, stored.found.describe(), stored.transition, request)
         if (!done) ledger.forget()
+        // A wait that carries on watches from the place that was stored with it. One that
+        // began in this very step (a stored trip had stood too long) has its place already.
+        val carriesOn = stored.transition.effects.none { it is TripEffect.StartWaiting }
+        if (done && carriesOn && stored.transition.state.waitingToMove) {
+            ledger.resumeWaiting(settingsNow.parkedTruck)
+        }
         return done
     }
 
@@ -193,9 +184,23 @@ internal class TripWorker(
     }
 
     private suspend fun onFix(fix: RawPoint) {
-        // A deadline the service's timer missed comes first, judged before this fix is
-        // counted. Counted first, a fix that shows movement would move the no-movement limit
-        // of a forgotten manual trip on, and the trip would swallow the next drive.
+        val restart = StartRequest(TripTrigger.RECONCILE, "GPS", fix.wallClockMs)
+        // Beside a parked truck the fix is looked at first: if it shows the truck driving off,
+        // the trip starts, however long the wait has lasted. A missed trip is worse.
+        if (known?.waitingToMove == true) {
+            val movedAtMs = ledger.watchFix(fix)
+            if (movedAtMs != null) {
+                advance("GPS", TripEvent.Moved(movedAtMs), restart, quiet = true)
+                // The trip's first points, this fix among them, were stored when it was opened.
+                // It last moved at the newest of them that counted, not at the first.
+                val last = ledger.lastMovementAtMs ?: return
+                advance("GPS", TripEvent.Moved(last), restart, quiet = true)
+                return
+            }
+        }
+        // During a trip a deadline the service's timer missed comes first, judged before this
+        // fix is counted. Counted first, a fix that shows movement would move the parked limit
+        // of a trip that stood for hours on, and the trip would swallow the next drive.
         val due = known?.let { TripStateMachine.nextCheckAtMs(it, rules) }
         if (due != null && fix.wallClockMs >= due + TIMER_BACKSTOP_MS) {
             val source = "a GPS fix arrived after a deadline the timer missed"
@@ -203,9 +208,8 @@ internal class TripWorker(
         }
         // A fix that arrives after the trip closed belongs to no trip.
         if (known?.trip == null || ledger.open == null) return
-        val moved = ledger.addFix(fix)
-        val restart = StartRequest(TripTrigger.RECONCILE, "GPS", fix.wallClockMs)
-        if (moved) advance("GPS", TripEvent.Moved(fix.wallClockMs), restart, quiet = true)
+        val movement = ledger.addFix(fix) ?: return
+        advance("GPS", movement, restart, quiet = true)
     }
 
     private suspend fun onStartFailed(work: TripWork.StartFailed) {
@@ -216,19 +220,19 @@ internal class TripWorker(
         // nothing is recording that trip. Memory is dropped, so the screens stop showing a
         // trip in progress, and the next trigger picks the stored trip up through the restart
         // rules, which close it if it has gone stale (ADR-002, "State survives the process").
-        if (known?.trip == null || service.recorder != null) return
+        // The same goes for a wait beside the parked truck that nothing is watching.
+        val wasRecording = known?.trip != null
+        if (known?.wantsService != true || service.recorder != null) return
         known = null
         ledger.forget()
-        val dropped = "The open trip is not being recorded. The next trigger picks it up"
-        eventLog.add(work.atMs, EventCategory.SERVICE, dropped)
+        eventLog.add(work.atMs, EventCategory.SERVICE, droppedText(wasRecording))
     }
 
     private suspend fun onServiceStopped(work: TripWork.ServiceStopped) {
         // The usual case is not this one: the worker told the service to stop, and had let go
         // of it by then.
-        if (!service.lostUnexpectedly(work.recorder) || known?.trip == null) return
-        val what = "The trip service stopped while a trip is open. Asking Android to start it again"
-        eventLog.add(work.atMs, EventCategory.SERVICE, what)
+        if (!service.lostUnexpectedly(work.recorder) || known?.wantsService != true) return
+        eventLog.add(work.atMs, EventCategory.SERVICE, serviceLostText(known?.trip != null))
         startService(StartRequest(TripTrigger.RECONCILE, "trip service stopped", work.atMs))
     }
 
@@ -238,11 +242,11 @@ internal class TripWorker(
         restart: StartRequest,
         category: EventCategory = EventCategory.TRIGGER,
         quiet: Boolean = false,
-        reading: TruckReading? = null,
+        reading: String = "",
     ): Boolean {
         val before = checkNotNull(known) { "An event arrived before the state was picked up" }
         val transition = TripStateMachine.step(before, event, rules)
-        val what = "$source: ${event.describe()}${reading.inWords()}"
+        val what = "$source: ${event.describe()}$reading"
         return commit(what, before.describe(), transition, restart, category, quiet)
     }
 
@@ -258,7 +262,8 @@ internal class TripWorker(
      * @param quiet no line for the event itself unless it changed something. For the two things
      * that arrive all day and usually change nothing: a GPS fix and a routine poll.
      * @return false if nothing was changed because the trip service is not running. ADR-002: a
-     * trip is opened or carried on only with the service in the foreground.
+     * trip is opened or carried on only with the service in the foreground, and so is a wait
+     * beside the parked truck.
      */
     private suspend fun commit(
         what: String,
@@ -269,8 +274,8 @@ internal class TripWorker(
         quiet: Boolean = false,
     ): Boolean {
         val after = transition.state
-        if (after.trip != null && service.recorder == null) {
-            val waiting = "$what. Recording needs the trip service, which is not running"
+        if (after.wantsService && service.recorder == null) {
+            val waiting = "$what. ${serviceNeededText(after.trip != null)}"
             eventLog.add(clock(), category, waiting, "State: $before")
             startService(restart)
             return false

@@ -9,7 +9,8 @@ package com.shawnkowalchuk.milo.core.trip
  *
  * @param distance the distance calculation so far.
  * @param lastMovementAtMs wall-clock time of the newest fix that added distance, or null if the
- * truck has not moved yet. Feeds the no-movement guard for manual trips.
+ * truck has not moved yet. Feeds the parked rule. A fix whose distance the next fix takes back
+ * (one bad fix while the truck stands) stops counting here in the same moment.
  * @param lastFixAtMs wall-clock time of the newest fix of any quality, or null before the first.
  * After a restart this is how old the trip's last sign of life is.
  * @param fixCount every fix received, used or not.
@@ -23,11 +24,11 @@ data class TripProgress(
     /** The picture after one more fix. */
     fun plus(point: TrackPoint, limits: DistanceLimits = DistanceLimits()): TripProgress {
         val measured = DistanceCalculator.add(distance, point, limits)
-        // A fix can also take distance back (rule 4 of the calculator). Only a gain is movement.
-        val moved = measured.metres > distance.metres
         return TripProgress(
             distance = measured,
-            lastMovementAtMs = if (moved) point.wallClockMs else lastMovementAtMs,
+            // Read from the calculation, not kept beside it: a fix can also take distance back
+            // (its rule 4), and the movement it took back must go with it.
+            lastMovementAtMs = measured.lastCountedAtMs,
             lastFixAtMs = point.wallClockMs,
             fixCount = fixCount + 1,
         )
@@ -37,5 +38,31 @@ data class TripProgress(
         /** The picture after all of [points], which must be in the order they were recorded. */
         fun of(points: List<TrackPoint>, limits: DistanceLimits = DistanceLimits()): TripProgress =
             points.fold(TripProgress()) { progress, point -> progress.plus(point, limits) }
+    }
+}
+
+/**
+ * What the trip rules have to be told about movement after one more fix, or null if the fix
+ * changed nothing about it. [before] is the picture without the fix, the receiver the picture
+ * with it.
+ *
+ * - The truck moved: [TripEvent.Moved], at the time distance was last counted.
+ * - The movement last reported was one bad fix, which the calculation has now taken back:
+ *   [TripEvent.MoveTakenBack], with the time of the movement before it, or [tripStartedAtMs] if
+ *   there was none. Left untold, one stray fix every few minutes would keep a parked trip open.
+ *
+ * @param atMs wall-clock time of the fix.
+ */
+fun TripProgress.movementSince(
+    before: TripProgress,
+    tripStartedAtMs: Long,
+    atMs: Long,
+): TripEvent? {
+    val was = before.lastMovementAtMs
+    val now = lastMovementAtMs
+    return when {
+        now == was -> null
+        now != null && (was == null || now > was) -> TripEvent.Moved(now)
+        else -> TripEvent.MoveTakenBack(lastMovedAtMs = now ?: tripStartedAtMs, atMs = atMs)
     }
 }

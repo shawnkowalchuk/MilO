@@ -69,6 +69,7 @@ class TripControllerRulesTest {
     fun `a companion start confirmed by the profile state carries on as a truck trip`() = runTest {
         val (controller, service) = process(world)
         service.comesUpAtOnce = true
+        val startedAtMs = world.nowMs
         controller.onTrigger(TripTrigger.TRUCK_APPEARED, "companion service")
         runCurrent()
 
@@ -79,7 +80,8 @@ class TripControllerRulesTest {
 
         val trip = world.openTrips.single()
         assertTrue(trip.truckSeen)
-        assertNull(service.checkAtMs)
+        // The confirmation timer is gone. What is left is the parked limit of every trip.
+        assertEquals(startedAtMs + PARKED_LIMIT_MS, service.checkAtMs)
         // Now the truck is known to be connected: the sound, once.
         assertEquals(1, service.tripStartsAnnounced)
     }

@@ -139,17 +139,20 @@ class TripStateMachineTest {
     }
 
     @Test
-    fun `for a manual trip with no truck the next look is 30 minutes after the last movement`() {
-        val moving = MANUAL_NO_TRUCK.on(Moved(T0 + 20 * MINUTE)).state
+    fun `while a trip is recorded the next look is the parked limit after it last moved`() {
+        val manual = MANUAL_NO_TRUCK.onParked(Moved(T0 + 20 * MINUTE)).state
+        val truck = RECORDING.onParked(Moved(T0 + 20 * MINUTE)).state
 
-        assertEquals(T0 + 50 * MINUTE, TripStateMachine.nextCheckAtMs(moving, RULES))
+        val due = T0 + 20 * MINUTE + PARKED_LIMIT
+        assertEquals(due, TripStateMachine.nextCheckAtMs(manual, PARKED_RULES))
+        assertEquals(due, TripStateMachine.nextCheckAtMs(truck, PARKED_RULES))
     }
 
     @Test
-    fun `a manual trip with no truck needs no timer while Android Auto is connected`() {
-        val plugged = MANUAL_NO_TRUCK.on(AndroidAutoConnection(true, T0 + MINUTE)).state
+    fun `Android Auto being connected does not take that timer away`() {
+        val plugged = MANUAL_NO_TRUCK.onParked(AndroidAutoConnection(true, T0 + MINUTE)).state
 
-        assertNull(TripStateMachine.nextCheckAtMs(plugged, RULES))
+        assertEquals(T0 + PARKED_LIMIT, TripStateMachine.nextCheckAtMs(plugged, PARKED_RULES))
     }
 
     // ---- The settings the rules run with ------------------------------------------------------

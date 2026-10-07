@@ -7,6 +7,7 @@ import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
+import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
@@ -38,6 +39,15 @@ enum class CarStatus(val textRes: Int, val startRefused: Boolean = false) {
 
     /** The grace period: the truck has gone and the trip ends unless it comes back. */
     WAITING_FOR_TRUCK(R.string.car_status_waiting_for_truck),
+
+    /**
+     * No trip: the truck stood still, so its trip was ended, and it is still connected. MilO is
+     * watching its position, and the next trip starts when it moves.
+     */
+    PARKED_WAITING(R.string.car_status_parked_waiting),
+
+    /** The same, for so long that MilO has stopped watching: the button starts a trip. */
+    PARKED_NOT_WATCHED(R.string.car_status_parked_not_watched),
 
     /** No trip, and nothing known that explains it (ended by hand, or not yet read). */
     NOT_RECORDING(R.string.car_status_not_recording),
@@ -140,8 +150,9 @@ fun CarScreenContent?.differsOnlyInTripFigures(next: CarScreenContent): Boolean 
 
 /**
  * One line, so the most telling thing wins. An open trip comes first: while one is recording,
- * what stood in the way earlier no longer matters. With no trip, a refused start is the most
- * exact explanation, then a setup that is not in order, then the truck.
+ * what stood in the way earlier no longer matters. With no trip, a truck that MilO is waiting
+ * beside comes next: that is no failure, and the next trip starts by itself. Then a refused
+ * start, which is the most exact explanation, then a setup that is not in order, then the truck.
  */
 private fun carStatus(activity: TripActivity, setupNeedsAttention: Boolean): CarStatus {
     val trip = activity.trip
@@ -150,8 +161,10 @@ private fun carStatus(activity: TripActivity, setupNeedsAttention: Boolean): Car
         trip != null && trip.waitingForTruck -> CarStatus.WAITING_FOR_TRUCK
         trip != null && activity.truckConnected == false -> CarStatus.RECORDING_WITHOUT_TRUCK
         trip != null -> CarStatus.RECORDING
+        activity.parked == ParkedTruckWatch.WAITING_TO_MOVE -> CarStatus.PARKED_WAITING
         failure != null -> refusalStatus(failure)
         setupNeedsAttention -> CarStatus.SETUP_INCOMPLETE
+        activity.parked == ParkedTruckWatch.NO_LONGER_WATCHED -> CarStatus.PARKED_NOT_WATCHED
         activity.truckConnected == false -> CarStatus.TRUCK_NOT_CONNECTED
         else -> CarStatus.NOT_RECORDING
     }
