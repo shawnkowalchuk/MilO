@@ -2,43 +2,52 @@ package com.shawnkowalchuk.milo.core.designsystem.component
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// The indicator glyphs are built here rather than taken from the material-icons library: that
-// library is frozen at 1.7.8 even inside the Compose BOM, and a handful of icons does not
-// justify a dependency. The outlines are Google's Material "check circle", "error", "help" and
-// "radio button unchecked" icons (Apache License 2.0).
+// The marks drawn on the status dots of a StatusRow: a tick, an exclamation mark and a question
+// mark. They are line icons built from path data, like the icons in MiloIcons.kt, and for the
+// same reason. The fourth state has no mark: it is an empty ring, which the row draws itself.
 //
-// The shapes differ as well as the colours on purpose, so the state is still readable for
+// The marks differ as well as the colours on purpose, so the state is still readable for
 // someone who cannot tell red from green, or in sunlight that washes the colours out.
+//
+// They are drawn as shapes and not written as letters, so that they keep their size on the dot
+// when the phone's font size is turned up.
 
-/** The circle all four indicators are drawn in. */
-private const val CIRCLE = "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"
+/** A mark is drawn small, 14 dp on a 28 dp dot, so its lines are thick on the 24 grid. */
+private const val MARK_LINE_WIDTH = 3f
 
-private const val CHECK_CIRCLE_PATH =
-    CIRCLE + "M10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"
+/**
+ * The exclamation mark and the question mark are narrow, and at the tick's thickness they
+ * looked thin beside it on the dot (seen on an emulator), so their lines are a little thicker.
+ */
+private const val NARROW_MARK_LINE_WIDTH = 3.5f
 
-private const val ERROR_CIRCLE_PATH = CIRCLE + "M13,17h-2v-2h2v2zM13,13h-2L11,7h2v6z"
+// The tick of the design.
+private const val TICK_PATH = "M5,12l5,5L20,7"
 
-// A question mark: MilO cannot tell.
-private const val HELP_CIRCLE_PATH =
-    CIRCLE + "M13,19h-2v-2h2v2z" +
-        "M15.07,11.25l-0.9,0.92C13.45,12.9 13,13.5 13,15h-2v-0.5" +
-        "c0,-1.1 0.45,-2.1 1.17,-2.83l1.24,-1.26c0.37,-0.36 0.59,-0.86 0.59,-1.41 " +
-        "0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2L8,9c0,-2.21 1.79,-4 4,-4s4,1.79 4,4" +
-        "c0,0.88 -0.36,1.68 -0.93,2.25z"
+// A stroke with a dot under it, as tall as the grid allows.
+private const val EXCLAMATION_PATH = "M12,2.5v12M12,21.25h0.01"
 
-// An empty ring, like a box waiting for its tick: the user has something to confirm.
-private const val EMPTY_CIRCLE_PATH =
-    CIRCLE + "M12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z"
+// A hook with a dot under it: MilO cannot tell.
+private const val QUESTION_PATH =
+    "M6.76,7a5.4,5.4 0 0 1 10.5,1.8c0,3.6 -5.4,5.4 -5.4,5.4" +
+        "M12,21.25h0.01"
 
 internal object StatusIcons {
-    val Ok: ImageVector by lazy { pathIcon(name = "StatusOk", pathData = CHECK_CIRCLE_PATH) }
-    val Problem: ImageVector by lazy {
-        pathIcon(name = "StatusProblem", pathData = ERROR_CIRCLE_PATH)
+    val Tick: ImageVector by lazy {
+        lineIcon(name = "StatusTick", pathData = TICK_PATH, lineWidth = MARK_LINE_WIDTH)
     }
-    val Unknown: ImageVector by lazy {
-        pathIcon(name = "StatusUnknown", pathData = HELP_CIRCLE_PATH)
+    val Exclamation: ImageVector by lazy {
+        lineIcon(
+            name = "StatusExclamation",
+            pathData = EXCLAMATION_PATH,
+            lineWidth = NARROW_MARK_LINE_WIDTH,
+        )
     }
-    val NeedsConfirmation: ImageVector by lazy {
-        pathIcon(name = "StatusNeedsConfirmation", pathData = EMPTY_CIRCLE_PATH)
+    val Question: ImageVector by lazy {
+        lineIcon(
+            name = "StatusQuestion",
+            pathData = QUESTION_PATH,
+            lineWidth = NARROW_MARK_LINE_WIDTH,
+        )
     }
 }

@@ -68,7 +68,7 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 
 ## First-time setup in the app
 
-Open MilO and press **Setup** in the bottom bar. The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
+Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
 On 2026-10-05 you went through this screen once, everything except pairing the truck. The Physical activity row was added after that.
 
@@ -219,12 +219,12 @@ This is what is built. With the truck it has not been seen yet; a trip started w
 
 | What | Where |
 |---|---|
-| The trip in progress, today's trips, Start trip / End trip | **Home**, the first button of the bottom bar |
-| Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button |
+| The trip in progress, today's trips, Start trip / End trip | **Home**, the first button of the bottom bar (a house) |
+| Every trip, a month at a time; edit, mark Business or Personal, delete, add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the month's card, **Report for the accountant** |
-| Your name, company, vehicle, the accountant's email address, the work hours, the two trip numbers, the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the cog beside the title on Home |
-| The permissions and phone settings, and the truck | **Setup**, the third button |
-| What MilO did and when | **Log**, the last button |
+| Your name, company, vehicle, the accountant's email address, the work hours, the two trip numbers, the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders beside the title on Home |
+| The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
+| What MilO did and when | **Log**, the last button (a sheet of paper) |
 
 **The report.** Set your name and the accountant's address in Settings first. On the Report screen, "Create PDF" and "Open PDF" let you look at it; **Send to accountant** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Export CSV" makes the same trips as a spreadsheet file. No email draft has been seen yet, on any device: the emulator had no email account.
 

@@ -19,10 +19,9 @@ class MiloIconsTest {
             MiloIcons.Settings,
             MiloIcons.Add,
             MiloIcons.Remove,
-            StatusIcons.Ok,
-            StatusIcons.Problem,
-            StatusIcons.Unknown,
-            StatusIcons.NeedsConfirmation,
+            StatusIcons.Tick,
+            StatusIcons.Exclamation,
+            StatusIcons.Question,
         )
 
     @Test

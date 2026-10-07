@@ -3,8 +3,21 @@
     <!--
         Only styles the window before Compose draws its first frame (the system splash screen
         and the brief moment after it). Everything the user actually sees is themed in Kotlin by
-        MiloTheme, so no colours are set here. A platform theme is used as the parent to avoid
-        pulling in the AppCompat or Material Components libraries just for one style.
+        MiloTheme. A platform theme is used as the parent to avoid pulling in the AppCompat or
+        Material Components libraries just for one style.
+
+        MilO is always dark, whatever the phone is set to, so there is one style and no
+        values-night copy of it. The parent is the platform's dark theme, and the window is given
+        MilO's own page colour, both as its background and as the background of Android's splash
+        screen: otherwise a launch would show Android's grey, or with a light parent white, for a
+        moment before the first screen is drawn. The two "light bar" items are false so that the
+        clock and the gesture line are drawn light on that dark window from the first moment on;
+        after that MainActivity keeps them so (MiloSystemBarStyle).
     -->
-    <style name="Theme.MilO" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MilO" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/milo_window_background</item>
+        <item name="android:windowSplashScreenBackground">@color/milo_window_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
 </resources>

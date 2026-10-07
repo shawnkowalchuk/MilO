@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Dark counterpart of values/themes.xml, so a dark-mode launch does not flash white. -->
-    <style name="Theme.MilO" parent="android:Theme.Material.NoActionBar" />
-</resources>

@@ -1,22 +1,37 @@
 package com.shawnkowalchuk.milo.core.designsystem.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 // Material's minimum touch target. The whole row is the target, not only the small switch.
 private val MinHeight = 48.dp
+
+// The design's switch: a pill-shaped track with a round thumb that sits just inside it.
+private val TrackWidth = 48.dp
+private val TrackHeight = 28.dp
+private val ThumbSize = 22.dp
 
 /**
  * A labelled on/off switch. The whole row toggles it, and a screen reader reads the label and
@@ -43,7 +58,63 @@ fun SwitchRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        // No handler of its own: the row above is what is pressed.
-        Switch(checked = checked, onCheckedChange = null)
+        SwitchMark(checked = checked)
+    }
+}
+
+/**
+ * The switch as the design draws it. On: the track is the accent and the thumb is dark, at the
+ * end. Off: the track is the quiet fill of a control and the thumb is grey, at the start. The
+ * thumb's place says the state as well as the colours do.
+ *
+ * It only shows the state. It has no handler and says nothing to a screen reader: the row
+ * around it is what is pressed and what is read out.
+ *
+ * Material's own `Switch` is not used because its size is fixed and is not the design's.
+ */
+@Composable
+private fun SwitchMark(checked: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    val track by animateColorAsState(
+        targetValue = if (checked) scheme.primary else MiloTheme.colors.control.fill,
+        label = "switch track",
+    )
+    val thumb by animateColorAsState(
+        targetValue = if (checked) scheme.onPrimary else scheme.onSurfaceVariant,
+        label = "switch thumb",
+    )
+    // 0 at the start of the track, 1 at its end.
+    val place by animateFloatAsState(targetValue = if (checked) 1f else 0f, label = "switch place")
+    Spacer(
+        modifier =
+            Modifier
+                .size(width = TrackWidth, height = TrackHeight)
+                // Drawn, not laid out: the three values above are read only while drawing, so
+                // the slide of the thumb redraws this one mark and nothing around it.
+                .drawBehind {
+                    drawRoundRect(color = track, cornerRadius = CornerRadius(size.height / 2))
+                    val radius = ThumbSize.toPx() / 2
+                    val fromEdge = size.height / 2
+                    val travel = size.width - size.height
+                    // "The end" is the left where a language is written from right to left.
+                    val along =
+                        if (layoutDirection == LayoutDirection.Rtl) 1f - place else place
+                    drawCircle(
+                        color = thumb,
+                        radius = radius,
+                        center = Offset(x = fromEdge + travel * along, y = size.height / 2),
+                    )
+                },
+    )
+}
+
+// Sample text is written inline because a preview is never shown to a user or shipped.
+@Preview
+@Composable
+private fun SwitchRowPreview() {
+    MiloTheme {
+        Surface {
+            SwitchRow(label = "Trip-start sound", checked = true, onCheckedChange = {})
+        }
     }
 }
