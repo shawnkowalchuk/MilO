@@ -166,7 +166,7 @@ class OwnTripSound(
      * Removes copies that are no longer wanted. A failure here changes nothing about which sound
      * plays, so it is logged and the change stands; the next change removes what was left.
      */
-    private suspend fun tidy(remove: () -> Unit) {
+    private suspend fun tidy(remove: suspend () -> Unit) {
         try {
             remove()
         } catch (leftBehind: IOException) {
