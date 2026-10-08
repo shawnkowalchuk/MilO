@@ -1216,6 +1216,8 @@ Shawn's decisions of 2026-10-07: he types the reading, MilO adds every truck tri
 
 ## The home-screen widget (2026-10-07)
 
+**2026-10-08:** Shawn tested the widget on the phone: "i teset it and it works". The rows below were not reported one by one, so they still say "not run"; mark each when it has been looked at.
+
 Shawn's request of 2026-10-07: a widget with the trip, Start and End, and this month's and this year's Business kilometres in dollars, and a switch for the whole widget in Settings. The same evening the CRA's tiers gave way to one rate set in Settings, $0.70 out of the box (W-1, W-4, W-13, W-14). Built and unit tested only; never drawn anywhere.
 
 | # | Do this | Expect | Result |
