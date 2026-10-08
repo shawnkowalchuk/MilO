@@ -416,7 +416,7 @@ To look at a change before merging, open `website/index.html` in a browser, or r
 
 **Setting it up, once** (as for reactimate.top):
 
-1. **Check the project ID.** Firebase console, the cog, **Project settings**, "Project ID". It must be `milotriplog`; if it is anything else (Firebase adds a few letters when a name is taken), `.firebaserc` and the secret's name in `.github/workflows/website.yml` change with it.
+1. **The project ID is `milotriplog`** (Firebase console, the cog, **Project settings**; checked on 2026-10-08). `.firebaserc` and the secret's name in `.github/workflows/website.yml` depend on it. The free Spark plan is enough: it includes Hosting and a custom domain.
 2. **Switch Hosting on:** Firebase console, **Build**, **Hosting**, **Get started**. Click through; the command-line steps it shows are already done in this repository.
 3. **Make the deploy key and give it to GitHub,** on the Mac, in the MilO folder with `main` pulled:
 

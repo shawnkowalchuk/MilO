@@ -1682,7 +1682,7 @@ Firebase Hosting in the project `milotriplog`; the deploy key in GitHub's Action
 **Edge cases & gotchas**
 - **The privacy page makes promises about the app** (what it keeps, what leaves the phone and how, every permission and why). A change to any of that changes `website/privacy.html` in the same pull request.
 - **Until the first release is published,** the download button opens an empty Releases page (README, "Making a release").
-- **The project ID is assumed to be `milotriplog`.** Shawn gave "MilOtriplog"; IDs are lowercase, and Firebase adds letters to one that is taken. If the console shows another, `.firebaserc` and the secret's name in the workflow change with it, or the first deploy fails.
+- **The project ID is `milotriplog`** (display name "MilOtriplog"), read from the console's Project settings on 2026-10-08. `.firebaserc` and the secret's name in the workflow depend on it; on the free Spark plan.
 - **The screenshots are the README's too:** they moved from `docs/screenshots/` to `website/screenshots/`, one copy for both. The home screenshot's street addresses are blurred; the Settings one shows Shawn's name, as the README does.
 - The font is a copy of `app/src/main/res/font/sora.ttf`; the two are changed together, and its licence goes with it (`website/fonts/Sora-OFL.txt`).
 - The Firebase command-line tool the deploy runs is pinned in the workflow (15.33.0), where Dependabot cannot see it (`[DEBT]`).

@@ -21,7 +21,7 @@ Asked on 2026-10-08, Shawn chose:
 - **Content: "Landing + privacy page".** One page that says what MilO does, with the screenshots, a "Download the latest APK" button that opens the newest GitHub Release, the install steps and a privacy summary; and a privacy policy page. A not-found page besides.
 - **Deploy: "Auto on merge, like Reactimate".** `.github/workflows/website.yml` deploys `website/` to the live site whenever a change to it (or to `firebase.json`, `.firebaserc` or the workflow) reaches `main`, and on demand from the Actions tab.
 - **Tech: "Plain HTML and CSS".** Hand-written pages in `website/`, no build step, no npm, no JavaScript at all.
-- **The Firebase project** is `milotriplog` (`.firebaserc`). Shawn gave its name as "MilOtriplog"; a project ID is always lowercase, so `milotriplog` is the reading, to be confirmed in the Firebase console.
+- **The Firebase project** is `milotriplog` (`.firebaserc`): its display name is "MilOtriplog", and the console's Project settings showed the ID `milotriplog` (Shawn's screenshot, 2026-10-08). It is on the free Spark plan, which includes Hosting and a custom domain.
 
 And so:
 
