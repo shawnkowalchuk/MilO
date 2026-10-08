@@ -273,6 +273,8 @@ internal fun SettingsContent(
         // Last: it is used a few times a year, and it is the one tile that can replace
         // everything, so it is not among the settings that are changed in passing.
         if (state != SettingsUiState.Reading) dataTile()
+        // Beside the version: neither is a setting.
+        CoffeeTile()
         versionTile()
     }
 }

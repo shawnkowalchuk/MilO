@@ -21,6 +21,9 @@
   --text-secondary: #9298a3;
   --accent: #c6f432;
   --accent-pressed: #ddff7a;
+  /* Buy Me a Coffee's own yellow, for its button alone (2026-10-08). */
+  --coffee: #ffdd00;
+  --coffee-pressed: #ffe94d;
   --tile-radius: 26px;
   --small-radius: 22px;
   --button-radius: 18px;
@@ -43,6 +46,8 @@ body {
   font-family: "Sora", system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.55;
+  /* A web address is one long word: on a phone it breaks rather than run off the page. */
+  overflow-wrap: break-word;
 }
 
 a {
@@ -189,6 +194,25 @@ main > * {
 .accent .button:hover,
 .accent .button:focus-visible {
   color: var(--accent-pressed);
+}
+
+/*
+ * The Buy me a coffee button: Buy Me a Coffee's yellow with black words, as its own button
+ * has them, drawn here so that the page loads nothing from another site.
+ */
+.coffee {
+  display: inline-block;
+  background: var(--coffee);
+  color: #000;
+  border-radius: var(--button-radius);
+  padding: 12px 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.coffee:hover,
+.coffee:focus-visible {
+  background: var(--coffee-pressed);
 }
 
 .hero .small {

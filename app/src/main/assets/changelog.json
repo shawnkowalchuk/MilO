@@ -16,8 +16,18 @@
         },
         {
           "kind": "new",
+          "title": "Several vehicles",
+          "body": "Pair each work vehicle in Setup, and any of them starts a trip. Each trip records which vehicle it was in, each vehicle has its own odometer, and the report names the vehicle when the month had more than one."
+        },
+        {
+          "kind": "new",
           "title": "Business or Personal",
           "body": "Trips in your work hours are saved as Business, the others as Personal or not at all. Any trip can be changed, edited or added by hand on the Trips screen."
+        },
+        {
+          "kind": "new",
+          "title": "A label for each trip",
+          "body": "Press a trip, then Label, and pick one of the labels you used before or type a new one. The label used where the trip ended, within 200 m, is listed first and already chosen. The report prints it as the trip's purpose."
         },
         {
           "kind": "new",
@@ -43,6 +53,11 @@
           "kind": "new",
           "title": "Your data stays yours",
           "body": "No account and no server. Export all your data to one file and import it again, and Android's own backup keeps a copy in your Google account."
+        },
+        {
+          "kind": "new",
+          "title": "Buy me a coffee",
+          "body": "A tile above Version in Settings opens MilO's page on Buy Me a Coffee in the browser, for anyone who would like to say thanks. MilO stays free, with no ads."
         }
       ]
     }

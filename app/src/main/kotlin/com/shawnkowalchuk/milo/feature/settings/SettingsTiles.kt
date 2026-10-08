@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -106,8 +107,9 @@ private fun TruckTile(state: SettingsUiState.Ready, onChangeTruck: () -> Unit, m
 
                     state.moreVehicles == 0 -> name
 
-                    else -> stringResource(
-                        R.string.settings_vehicles_more,
+                    else -> pluralStringResource(
+                        R.plurals.settings_vehicles_more,
+                        state.moreVehicles,
                         name,
                         state.moreVehicles,
                     )

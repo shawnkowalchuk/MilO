@@ -711,8 +711,14 @@
     <string name="settings_could_not_save">That change could not be saved. The Log screen says why.</string>
     <string name="settings_truck_title">Truck</string>
     <string name="settings_vehicles_title">Vehicles</string>
-    <!-- The first vehicle's name and how many more are paired: "Work truck + 1 more". -->
-    <string name="settings_vehicles_more">%1$s + %2$d more</string>
+    <!--
+        The first vehicle's name and how many more are paired: "Work truck + 1 more". The
+        words are the same for one and for several in English; another language may need two.
+    -->
+    <plurals name="settings_vehicles_more">
+        <item quantity="one">%1$s + %2$d more</item>
+        <item quantity="other">%1$s + %2$d more</item>
+    </plurals>
     <string name="settings_truck_detail">A trip starts by itself when this truck connects.</string>
     <string name="settings_applies_next_trip">A change applies from the next trip. A trip that is being recorded may already use it.</string>
     <string name="settings_grace_label">Wait after the truck disconnects</string>
