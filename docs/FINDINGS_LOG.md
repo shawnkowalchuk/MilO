@@ -24,6 +24,56 @@
 
 ### 2026-10-08
 
+**`[DECISION]` Several vehicles: the truck stays where it was, and the others are a list beside it**
+Shawn: "can we add the option to link multiple vehicles to blutooth". His answers: several work vehicles; each trip records which one it was in; an odometer for each; the phone only. **The first vehicle is the truck, under the keys it always had** (`truck_address`, `truck_name`, `truck_association_id`), and the others are a new string set, `more_vehicles`. Moving every vehicle into one new list was the other way, and was not taken: every path that knew one truck (Setup, Home, the reconcile, the export, the pairing check, Android Auto's status) would have changed at once, for a phone that in most cases has one vehicle. Removing the first vehicle moves the next one into the old keys, so they always hold a vehicle while any is paired. **A trip or a reading with no vehicle counts for the first one,** so nothing recorded before needs a vehicle to be counted; the trips and the readings from before are still given the truck's address once (`TripVehicleCatchUp`), so that removing the truck later does not hand them to the next vehicle.
+
+**`[CHANGE]` Several vehicles: pair each, any of them starts a trip, each trip records its vehicle, an odometer for each**
+- **Pairing** ("Vehicles"): Add pairs one more; Remove, after a question, removes the vehicle and its association. After a pairing, associations that are no vehicle's newest are removed.
+- **Detection:** the receiver and the companion service match every paired vehicle and name it; the reading asks about every address; the pairing check watches each; Setup names a vehicle Android does not watch. **A disconnect of another vehicle than the one last seen connected is read, not trusted**, so leaving the van's Bluetooth range while in the truck does not end the truck's trip.
+- **Each trip records its vehicle** (database version 7, `trips.vehicleAddress`), once, while it is open. Export format 3 carries it.
+- **Odometer:** a reading names its vehicle ("time:km|address"); Settings has a tile per vehicle; the report prints each vehicle's odometer, and the vehicle under a trip where the period had more than one; the CSV has a Vehicle column.
+- **With one vehicle nothing looks different.**
+- **Checked:** the trip rules, the signals, pairing, the odometer and the report in unit tests (the odometer and report tests, 527, also in a scratch Gradle project here), and the rest in CI. **Nothing has run on an emulator or on the phone:** device checks MV-1 to MV-12.
+
+**`[DEBT]` A change of vehicle within the grace period keeps the trip in the first vehicle**
+A trip records its vehicle once (`TripLedger.noteVehicle`). Leaving the truck and driving off in the van within the two minutes of grace continues the trip, as it always did, and the whole trip is the truck's: the van's odometer misses it. To fix: end the trip and start another when a connect names another vehicle during the grace period. Rare for one driver; left until it is seen.
+
+**`[DEBT]` A trip added by hand names no vehicle**
+The edit screen has no choice of vehicle, so a trip typed in has none and counts for the first vehicle's odometer (`TripRepository.addByHand`). With one vehicle that is right. To fix: a choice of the paired vehicles on the edit screen, shown only when there are several.
+
+**`[DEBT]` An export carries the first vehicle only**
+`TransferredSettings` has one truck, as before; the vehicles beside it stay as the importing phone has them. The trips in the file name their vehicles either way. To fix: a list of vehicles in the settings of the file, which is a new export format.
+
+**`[DEBT]` Three files are further over the 300-line guideline**
+`TripWorker.kt` (362 to 380 lines), `TripLedger.kt` (325 to 351) and `AppContainer.kt` (316 to 329) were over it before and grew with the vehicles. `MiloNavigation.kt` went down to 267: the Trips screen's entry moved to `app/TripsEntry.kt`. To fix: split each by its parts (the worker's vehicle and parked work, the ledger's vehicle and grace notes), in a change of its own.
+
+**`[FINDING]` The schema of database version 7 was taken from CI, and matched**
+This session has no Android SDK (Google's Maven is blocked), so Room's KSP could not export `app/schemas/.../7.json`. The file was written by hand from 6.json and the two new columns, with the identity hash Room printed in a CI run, and a temporary CI step compared Room's own export with it. The next run showed no difference, and the step came out again. The migration test now counts the two columns of the step to version 7, and checks its two statements.
+
+**`[FINDING]` Kotlin 2.4 smart-casts after a `when` on `x?.property`, and a safe call after it is a warning**
+`when (status?.state)` followed by `status?.missing` failed the build: with warnings as errors, the needless `?.` on a value Kotlin now knows is not null is fatal. Written `status.missing`.
+
+**`[DECISION]` Trip labels: suggested by where the trip ended, only suggested, printed as the purpose**
+Shawn: "add the ability to add a label for each trip pick from a list of previously used ones. have them from a gps quaridinate so that if im at work and labeled work before that is the one that is choosen from the list". His answers: the place is where the trip **ends**; within **200 m**; the label is **only suggested**, never set by itself; the report prints it **as a column**; the phone only. **The suggestion is the newest label used within 200 m,** not the most used, so a place that changed its name follows at once. It is chosen in the dialog already, which is how "that is the one that is chosen from the list" is met while Save is still his press. The report's "column" is a grey line under the trip's addresses on the PDF (the page has no room for another column beside the addresses), and a Purpose column in the CSV.
+
+**`[CHANGE]` Trip labels**
+A pressed trip has a Label button (Edit, Label, the other category, Delete: two lines of buttons). It opens a dialog: a sentence, the labels used before as choice buttons with the suggestion first and chosen, "No label" for a trip that has one, and a field for a new label; Save writes the typed label, or else the chosen one. Labels that differ only in capitals are one. One event-log line for each save. The trip's grey line shows the label after the times. `core/trip/TripLabels.kt` (pure, 7 tests, also run here), `TripLabelViewModel` (7 tests, CI) and `LabelDialog` in `feature/trips/`; the view model is its own, because `TripsViewModel` is at its size limit. **Nothing has run on an emulator or on the phone:** device checks LB-1 to LB-8.
+
+**`[FINDING]` The design's chips cannot stand in a dialog**
+The labels were to be chips (`ChipChoice`), but an unchosen chip is the colour of a tile, and a dialog is a tile: they would not be seen. The dialog uses the edit screen's choice buttons (`ChoiceButton`, made for a tile) in a column instead. No new component.
+
+**`[DECISION]` Buy me a coffee: a tile that opens the browser, and a button the website draws itself**
+Shawn: "can we add a buy me a coffee link in app and on the website. buymeacoffee.com/SeaWingman", with Buy Me a Coffee's button code, an image from img.buymeacoffee.com. **The website does not use that image:** its Content-Security-Policy allows images from the site only, and the privacy policy says the site loads nothing from other sites. The button is drawn in the site's CSS instead, in Buy Me a Coffee's yellow (`--coffee`, the one colour on the site outside its palette, for this button alone). **The app opens the page in the browser** (`ACTION_VIEW`), so it still has no internet permission and sends nothing with the press. Phone only.
+
+**`[CHANGE]` Buy me a coffee in Settings and on the website**
+Settings: a tile above Version, drawn as Version is, that opens the page; a phone with no browser says so on the tile (`feature/settings/CoffeeTile.kt`). Website: the button in the landing page's last tile, a link in each footer (the What's new page's through `tools/changes_page.py`), the "Is MilO free?" answer, and a line in the privacy policy for the tile and the links. Device checks BC-1 to BC-3.
+
+**`[CHANGE]` The website describes several vehicles, labels and What's new**
+The landing page's description, lead, lists, questions and structured data (a `featureList`; the FAQ's structured data matches the questions on the page word for word, as Google asks), the comparison's MilO column and "fits if" lists, and the privacy policy's list of what the app keeps. The CRA and IRS answer now says the report prints a purpose where a trip has a label; "Does it record drives in other vehicles?" became "Can MilO track more than one vehicle?"; "Can I note what each trip was for?" is new. Drawn at 390 and 1280 pixels: a web address in a What's new line ran 9 pixels off a phone's screen, so long words now break (`overflow-wrap`).
+
+**`[FIX]` Lint: "+ 1 more" is a plural**
+`settings_vehicles_more` failed Android Lint's PluralsCandidate (a warning, so an error here). It is a `<plurals>` with the same words for one and several in English.
+
 **`[DECISION]` What's new: the list of changes is a file in the repository, not a server**
 Shawn: "make sure we have a version number in the app under settings. also please make it clickable and make it work same as gopherforms and seawingman. with including version and what has changed the only difference is im not sure how we are going to do the backend to edit the list and release of changes. also include this on the website". Both of his other apps were read (cloned read-only into the session): GopherForms' Settings has "Version 1.4.2 →", which opens "What's new", entries grouped by version with a tag each (New, Improved, Fixed, Security), and a "What's new" shown once after a new version; both keep the entries in a database behind their server, with an admin page that edits and releases them. MilO has no server and no internet permission, and its privacy promise rests on that. Asked, Shawn chose **"A file in the repo"** (over "A server like GopherForms", which would have needed both and an ADR), with the popup once after each update. So "the backend" is `app/src/main/assets/changelog.json`, edited in a pull request like the code; "release of changes" is dating a version in it. The app reads it as an asset, and the website's page is written from it by a script, so the two cannot disagree.
 

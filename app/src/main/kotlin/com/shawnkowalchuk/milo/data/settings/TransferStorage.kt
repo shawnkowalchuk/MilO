@@ -72,7 +72,12 @@ data class TransferredSettings(
     val reminderDay: Int,
 )
 
-/** The part of the stored settings that an export carries. */
+/**
+ * The part of the stored settings that an export carries.
+ *
+ * TODO(debt): the first vehicle only, as before several vehicles. The others stay as they are
+ * on the phone that imports (FINDINGS_LOG, 2026-10-08).
+ */
 fun MiloSettings.transferred(): TransferredSettings = TransferredSettings(
     truck = truckAddress?.let { TransferredTruck(it, truckName) },
     gracePeriodSeconds = gracePeriodSeconds,

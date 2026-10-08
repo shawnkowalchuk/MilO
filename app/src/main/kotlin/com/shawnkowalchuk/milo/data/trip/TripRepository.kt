@@ -270,6 +270,8 @@ class TripRepository(private val dao: TripDao) {
      * @return the row as stored, with its id.
      */
     suspend fun addByHand(typed: TypedTrip, schedule: WorkSchedule?, zone: ZoneId): Trip {
+        // TODO(debt): the edit screen has no choice of vehicle, so a trip typed in names none,
+        // and counts for the first vehicle (`drivenIn`). FINDINGS_LOG, 2026-10-08.
         val trip = tripAddedByHand(typed, schedule, zone)
         return trip.copy(id = dao.insert(trip))
     }

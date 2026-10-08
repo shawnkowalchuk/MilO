@@ -138,6 +138,9 @@ internal class TripLedger(
     /**
      * Records the paired vehicle the open trip is in (since 2026-10-08), once.
      *
+     * TODO(debt): once only. A change of vehicle within the grace period, the trip going on
+     * in another paired vehicle, keeps the trip in the first one (FINDINGS_LOG, 2026-10-08).
+     *
      * @return the line that records it, or null if there was nothing to record.
      */
     suspend fun noteVehicle(address: String): LogLine? {
