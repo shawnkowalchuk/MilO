@@ -14,6 +14,10 @@ internal const val OLD_TRUCK_ADDRESS = "11:22:33:44:55:66"
 
 internal val TRUCK_DEVICE = PairedDevice(TRUCK_ADDRESS, "Work truck")
 
+/** A second vehicle, paired beside the truck (since 2026-10-08). */
+internal const val VAN_ADDRESS = "22:33:44:55:66:77"
+internal val VAN_DEVICE = PairedDevice(VAN_ADDRESS, "Van")
+
 /**
  * Everything pairing touches, held in memory: the settings, the event log, Android's companion
  * device manager and the phone's list of paired devices. The test plays Android's part.

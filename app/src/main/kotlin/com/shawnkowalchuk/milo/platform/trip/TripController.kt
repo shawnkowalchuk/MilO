@@ -86,9 +86,10 @@ class TripController(
      * blocks: a receiver calls it from `onReceive`.
      *
      * @param source where the trigger came from, in words, for the event log.
+     * @param vehicle the paired vehicle the trigger named, or null ([StartRequest.vehicle]).
      */
-    fun onTrigger(trigger: TripTrigger, source: String) {
-        val request = StartRequest(trigger, source, clock())
+    fun onTrigger(trigger: TripTrigger, source: String, vehicle: String? = null) {
+        val request = StartRequest(trigger, source, clock(), vehicle)
         if (worker.service.recorder == null && beginsRecording(request)) {
             startService(request)
         } else {

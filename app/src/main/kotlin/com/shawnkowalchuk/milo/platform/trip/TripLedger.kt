@@ -32,6 +32,7 @@ import java.time.ZoneId
  * @param fromParked true if a parked truck's moving started it. Such a trip is removed for good
  * if it loses the truck within its first kilometre (`leftInAnotherVehicle`). Kept in the
  * settings file as well (`setDrivenOffTripId`), so that a restart knows it too.
+ * @param vehicle the paired vehicle it is in, once known (`Trip.vehicleAddress`).
  */
 internal data class OpenTrip(
     val id: Long,
@@ -39,6 +40,7 @@ internal data class OpenTrip(
     val startedBy: TripStartCause,
     val progress: TripProgress = TripProgress(),
     val fromParked: Boolean = false,
+    val vehicle: String? = null,
 )
 
 /**
@@ -95,7 +97,14 @@ internal class TripLedger(
         val row = trips.findOpenTrip() ?: return null
         val progress = TripProgress.of(points.pointsForTrip(row.id).map { it.toTrackPoint() })
         open =
-            OpenTrip(row.id, row.startedAtMs, row.startedBy, progress, row.id == drivenOffTripId)
+            OpenTrip(
+                row.id,
+                row.startedAtMs,
+                row.startedBy,
+                progress,
+                row.id == drivenOffTripId,
+                row.vehicleAddress,
+            )
         val graceStartedAtMs = row.graceStartedAtMs
         val graceDeadlineMs = row.graceDeadlineMs
         val trip =
@@ -125,6 +134,20 @@ internal class TripLedger(
 
     /** One fix while waiting beside the parked truck. See [TripParking.onFix]. */
     fun watchFix(fix: RawPoint): Long? = parking.onFix(fix)
+
+    /**
+     * Records the paired vehicle the open trip is in (since 2026-10-08), once.
+     *
+     * @return the line that records it, or null if there was nothing to record.
+     */
+    suspend fun noteVehicle(address: String): LogLine? {
+        val trip = open?.takeIf { it.vehicle == null } ?: return null
+        val changed = trips.setVehicle(trip.id, address)
+        open = trip.copy(vehicle = address)
+        // Not written: the row had its vehicle already, from the pass over earlier trips.
+        val kept = if (changed) "" else " (it had one already: nothing was written)"
+        return LogLine(EventCategory.TRIP, "Trip ${trip.id}: in the vehicle $address$kept")
+    }
 
     /** When the open trip last really moved, as its stored fixes say, or null if it has not. */
     val lastMovementAtMs: Long? get() = open?.progress?.lastMovementAtMs

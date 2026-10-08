@@ -27,8 +27,11 @@ internal sealed interface SignalDecision {
      * Tell the trip controller.
      *
      * @param source where the trigger came from, in words, for the event log.
+     * @param vehicle the address of the paired vehicle the report is about, or null when that
+     * cannot be told. The trip it starts records it (since 2026-10-08).
      */
-    data class Fire(val trigger: TripTrigger, val source: String) : SignalDecision
+    data class Fire(val trigger: TripTrigger, val source: String, val vehicle: String? = null) :
+        SignalDecision
 
     /** Not about the truck. The line still goes to the event log: it proves the report arrived. */
     data class Ignore(val why: String) : SignalDecision
@@ -101,7 +104,8 @@ private fun profileSignal(profile: String, state: Int?): BluetoothSignal? = when
 
 /**
  * Decides what a Bluetooth broadcast becomes. The broadcast fires for every device the phone
- * connects to (earbuds, a watch), so everything turns on whether [address] is the truck's.
+ * connects to (earbuds, a watch), so everything turns on whether [address] is one of the paired
+ * vehicles' (the truck's, or since 2026-10-08 any other vehicle paired beside it).
  *
  * @param via which receiver heard it, for the event log.
  * @param address the address of the device the broadcast is about, or null if it named none.
@@ -113,7 +117,7 @@ internal fun decideBroadcast(
     lookup: TruckLookup,
 ): SignalDecision {
     val device = address ?: "a device it does not name"
-    val truck = lookup.truck
+    val truck = lookup.trucks.named(address, associationId = null)
     return when {
         // Whose event it is cannot be told. It may be the truck's, so it is not dropped: the
         // controller reads the truck's connection, and that reading decides.
@@ -122,16 +126,27 @@ internal fun decideBroadcast(
             SignalDecision.Fire(TripTrigger.RECONCILE, source)
         }
 
-        truck == null ->
+        lookup.trucks.isEmpty() ->
             SignalDecision.Ignore("$via: ${signal.what} for $device. No truck is paired. Ignored")
 
-        truck.isDevice(address, associationId = null) ->
-            SignalDecision.Fire(signal.trigger, "$via: ${signal.what} for the truck ($device)")
+        truck != null ->
+            SignalDecision.Fire(
+                signal.trigger,
+                "$via: ${signal.what} for ${truck.inSource(lookup)} ($device)",
+                truck.address,
+            )
 
         else ->
             SignalDecision.Ignore("$via: ${signal.what} for another device ($device). Ignored")
     }
 }
+
+/**
+ * How the event log names a paired vehicle: "the truck" while it is the only one, as it always
+ * did, and by its name among several.
+ */
+private fun Truck.inSource(lookup: TruckLookup): String =
+    if (lookup.trucks.size == 1) "the truck" else "the vehicle ${name ?: address}"
 
 /** What a companion device callback says happened, whichever Android version sent it. */
 internal enum class CompanionSignal(val what: String, val trigger: TripTrigger) {
@@ -158,7 +173,7 @@ internal fun companionSignal(presenceEvent: Int): CompanionSignal? = when (prese
 
 /**
  * Decides what a companion device callback becomes. Android binds the companion service only
- * for devices MilO itself is associated with, and that is normally the truck alone.
+ * for devices MilO itself is associated with: the paired vehicles.
  *
  * @param address the address the callback named, or null (Android 16 names only the id).
  * @param associationId the association the callback named.
@@ -171,16 +186,16 @@ internal fun decideCompanion(
 ): SignalDecision {
     val named = listOfNotNull(address, "association $associationId").joinToString()
     val what = "companion service: ${signal.what} ($named)"
-    val truck = lookup.truck
+    val truck = lookup.trucks.named(address, associationId)
     return when {
         // The truck cannot be looked up, but the callback is about one of MilO's own
         // associations, so it is acted on. A start it causes still has to be confirmed.
         lookup.problem != null ->
             SignalDecision.Fire(signal.trigger, "$what, and ${lookup.problem}")
 
-        truck == null -> SignalDecision.Ignore("$what. No truck is paired. Ignored")
+        lookup.trucks.isEmpty() -> SignalDecision.Ignore("$what. No truck is paired. Ignored")
 
-        truck.isDevice(address, associationId) -> SignalDecision.Fire(signal.trigger, what)
+        truck != null -> SignalDecision.Fire(signal.trigger, what, truck.address)
 
         else -> SignalDecision.Ignore("$what. That device is not the truck. Ignored")
     }

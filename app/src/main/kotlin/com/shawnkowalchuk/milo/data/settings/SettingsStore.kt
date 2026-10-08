@@ -220,6 +220,8 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             truckAddress = preferences[TRUCK_ADDRESS],
             truckName = preferences[TRUCK_NAME],
             truckAssociationId = preferences[TRUCK_ASSOCIATION_ID],
+            moreVehicles = preferences.readMoreVehicles(),
+            tripVehiclesFilled = preferences.readTripVehiclesFilled(),
             gracePeriodSeconds = preferences[GRACE_PERIOD_SECONDS] ?: defaults.gracePeriodSeconds,
             minimumTripDistanceMetres =
                 preferences[MINIMUM_TRIP_DISTANCE_METRES] ?: defaults.minimumTripDistanceMetres,

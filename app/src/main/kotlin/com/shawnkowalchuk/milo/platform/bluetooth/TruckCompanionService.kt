@@ -76,7 +76,9 @@ class TruckCompanionService : CompanionDeviceService() {
         val lookup = container.pairedTruck.now()
         when (val decision = decideCompanion(signal, address, associationId, lookup)) {
             is SignalDecision.Ignore -> controller.note(EventCategory.TRIGGER, decision.why)
-            is SignalDecision.Fire -> controller.onTrigger(decision.trigger, decision.source)
+
+            is SignalDecision.Fire ->
+                controller.onTrigger(decision.trigger, decision.source, decision.vehicle)
         }
     }
 }

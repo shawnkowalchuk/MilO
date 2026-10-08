@@ -71,6 +71,13 @@ jobs:
       - name: Check, test and build
         run: ./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug
 
+      # TEMPORARY (2026-10-08): prints the schema Room exported for database version 7, which
+      # the session that wrote the migration could not generate (no Android SDK there). It is
+      # copied into app/schemas and this step is taken out again before the merge.
+      - name: Print the exported schema (temporary)
+        if: always()
+        run: cat app/schemas/com.shawnkowalchuk.milo.data.MiloDatabase/7.json || true
+
       # The console only prints the first lint error and a one-line test summary. The full lint
       # and test reports are kept, for failed runs only, so a red build can be diagnosed without
       # reproducing it locally.

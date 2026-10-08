@@ -147,8 +147,34 @@ internal val MIGRATION_5_6: Migration =
     }
 
 /**
+ * Version 6 to 7, both of 2026-10-08: the vehicle each trip was in (MilO learned several), and
+ * the label Shawn gives a trip.
+ *
+ * Two columns are added to `trips`, null on every existing row: the vehicle's Bluetooth
+ * address, and the label. The trips that were in the truck are given its address afterwards,
+ * once, by `data/trip/TripVehicleCatchUp`: this step cannot read the settings file the truck is
+ * in. No trip had a label before.
+ *
+ * The exported `app/schemas/.../7.json` is the reference.
+ */
+internal val MIGRATION_6_7: Migration =
+    object : Migration(6, 7) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE trips ADD COLUMN vehicleAddress TEXT")
+            connection.execSQL("ALTER TABLE trips ADD COLUMN label TEXT")
+        }
+    }
+
+/**
  * Every step, in order. `buildMiloDatabase` hands them to Room, which runs them one after the
  * other for a database that is more than one version behind.
  */
 internal val MILO_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+    arrayOf(
+        MIGRATION_1_2,
+        MIGRATION_2_3,
+        MIGRATION_3_4,
+        MIGRATION_4_5,
+        MIGRATION_5_6,
+        MIGRATION_6_7,
+    )

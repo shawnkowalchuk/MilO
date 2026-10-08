@@ -5,6 +5,8 @@ import android.content.Context
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.removeVehicle
+import com.shawnkowalchuk.milo.data.settings.storeVehicle
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Pairs MilO with the truck (ADR-002, "Pairing") and keeps the pairing armed.
+ * Pairs MilO with the truck (ADR-002, "Pairing") and keeps the pairing armed. Since 2026-10-08
+ * with several vehicles: picking another device adds it beside the ones already paired, and
+ * [remove] takes one away.
  *
  * Pairing is three steps. The screen lists [pairedDevices] and Shawn picks the truck. MilO asks
  * Android to associate it ([associate]), and Android asks Shawn for his consent in a dialog of
@@ -151,13 +155,44 @@ class TruckPairing internal constructor(
         }
         // A blank name is no name: the settings store refuses to hold one.
         val truck = Truck(device.address, device.name?.takeIf { it.isNotBlank() }, association?.id)
-        settings.setTruck(truck.address, truck.name, truck.associationId)
-        // Every other association is left over from an earlier pairing. Android would go on
-        // waking MilO for them.
-        associations.filterNot { it == association }.forEach(link::remove)
+        settings.storeVehicle(truck.address, truck.name, truck.associationId, clock())
+        // An association of no paired vehicle is left over from an earlier pairing, and so is
+        // an older one of this vehicle's. Android would go on waking MilO for them.
+        val kept =
+            settings.current().trucks().mapNotNull { associations.newestFor(it.address) }.toSet()
+        associations.filterNot { it in kept }.forEach(link::remove)
         report(PairingProgress.Paired(truck))
         runCheck("paired with the truck")
         onTruckChanged()
+    }
+
+    /**
+     * Takes a paired vehicle away (since 2026-10-08): its association is removed, so Android no
+     * longer wakes MilO for it, and it is forgotten. Removing the first vehicle makes the next
+     * one the first. A trip it is recording goes on, and ends as a trip ends when its vehicle
+     * is gone.
+     */
+    fun remove(vehicle: Truck) {
+        scope.launch {
+            try {
+                if (link.supported) {
+                    link.associations()
+                        .filter { sameAddress(it.address, vehicle.address) }
+                        .forEach(link::remove)
+                }
+                settings.removeVehicle(vehicle.address)
+                eventLog.add(clock(), EventCategory.PAIRING, "Vehicle removed: $vehicle")
+            } catch (unwritable: IOException) {
+                val what = "The vehicle could not be removed: $unwritable"
+                eventLog.add(clock(), EventCategory.PAIRING, what)
+            } catch (refused: RuntimeException) {
+                // See associate(): Android's refusals are unchecked exceptions.
+                val what = "Android refused while removing a vehicle: $refused"
+                eventLog.add(clock(), EventCategory.PAIRING, what)
+            }
+            runCheck("a vehicle was removed")
+            onTruckChanged()
+        }
     }
 
     private suspend fun report(result: PairingProgress) {

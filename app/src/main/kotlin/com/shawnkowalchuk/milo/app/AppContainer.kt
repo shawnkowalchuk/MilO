@@ -18,6 +18,7 @@ import com.shawnkowalchuk.milo.data.settings.buildShownUnit
 import com.shawnkowalchuk.milo.data.sound.buildOwnSoundStore
 import com.shawnkowalchuk.milo.data.trip.TripCategoryCatchUp
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.data.trip.TripVehicleCatchUp
 import com.shawnkowalchuk.milo.platform.address.GeocoderAddressLookup
 import com.shawnkowalchuk.milo.platform.address.NetworkStatus
 import com.shawnkowalchuk.milo.platform.address.TripAddresses
@@ -226,6 +227,18 @@ class AppContainer(context: Context) {
             crashFileStore = crashFileStore,
             clock = System::currentTimeMillis,
             zone = ZoneId::systemDefault,
+            scope = applicationScope,
+        )
+    }
+
+    /** Gives the trips from before several vehicles the truck's address, once (2026-10-08). */
+    val tripVehicleCatchUp: TripVehicleCatchUp by lazy {
+        TripVehicleCatchUp(
+            trips = tripRepository,
+            settings = settingsStore,
+            eventLog = eventLogRepository,
+            crashFileStore = crashFileStore,
+            clock = System::currentTimeMillis,
             scope = applicationScope,
         )
     }

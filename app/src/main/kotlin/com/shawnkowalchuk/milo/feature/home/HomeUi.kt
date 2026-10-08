@@ -3,6 +3,8 @@ package com.shawnkowalchuk.milo.feature.home
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
+import com.shawnkowalchuk.milo.platform.bluetooth.sameAddress
+import com.shawnkowalchuk.milo.platform.bluetooth.trucks
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.LocalDate
 import java.time.YearMonth
@@ -63,6 +65,17 @@ internal data class HomeRead(
     val nowMs: Long,
 )
 
+/**
+ * The name to show on the truck's tile (since 2026-10-08): the paired vehicle the trip is about
+ * or that is connected, and otherwise the first one, as the tile always showed.
+ */
+internal fun MiloSettings.vehicleName(address: String?): String? {
+    val vehicles = trucks()
+    val vehicle =
+        vehicles.firstOrNull { sameAddress(it.address, address) } ?: vehicles.firstOrNull()
+    return vehicle?.name
+}
+
 /** Puts the screen together. The one place where the parts meet. */
 internal fun homeUi(now: HomeNow, read: HomeRead): HomeUi = HomeUi(
     date = now.date,
@@ -76,7 +89,7 @@ internal fun homeUi(now: HomeNow, read: HomeRead): HomeUi = HomeUi(
     truck =
         TruckTileState(
             state = truckState(truckFacts(now.stored, now.activity, now.setupNeedsAttention)),
-            truckName = now.stored?.truckName,
+            truckName = now.stored?.vehicleName(now.activity.vehicle),
         ),
     reportWaiting = read.reportWaiting,
     startAddress = startAddressOf(now.activity.trip, read.openTripStart),

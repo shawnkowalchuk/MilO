@@ -16,6 +16,8 @@ private const val TRUCK_ASSOCIATION = 7
 
 private val TRUCK = Truck(TRUCK_ADDRESS, "Work truck", TRUCK_ASSOCIATION)
 private val PAIRED = TruckLookup(TRUCK)
+private const val VAN_ASSOCIATION = 8
+private val TWO_VEHICLES = TruckLookup(listOf(TRUCK, Truck(VAN_ADDRESS, "Van", VAN_ASSOCIATION)))
 private val NOT_PAIRED = TruckLookup(truck = null)
 private val LOOKUP_FAILED = TruckLookup(truck = null, problem = "the settings cannot be read")
 
@@ -111,6 +113,7 @@ class TruckSignalsTest {
             SignalDecision.Fire(
                 TripTrigger.TRUCK_LINK_CONNECTED,
                 "Bluetooth receiver: ACL connected for the truck (AA:BB:CC:DD:EE:FF)",
+                TRUCK_ADDRESS,
             ),
             decision,
         )
@@ -199,6 +202,7 @@ class TruckSignalsTest {
             SignalDecision.Fire(
                 TripTrigger.TRUCK_APPEARED,
                 "companion service: device appeared (aa:bb:cc:dd:ee:ff, association 99)",
+                TRUCK_ADDRESS,
             ),
             byAddress,
         )
@@ -212,9 +216,43 @@ class TruckSignalsTest {
             SignalDecision.Fire(
                 TripTrigger.TRUCK_DISCONNECTED,
                 "companion service: device disappeared (association 7)",
+                TRUCK_ADDRESS,
             ),
             byId,
         )
+    }
+
+    @Test
+    fun `a broadcast for a second vehicle fires its trigger, names it and says which it is`() {
+        val decision =
+            decideBroadcast("Bluetooth receiver", ACL_CONNECTED, VAN_ADDRESS, TWO_VEHICLES)
+
+        assertEquals(
+            SignalDecision.Fire(
+                TripTrigger.TRUCK_LINK_CONNECTED,
+                "Bluetooth receiver: ACL connected for the vehicle Van ($VAN_ADDRESS)",
+                VAN_ADDRESS,
+            ),
+            decision,
+        )
+    }
+
+    @Test
+    fun `among several vehicles the first is named by its name too, and earbuds are ignored`() {
+        val truck = decideBroadcast("via", ACL_CONNECTED, TRUCK_ADDRESS, TWO_VEHICLES)
+        val earbuds = decideBroadcast("via", ACL_CONNECTED, EARBUDS_ADDRESS, TWO_VEHICLES)
+
+        assertEquals(TRUCK_ADDRESS, (truck as SignalDecision.Fire).vehicle)
+        assertTrue(truck.source.contains("the vehicle Work truck"))
+        assertTrue(earbuds is SignalDecision.Ignore)
+    }
+
+    @Test
+    fun `a companion callback for a second vehicle is matched by its association id`() {
+        val decision =
+            decideCompanion(CompanionSignal.APPEARED, null, VAN_ASSOCIATION, TWO_VEHICLES)
+
+        assertEquals(VAN_ADDRESS, (decision as SignalDecision.Fire).vehicle)
     }
 
     @Test

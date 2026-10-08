@@ -266,8 +266,8 @@ class DataImportingTest {
                     whole.dropLast(40) to TransferRefusal.Damaged,
                     whole.replace("\"status\":\"DELETED\"", "\"status\":\"OPEN\"") to
                         TransferRefusal.Damaged,
-                    whole.replace("\"formatVersion\": 2,", "\"formatVersion\": 3,") to
-                        TransferRefusal.NewerVersion(3),
+                    whole.replace("\"formatVersion\": 3,", "\"formatVersion\": 4,") to
+                        TransferRefusal.NewerVersion(4),
                 )
 
             for ((text, why) in refused) {
@@ -282,7 +282,7 @@ class DataImportingTest {
             val lines = world.lines(EventCategory.REPORT)
             assertEquals(4, lines.size)
             assertTrue(lines[2], lines[2].contains("Trip 4: its status is \"OPEN\""))
-            assertTrue(lines[3], lines[3].contains("format version 3"))
+            assertTrue(lines[3], lines[3].contains("format version 4"))
         }
 
     @Test

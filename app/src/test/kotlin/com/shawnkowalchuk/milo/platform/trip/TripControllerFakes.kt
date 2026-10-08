@@ -97,6 +97,9 @@ class FakeWorld(settingsFile: DataStore<Preferences> = FakeSettingsFile()) {
 class FakeTruck : TruckConnectionSource {
     var connected = false
 
+    /** Which paired vehicle a reading of "connected" names, if any (since 2026-10-08). */
+    var vehicle: String? = null
+
     /** Set to make the phone unable to say, as it is without the Bluetooth permission. */
     var unreadable = false
 
@@ -110,7 +113,7 @@ class FakeTruck : TruckConnectionSource {
         if (takesAMoment) yield()
         return when {
             unreadable -> TruckReading.unknown("the test took Bluetooth away")
-            connected -> TruckReading.connected("the test says so")
+            connected -> TruckReading.connected("the test says so", vehicle)
             else -> TruckReading.notConnected("the test says so")
         }
     }

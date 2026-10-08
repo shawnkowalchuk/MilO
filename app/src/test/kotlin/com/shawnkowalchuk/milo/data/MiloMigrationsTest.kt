@@ -87,7 +87,7 @@ class MiloMigrationsTest {
     fun `there is one step for every version the database has had`() {
         val current = schemas.listFiles { file -> file.extension == "json" }.orEmpty().size
 
-        assertEquals("One schema file per version, and no gaps", current, 6)
+        assertEquals("One schema file per version, and no gaps", current, 7)
         // In order and without a gap, so a database that is two versions behind is taken
         // through both steps, one after the other.
         assertEquals(

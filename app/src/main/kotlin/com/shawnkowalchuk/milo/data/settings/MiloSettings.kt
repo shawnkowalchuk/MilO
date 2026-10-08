@@ -36,15 +36,20 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Ten fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
- * [whatsNewSeenVersion], [lastDrivingAlertAtMs], [reportHandOver], [reminderShown],
- * [lastExport] and the last three; and one value inside [nothingRecorded] is not either. They
- * are small pieces of state that must outlive the process, and the settings store is where such
- * values live.
+ * Eleven fields are not settings Shawn chooses: [tripVehiclesFilled], [parkedTruck],
+ * [drivenOffTripId], [whatsNewSeenVersion], [lastDrivingAlertAtMs], [reportHandOver],
+ * [reminderShown], [lastExport] and the last three; and one value inside [nothingRecorded] is
+ * not either. They are small pieces of state that must outlive the process, and the settings
+ * store is where such values live.
  *
- * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
+ * @param truckAddress the Bluetooth address of the paired truck, or null before pairing. Since
+ * 2026-10-08 MilO knows several vehicles, and this is the first of them (`VehicleStorage.kt`).
  * @param truckName the truck's name as the phone shows it, for display only.
  * @param truckAssociationId the id of the companion device association, or null without one.
+ * @param moreVehicles the vehicles beside the first, in the order they were paired (since
+ * 2026-10-08; kept in `VehicleStorage.kt`). Read every vehicle through `trucks()`.
+ * @param tripVehiclesFilled true once the trips recorded before several vehicles have been
+ * given the first one (`data/trip/TripVehicleCatchUp`). Not a setting.
  * @param gracePeriodSeconds how long a trip waits after the truck disconnects.
  * @param minimumTripDistanceMetres trips shorter than this are discarded.
  * @param parkedLimitSeconds how long a trip may go without real movement before it is closed
@@ -123,6 +128,8 @@ data class MiloSettings(
     val truckAddress: String? = null,
     val truckName: String? = null,
     val truckAssociationId: Int? = null,
+    val moreVehicles: List<StoredVehicle> = emptyList(),
+    val tripVehiclesFilled: Boolean = false,
     val gracePeriodSeconds: Int = DEFAULT_GRACE_PERIOD_SECONDS,
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val parkedLimitSeconds: Int = DEFAULT_PARKED_LIMIT_SECONDS,

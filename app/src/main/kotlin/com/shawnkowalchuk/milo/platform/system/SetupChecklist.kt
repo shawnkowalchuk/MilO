@@ -6,6 +6,8 @@ import com.shawnkowalchuk.milo.data.settings.ConfirmedStep
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.platform.bluetooth.PairingStatus
+import com.shawnkowalchuk.milo.platform.bluetooth.sameAddress
+import com.shawnkowalchuk.milo.platform.bluetooth.trucks
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +51,12 @@ class SetupChecklist(
                 setupRows(
                     facts = it,
                     pairing = checked?.state,
-                    truckName = stored.truckName,
+                    // Since 2026-10-08: of several vehicles, the one Android no longer watches
+                    // for, if one is; otherwise the first, as it always was.
+                    truckName =
+                        checked?.missing?.firstOrNull()?.let { lost ->
+                            stored.trucks().firstOrNull { sameAddress(it.address, lost) }?.name
+                        } ?: stored.truckName,
                     confirmedAtMs = stored.confirmedAtMs,
                     drivingAlertEnabled = stored.drivingAlertEnabled,
                 )

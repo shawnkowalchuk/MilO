@@ -59,6 +59,14 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
     private var truckSeenOnThisLink = false
 
     /**
+     * The paired vehicle last seen connected in this process, by a connect that named it or by
+     * a reading, or null if none has been (since 2026-10-08, when MilO learned several). The
+     * open trip records it as the vehicle it is in ([TripWorker]).
+     */
+    var vehicleNow: String? = null
+        private set
+
+    /**
      * Takes note of a trigger before anything is read for it. The worker calls this first,
      * ahead even of the reading taken when the stored state is picked up: a reading comes
      * after the event that prompted it, and must be able to see the link that event made.
@@ -68,12 +76,17 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
         // starts again.
         if (request.trigger != TripTrigger.POLL) lostDisconnect.reset()
         if (request.trigger == TripTrigger.TRUCK_LINK_CONNECTED) truckSeenOnThisLink = false
+        val connects =
+            request.trigger == TripTrigger.TRUCK_LINK_CONNECTED ||
+                request.trigger == TripTrigger.TRUCK_APPEARED
+        if (connects && request.vehicle != null) vehicleNow = request.vehicle
     }
 
     /** Is the truck connected right now? */
     suspend fun readTruck(): TruckReading {
         val reading = truck.read()
         if (reading.connected) truckSeenOnThisLink = true
+        if (reading.connected && reading.vehicle != null) vehicleNow = reading.vehicle
         return reading
     }
 
@@ -108,16 +121,16 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
 
             TripTrigger.TRUCK_APPEARED -> Evidence(TripEvent.TruckAppeared(atMs))
 
+            // The disconnect of another paired vehicle than the one last seen connected says
+            // nothing certain about that one: it is read instead.
             TripTrigger.TRUCK_DISCONNECTED ->
-                Evidence(TripEvent.TruckConnection(connected = false, atMs))
+                if (isAnotherVehicle(request.vehicle)) {
+                    reconcileEvidence(state, atMs)
+                } else {
+                    Evidence(TripEvent.TruckConnection(connected = false, atMs))
+                }
 
-            TripTrigger.RECONCILE -> {
-                val reading = readTruck()
-                val unseen = provesNothingYet(reading, state)
-                val news = reading.known && !unseen
-                val event = TripEvent.TruckConnection(reading.connected, atMs)
-                Evidence(event.takeIf { news }, reading, linkNotSeenYet = unseen)
-            }
+            TripTrigger.RECONCILE -> reconcileEvidence(state, atMs)
 
             TripTrigger.CHECK_DUE -> {
                 val reading = readTruck()
@@ -142,6 +155,23 @@ internal class TripEvidence(private val truck: TruckConnectionSource) {
 
             TripTrigger.POLL -> pollEvidence(state, atMs)
         }
+    }
+
+    private suspend fun reconcileEvidence(state: TripState, atMs: Long): Evidence {
+        val reading = readTruck()
+        val unseen = provesNothingYet(reading, state)
+        val news = reading.known && !unseen
+        val event = TripEvent.TruckConnection(reading.connected, atMs)
+        return Evidence(event.takeIf { news }, reading, linkNotSeenYet = unseen)
+    }
+
+    /**
+     * Whether [vehicle], named by a trigger, is a paired vehicle other than the one last seen
+     * connected. Never with one vehicle paired, so a single truck is handled as it always was.
+     */
+    private fun isAnotherVehicle(vehicle: String?): Boolean {
+        val now = vehicleNow
+        return vehicle != null && now != null && !vehicle.equals(now, ignoreCase = true)
     }
 
     private fun TruckReading.orBelieved(state: TripState): Boolean =

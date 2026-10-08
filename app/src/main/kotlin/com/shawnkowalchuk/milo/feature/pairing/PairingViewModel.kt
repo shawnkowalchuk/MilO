@@ -9,7 +9,7 @@ import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDeviceList
 import com.shawnkowalchuk.milo.platform.bluetooth.Truck
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckPairing
-import com.shawnkowalchuk.milo.platform.bluetooth.truck
+import com.shawnkowalchuk.milo.platform.bluetooth.trucks
 import com.shawnkowalchuk.milo.platform.system.PermissionAsk
 import com.shawnkowalchuk.milo.platform.system.SetupFix
 import com.shawnkowalchuk.milo.platform.system.SystemScreen
@@ -60,24 +60,24 @@ class PairingViewModel(
     private val visit = MutableStateFlow(Visit())
 
     /**
-     * The stored truck. If the settings cannot be read there is no truck to show; the pairing
-     * check reports the unreadable file itself, in the truck's state and in the event log.
+     * The paired vehicles, the truck first. If the settings cannot be read there is none to
+     * show; the pairing check reports the unreadable file itself, in its state and in the log.
      */
-    private val truck: Flow<Truck?> =
-        settings.settings.map { it.truck() }.catch { failure ->
+    private val trucks: Flow<List<Truck>> =
+        settings.settings.map { it.trucks() }.catch { failure ->
             if (failure !is IOException) throw failure
-            emit(null)
+            emit(emptyList())
         }
 
     /** Null until the phone's devices have been read for the first time. */
     val state: StateFlow<PairingUiState?> =
-        combine(visit, truck, pairing.status, pairing.progress) { here, stored, status, progress ->
+        combine(visit, trucks, pairing.status, pairing.progress) { here, stored, status, progress ->
             if (!here.hasRead) return@combine null
             pairingUiState(
                 PairingInputs(
                     paired = here.paired,
                     locationOn = here.locationOn,
-                    truck = stored,
+                    trucks = stored,
                     status = status,
                     progress = progress,
                     attemptedHere = here.attemptedHere,
@@ -122,8 +122,8 @@ class PairingViewModel(
     }
 
     /**
-     * Shawn picked [device] as the truck. If another truck was stored, `TruckPairing` replaces
-     * it and removes its association once Android has made the new one.
+     * Shawn picked [device]. Since 2026-10-08 `TruckPairing` adds it beside the vehicles
+     * already paired, or pairs it again if it is one of them.
      *
      * @param activity the screen's Activity: Android shows its consent dialog on top of it. It
      * is passed through and not kept.
@@ -131,6 +131,11 @@ class PairingViewModel(
     fun onDevicePicked(device: PairedDevice, activity: Activity) {
         visit.update { it.copy(attemptedHere = true, dialogClosedWithoutAllowing = false) }
         pairing.associate(device, activity)
+    }
+
+    /** Shawn confirmed that [vehicle] is to be removed. */
+    fun onRemove(vehicle: Truck) {
+        pairing.remove(vehicle)
     }
 
     /** True the first time it is asked about [consent]: the screen then shows the dialog. */

@@ -21,7 +21,14 @@ class TripServiceStarter(
     override fun start(request: StartRequest): StartFailure? {
         val problems = preflight.problems()
         if (problems.isNotEmpty()) return failed(StartFailure(problems))
-        val intent = tripServiceIntent(context, request.trigger, request.source, request.atMs)
+        val intent =
+            tripServiceIntent(
+                context,
+                request.trigger,
+                request.source,
+                request.atMs,
+                request.vehicle,
+            )
         return try {
             context.startForegroundService(intent)
             null

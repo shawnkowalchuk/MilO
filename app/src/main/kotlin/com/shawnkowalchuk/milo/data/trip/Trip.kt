@@ -75,6 +75,12 @@ import com.shawnkowalchuk.milo.core.trip.TripStatus
  * worked out again from the GPS points.
  * @param recordedEndedAtMs the same for [endedAtMs].
  * @param recordedDistanceMetres the same for [distanceMetres].
+ * @param vehicleAddress the Bluetooth address of the paired vehicle the trip was in (since
+ * 2026-10-08, when MilO learned several), or null: a trip started with the button that no
+ * vehicle joined, which was in some other vehicle. The trips recorded before were given the
+ * truck's address once (`TripVehicleCatchUp`). It decides whose odometer a trip moves.
+ * @param label what Shawn called the trip ("Work", "Supplier"), picked from the labels used
+ * before or typed new (since 2026-10-08), or null while it has none. The report prints it.
  */
 // The index is for the Trips screen, which reads the trips that started in a span of time.
 @Entity(tableName = "trips", indices = [Index("startedAtMs")])
@@ -112,4 +118,6 @@ data class Trip(
     val recordedStartedAtMs: Long? = null,
     val recordedEndedAtMs: Long? = null,
     val recordedDistanceMetres: Double? = null,
+    val vehicleAddress: String? = null,
+    val label: String? = null,
 )

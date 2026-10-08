@@ -11,12 +11,13 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does twelve things only: it owns the [AppContainer], it has what Android's backup left
+ * It does thirteen things only: it owns the [AppContainer], it has what Android's backup left
  * behind dealt with (a restore above all), it starts the crash and kill capture (which also
  * trims the event log), it has an import finished that the last process was ended in the
  * middle of, it has the trip controller look at what the last process left behind,
  * it checks that Android still watches for the truck, it has the addresses of finished trips
  * caught up, it has the trips that are not sorted into Business or Personal yet sorted, it has
+ * the trips from before several vehicles given the truck's address (once), it has
  * the driving alert ask the phone again to report driving, it has the monthly reminder ask
  * for its daily alarm again and look at whether a reminder is due, it has the daily check do
  * the same and ask whether a trip has been recorded today, and it starts the watch that writes
@@ -87,6 +88,12 @@ class MiloApplication : Application() {
         // nothing of this may fail in there.
         val categories = container.tripCategoryCatchUp
         container.tripController.whenCaughtUp { categories.catchUp(PROCESS_START) }
+
+        // The trips recorded before MilO knew several vehicles are given the truck's address,
+        // once (2026-10-08): each vehicle's odometer counts the trips with its address. After
+        // the reconcile, like the two passes above.
+        val vehicles = container.tripVehicleCatchUp
+        container.tripController.whenCaughtUp { vehicles.catchUp(PROCESS_START) }
 
         // The request to be told about driving does not outlive a reboot or an update of MilO,
         // and both of those start a new process, so it is made again here. Nothing in it can

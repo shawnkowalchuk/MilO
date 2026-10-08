@@ -156,6 +156,8 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
         stored.writeReminderEnabled(arrived.reminderEnabled)
         stored.writeReminderDay(arrived.reminderDay)
         stored.writeReportHandOver(null)
+        // The trips were replaced, and the file may not say which vehicle each was in.
+        stored.forgetTripVehiclesFilled()
         if (truck is TruckChange.Store) {
             stored[SettingsStore.TRUCK_ADDRESS] = truck.truck.address
             stored.setOrRemove(SettingsStore.TRUCK_NAME, truck.truck.name)
@@ -184,6 +186,8 @@ suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, drop
         stored.forgetParkedTruck()
         stored.forgetDrivenOffTrip()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
+        // The other vehicles' ids are the other phone's (since 2026-10-08): see there.
+        stored.forgetMoreVehicleAssociations()
         if (dropOwnSound) stored.forgetOwnSounds()
     }
 }

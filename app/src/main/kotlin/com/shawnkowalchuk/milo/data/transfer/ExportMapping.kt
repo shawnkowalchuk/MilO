@@ -93,6 +93,8 @@ fun Trip.toExported(): ExportedTrip = ExportedTrip(
     recordedStartedAtMs = recordedStartedAtMs,
     recordedEndedAtMs = recordedEndedAtMs,
     recordedDistanceMetres = recordedDistanceMetres,
+    vehicleAddress = vehicleAddress,
+    label = label,
 )
 
 /** The row to store for a trip of the file that [problem] found nothing wrong with. */
@@ -123,6 +125,8 @@ internal fun ExportedTrip.toTrip(): Trip = Trip(
     recordedStartedAtMs = recordedStartedAtMs,
     recordedEndedAtMs = recordedEndedAtMs,
     recordedDistanceMetres = recordedDistanceMetres,
+    vehicleAddress = vehicleAddress,
+    label = label,
 )
 
 fun SentReport.toExported(): ExportedSentReport = ExportedSentReport(

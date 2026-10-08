@@ -197,7 +197,7 @@ class ExportRoundTripTest {
 
         val document = Json.parseToJsonElement(text).jsonObject
         assertEquals("milo-export", document.getValue("format").jsonPrimitive.content)
-        assertEquals("2", document.getValue("formatVersion").jsonPrimitive.content)
+        assertEquals("3", document.getValue("formatVersion").jsonPrimitive.content)
         val exportedAt = document.getValue("exportedAt").jsonPrimitive.content
         assertEquals("2026-10-06T14:02:11-06:00", exportedAt)
         val contents = document.getValue("contents").jsonObject
@@ -207,7 +207,7 @@ class ExportRoundTripTest {
         assertEquals(8, document.getValue("trips").jsonArray.size)
         assertEquals(4, document.getValue("points").jsonArray.size)
         // What it is, in its first two lines, for whoever opens it in an editor.
-        assertTrue(text.startsWith("{\n\"format\": \"milo-export\",\n\"formatVersion\": 2,\n"))
+        assertTrue(text.startsWith("{\n\"format\": \"milo-export\",\n\"formatVersion\": 3,\n"))
     }
 
     @Test

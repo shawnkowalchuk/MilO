@@ -59,8 +59,15 @@ val TripTrigger.isServiceTimer: Boolean
  * @param source where the trigger came from, in words, for the event log.
  * @param atMs wall-clock time the trigger fired. The trip starts then, not when the service is
  * finally up.
+ * @param vehicle the address of the paired vehicle the trigger named, or null if it named none
+ * (since 2026-10-08): a trip it starts records it.
  */
-data class StartRequest(val trigger: TripTrigger, val source: String, val atMs: Long)
+data class StartRequest(
+    val trigger: TripTrigger,
+    val source: String,
+    val atMs: Long,
+    val vehicle: String? = null,
+)
 
 /** Starts the trip service. An interface so the controller can be tested without Android. */
 fun interface RecordingStarter {

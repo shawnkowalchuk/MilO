@@ -54,8 +54,8 @@ class ExportReaderTest {
     @Test
     fun `a file from a newer MilO is refused as that, whatever else it holds`() {
         assertEquals(
-            ExportProblem.NewerVersion(3),
-            problemOf(with("\"formatVersion\": 2,", "\"formatVersion\": 3,")),
+            ExportProblem.NewerVersion(4),
+            problemOf(with("\"formatVersion\": 3,", "\"formatVersion\": 4,")),
         )
         // Also when its parts are ones this version cannot read at all.
         val newer =
@@ -72,7 +72,7 @@ class ExportReaderTest {
     private fun asFormatOne(): String {
         val unit = ",\"distanceUnit\":\"KILOMETRES\""
         assertTrue("The file's sent reports name no unit to take out", whole.contains(unit))
-        return with("\"formatVersion\": 2,", "\"formatVersion\": 1,").replace(unit, "")
+        return with("\"formatVersion\": 3,", "\"formatVersion\": 1,").replace(unit, "")
     }
 
     @Test
@@ -92,7 +92,7 @@ class ExportReaderTest {
         val withoutUnit = whole.replaceFirst(unit, "")
         assertTrue(damage(withoutUnit).contains("which unit"))
         // Format 1 with a unit: MilO never wrote that.
-        val withUnit = with("\"formatVersion\": 2,", "\"formatVersion\": 1,")
+        val withUnit = with("\"formatVersion\": 3,", "\"formatVersion\": 1,")
         assertTrue(damage(withUnit).contains("format 1"))
         // And a unit MilO does not know, which is never read as kilometres.
         val unknown = whole.replaceFirst(
@@ -102,10 +102,53 @@ class ExportReaderTest {
         assertTrue(damage(unknown).contains("YARDS"))
     }
 
+    // ---- Format 3, in which a trip names its vehicle (2026-10-08) ---------------------------------
+
+    @Test
+    fun `a file of format 2 is still read, and its trips name no vehicle`() {
+        val reading = read(with("\"formatVersion\": 3,", "\"formatVersion\": 2,"))
+
+        assertTrue("$reading", reading is ExportReading.Good)
+        val trips = (reading as ExportReading.Good).export.trips
+        assertTrue(trips.all { it.vehicleAddress == null && it.label == null })
+    }
+
+    @Test
+    fun `a trip may name its vehicle from format 3 on, and may not before`() {
+        val named =
+            whole.replaceFirst(
+                "\"vehicleAddress\":null",
+                "\"vehicleAddress\":\"AA:BB:CC:DD:EE:FF\"",
+            )
+        assertTrue("The file's trips have no vehicle key to fill", named != whole)
+
+        val reading = read(named)
+        assertTrue("$reading", reading is ExportReading.Good)
+        val trips = (reading as ExportReading.Good).export.trips
+        assertEquals(listOf("AA:BB:CC:DD:EE:FF"), trips.mapNotNull { it.vehicleAddress })
+        // A file of format 2 that names one: MilO never wrote that.
+        val older = named.replace("\"formatVersion\": 3,", "\"formatVersion\": 2,")
+        assertTrue(damage(older).contains("format 2"))
+    }
+
+    @Test
+    fun `a trip's label is read from format 3, and an empty one is refused`() {
+        val labelled = whole.replaceFirst("\"label\":null", "\"label\":\"Work\"")
+        assertTrue("The file's trips have no label key to fill", labelled != whole)
+
+        val reading = read(labelled)
+        assertTrue("$reading", reading is ExportReading.Good)
+        val trips = (reading as ExportReading.Good).export.trips
+        assertEquals(listOf("Work"), trips.mapNotNull { it.label })
+        assertTrue(
+            damage(whole.replaceFirst("\"label\":null", "\"label\":\" \"")).contains("label"),
+        )
+    }
+
     @Test
     fun `a format version that is no version`() {
         for (version in listOf("0", "-1", "1.5", "\"1\"", "null", "true", "99999999999")) {
-            damage(with("\"formatVersion\": 2,", "\"formatVersion\": $version,"))
+            damage(with("\"formatVersion\": 3,", "\"formatVersion\": $version,"))
         }
         damage("{\"format\":\"milo-export\"}")
     }

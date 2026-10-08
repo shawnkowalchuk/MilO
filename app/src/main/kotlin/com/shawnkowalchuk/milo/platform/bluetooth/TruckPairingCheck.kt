@@ -3,10 +3,13 @@ package com.shawnkowalchuk.milo.platform.bluetooth
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setVehicleAssociation
 
 /**
  * The check behind [TruckPairing.check]: does the truck's association still exist, and is
  * Android watching for the truck? It also adopts an association that was made outside MilO.
+ * Since 2026-10-08 it does the same for every other vehicle paired beside the truck, whose
+ * associations are theirs and are never adopted as the truck.
  *
  * The association is Android's, not MilO's. It can be removed in the phone's Bluetooth settings
  * without MilO being told (before Android 16), and it can be made over adb.
@@ -30,23 +33,60 @@ internal class TruckPairingCheck(
      * exceptions of several kinds.
      */
     suspend fun look(): PairingStatus {
-        val stored = settings.current().truck()
+        val now = settings.current()
+        val stored = now.truck()
+        val more = now.trucks().drop(1)
         if (!link.supported) return withoutCompanionSupport(stored)
-        val associations = link.associations()
+        val all = link.associations()
+        // The other vehicles' associations are theirs: never adopted as the truck.
+        val associations = all.filterNot { a -> more.any { sameAddress(it.address, a.address) } }
         val truck =
             stored?.takeIf { associations.newestFor(it.address) != null }
                 ?: adopt(associations, inPlaceOf = stored)
-                ?: return notArmed(stored, associations)
-        val association =
-            checkNotNull(associations.newestFor(truck.address)) { "The truck has an association" }
-        // Android assigns the id. It is stored only so that an event which names the id alone
-        // (Android 16) can be matched, so it follows whatever Android says it is.
-        if (association.id != truck.associationId) {
-            settings.setTruck(truck.address, truck.name, association.id)
+        val observed = mutableListOf<String>()
+        val missing = mutableListOf<String>()
+        for (vehicle in listOfNotNull(truck) + more) {
+            val association = all.newestFor(vehicle.address)
+            if (association == null) {
+                missing += vehicle.address
+                continue
+            }
+            // Android assigns the id. It is stored only so that an event which names the id
+            // alone (Android 16) can be matched, so it follows whatever Android says it is.
+            if (association.id != vehicle.associationId) {
+                settings.setVehicleAssociation(vehicle.address, association.id)
+            }
+            link.startObserving(association)
+            observed += "association ${association.id} for ${vehicle.address}"
         }
-        link.startObserving(association)
-        val which = "association ${association.id}"
-        return PairingStatus(PairingState.ARMED, "$which for ${truck.address} is observed")
+        if (truck == null) {
+            val notArmed = notArmed(stored, associations)
+            val lost = listOfNotNull(stored?.address) + missing
+            if (more.isEmpty()) return notArmed.copy(missing = lost)
+            val detail = "${notArmed.detail} ${vehiclesText(observed, missing)}"
+            return PairingStatus(notArmed.state, detail, lost)
+        }
+        if (missing.isEmpty()) {
+            return PairingStatus(PairingState.ARMED, vehiclesText(observed, missing))
+        }
+        val detail = "${vehiclesText(observed, missing)} ${pairedWithThePhone()}"
+        return PairingStatus(PairingState.ASSOCIATION_MISSING, detail, missing.toList())
+    }
+
+    /**
+     * Which vehicles are watched for and which are not, in words: "association 7 for AA:…
+     * is observed", as the line has always read with one vehicle.
+     */
+    private fun vehiclesText(observed: List<String>, missing: List<String>): String {
+        val parts = mutableListOf<String>()
+        if (observed.isNotEmpty()) {
+            val verb = if (observed.size == 1) "is" else "are"
+            parts += "${observed.joinToString()} $verb observed"
+        }
+        if (missing.isNotEmpty()) {
+            parts += "no association any more for ${missing.joinToString()}: to be paired again"
+        }
+        return parts.joinToString("; ")
     }
 
     /**

@@ -134,6 +134,63 @@ class TruckPairingTest {
     }
 
     @Test
+    fun `pairing a second vehicle keeps the truck and its association, and arms both`() = runTest {
+        settings.setTruck(TRUCK_ADDRESS, "Work truck", 7)
+        link.held += Association(TRUCK_ADDRESS, id = 7)
+        world.paired = PairedDeviceList(listOf(TRUCK_DEVICE, VAN_DEVICE), problem = null)
+        val pairing = pairing()
+
+        pairing.associate(VAN_DEVICE, screen)
+        link.create(VAN_ADDRESS, id = 8)
+        runCurrent()
+
+        assertEquals(
+            listOf(Truck(TRUCK_ADDRESS, "Work truck", 7), Truck(VAN_ADDRESS, "Van", 8)),
+            settings.current().trucks(),
+        )
+        assertEquals(
+            listOf(Association(TRUCK_ADDRESS, 7), Association(VAN_ADDRESS, 8)),
+            link.held,
+        )
+        assertEquals(PairingState.ARMED, pairing.status.value?.state)
+        assertTrue(link.observed.containsAll(link.held))
+    }
+
+    @Test
+    fun `removing a vehicle removes its association and forgets it`() = runTest {
+        settings.setTruck(TRUCK_ADDRESS, "Work truck", 7)
+        link.held += Association(TRUCK_ADDRESS, id = 7)
+        val pairing = pairing()
+        pairing.associate(VAN_DEVICE, screen)
+        link.create(VAN_ADDRESS, id = 8)
+        runCurrent()
+
+        pairing.remove(Truck(VAN_ADDRESS, "Van", 8))
+        runCurrent()
+
+        assertEquals(listOf(Truck(TRUCK_ADDRESS, "Work truck", 7)), settings.current().trucks())
+        assertEquals(listOf(Association(TRUCK_ADDRESS, 7)), link.held)
+        assertTrue(world.logged().any { it.startsWith("Vehicle removed:") })
+    }
+
+    @Test
+    fun `removing the truck makes the next vehicle the truck`() = runTest {
+        settings.setTruck(TRUCK_ADDRESS, "Work truck", 7)
+        link.held += Association(TRUCK_ADDRESS, id = 7)
+        val pairing = pairing()
+        pairing.associate(VAN_DEVICE, screen)
+        link.create(VAN_ADDRESS, id = 8)
+        runCurrent()
+
+        pairing.remove(Truck(TRUCK_ADDRESS, "Work truck", 7))
+        runCurrent()
+
+        assertEquals(Truck(VAN_ADDRESS, "Van", 8), settings.current().truck())
+        assertEquals(1, settings.current().trucks().size)
+        assertEquals(listOf(Association(VAN_ADDRESS, 8)), link.held)
+    }
+
+    @Test
     fun `without companion device support the truck is stored for the Bluetooth receiver`() =
         runTest {
             link.supported = false

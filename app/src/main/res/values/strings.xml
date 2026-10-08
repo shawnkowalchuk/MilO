@@ -295,46 +295,51 @@
     <string name="setup_action_allow">Allow</string>
     <string name="setup_action_open_settings">Open settings</string>
     <string name="setup_action_pair_truck">Pair truck</string>
-    <string name="setup_action_change_truck">Change truck</string>
+    <string name="setup_action_change_truck">Pair or remove</string>
     <string name="setup_action_confirm">I have set this</string>
     <string name="setup_action_take_back">Not set any more</string>
 
     <!-- Truck pairing. -->
-    <string name="pairing_title">Truck</string>
+    <string name="pairing_title">Vehicles</string>
     <string name="pairing_reading">Reading the phone\'s Bluetooth devices…</string>
-    <string name="pairing_intro">MilO watches for one Bluetooth device: the truck. Pick it from the devices this phone is paired with. Android then asks you to allow it.</string>
-    <string name="pairing_truck_title">Your truck</string>
-    <string name="pairing_no_truck">No truck is paired</string>
+    <string name="pairing_intro">MilO watches for the vehicles you pair here, and a trip starts by itself when one of them connects. Pick each from the devices this phone is paired with. Android then asks you to allow it.</string>
+    <string name="pairing_truck_title">Your vehicles</string>
+    <string name="pairing_no_truck">No vehicle is paired</string>
     <string name="pairing_no_truck_detail">Until one is, no trip starts by itself.</string>
     <string name="pairing_watch_ok">Paired, and Android is watching for it. A trip starts by itself when it connects.</string>
     <string name="pairing_watch_association_missing">Paired before, but Android no longer watches for it. Pair it again from the list below.</string>
-    <string name="pairing_watch_not_supported">Stored as the truck, but this phone cannot watch for a device in the background. Only the Bluetooth signal itself can start a trip.</string>
+    <string name="pairing_watch_not_supported">Stored, but this phone cannot watch for a device in the background. Only the Bluetooth signal itself can start a trip.</string>
     <string name="pairing_watch_check_failed">MilO could not check whether Android is watching for it. The Log screen says why.</string>
     <string name="pairing_attempt_asking">Waiting for Android. If its dialog is open, choose Allow.</string>
     <!-- The argument is the truck's name. -->
     <string name="pairing_attempt_paired">Paired with %1$s</string>
     <string name="pairing_attempt_declined_title">Not paired</string>
-    <string name="pairing_attempt_declined">Android\'s dialog was closed without allowing. Nothing was changed. Pick the truck again to retry.</string>
+    <string name="pairing_attempt_declined">Android\'s dialog was closed without allowing. Nothing was changed. Pick it again to retry.</string>
     <string name="pairing_attempt_failed_title">Pairing failed</string>
     <!-- The argument is the reason, as MilO's pairing code words it for the event log. -->
-    <string name="pairing_attempt_failed">What went wrong: %1$s. Nothing was changed. Check that the truck is paired with this phone in the Bluetooth settings and that Bluetooth and Location are on, then pick it again.</string>
-    <string name="pairing_blocker_title">Before you can pick the truck</string>
-    <string name="pairing_blocker_permission">MilO is not allowed to use Nearby devices. It needs that to list the phone\'s Bluetooth devices and to see the truck connect.</string>
+    <string name="pairing_attempt_failed">What went wrong: %1$s. Nothing was changed. Check that the vehicle is paired with this phone in the Bluetooth settings and that Bluetooth and Location are on, then pick it again.</string>
+    <string name="pairing_blocker_title">Before you can pick a vehicle</string>
+    <string name="pairing_blocker_permission">MilO is not allowed to use Nearby devices. It needs that to list the phone\'s Bluetooth devices and to see a vehicle connect.</string>
     <string name="pairing_blocker_no_bluetooth">This phone has no Bluetooth.</string>
     <string name="pairing_blocker_bluetooth_off">Bluetooth is switched off. Switch it on to see the paired devices.</string>
-    <string name="pairing_blocker_location_off">Location is switched off. Android needs it on to pair the truck with MilO.</string>
-    <string name="pairing_blocker_nothing_paired">No device is paired with this phone. Pair the truck in the phone\'s Bluetooth settings first, then come back.</string>
+    <string name="pairing_blocker_location_off">Location is switched off. Android needs it on to pair a vehicle with MilO.</string>
+    <string name="pairing_blocker_nothing_paired">No device is paired with this phone. Pair the vehicle in the phone\'s Bluetooth settings first, then come back.</string>
     <string name="pairing_action_allow_nearby_devices">Allow Nearby devices</string>
     <string name="pairing_action_bluetooth_settings">Bluetooth settings</string>
     <string name="pairing_action_location_settings">Location settings</string>
     <string name="pairing_devices_title">Paired with this phone</string>
-    <string name="pairing_change_note">Picking another device replaces the current truck.</string>
+    <string name="pairing_change_note">Picking another device adds it beside the vehicles above. Remove takes one away; its trips stay.</string>
     <string name="pairing_device_no_name">No name</string>
     <!-- The argument is the device's Bluetooth address. -->
-    <string name="pairing_device_current">Current truck · %1$s</string>
+    <string name="pairing_device_current">Paired with MilO · %1$s</string>
     <string name="pairing_action_pair">Pair</string>
     <string name="pairing_action_pair_again">Pair again</string>
-    <string name="pairing_action_switch">Use this one</string>
+    <string name="pairing_action_switch">Add</string>
+    <string name="pairing_action_remove">Remove</string>
+    <!-- The question before a vehicle is removed: its name. -->
+    <string name="pairing_remove_title">Remove %1$s?</string>
+    <string name="pairing_remove_text">MilO stops watching for it, and it no longer starts a trip. Its trips stay as they are. You can pair it again at any time.</string>
+    <string name="pairing_remove_keep">Keep</string>
 
     <!-- Event log. The entries themselves are stored in English and shown as stored. -->
     <string name="log_title">Log</string>
@@ -702,6 +707,9 @@
     <string name="settings_unreadable">MilO cannot read its settings, so they cannot be shown or changed here. Trips are still recorded, with the usual values. The Log screen says why.</string>
     <string name="settings_could_not_save">That change could not be saved. The Log screen says why.</string>
     <string name="settings_truck_title">Truck</string>
+    <string name="settings_vehicles_title">Vehicles</string>
+    <!-- The first vehicle's name and how many more are paired: "Work truck + 1 more". -->
+    <string name="settings_vehicles_more">%1$s + %2$d more</string>
     <string name="settings_truck_detail">A trip starts by itself when this truck connects.</string>
     <string name="settings_applies_next_trip">A change applies from the next trip. A trip that is being recorded may already use it.</string>
     <string name="settings_grace_label">Wait after the truck disconnects</string>

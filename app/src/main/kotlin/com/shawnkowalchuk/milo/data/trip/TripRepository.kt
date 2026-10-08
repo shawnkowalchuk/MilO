@@ -71,6 +71,13 @@ class TripRepository(private val dao: TripDao) {
     suspend fun markTruckSeen(tripId: Long): Boolean =
         dao.markTruckSeen(tripId, TripStatus.OPEN) == 1
 
+    /** Records which paired vehicle the open trip is in, unless it already has one. */
+    suspend fun setVehicle(tripId: Long, address: String): Boolean =
+        dao.setVehicle(tripId, address, TripStatus.OPEN) == 1
+
+    /** See [TripDao.fillVehicle]. Returns how many trips it gave the vehicle. */
+    suspend fun fillVehicle(address: String): Int = dao.fillVehicle(address)
+
     suspend fun startGrace(tripId: Long, startedAtMs: Long, deadlineMs: Long): Boolean =
         dao.setGrace(tripId, startedAtMs, deadlineMs, TripStatus.OPEN) == 1
 

@@ -135,6 +135,7 @@ sealed interface SettingsUiState {
      * @param reminderDay the day of the month from which it does, 1 to 31.
      * @param canRemindEarlier false on the 1st, and [canRemindLater] on the 31st.
      * @param problem the last press that did not work, until the next one.
+     * @param moreVehicles how many vehicles are paired beside the truck (since 2026-10-08).
      */
     data class Ready(
         val truckPaired: Boolean,
@@ -163,6 +164,7 @@ sealed interface SettingsUiState {
         val canRemindEarlier: Boolean,
         val canRemindLater: Boolean,
         val problem: SettingsProblem?,
+        val moreVehicles: Int = 0,
     ) : SettingsUiState {
         /** One of the two sounds as the settings have it. */
         fun sound(which: TripSound): SoundChoice = sounds.getValue(which)
@@ -240,6 +242,7 @@ fun settingsUiState(
     canRemindEarlier = REMINDER_DAY_CHOICE.canStepDown(settings.reminderDay),
     canRemindLater = REMINDER_DAY_CHOICE.canStepUp(settings.reminderDay),
     problem = problem,
+    moreVehicles = settings.moreVehicles.size,
 )
 
 /** What the screen says when a picked file was refused. */
