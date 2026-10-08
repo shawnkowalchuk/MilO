@@ -1,8 +1,11 @@
 package com.shawnkowalchuk.milo.data.report
 
+import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.PrimaryKey
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.tenthsOf
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -40,9 +43,16 @@ enum class SentReportKind {
  * was marked.
  * @param tripCount how many Business trips the report listed.
  * @param distanceMetres the total the report printed, in metres like every stored distance. It
- * is a whole number of tenths of a kilometre, because the report adds up the figures it prints.
+ * is a whole number of tenths of [distanceUnit], because the report adds up the figures it
+ * prints. Read it back with [printedTenths], never by rounding it in another unit.
  * @param revision 0 for the first report sent for this kind and these days, 1 for the first
  * that replaced it, and so on.
+ * @param distanceUnit the unit the report was printed in (since 2026-10-07, database version
+ * 6). The row is a record of what the report said, so it keeps the unit the report said it in:
+ * a report sent in kilometres is listed in kilometres for good, whatever MilO is set to later,
+ * and "changed since the report was sent" is judged in this unit. Stored by name, so a constant
+ * can be added but never renamed without a migration. Every row from before that version is in
+ * kilometres, which is what the column's default says.
  */
 @Entity(tableName = "sent_reports")
 data class SentReport(
@@ -54,7 +64,15 @@ data class SentReport(
     val tripCount: Int,
     val distanceMetres: Double,
     val revision: Int,
+    @ColumnInfo(defaultValue = "'KILOMETRES'")
+    val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
 )
+
+/**
+ * The total the report printed, in tenths of the unit it was printed in ([SentReport.distanceUnit]):
+ * the figure itself, exactly, because [SentReport.distanceMetres] was made from it.
+ */
+val SentReport.printedTenths: Long get() = tenthsOf(distanceMetres, distanceUnit)
 
 /**
  * A report that was removed from the list, and what the list still holds for its period.

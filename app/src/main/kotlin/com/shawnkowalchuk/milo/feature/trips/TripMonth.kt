@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.trips
 
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.data.trip.ByHandMark
@@ -105,8 +106,8 @@ data class TripLine(
  *
  * @param sessionCount how many counted trips the day has, Business and Personal together.
  * Deleted and discarded trips are not among them, listed or not.
- * @param businessTenths what the day's Business trips add up to, in tenths of a kilometre: the
- * sum of the figures its Business rows show.
+ * @param businessTenths what the day's Business trips add up to, in tenths of the month's unit
+ * ([MonthSummary.unit]): the sum of the figures its Business rows show.
  */
 data class TripDay(
     val date: LocalDate,
@@ -125,12 +126,16 @@ data class TripDay(
  * @param days newest day first. Holds deleted and discarded trips only if they were asked for.
  * @param hiddenLeftOut how many deleted and discarded trips the month has that [days] leaves
  * out.
+ * @param unit the unit [totals] and every day's figure are in, and are to be written with: the
+ * one chosen in Settings when the month was added up. A row's own figure is worked out from
+ * its metres in the same unit, so the rows of a day add up to its heading.
  */
 data class MonthSummary(
     val totals: CategoryTotals,
     val inProgress: TripLine?,
     val days: List<TripDay>,
     val hiddenLeftOut: Int,
+    val unit: DistanceUnit,
 ) {
     /** How many finished trips the month has, whatever they are saved as. */
     val tripCount: Int get() = totals.count
@@ -177,6 +182,7 @@ fun monthOfSavedTrip(startedAtMs: Long, zone: ZoneId, current: YearMonth): YearM
  * closes, so the list shows this figure, and only for the trip it belongs to.
  * @param liveStart where the trip in progress started, from the address lookup. The stored row
  * has no position either until the trip closes. Used only for the trip it belongs to.
+ * @param unit the unit chosen in Settings: every total is added up in it.
  */
 fun monthSummary(
     trips: List<Trip>,
@@ -185,6 +191,7 @@ fun monthSummary(
     liveTripId: Long?,
     liveDistanceMetres: Double?,
     liveStart: OpenTripStart?,
+    unit: DistanceUnit,
 ): MonthSummary {
     val finished = trips.filter { it.isCounted }
     val leftOut =
@@ -200,7 +207,7 @@ fun monthSummary(
     val newestFirst = compareByDescending<TripLine> { it.startedAtMs }.thenByDescending { it.id }
     val finishedByDay = finished.groupBy { localDateOf(it.startedAtMs, zone) }
     return MonthSummary(
-        totals = categoryTotals(finished),
+        totals = categoryTotals(finished, unit),
         inProgress =
             trips.firstOrNull { it.status == TripStatus.OPEN }?.let { open ->
                 TripLine(
@@ -216,7 +223,7 @@ fun monthSummary(
             listed
                 .groupBy { localDateOf(it.startedAtMs, zone) }
                 .map { (date, lines) ->
-                    val dayTotals = categoryTotals(finishedByDay[date].orEmpty())
+                    val dayTotals = categoryTotals(finishedByDay[date].orEmpty(), unit)
                     TripDay(
                         date = date,
                         trips = lines.sortedWith(newestFirst),
@@ -225,6 +232,7 @@ fun monthSummary(
                     )
                 }.sortedByDescending { it.date },
         hiddenLeftOut = if (showLeftOut) 0 else leftOut.size,
+        unit = unit,
     )
 }
 

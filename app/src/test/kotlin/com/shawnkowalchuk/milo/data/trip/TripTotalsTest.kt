@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.data.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -64,7 +65,7 @@ class TripTotalsTest {
 
         assertEquals(2, today.count)
         // 20.0 km and 21.2 km, as each is printed.
-        assertEquals(412, today.totalTenths)
+        assertEquals(412, today.totalTenths(DistanceUnit.KILOMETRES))
         assertEquals(55 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -75,7 +76,7 @@ class TripTotalsTest {
 
         for (today in listOf(nothing, onlyLeftOut)) {
             assertEquals(0, today.count)
-            assertEquals(0, today.totalTenths)
+            assertEquals(0, today.totalTenths(DistanceUnit.KILOMETRES))
             assertEquals(0L, today.driveTimeMs)
             assertTrue(today.sessions.isEmpty())
         }
@@ -98,7 +99,7 @@ class TripTotalsTest {
 
         assertEquals(2, today.count)
         // 8.2 km, and 250 m, which is printed as 0.3 km.
-        assertEquals(85, today.totalTenths)
+        assertEquals(85, today.totalTenths(DistanceUnit.KILOMETRES))
         assertEquals(25 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -128,8 +129,8 @@ class TripTotalsTest {
         // rows up. Their 447 m rounded once would be 0.4 km.
         val today = todayTrips(List(3) { trip(it * 10L, 5, 149.0) })
 
-        assertEquals(3, today.totalTenths)
-        assertEquals(3, today.totals.unsorted.tenths)
+        assertEquals(3, today.totalTenths(DistanceUnit.KILOMETRES))
+        assertEquals(3, today.totals(DistanceUnit.KILOMETRES).unsorted.tenths)
     }
 
     @Test
@@ -141,7 +142,7 @@ class TripTotalsTest {
         val today = todayTrips(listOf(backwards, ordinary))
 
         assertEquals(30 * MINUTE_MS, today.driveTimeMs)
-        assertEquals(120, today.totalTenths)
+        assertEquals(120, today.totalTenths(DistanceUnit.KILOMETRES))
     }
 
     @Test

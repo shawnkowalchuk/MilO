@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -114,11 +115,11 @@ class TripEditProblemPlacesTest {
                 R.string.trip_edit_problem_end_not_after_start,
                 names = R.string.trip_edit_ends_next_day,
             ),
-            FormProblem.END_NOT_AFTER_START.sentence(),
+            FormProblem.END_NOT_AFTER_START.sentence(DistanceUnit.KILOMETRES),
         )
         // A sentence quotes a number or a name, never both: the screen fills in one argument.
         for (problem in FormProblem.entries) {
-            val sentence = problem.sentence()
+            val sentence = problem.sentence(DistanceUnit.KILOMETRES)
             assertTrue("$problem", sentence.number == null || sentence.names == null)
         }
     }

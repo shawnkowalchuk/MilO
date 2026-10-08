@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.ByHandMark
 import com.shawnkowalchuk.milo.data.trip.CategoryTotals
 import com.shawnkowalchuk.milo.data.trip.Tally
@@ -72,6 +73,7 @@ private fun TripsPreview() {
                     TripDay(LocalDate.of(2026, 10, 2), trips.takeLast(1), 1, 0),
                 ),
             hiddenLeftOut = 0,
+            unit = DistanceUnit.KILOMETRES,
         )
     val day = LocalDate.of(2026, 10, 3)
     val state =

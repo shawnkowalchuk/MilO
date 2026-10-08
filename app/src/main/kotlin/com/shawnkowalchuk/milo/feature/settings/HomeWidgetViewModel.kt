@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.allowance.parseCentsPerKm
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -30,12 +31,15 @@ private const val KEEP_WATCHING_MS = 5_000L
  * @param canAskToAdd whether the home screen can be asked to add it with one tap.
  * @param centsPerKm the rate the widget's dollars are priced at, in cents a kilometre.
  * @param couldNotSave true if the last press could not be stored.
+ * @param unit the unit distances are shown in. The rate stays a rate per kilometre in either;
+ * with miles the tile also says, for reading only, what it comes to per mile.
  */
 data class HomeWidgetCardState(
     val enabled: Boolean,
     val canAskToAdd: Boolean,
     val centsPerKm: Int,
     val couldNotSave: Boolean,
+    val unit: DistanceUnit = DistanceUnit.KILOMETRES,
 )
 
 /**
@@ -71,6 +75,7 @@ class HomeWidgetViewModel(
                     canAskToAdd = it.homeWidgetEnabled && homeScreenTakesRequests(),
                     centsPerKm = it.homeWidgetCentsPerKm,
                     couldNotSave = failed,
+                    unit = it.distanceUnit,
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), null)

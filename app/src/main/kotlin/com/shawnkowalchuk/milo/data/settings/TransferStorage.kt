@@ -46,7 +46,11 @@ data class TransferredTruck(val address: String, val name: String?)
  *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening). The odometer readings
  *  ([MiloSettings.odometerReadings], 2026-10-07) and the widget's rate
  *  ([MiloSettings.homeWidgetCentsPerKm], 2026-10-07) are left out on the same terms: Android's
- *  backup carries them, an export file does not. See docs/FINDINGS_LOG.md, 2026-10-07.
+ *  backup carries them, an export file does not. See docs/FINDINGS_LOG.md, 2026-10-07. So is
+ *  the unit distances are shown in ([MiloSettings.distanceUnit], 2026-10-07 (evening)): an
+ *  import leaves this phone's choice of kilometres or miles as it is. Format 2 of the export
+ *  file was made for one thing only, the unit a sent report was printed in, which is a record
+ *  and not a setting; these four settings still wait for the format that takes them all.
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,

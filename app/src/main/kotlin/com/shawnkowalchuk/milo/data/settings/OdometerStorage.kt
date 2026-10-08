@@ -3,8 +3,9 @@ package com.shawnkowalchuk.milo.data.settings
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.shawnkowalchuk.milo.core.odometer.MAX_ODOMETER_KM
+import com.shawnkowalchuk.milo.core.odometer.MAX_ODOMETER_READING
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 
 // The odometer readings Shawn typed in (his decision of 2026-10-07: "I enter it, MilO adds
 // trips"), kept in the settings file. They are few, a handful a year, and the settings file is
@@ -14,6 +15,11 @@ import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 // Each reading is one entry of a string set, "time:km", the time in wall-clock milliseconds.
 // The set is read back sorted by time; an entry that is not of that form is skipped, never
 // guessed at.
+//
+// Since 2026-10-07 a reading typed with MilO set to miles is "time:miles:mi": the figure as
+// typed and the unit it was typed in, so that it comes back exactly. A reading in kilometres
+// is written as it always was, with no third part, and every entry from before that day is
+// one.
 
 private val READINGS = stringSetPreferencesKey("odometer_readings")
 
@@ -29,15 +35,34 @@ internal fun Preferences.readOdometerReadings(): List<OdometerReading> =
  */
 suspend fun SettingsStore.addOdometerReading(reading: OdometerReading) {
     require(reading.atMs >= 0) { "A timestamp cannot be negative: ${reading.atMs} ms" }
-    require(reading.km in 0..MAX_ODOMETER_KM) { "Not an odometer reading: ${reading.km} km" }
-    dataStore.edit { stored ->
-        stored[READINGS] = stored[READINGS].orEmpty() + "${reading.atMs}$SEPARATOR${reading.km}"
+    require(reading.value in 0..MAX_ODOMETER_READING) {
+        "Not an odometer reading: ${reading.value}"
+    }
+    dataStore.edit { stored -> stored[READINGS] = stored[READINGS].orEmpty() + entryOf(reading) }
+}
+
+/** The entry a reading is stored as. In kilometres it is the entry MilO has always written. */
+internal fun entryOf(reading: OdometerReading): String {
+    val timeAndValue = "${reading.atMs}$SEPARATOR${reading.value}"
+    return when (reading.unit) {
+        DistanceUnit.KILOMETRES -> timeAndValue
+        DistanceUnit.MILES -> "$timeAndValue$SEPARATOR${reading.unit.storedWord}"
     }
 }
 
-private fun readingOf(entry: String): OdometerReading? {
-    val atMs = entry.substringBefore(SEPARATOR).toLongOrNull() ?: return null
-    val km = entry.substringAfter(SEPARATOR, missingDelimiterValue = "").toLongOrNull()
-    if (km == null || atMs < 0 || km !in 0..MAX_ODOMETER_KM) return null
-    return OdometerReading(atMs, km)
+private const val PARTS_WITHOUT_UNIT = 2
+private const val PARTS_WITH_UNIT = 3
+
+internal fun readingOf(entry: String): OdometerReading? {
+    val parts = entry.split(SEPARATOR)
+    val unit =
+        when (parts.size) {
+            PARTS_WITHOUT_UNIT -> DistanceUnit.KILOMETRES
+            PARTS_WITH_UNIT -> distanceUnitOf(parts.last()) ?: return null
+            else -> return null
+        }
+    val atMs = parts[0].toLongOrNull() ?: return null
+    val value = parts[1].toLongOrNull() ?: return null
+    if (atMs < 0 || value !in 0..MAX_ODOMETER_READING) return null
+    return OdometerReading(atMs, value, unit)
 }

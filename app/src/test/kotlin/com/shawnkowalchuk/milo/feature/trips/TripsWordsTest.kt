@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.trips
 
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
@@ -59,6 +60,7 @@ class TripsWordsTest {
             inProgress = inProgress,
             days = days,
             hiddenLeftOut = hidden,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     // ---- A day's heading ------------------------------------------------------------------------

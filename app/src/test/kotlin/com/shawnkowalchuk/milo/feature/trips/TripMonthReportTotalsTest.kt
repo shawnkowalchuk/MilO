@@ -5,15 +5,19 @@ import com.shawnkowalchuk.milo.core.report.reportDays
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.metresOfTenths
+import com.shawnkowalchuk.milo.core.util.tenthsOf
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.report.changedSinceSent
 import com.shawnkowalchuk.milo.data.report.monthSubmission
 import com.shawnkowalchuk.milo.data.report.selectForReport
+import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.data.trip.todayTrips
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -79,6 +83,7 @@ class TripMonthReportTotalsTest {
         liveTripId = null,
         liveDistanceMetres = null,
         liveStart = null,
+        unit = DistanceUnit.KILOMETRES,
     )
 
     private fun reportOf(trips: List<Trip> = month) =
@@ -91,9 +96,16 @@ class TripMonthReportTotalsTest {
 
         assertEquals(60, business.count)
         assertEquals(onReport.size, business.count)
-        assertEquals(onReport.sumOf { it.tenths }, business.tenths)
+        assertEquals(onReport.sumOf { it.tenths(DistanceUnit.KILOMETRES) }, business.tenths)
         // And it is not what the metres would give, rounded once: the two rules do differ here.
-        val metresOnce = formatKilometres(onReport.sumOf { it.distanceMetres }, Locale.ROOT)
+        val metresOnce =
+            formatDistance(
+                onReport.sumOf {
+                    it.distanceMetres
+                },
+                DistanceUnit.KILOMETRES,
+                Locale.ROOT,
+            )
         assertNotEquals(metresOnce, formatTenths(business.tenths, Locale.ROOT))
     }
 
@@ -103,7 +115,9 @@ class TripMonthReportTotalsTest {
         val reportDays = reportDays(reportOf().trips, edmonton)
 
         assertEquals(3, reportDays.size)
-        for (day in reportDays) assertEquals(day.tenths, days[day.date])
+        for (day in reportDays) {
+            assertEquals(day.tenths(DistanceUnit.KILOMETRES), days[day.date])
+        }
         // The days add up to the month, on the screen as on the report.
         assertEquals(summary().totals.business.tenths, days.values.sum())
     }
@@ -117,7 +131,11 @@ class TripMonthReportTotalsTest {
                 day.trips
                     .filter { it.category == TripCategory.BUSINESS }
                     .sumOf {
-                        formatKilometres(it.distanceMetres ?: 0.0, Locale.ROOT).toBigDecimal()
+                        formatDistance(
+                            it.distanceMetres ?: 0.0,
+                            DistanceUnit.KILOMETRES,
+                            Locale.ROOT,
+                        ).toBigDecimal()
                     }
             assertEquals(rows.toPlainString(), formatTenths(day.businessTenths, Locale.ROOT))
         }
@@ -131,13 +149,73 @@ class TripMonthReportTotalsTest {
         val today = todayTrips(oneDay)
         val report = reportOf(oneDay)
 
-        assertEquals(report.trips.sumOf { it.tenths }, today.totals.business.tenths)
+        assertEquals(
+            report.trips.sumOf { it.tenths(DistanceUnit.KILOMETRES) },
+            today.totals(DistanceUnit.KILOMETRES).business.tenths,
+        )
         // The car's one figure is every counted trip of the day, each as it is printed.
-        val parts = today.totals
+        val parts = today.totals(DistanceUnit.KILOMETRES)
         assertEquals(
             parts.business.tenths + parts.personal.tenths + parts.unsorted.tenths,
-            today.totalTenths,
+            today.totalTenths(DistanceUnit.KILOMETRES),
         )
+    }
+
+    // ---- The same with miles chosen (2026-10-07) -------------------------------------------------
+
+    private fun summaryIn(unit: DistanceUnit, trips: List<Trip> = month) = monthSummary(
+        trips = trips,
+        zone = edmonton,
+        showLeftOut = false,
+        liveTripId = null,
+        liveDistanceMetres = null,
+        liveStart = null,
+        unit = unit,
+    )
+
+    @Test
+    fun `in miles the month, each day and each row add up as the report in miles adds up`() {
+        val miles = DistanceUnit.MILES
+        val inMiles = summaryIn(miles)
+        val onReport = reportOf()
+
+        assertEquals(miles, inMiles.unit)
+        // The month card's figure is the total a report made in miles prints.
+        assertEquals(60, inMiles.totals.business.count)
+        assertEquals(onReport.totalTenths(miles), inMiles.totals.business.tenths)
+        assertEquals(4_305L, inMiles.totals.business.tenths)
+        // Each day's heading is that report's subtotal, and the days add up to the month.
+        val days = inMiles.days.associate { it.date to it.businessTenths }
+        for (day in reportDays(onReport.trips, edmonton)) {
+            assertEquals(day.tenths(miles), days[day.date])
+        }
+        assertEquals(inMiles.totals.business.tenths, days.values.sum())
+        // And the Business rows of a day, each written from its metres, add up to its heading.
+        for (day in inMiles.days) {
+            val rows =
+                day.trips
+                    .filter { it.kind == TripKind.COUNTED && it.category == TripCategory.BUSINESS }
+                    .sumOf { tenthsOf(it.distanceMetres ?: 0.0, miles) }
+
+            assertEquals("${day.date}", day.businessTenths, rows)
+        }
+        // Personal and unsorted are kept apart in miles as they are in kilometres.
+        assertEquals(Tally(1, 138), inMiles.totals.personal)
+        assertEquals(Tally(1, 62), inMiles.totals.unsorted)
+    }
+
+    @Test
+    fun `the month in kilometres is the month it was before there was a choice`() {
+        assertEquals(summary(), summaryIn(DistanceUnit.KILOMETRES))
+        assertEquals(6_930L, summary().totals.business.tenths)
+        assertEquals(DistanceUnit.KILOMETRES, summary().unit)
+    }
+
+    @Test
+    fun `the miles on the month card are not the kilometres converted`() {
+        // 693.0 km would be 430.6 mi. The sixty trips, each as printed in miles, are 430.5.
+        assertEquals(4_306L, tenthsOf(693_000.0, DistanceUnit.MILES))
+        assertEquals(4_305L, summaryIn(DistanceUnit.MILES).totals.business.tenths)
     }
 
     // ---- Changed since it was sent, on the month card --------------------------------------------
@@ -152,13 +230,71 @@ class TripMonthReportTotalsTest {
             lastDay = october.atEndOfMonth().toEpochDay(),
             sentAtMs = 1_791_300_000_000L,
             tripCount = listed.size,
-            distanceMetres = metresOfTenths(listed.sumOf { it.tenths }),
+            distanceMetres =
+                metresOfTenths(
+                    listed.sumOf { it.tenths(DistanceUnit.KILOMETRES) },
+                    DistanceUnit.KILOMETRES,
+                ),
             revision = 0,
         )
     }
 
     private fun changed(sent: SentReport, now: List<Trip>) = summary(now).totals.business.let {
-        changedSinceSent(monthSubmission(october, listOf(sent)), it.count, it.tenths)
+        changedSinceSent(monthSubmission(october, listOf(sent)), it.count) { _ -> it.tenths }
+    }
+
+    /** The row "I sent it" stores for a report of [trips] printed in [unit]. */
+    private fun sentReportIn(unit: DistanceUnit, trips: List<Trip> = month): SentReport =
+        sentReportOf(trips).copy(
+            distanceMetres = metresOfTenths(reportOf(trips).totalTenths(unit), unit),
+            distanceUnit = unit,
+        )
+
+    /** What the Trips screen works out for the month card, with [shownIn] chosen in Settings. */
+    private fun changedOnScreen(sent: SentReport, now: List<Trip>, shownIn: DistanceUnit) =
+        summaryIn(shownIn, now).totals.business.let { business ->
+            changedSinceSent(monthSubmission(october, listOf(sent)), business.count) { sentIn ->
+                categoryTotals(now, sentIn).business.tenths
+            }
+        }
+
+    @Test
+    fun `choosing the other unit never says a sent month has changed, whichever it was sent in`() {
+        for (printedIn in DistanceUnit.entries) {
+            for (shownIn in DistanceUnit.entries) {
+                assertNull(
+                    "printed in $printedIn, shown in $shownIn",
+                    changedOnScreen(sentReportIn(printedIn), month, shownIn),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a real change is still noticed after the unit was changed, in the report's own unit`() {
+        val longer = month.map {
+            if (it.id ==
+                month.first().id
+            ) {
+                it.copy(distanceMetres = 12_000.0)
+            } else {
+                it
+            }
+        }
+
+        for (printedIn in DistanceUnit.entries) {
+            for (shownIn in DistanceUnit.entries) {
+                val changed = changedOnScreen(sentReportIn(printedIn), longer, shownIn)
+
+                assertEquals("printed in $printedIn, shown in $shownIn", printedIn, changed?.unit)
+                assertEquals(60, changed?.tripCount)
+                assertEquals(
+                    reportOf(longer).totalTenths(printedIn),
+                    changed?.tenths,
+                )
+                assertEquals(reportOf(month).totalTenths(printedIn), changed?.sentTenths)
+            }
+        }
     }
 
     @Test

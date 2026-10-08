@@ -3,7 +3,7 @@
     <string name="app_name">MilO</string>
 
     <!--
-        Shared: a distance in kilometres. The number is produced by formatKilometres() for one
+        Shared: a distance in kilometres. The number is produced by formatDistance() for one
         trip and by formatTenths() for a total.
     -->
     <string name="distance_km">%1$s km</string>
@@ -12,6 +12,23 @@
         figure before it is the same number distance_km would be given.
     -->
     <string name="unit_km">km</string>
+    <!--
+        Shared: the same two in miles, for when Miles is chosen in Settings (2026-10-07). No
+        other string names a unit beside a figure: a sentence that holds a distance is given
+        the distance as one argument, already written with distance_km or distance_mi. Which
+        of the two is chosen in core/designsystem/text/DistanceWords.kt.
+    -->
+    <string name="distance_mi">%1$s mi</string>
+    <string name="unit_mi">mi</string>
+    <!-- Shared: a distance as a screen reader says it, with the unit's whole word. -->
+    <string name="distance_km_spoken">%1$s kilometres</string>
+    <string name="distance_mi_spoken">%1$s miles</string>
+    <!-- Shared: the unit's whole word inside a sentence, such as Distances are in miles. -->
+    <string name="unit_km_name">kilometres</string>
+    <string name="unit_mi_name">miles</string>
+    <!-- Shared: a speed, for a limit a sentence names. The argument is a whole number. -->
+    <string name="speed_kmh">%1$s km/h</string>
+    <string name="speed_mph">%1$s mph</string>
     <!-- Shared: a length of time in whole minutes, or in whole hours and minutes. -->
     <string name="duration_minutes">%1$d min</string>
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
@@ -95,10 +112,11 @@
     <!--
         Home: the tile with the month's Business kilometres. The argument is the Business
         share of all the month's kilometres, in whole percent. The second line stands in its
-        place while the month has no kilometres.
+        place while the month has no kilometres; its argument is the unit's whole word,
+        kilometres or miles.
     -->
     <string name="home_month_share">%1$d%% business</string>
-    <string name="home_month_none">No kilometres yet</string>
+    <string name="home_month_none">No %1$s yet</string>
     <!--
         Home: the truck's tile. A title and a sentence for each state MilO can really be in
         (feature/home/TruckState.kt). "Not connected" and "Connected" are also the word on the
@@ -488,13 +506,14 @@
     <string name="trip_edit_problem_end_not_after_start">The end must be later than the start. If the trip ran past midnight, switch on \"%1$s\". Nothing was saved.</string>
     <string name="trip_edit_problem_future">A trip cannot start or end in the future. Check the date and the times. Nothing was saved.</string>
     <string name="trip_edit_problem_overlaps_recording">A trip is being recorded right now, and this one would run into it. Make it end before the recording started, or end the recording first. Nothing was saved.</string>
-    <string name="trip_edit_problem_distance_missing">Type the distance in kilometres.</string>
+    <!-- The argument is the unit's whole word, kilometres or miles. -->
+    <string name="trip_edit_problem_distance_missing">Type the distance in %1$s.</string>
     <string name="trip_edit_problem_distance_not_a_number">The distance must be a number, such as 12.4. Nothing was saved.</string>
     <string name="trip_edit_problem_distance_negative">The distance cannot be less than zero. Nothing was saved.</string>
-    <!-- The argument is the longest distance the form takes for one trip, in kilometres. -->
-    <string name="trip_edit_problem_distance_too_long">That is more than %1$d km for one trip. Check the distance. Nothing was saved.</string>
-    <!-- The argument is a speed in kilometres per hour. -->
-    <string name="trip_edit_problem_distance_too_fast">That distance is too far for the time between the start and the end: more than %1$d km/h on average. Check the distance and the times. Nothing was saved.</string>
+    <!-- The argument is the longest distance the form takes for one trip, such as 2000 km. -->
+    <string name="trip_edit_problem_distance_too_long">That is more than %1$s for one trip. Check the distance. Nothing was saved.</string>
+    <!-- The argument is a speed with its unit, such as 180 km/h. -->
+    <string name="trip_edit_problem_distance_too_fast">That distance is too far for the time between the start and the end: more than %1$s on average. Check the distance and the times. Nothing was saved.</string>
     <string name="trip_edit_save_failed">That could not be saved. The Log screen says why.</string>
     <!-- The edit screen: what MilO recorded of a trip that was edited, and the way back to it. -->
     <string name="trip_edit_recorded_title">What MilO recorded</string>
@@ -531,7 +550,8 @@
         subject: October 5, 2026 to October 18, 2026.
     -->
     <string name="report_period_range_words">%1$s to %2$s</string>
-    <string name="report_summary_none">No Business trips in this period. The report would say so, with a total of 0.0 km.</string>
+    <!-- The argument is the total such a report prints, such as 0.0 km. -->
+    <string name="report_summary_none">No Business trips in this period. The report would say so, with a total of %1$s.</string>
     <plurals name="report_summary_marked">
         <item quantity="one">%d of them was added or edited by hand. It carries an asterisk (*) on the report.</item>
         <item quantity="other">%d of them were added or edited by hand. They carry an asterisk (*) on the report.</item>
@@ -629,19 +649,19 @@
         <item quantity="one">%d personal trip</item>
         <item quantity="other">%d personal trips</item>
     </plurals>
-    <string name="report_pdf_business_only">Business trips only. Distances are in kilometres.</string>
+    <!-- The argument is the unit's whole word, kilometres or miles. -->
+    <string name="report_pdf_business_only">Business trips only. Distances are in %1$s.</string>
     <!-- The arguments are the revision's number and the day the report it replaces was sent. -->
     <string name="report_pdf_revision">Revision %1$d. It replaces the report sent on %2$s.</string>
     <string name="report_pdf_column_start">Start</string>
     <string name="report_pdf_column_end">End</string>
     <string name="report_pdf_column_from">From</string>
     <string name="report_pdf_column_to">To</string>
-    <string name="report_pdf_column_km">km</string>
     <!-- A day's heading at the top of a following page. The argument is the day. -->
     <string name="report_pdf_day_continued">%1$s (continued)</string>
     <string name="report_pdf_subtotal">Subtotal</string>
-    <!-- The argument is the period, such as October 2026. -->
-    <string name="report_pdf_total">Total business kilometres for %1$s</string>
+    <!-- The arguments are the period, such as October 2026, and the unit's whole word. -->
+    <string name="report_pdf_total">Total business %2$s for %1$s</string>
     <plurals name="report_pdf_trip_count">
         <item quantity="one">%d business trip</item>
         <item quantity="other">%d business trips</item>
@@ -664,13 +684,14 @@
     <!--
         The email the report is sent with. The subject's arguments are the period and the
         sender's name; a revision's are that subject and its number. The body's are the
-        period, the kilometres, the number of trips and the sender's name.
+        period, the total with its unit (345.6 km), the number of trips and the sender's
+        name.
     -->
     <string name="report_email_subject">Mileage - %1$s - %2$s</string>
     <string name="report_email_subject_revision">%1$s - Revision %2$d</string>
     <plurals name="report_email_body">
-        <item quantity="one">Attached is my mileage report for %1$s: %2$s km in %3$d business trip.\n\n%4$s</item>
-        <item quantity="other">Attached is my mileage report for %1$s: %2$s km in %3$d business trips.\n\n%4$s</item>
+        <item quantity="one">Attached is my mileage report for %1$s: %2$s in %3$d business trip.\n\n%4$s</item>
+        <item quantity="other">Attached is my mileage report for %1$s: %2$s in %3$d business trips.\n\n%4$s</item>
     </plurals>
     <!-- The first word of the report file's name, as in Mileage-2026-10-Name.pdf. -->
     <string name="report_file_prefix">Mileage</string>
@@ -868,13 +889,15 @@
     <string name="car_status_refused_battery_restricted">Could not start: battery use is set to Restricted</string>
     <string name="car_status_refused_bluetooth_permission">Could not start: \"Nearby devices\" is not allowed</string>
     <string name="car_status_refused_by_android">Could not start: Android did not allow it</string>
-    <!-- The This trip row: kilometres from formatKilometres(), then whole hours and minutes. -->
-    <string name="car_trip_minutes">%1$s km · %2$d min</string>
-    <string name="car_trip_hours_minutes">%1$s km · %2$d h %3$d min</string>
-    <!-- The Today row: the finished trips that started today, and their kilometres. -->
+    <!--
+        The This trip row: the distance with its unit (12.3 km), then whole hours and minutes.
+    -->
+    <string name="car_trip_minutes">%1$s · %2$d min</string>
+    <string name="car_trip_hours_minutes">%1$s · %2$d h %3$d min</string>
+    <!-- The Today row: the finished trips that started today, and their distance (48.2 km). -->
     <plurals name="car_today">
-        <item quantity="one">%1$d trip · %2$s km</item>
-        <item quantity="other">%1$d trips · %2$s km</item>
+        <item quantity="one">%1$d trip · %2$s</item>
+        <item quantity="other">%1$d trips · %2$s</item>
     </plurals>
     <string name="car_today_none">No trips yet</string>
     <string name="car_today_unknown">Not available</string>

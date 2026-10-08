@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -108,7 +109,7 @@ class TripRestoringTest : TripEditingFixture() {
 
         editing.save(
             trip,
-            formFor(trip, edmonton).copy(start = LocalTime.of(7, 0)),
+            formFor(trip, edmonton, DistanceUnit.KILOMETRES).copy(start = LocalTime.of(7, 0)),
             schedule = null,
             edmonton,
         )

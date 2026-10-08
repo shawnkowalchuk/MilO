@@ -23,6 +23,10 @@ import kotlinx.serialization.json.Json
 //
 // Times are milliseconds since 1970 and distances are metres, as in storage. A calendar day is
 // written as text ("2026-09-01"). A stored constant is written by the name the tables use.
+//
+// Format 2 (2026-10-07) differs from format 1 in one thing: a sent report says which unit it
+// was printed in ("distanceUnit"). A file of format 1 has no such key, and its reports are all
+// in kilometres, which is all MilO printed then.
 
 /** What the key "format" holds. A file that says anything else is not an export of MilO's. */
 const val EXPORT_FORMAT = "milo-export"
@@ -31,7 +35,10 @@ const val EXPORT_FORMAT = "milo-export"
  * The version of the form described above. Raise it for any change to the form, and keep
  * reading every earlier version: a file from a newer version is refused, never guessed at.
  */
-const val EXPORT_FORMAT_VERSION = 1
+const val EXPORT_FORMAT_VERSION = 2
+
+/** The first version of the form in which a sent report names its unit. */
+internal const val FORMAT_WITH_REPORT_UNIT = 2
 
 /** The names of the numbers of a row of "points", in order. Written into the file as a legend. */
 val EXPORT_POINT_COLUMNS: List<String> =
@@ -111,6 +118,11 @@ data class ExportedTrip(
  * A report recorded as sent.
  *
  * @param firstDay and [lastDay] are calendar days as text, such as "2026-09-01".
+ * @param distanceUnit the unit the report was printed in, "KILOMETRES" or "MILES": the total
+ * in [distanceMetres] is a whole number of tenths of it. Written by format 2 and later, always.
+ * It is the one key with a value to fall back on, and only so that a file of format 1, which
+ * has no such key, can still be read; the reader refuses a file of format 2 that lacks it
+ * (`ExportedSentReport.problem`).
  */
 @Serializable
 data class ExportedSentReport(
@@ -122,6 +134,7 @@ data class ExportedSentReport(
     val tripCount: Int,
     val distanceMetres: Double,
     val revision: Int,
+    val distanceUnit: String? = null,
 )
 
 /** The paired truck: which device it is and what it is called, without its association. */

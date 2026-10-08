@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.report
 
 import android.content.Intent
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
 import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.ReportSelection
@@ -23,7 +24,8 @@ import java.time.ZoneId
 /**
  * What a report made now would hold.
  *
- * @param tenths its total, in tenths of a kilometre: the sum of the figures it prints.
+ * @param tenths its total, in tenths of [unit]: the sum of the figures it prints.
+ * @param unit the unit the report would be printed in: the one chosen in Settings.
  * @param markedCount how many of its trips were added or edited by hand.
  * @param withoutAddress how many of its trips lack a start or an end address.
  * @param personalLeftOut and [unsortedLeftOut] count the period's trips that are left off.
@@ -31,6 +33,7 @@ import java.time.ZoneId
 data class ReportSummary(
     val tripCount: Int,
     val tenths: Long,
+    val unit: DistanceUnit,
     val markedCount: Int,
     val withoutAddress: Int,
     val personalLeftOut: Int,
@@ -41,6 +44,9 @@ data class ReportSummary(
 /**
  * One line of the list of sent reports.
  *
+ * @param distanceMetres the total the report printed, and [unit] the unit it was printed in.
+ * The line is written in that unit for good: it is a record of what the report said, and does
+ * not follow a later change of the unit in Settings.
  * @param removal what removing this report from the list would do, which the question says
  * before it is removed.
  */
@@ -50,6 +56,7 @@ data class SentLine(
     val sentAtMs: Long,
     val tripCount: Int,
     val distanceMetres: Double,
+    val unit: DistanceUnit,
     val revision: Int,
     val removal: RemovalEffect,
 )
@@ -117,6 +124,7 @@ sealed interface ReportUiState {
 
     /**
      * @param today the last day a period may reach.
+     * @param unit the unit chosen in Settings: what a report made now is printed in.
      * @param submission whether the chosen month has been submitted. It is about the month,
      * also while "A date range" is chosen, where the screen does not show it.
      * @param status what the Status tile says about the chosen period, month or range.
@@ -146,6 +154,7 @@ sealed interface ReportUiState {
     data class Ready(
         val zone: ZoneId,
         val today: LocalDate,
+        val unit: DistanceUnit,
         val choice: ReportChoice,
         val canStepForward: Boolean,
         val submission: MonthSubmission?,
@@ -169,10 +178,11 @@ sealed interface ReportUiState {
     ) : ReportUiState
 }
 
-/** What a report of [selection] would hold. */
-fun summaryOf(selection: ReportSelection): ReportSummary = ReportSummary(
+/** What a report of [selection] would hold, printed in [unit]. */
+fun summaryOf(selection: ReportSelection, unit: DistanceUnit): ReportSummary = ReportSummary(
     tripCount = selection.trips.size,
-    tenths = selection.trips.sumOf { it.tenths },
+    tenths = selection.totalTenths(unit),
+    unit = unit,
     markedCount = selection.trips.count { it.mark != null },
     withoutAddress = selection.withoutAddress,
     personalLeftOut = selection.personalLeftOut,
@@ -197,11 +207,12 @@ fun reportUiState(
 ): ReportUiState.Ready = ReportUiState.Ready(
     zone = zone,
     today = today,
+    unit = settings.distanceUnit,
     choice = choice,
     canStepForward = choice.canStepForward(today),
     submission = monthSubmission(choice.month, sent),
     status = reportStatus(choice.period, today, zone, selection?.trips?.size, settings, sent),
-    summary = selection?.let(::summaryOf),
+    summary = selection?.let { summaryOf(it, settings.distanceUnit) },
     missing = settings.missingForSending(),
     accountantEmail = settings.accountantEmail,
     sender = SenderDetails(settings.reportName, settings.reportCompany, settings.reportVehicle),

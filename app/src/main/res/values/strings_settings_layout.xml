@@ -36,6 +36,14 @@
     <!-- Trips: the tile's label, as drawn, and the line that opens what its numbers do. -->
     <string name="settings_trips_label">Trips · applies from the next trip</string>
     <string name="settings_about_trips">About these three</string>
+    <!--
+        The tile under it (2026-10-07): the unit every distance is shown in. The two words are
+        the two parts of the control; the sentence under it says what follows the choice.
+    -->
+    <string name="settings_units_title">Units</string>
+    <string name="settings_units_kilometres">Kilometres</string>
+    <string name="settings_units_miles">Miles</string>
+    <string name="settings_units_detail">Every screen, the Android Auto screen, the widget, the notifications and the report for the accountant show distances in this unit. Stored trips are not changed, so you can switch back at any time.</string>
 
     <!-- Work schedule: the tile's label, as drawn. -->
     <string name="settings_schedule_label">Work schedule · trips in these hours are Business</string>

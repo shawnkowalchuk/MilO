@@ -32,8 +32,11 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TileKind
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.ValueButton
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.submissionWords
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatDate
 import com.shawnkowalchuk.milo.core.util.formatMediumDay
 import com.shawnkowalchuk.milo.core.util.formatMonthAndYear
@@ -172,7 +175,7 @@ internal fun PeriodTile(state: ReportUiState.Ready, actions: ReportActions) {
  * @param summary null while the period's trips are being read: the figure is then a dash.
  */
 @Composable
-internal fun BusinessTile(summary: ReportSummary?, modifier: Modifier) {
+internal fun BusinessTile(summary: ReportSummary?, unit: DistanceUnit, modifier: Modifier) {
     val locale = LocalConfiguration.current.locales[0]
     val reading = stringResource(R.string.report_reading)
     Tile(
@@ -180,12 +183,15 @@ internal fun BusinessTile(summary: ReportSummary?, modifier: Modifier) {
         padding = TilePadding.EVEN,
     ) {
         TileLabel(stringResource(R.string.trip_business))
+        val figure = summary?.let { formatTenths(it.tenths, locale) }
+        // The summary's own unit, the one its figure was added up in; the screen's while the
+        // trips are still being read. The two are the same setting.
+        val shownIn = summary?.unit ?: unit
         FigureText(
             // A dash while the trips are being read, because a zero would be a figure.
-            figure =
-                summary?.let { formatTenths(it.tenths, locale) }
-                    ?: stringResource(R.string.home_figure_reading),
-            unit = stringResource(R.string.unit_km),
+            figure = figure ?: stringResource(R.string.home_figure_reading),
+            unit = stringResource(unitShortRes(shownIn)),
+            spoken = figure?.let { stringResource(distanceSpokenRes(shownIn), it) },
             modifier =
                 if (summary == null) {
                     Modifier.semantics { contentDescription = reading }

@@ -23,6 +23,12 @@
     <string name="settings_widget_rate">Rate</string>
     <string name="settings_widget_rate_value">%1$s/km</string>
     <string name="settings_widget_rate_field">Dollars a kilometre</string>
+    <!--
+        Under the rate while Miles is chosen in Settings, for reading only: the rate stays a
+        rate per kilometre, and this says what it comes to per mile. $0.70 per km is $1.13 per
+        mile.
+    -->
+    <string name="settings_widget_rate_per_mile">%1$s per km is %2$s per mile</string>
     <!-- The grey example inside the empty field. -->
     <string name="settings_widget_rate_example">0.70</string>
     <!-- The arguments: the lowest and the highest rate that can be set, $0.01 and $5.00. -->
@@ -31,5 +37,10 @@
     <string name="settings_widget_add">Add to home screen</string>
     <string name="settings_widget_how">To add it yourself: touch and hold an empty spot on the home screen, then Widgets, then MilO.</string>
     <string name="settings_about_widget">About the widget</string>
+    <!--
+        The same while Miles is chosen: the report is then in miles, and the dollars still come
+        from kilometres.
+    -->
+    <string name="settings_widget_detail_miles">The dollars are this month\'s and this year\'s Business kilometres at the rate above, the same for every kilometre. The rate stays a rate per kilometre, and the dollars are worked out from kilometres, so they are the same whichever unit is shown. They are for reference only: the report for the accountant shows no dollars. Switched off, the widget cannot be added, and one already on the home screen says so, or is removed by the home screen.</string>
     <string name="settings_widget_detail">The dollars are this month\'s and this year\'s Business kilometres at the rate above, the same for every kilometre. They are for reference only: the report for the accountant stays in kilometres. Switched off, the widget cannot be added, and one already on the home screen says so, or is removed by the home screen.</string>
 </resources>

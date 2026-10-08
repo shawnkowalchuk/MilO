@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.platform.address.MAX_ADDRESS_ATTEMPTS
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
@@ -54,8 +55,15 @@ class TripMonthTest {
         liveTripId: Long? = null,
         liveDistanceMetres: Double? = null,
         liveStart: OpenTripStart? = null,
-    ): MonthSummary =
-        monthSummary(trips, edmonton, showLeftOut, liveTripId, liveDistanceMetres, liveStart)
+    ): MonthSummary = monthSummary(
+        trips,
+        edmonton,
+        showLeftOut,
+        liveTripId,
+        liveDistanceMetres,
+        liveStart,
+        DistanceUnit.KILOMETRES,
+    )
 
     // ---- Totals -----------------------------------------------------------------------------------
 

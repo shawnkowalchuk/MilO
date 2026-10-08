@@ -42,7 +42,7 @@ internal class ReportFiles(
     suspend fun pdf(report: MileageReport, made: CreatedPdf?): CreatedPdf {
         if (made != null && made.report == report && documents.holds(made.file)) return made
         val file = documents.createPdf(report)
-        records.created("PDF", report.period, report.tripCount, report.totalTenths)
+        created("PDF", report)
         return CreatedPdf(report, file)
     }
 
@@ -64,7 +64,7 @@ internal class ReportFiles(
     /** Makes the CSV of [report] and offers it to Android's share sheet. */
     suspend fun csvToShare(report: MileageReport): List<Intent> {
         val file = documents.createCsv(report)
-        records.created("CSV", report.period, report.tripCount, report.totalTenths)
+        created("CSV", report)
         return listOf(handOff.toShare(file.file, texts.subject(report)))
     }
 
@@ -78,8 +78,13 @@ internal class ReportFiles(
     suspend fun bothToShare(pdf: CreatedPdf): List<Intent> {
         val report = pdf.report.copy(revision = null)
         val csv = documents.createCsv(report)
-        records.created("CSV", report.period, report.tripCount, report.totalTenths)
+        created("CSV", report)
         return listOf(handOff.toShareBoth(pdf.file.file, csv.file, texts.subject(pdf.report)))
+    }
+
+    /** The event-log line for a file that was made, with the report's total in its own unit. */
+    private suspend fun created(what: String, report: MileageReport) {
+        records.created(what, report.period, report.tripCount, report.totalTenths, report.unit)
     }
 
     /** Removes the report files of earlier weeks. They are in the cache and can be made again. */

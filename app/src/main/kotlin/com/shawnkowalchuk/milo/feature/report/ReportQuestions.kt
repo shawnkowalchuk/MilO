@@ -7,11 +7,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.periodInWords
 import com.shawnkowalchuk.milo.core.util.formatDate
 import com.shawnkowalchuk.milo.core.util.formatDay
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.data.report.RemovalEffect
 import com.shawnkowalchuk.milo.data.report.SentEffect
@@ -126,7 +127,12 @@ private fun ResendQuestion(resend: Resend, zone: ZoneId, onSend: () -> Unit, onK
     val locale = LocalConfiguration.current.locales[0]
     val last = resend.last
     val trips = pluralStringResource(R.plurals.trips_count, last.tripCount, last.tripCount)
-    val km = stringResource(R.string.distance_km, formatKilometres(last.distanceMetres, locale))
+    // In the unit that report was printed in, as it stood on it.
+    val km =
+        stringResource(
+            distanceRes(last.unit),
+            formatDistance(last.distanceMetres, last.unit, locale),
+        )
     ConfirmDialog(
         title = stringResource(R.string.report_resend_title),
         text =
@@ -163,7 +169,7 @@ internal fun MarkQuestion(
     val locale = LocalConfiguration.current.locales[0]
     val period = periodWords(state.choice.period, locale)
     val trips = pluralStringResource(R.plurals.trips_count, summary.tripCount, summary.tripCount)
-    val km = stringResource(R.string.distance_km, formatTenths(summary.tenths, locale))
+    val km = stringResource(distanceRes(summary.unit), formatTenths(summary.tenths, locale))
     val what =
         when (val effect = state.ifSent) {
             SentEffect.MarksMonth ->

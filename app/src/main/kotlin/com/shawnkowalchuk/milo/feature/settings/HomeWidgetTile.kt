@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.allowance.MAX_CENTS_PER_KM
 import com.shawnkowalchuk.milo.core.allowance.MIN_CENTS_PER_KM
+import com.shawnkowalchuk.milo.core.allowance.centsPerMileOf
 import com.shawnkowalchuk.milo.core.allowance.formatCentsPerKm
 import com.shawnkowalchuk.milo.core.designsystem.component.QuietExpander
 import com.shawnkowalchuk.milo.core.designsystem.component.RowStatus
@@ -26,6 +27,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TitledSwitchRow
 import com.shawnkowalchuk.milo.core.designsystem.component.ValueButton
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 
 /** A rate is at most "5.00"; this leaves room for a dollar sign and spaces around it. */
 private const val MAX_TYPED_LENGTH = 8
@@ -80,6 +82,18 @@ internal fun HomeWidgetTileContent(
         }
         if (shown.enabled) {
             RateEntry(shown.centsPerKm, onSaveRate)
+            // The rate is per kilometre whatever is shown. With miles, what it comes to per
+            // mile is said beside it, for reading only: nothing is priced at that figure.
+            if (shown.unit == DistanceUnit.MILES) {
+                val locale = LocalConfiguration.current.locales[0]
+                Note(
+                    stringResource(
+                        R.string.settings_widget_rate_per_mile,
+                        formatCentsPerKm(shown.centsPerKm, locale),
+                        formatCentsPerKm(centsPerMileOf(shown.centsPerKm), locale),
+                    ),
+                )
+            }
             if (shown.canAskToAdd) {
                 TileButton(
                     text = stringResource(R.string.settings_widget_add),
@@ -94,7 +108,14 @@ internal fun HomeWidgetTileContent(
             expanded = aboutOpen,
             onToggle = { aboutOpen = !aboutOpen },
         ) {
-            Note(stringResource(R.string.settings_widget_detail))
+            Note(
+                stringResource(
+                    when (shown.unit) {
+                        DistanceUnit.KILOMETRES -> R.string.settings_widget_detail
+                        DistanceUnit.MILES -> R.string.settings_widget_detail_miles
+                    },
+                ),
+            )
         }
     }
 }

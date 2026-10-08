@@ -21,9 +21,14 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TextEntry
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileButton
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
-import com.shawnkowalchuk.milo.core.odometer.formatOdometerKm
+import com.shawnkowalchuk.milo.core.odometer.formatOdometer
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatMediumDay
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.localDateOf
@@ -54,10 +59,14 @@ internal fun OdometerTile(viewModel: OdometerViewModel) {
  * Built from the screen's existing parts: a tile, its label, a figure, a note, the text field
  * of the report's details and the tile's buttons.
  *
- * @param onSaveReading stores what was typed, and answers false if it is not a reading.
+ * @param onSaveReading stores what was typed as a reading in the unit the tile is in, and
+ * answers false if it is not a reading.
  */
 @Composable
-internal fun OdometerTileContent(shown: OdometerCardState, onSaveReading: (String) -> Boolean) {
+internal fun OdometerTileContent(
+    shown: OdometerCardState,
+    onSaveReading: (String, DistanceUnit) -> Boolean,
+) {
     val locale = LocalConfiguration.current.locales[0]
     var editing by rememberSaveable { mutableStateOf(false) }
     var typed by rememberSaveable { mutableStateOf("") }
@@ -73,9 +82,11 @@ internal fun OdometerTileContent(shown: OdometerCardState, onSaveReading: (Strin
         if (figure == null) {
             Note(stringResource(R.string.settings_odometer_none))
         } else {
+            val whole = formatOdometer(figure.value, locale)
             FigureText(
-                figure = formatOdometerKm(figure.km, locale),
-                unit = stringResource(R.string.unit_km),
+                figure = whole,
+                unit = stringResource(unitShortRes(figure.unit)),
+                spoken = stringResource(distanceSpokenRes(figure.unit), whole),
             )
             Note(madeOf(figure, shown.zone, locale))
         }
@@ -96,7 +107,11 @@ internal fun OdometerTileContent(shown: OdometerCardState, onSaveReading: (Strin
                 maxLength = MAX_TYPED_LENGTH,
                 decimalNumber = true,
                 lastField = true,
-                error = stringResource(R.string.settings_odometer_refused).takeIf { refused },
+                error =
+                    stringResource(
+                        R.string.settings_odometer_refused,
+                        stringResource(unitNameRes(shown.unit)),
+                    ).takeIf { refused },
                 placeholder = stringResource(R.string.settings_odometer_example),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small)) {
@@ -112,7 +127,7 @@ internal fun OdometerTileContent(shown: OdometerCardState, onSaveReading: (Strin
                 TileButton(
                     text = stringResource(R.string.settings_odometer_save),
                     onClick = {
-                        if (onSaveReading(typed)) {
+                        if (onSaveReading(typed, shown.unit)) {
                             editing = false
                             typed = ""
                         } else {
@@ -143,29 +158,41 @@ internal fun OdometerTileContent(shown: OdometerCardState, onSaveReading: (Strin
             expanded = aboutOpen,
             onToggle = { aboutOpen = !aboutOpen },
         ) {
-            Note(stringResource(R.string.settings_odometer_detail))
+            Note(
+                stringResource(
+                    R.string.settings_odometer_detail,
+                    stringResource(unitNameRes(shown.unit)),
+                ),
+            )
         }
     }
 }
 
-/** The line under the figure: the reading it comes from, and the trips added since. */
+/**
+ * The line under the figure: the reading it comes from, and the trips added since. The reading
+ * is written as it was typed, in the unit it was typed in; the trips since are in the figure's
+ * unit, the one on screen.
+ */
 @Composable
 private fun madeOf(figure: OdometerFigure, zone: ZoneId, locale: Locale): String {
     val reading = figure.reading
-    val readingKm = formatOdometerKm(reading.km, locale)
+    val typed = stringResource(distanceRes(reading.unit), formatOdometer(reading.value, locale))
     val day = formatMediumDay(localDateOf(reading.atMs, zone), locale)
     return when {
-        !figure.estimated -> stringResource(R.string.settings_odometer_typed_today, readingKm)
+        !figure.estimated -> stringResource(R.string.settings_odometer_typed_today, typed)
 
         figure.drivenTenths == 0L ->
-            stringResource(R.string.settings_odometer_no_trips_since, readingKm, day)
+            stringResource(R.string.settings_odometer_no_trips_since, typed, day)
 
         else ->
             stringResource(
                 R.string.settings_odometer_trips_since,
-                readingKm,
+                typed,
                 day,
-                formatTenths(figure.drivenTenths, locale),
+                stringResource(
+                    distanceRes(figure.unit),
+                    formatTenths(figure.drivenTenths, locale),
+                ),
             )
     }
 }

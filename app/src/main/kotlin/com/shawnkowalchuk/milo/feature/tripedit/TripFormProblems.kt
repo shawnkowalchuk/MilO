@@ -1,6 +1,8 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.trip.MAX_SPEED_KMH
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.wholeUnitsBelow
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.ZoneId
 
@@ -15,6 +17,27 @@ import java.time.ZoneId
 const val MAX_TRIP_KILOMETRES = 2_000
 
 private const val METRES_PER_KILOMETRE = 1_000.0
+
+/**
+ * The longest distance the form takes, as the refusal names it in [unit]: 2000 km, or the whole
+ * miles under it, 1242. The limit itself is in metres and the same in either unit; rounded
+ * down, the sentence "more than 1242 mi" is true of everything that is refused.
+ */
+fun maxTripDistanceShown(unit: DistanceUnit): Int = when (unit) {
+    DistanceUnit.KILOMETRES -> MAX_TRIP_KILOMETRES
+
+    DistanceUnit.MILES ->
+        wholeUnitsBelow(MAX_TRIP_KILOMETRES * METRES_PER_KILOMETRE, unit).toInt()
+}
+
+/**
+ * The fastest average the form takes, as the refusal names it in [unit]: 180 km/h, or the whole
+ * miles an hour under it, 111. The rule is [MAX_SPEED_KMH], whatever is shown.
+ */
+fun maxSpeedShown(unit: DistanceUnit): Int = when (unit) {
+    DistanceUnit.KILOMETRES -> MAX_SPEED_KMH.toInt()
+    DistanceUnit.MILES -> wholeUnitsBelow(MAX_SPEED_KMH * METRES_PER_KILOMETRE, unit).toInt()
+}
 private const val MILLIS_PER_HOUR = 3_600_000.0
 
 /** The part of the form a problem is about: the screen says it there, beside what is wrong. */
@@ -22,7 +45,7 @@ enum class FormPart {
     /** The day and the two times: the tile "When". */
     TIMES,
 
-    /** The kilometres: the tile "Distance, km". */
+    /** The distance: the tile "Distance, km" or "Distance, mi". */
     DISTANCE,
 }
 

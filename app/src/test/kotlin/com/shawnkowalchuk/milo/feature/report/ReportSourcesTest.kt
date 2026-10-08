@@ -22,7 +22,7 @@ class ReportSourcesTest {
     private val september = YearMonth.of(2026, 9)
     private val trip = ReportTrip(1_789_000_000_000, 1_789_001_200_000, "Shop", "Site 7", 12_340.0)
     private val selection =
-        ReportSelection(listOf(trip), 0, 0, 0, tripInProgress = false, personalTenths = 0)
+        ReportSelection(listOf(trip), 0, 0, 0, tripInProgress = false, personalMetres = emptyList())
     private val named = MiloSettings(reportName = "Sam Driver", reportCompany = "Northside")
 
     private fun sources(

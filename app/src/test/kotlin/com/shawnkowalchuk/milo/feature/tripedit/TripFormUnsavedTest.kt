@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -42,8 +43,8 @@ class TripFormUnsavedTest {
             category = TripCategory.BUSINESS,
         )
 
-    private val opened = formFor(stored, edmonton)
-    private val blank = blankForm(openedAtMs, edmonton)
+    private val opened = formFor(stored, edmonton, DistanceUnit.KILOMETRES)
+    private val blank = blankForm(openedAtMs, edmonton, DistanceUnit.KILOMETRES)
 
     private fun unsaved(form: TripForm): Boolean = form.holdsUnsavedWork(opened, stored)
 

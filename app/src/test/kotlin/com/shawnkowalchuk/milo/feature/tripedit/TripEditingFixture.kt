@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -71,7 +72,12 @@ abstract class TripEditingFixture {
 
     /** Opens the form for [stored], makes [change] in it, and saves. */
     protected suspend fun save(stored: Trip, change: (TripForm) -> TripForm): SaveResult =
-        editing.save(stored, change(formFor(stored, edmonton)), schedule, edmonton)
+        editing.save(
+            stored,
+            change(formFor(stored, edmonton, DistanceUnit.KILOMETRES)),
+            schedule,
+            edmonton,
+        )
 
     /** A missed trip, filled in properly. */
     protected val missed =

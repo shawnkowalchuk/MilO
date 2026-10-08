@@ -7,6 +7,7 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.ByHandMark
 import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -83,6 +84,7 @@ class TripMonthByHandTest {
             liveTripId = null,
             liveDistanceMetres = null,
             liveStart = null,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun line(trip: Trip, showLeftOut: Boolean = false): TripLine =
@@ -105,8 +107,8 @@ class TripMonthByHandTest {
         val today = todayTrips(listOf(recorded, edited, added))
 
         assertEquals(3, today.count)
-        assertEquals(470, today.totalTenths)
-        assertEquals(Tally(3, 470), today.totals.business)
+        assertEquals(470, today.totalTenths(DistanceUnit.KILOMETRES))
+        assertEquals(Tally(3, 470), today.totals(DistanceUnit.KILOMETRES).business)
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -96,12 +97,14 @@ internal fun report(
     sender: ReportSender = SENDER,
     revision: ReportRevision? = null,
     personal: PersonalDriving = PERSONAL,
+    unit: DistanceUnit = DistanceUnit.KILOMETRES,
 ): MileageReport = MileageReport(
     sender = sender,
     period = period,
     generatedOn = LocalDate.of(2026, 10, 6),
     revision = revision,
     zone = EDMONTON,
+    unit = unit,
     days = reportDays(trips, EDMONTON),
     personal = personal,
 )

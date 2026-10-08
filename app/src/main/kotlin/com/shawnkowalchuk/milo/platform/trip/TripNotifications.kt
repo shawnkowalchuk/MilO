@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.app.MainActivity
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 
 /** The id of the ongoing trip notification. It is the service's foreground notification. */
 const val TRIP_NOTIFICATION_ID = 1
@@ -52,8 +54,12 @@ private const val DRIVING_ALERT_TAP_REQUEST = 1
  * the notification silently, and the trip service still runs. [showCouldNotStart] and
  * [showDrivingAlert] report whether the notification can be seen, so the event log can say
  * that it went unseen.
+ *
+ * @param unit the unit chosen in Settings at this moment, which the trip's distance is written
+ * in. Asked each time the notification is built, so the next one built after a change is in
+ * the new unit; the trip service builds one at once when the unit changes.
  */
-class TripNotifications(private val context: Context) {
+class TripNotifications(private val context: Context, private val unit: () -> DistanceUnit) {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     init {
@@ -91,9 +97,10 @@ class TripNotifications(private val context: Context) {
         val builder = ongoing(titleFor(trip))
         if (trip != null) {
             val locale = context.resources.configuration.locales[0]
-            val kilometres = formatKilometres(trip.distanceMetres, locale)
+            val shownIn = unit()
+            val distance = formatDistance(trip.distanceMetres, shownIn, locale)
             builder
-                .setContentText(context.getString(R.string.distance_km, kilometres))
+                .setContentText(context.getString(distanceRes(shownIn), distance))
                 // The system counts the elapsed time up by itself from the trip's start, so the
                 // notification does not have to be posted again every second to show it.
                 .setWhen(trip.startedAtMs)

@@ -24,7 +24,7 @@ const val MILO_DATABASE_FILE = "milo.db"
 /**
  * The version of the main database's tables. An export file says which one it was written from.
  */
-const val MILO_DATABASE_VERSION = 5
+const val MILO_DATABASE_VERSION = 6
 
 /**
  * The main database: trips, the event log and the list of sent reports. It is the small,
@@ -34,9 +34,10 @@ const val MILO_DATABASE_VERSION = 5
  * Raising [MILO_DATABASE_VERSION] needs a migration (`MiloMigrations.kt`) and the schema file
  * Room writes to `app/schemas`. Version 2 added the trips' addresses; version 3, Business or
  * Personal; version 4, the marks of a trip that was added or edited by hand and what was
- * recorded before; version 5, the table of reports sent to the accountant. A new column of
- * `trips` or `sent_reports` also has to be carried by the export file
- * (`data/transfer/ExportFormat.kt`), under a new format version.
+ * recorded before; version 5, the table of reports sent to the accountant; version 6, the
+ * unit each of those reports was printed in. A new column of `trips` or `sent_reports` also has
+ * to be carried by the export file (`data/transfer/ExportFormat.kt`), under a new format
+ * version, as version 6's column is by format 2.
  */
 @Database(
     entities = [Trip::class, EventLogEntry::class, SentReport::class],

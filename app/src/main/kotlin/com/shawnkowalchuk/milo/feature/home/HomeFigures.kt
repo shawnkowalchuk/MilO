@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.home
 import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
 import com.shawnkowalchuk.milo.core.designsystem.text.routeText
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.daySpan
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -33,8 +34,9 @@ private const val PERCENT = 100L
 /**
  * The month's tile.
  *
- * @param businessTenths what the month's Business trips add up to, in tenths of a kilometre:
- * the figure the Trips screen shows for the month, and the total its report prints.
+ * @param businessTenths what the month's Business trips add up to, in tenths of the unit the
+ * figures were made in ([HomeTrips.unit]): the figure the Trips screen shows for the month, and
+ * the total its report prints.
  * @param businessPercent the Business share of all the month's counted kilometres, in whole
  * percent, or null while the month has no kilometres at all: a share of nothing is not a
  * number.
@@ -86,13 +88,19 @@ internal data class HomeTrip(
  * trips were read for. The screen shows them under that day only.
  * @param today today's finished trips, counted by the one rule (`todayTrips`).
  * @param rows the same trips, newest first, each with where it went.
+ * @param unit the unit every figure here is in, and is to be written with: the one chosen in
+ * Settings when the figures were made.
  */
 internal data class HomeTrips(
     val date: LocalDate,
     val today: TodayTrips,
     val rows: List<HomeTrip>,
     val month: MonthFigures,
+    val unit: DistanceUnit,
 ) {
+    /** Today's trips added up by what they are saved as, in [unit]. */
+    val todayTotals: CategoryTotals get() = today.totals(unit)
+
     /** The most recent finished trip of today, or null before the first one. */
     val lastTrip: HomeTrip? get() = rows.firstOrNull()
 }
@@ -105,14 +113,20 @@ internal data class HomeTrips(
  * cannot be a trip apart.
  *
  * @param monthTrips every trip that started in the month of [date], whatever its status.
+ * @param unit the unit chosen in Settings: every figure is worked out in it.
  */
-internal fun homeTrips(date: LocalDate, zone: ZoneId, monthTrips: List<Trip>): HomeTrips {
+internal fun homeTrips(
+    date: LocalDate,
+    zone: ZoneId,
+    monthTrips: List<Trip>,
+    unit: DistanceUnit,
+): HomeTrips {
     val day = daySpan(date, zone)
     val startedToday =
         monthTrips.filter { it.startedAtMs >= day.fromMs && it.startedAtMs < day.untilMs }
     val today = todayTrips(startedToday)
     val stored = startedToday.associateBy { it.id }
-    val totals = categoryTotals(monthTrips)
+    val totals = categoryTotals(monthTrips, unit)
     return HomeTrips(
         date = date,
         today = today,
@@ -136,6 +150,7 @@ internal fun homeTrips(date: LocalDate, zone: ZoneId, monthTrips: List<Trip>): H
                 businessTenths = totals.business.tenths,
                 businessPercent = businessPercent(totals),
             ),
+        unit = unit,
     )
 }
 

@@ -2,7 +2,8 @@ package com.shawnkowalchuk.milo.core.report
 
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
-import com.shawnkowalchuk.milo.core.odometer.formatOdometerKm
+import com.shawnkowalchuk.milo.core.odometer.formatOdometer
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatDay
 import com.shawnkowalchuk.milo.core.util.formatMediumDay
 import com.shawnkowalchuk.milo.core.util.formatTenths
@@ -22,6 +23,10 @@ const val REPORT_MARK = "*"
 /**
  * The words of the PDF. Each one is user-visible text, so none is written in this package.
  *
+ * The words that name a unit ([businessOnly], [columnKm], [total], [odometerKm],
+ * [odometerEstimated]) are handed in already written for the report's unit, kilometres or
+ * miles: this package prints them and knows neither word.
+ *
  * @param appName and [appMark] are the app's name and the initial on its mark, as the screens
  * write them at the top.
  * @param generatedOn a format with one place, the day the report was made.
@@ -35,6 +40,8 @@ const val REPORT_MARK = "*"
  * of trips: one trip and five trips are written differently, and which way is the language's
  * to say, so the caller asks the string resources.
  * @param personalTripCount the same for the period's Personal trips.
+ * @param columnKm the title of the distance column, which is the unit's short word ("km",
+ * "mi"). It also stands after the two large figures at the top.
  * @param odometerOn a format with one place, the day: the label of an odometer figure.
  * @param odometerKm a format with one place, the figure: an odometer reading as typed.
  * @param odometerEstimated the same for a figure MilO worked out, which carries "est.".
@@ -184,7 +191,7 @@ fun printedReport(report: MileageReport, words: ReportWords, format: ReportForma
                 },
                 words.odometerNote.takeIf { report.odometer?.anyEstimated == true },
             ),
-        days = report.days.map { it.printed(report.zone, words, format) },
+        days = report.days.map { it.printed(report.zone, report.unit, words, format) },
         emptyNote = words.noTrips.takeIf { report.days.isEmpty() },
         totalLabel = String.format(locale, words.total, period),
         totalKm = totalKm,
@@ -194,7 +201,12 @@ fun printedReport(report: MileageReport, words: ReportWords, format: ReportForma
     )
 }
 
-private fun ReportDay.printed(zone: ZoneId, words: ReportWords, format: ReportFormat): PrintedDay {
+private fun ReportDay.printed(
+    zone: ZoneId,
+    unit: DistanceUnit,
+    words: ReportWords,
+    format: ReportFormat,
+): PrintedDay {
     val heading = formatDay(date, format.locale)
     return PrintedDay(
         heading = heading,
@@ -208,24 +220,24 @@ private fun ReportDay.printed(zone: ZoneId, words: ReportWords, format: ReportFo
                     // in its place: coordinates mean nothing to whoever reads the report.
                     from = trip.from ?: words.noAddress,
                     to = trip.to ?: words.noAddress,
-                    km = formatTenths(trip.tenths, format.locale),
+                    km = formatTenths(trip.tenths(unit), format.locale),
                     marked = trip.mark != null,
                 )
             },
-        subtotalKm = formatTenths(tenths, format.locale),
+        subtotalKm = formatTenths(tenths(unit), format.locale),
     )
 }
 
-/** One odometer figure as it is printed: its label with the day, and the kilometres. */
+/** One odometer figure as it is printed: its label with the day, and the figure. */
 private fun OdometerFigure.printed(
     day: LocalDate,
     words: ReportWords,
     locale: Locale,
 ): Pair<String, String> {
-    val km = formatOdometerKm(km, locale)
-    val value = if (estimated) words.odometerEstimated else words.odometerKm
+    val figure = formatOdometer(value, locale)
+    val written = if (estimated) words.odometerEstimated else words.odometerKm
     return String.format(locale, words.odometerOn, formatMediumDay(day, locale)) to
-        String.format(locale, value, km)
+        String.format(locale, written, figure)
 }
 
 private val OdometerSpan.anyEstimated: Boolean get() = start.estimated || end.estimated

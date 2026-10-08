@@ -1,7 +1,10 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.trip.MAX_SPEED_KMH
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.speedRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 
 // Which words the edit screen uses for what is wrong with the form and for who chose Business
 // or Personal. Only the choice is made here, so that it is tested without a phone: the words
@@ -13,12 +16,25 @@ import com.shawnkowalchuk.milo.core.trip.MAX_SPEED_KMH
  *
  * @param number the limit the sentence quotes, so that the words and the rule cannot disagree.
  * @param names the string resource of something on the screen that the sentence calls by its
- * name, such as a switch, so that the two cannot be worded differently.
+ * name, such as a switch, so that the two cannot be worded differently. Since 2026-10-07 also
+ * the unit's whole word, for a sentence that names the unit the form is in.
+ * @param numberWith the string resource that writes [number] with its unit ("2000 km", "111
+ * mph"), for a limit that is a distance or a speed. The sentence itself names no unit.
  */
-internal data class Sentence(val text: Int, val number: Int? = null, val names: Int? = null)
+internal data class Sentence(
+    val text: Int,
+    val number: Int? = null,
+    val names: Int? = null,
+    val numberWith: Int? = null,
+)
 
-/** What the screen says for one thing that is wrong with the form. */
-internal fun FormProblem.sentence(): Sentence = when (this) {
+/**
+ * What the screen says for one thing that is wrong with the form.
+ *
+ * @param unit the unit the form's distance field is in: the three sentences about the distance
+ * name it, and quote their limits in it.
+ */
+internal fun FormProblem.sentence(unit: DistanceUnit): Sentence = when (this) {
     FormProblem.START_MISSING -> Sentence(R.string.trip_edit_problem_start_missing)
 
     FormProblem.END_MISSING -> Sentence(R.string.trip_edit_problem_end_missing)
@@ -33,7 +49,8 @@ internal fun FormProblem.sentence(): Sentence = when (this) {
 
     FormProblem.OVERLAPS_RECORDING -> Sentence(R.string.trip_edit_problem_overlaps_recording)
 
-    FormProblem.DISTANCE_MISSING -> Sentence(R.string.trip_edit_problem_distance_missing)
+    FormProblem.DISTANCE_MISSING ->
+        Sentence(R.string.trip_edit_problem_distance_missing, names = unitNameRes(unit))
 
     FormProblem.DISTANCE_NOT_A_NUMBER ->
         Sentence(R.string.trip_edit_problem_distance_not_a_number)
@@ -41,10 +58,18 @@ internal fun FormProblem.sentence(): Sentence = when (this) {
     FormProblem.DISTANCE_NEGATIVE -> Sentence(R.string.trip_edit_problem_distance_negative)
 
     FormProblem.DISTANCE_TOO_LONG ->
-        Sentence(R.string.trip_edit_problem_distance_too_long, MAX_TRIP_KILOMETRES)
+        Sentence(
+            R.string.trip_edit_problem_distance_too_long,
+            maxTripDistanceShown(unit),
+            numberWith = distanceRes(unit),
+        )
 
     FormProblem.DISTANCE_TOO_FAST ->
-        Sentence(R.string.trip_edit_problem_distance_too_fast, MAX_SPEED_KMH.toInt())
+        Sentence(
+            R.string.trip_edit_problem_distance_too_fast,
+            maxSpeedShown(unit),
+            numberWith = speedRes(unit),
+        )
 }
 
 /** The line under Business and Personal that says who chose. */

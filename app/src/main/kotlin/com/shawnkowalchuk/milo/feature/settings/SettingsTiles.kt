@@ -26,9 +26,10 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TileButton
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.util.formatKilometres
 import com.shawnkowalchuk.milo.core.util.formatMinutes
+import com.shawnkowalchuk.milo.core.util.formatShortDistance
 
 // The first tiles of the Settings screen, as the design draws them: the truck beside the
 // driving alert, and the three numbers of the trip rules. With them, the three small parts
@@ -167,10 +168,16 @@ internal fun TripRulesTile(state: SettingsUiState.Ready, actions: SettingsAction
         )
         StepperRow(
             label = minimum,
+            // The stored metres, written in the unit chosen below: in miles with two decimals,
+            // because the steps are 100 m apart and a tenth of a mile would blur them.
             value =
                 stringResource(
-                    R.string.distance_km,
-                    formatKilometres(state.minimumDistanceMetres.toDouble(), locale),
+                    distanceRes(state.distanceUnit),
+                    formatShortDistance(
+                        state.minimumDistanceMetres.toDouble(),
+                        state.distanceUnit,
+                        locale,
+                    ),
                 ),
             decrease =
                 StepperButton(

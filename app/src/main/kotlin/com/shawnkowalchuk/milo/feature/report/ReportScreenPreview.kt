@@ -7,6 +7,7 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.report.ReportMark
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.ReportTrip
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.metresOfTenths
 import com.shawnkowalchuk.milo.data.report.ReportSelection
 import com.shawnkowalchuk.milo.data.report.SentReport
@@ -45,7 +46,7 @@ private val drawnMonth: ReportSelection =
         unsortedLeftOut = 0,
         withoutAddress = 0,
         tripInProgress = false,
-        personalTenths = 482,
+        personalMetres = listOf(48_200.0),
     )
 
 /**
@@ -64,7 +65,7 @@ private fun sampleTrips(count: Int, tenths: Long, zone: ZoneId): List<ReportTrip
             endedAtMs = startedAtMs + TRIP_MS,
             from = "Shop, 63 Ave NW",
             to = "Windermere site",
-            distanceMetres = metresOfTenths(ownTenths),
+            distanceMetres = metresOfTenths(ownTenths, DistanceUnit.KILOMETRES),
             mark = ReportMark.EDITED.takeIf { index == 1 || index == 2 },
         )
     }

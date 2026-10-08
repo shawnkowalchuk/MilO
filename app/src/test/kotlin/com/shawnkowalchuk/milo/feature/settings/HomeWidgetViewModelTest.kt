@@ -3,9 +3,11 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setDistanceUnit
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
 import com.shawnkowalchuk.milo.platform.trip.UnreadableSettingsFile
@@ -104,6 +106,27 @@ class HomeWidgetViewModelTest {
             viewModel.state.value,
         )
     }
+
+    @Test
+    fun `with miles chosen the tile knows it, and the rate is still the rate per kilometre`() =
+        runTest {
+            val file = FakeSettingsFile()
+            SettingsStore(file).setDistanceUnit(DistanceUnit.MILES)
+            val viewModel = viewModel(file)
+
+            watch(viewModel)
+
+            assertEquals(DistanceUnit.MILES, viewModel.state.value?.unit)
+            // 70 cents a kilometre, as stored. The tile says beside it what that is per mile.
+            assertEquals(70, viewModel.state.value?.centsPerKm)
+
+            // A rate typed while miles are shown is a rate per kilometre, stored as typed.
+            viewModel.onSaveRate("0.73")
+            runCurrent()
+
+            assertEquals(73, SettingsStore(file).current().homeWidgetCentsPerKm)
+            assertEquals(73, viewModel.state.value?.centsPerKm)
+        }
 
     @Test
     fun `a home screen that takes no requests gets no button`() = runTest {

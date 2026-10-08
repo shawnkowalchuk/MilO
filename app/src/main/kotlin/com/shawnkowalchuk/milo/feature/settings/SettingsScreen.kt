@@ -21,6 +21,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.DayOfWeek
 
 /** The kind of file the picker offers for the trip-start sound. */
@@ -32,6 +33,7 @@ internal class SettingsActions(
     val onGraceStep: (longer: Boolean) -> Unit,
     val onParkedLimitStep: (longer: Boolean) -> Unit,
     val onMinimumDistanceStep: (longer: Boolean) -> Unit,
+    val onDistanceUnit: (DistanceUnit) -> Unit,
     val onSoundEnabled: (Boolean) -> Unit,
     val onPlaySound: () -> Unit,
     val onPickOwnSound: () -> Unit,
@@ -69,7 +71,8 @@ internal class ScheduleActions(
  * The settings, laid out as the owner's design draws them: which truck, beside the driving
  * alert; who the report for the accountant is from and where it goes; the monthly reminder to
  * send last month's report; how long a trip waits for the truck to reconnect, how long the
- * truck may stand still before a trip ends and how short a trip may be; the work schedule that
+ * truck may stand still before a trip ends and how short a trip may be; whether distances are
+ * shown in kilometres or in miles; the work schedule that
  * makes a trip Business or Personal; what becomes of a trip outside it; the daily check that a
  * work day has a trip; the sound of a trip start; and, last, Android's backup with the export
  * and import of all data.
@@ -115,6 +118,7 @@ fun SettingsScreen(
             onGraceStep = viewModel::onGraceStep,
             onParkedLimitStep = viewModel::onParkedLimitStep,
             onMinimumDistanceStep = viewModel::onMinimumDistanceStep,
+            onDistanceUnit = viewModel::onDistanceUnit,
             onSoundEnabled = viewModel::onSoundEnabled,
             onPlaySound = viewModel::onPlaySound,
             onPickOwnSound = {
@@ -237,6 +241,9 @@ internal fun SettingsContent(
                 // Under the report's own tile: it is the reminder to send that report.
                 ReminderTile(state, actions.reminder)
                 TripRulesTile(state, actions)
+                // Under the trips' tile: it says how every distance is written, that tile's
+                // shortest trip included.
+                UnitsTile(state.distanceUnit, actions.onDistanceUnit)
                 ScheduleTile(state, actions.schedule)
                 OutsideHoursTile(state, actions.schedule)
                 // Under the schedule: the check goes by its work days and their start.

@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.odometer.odometerAt
-import com.shawnkowalchuk.milo.core.odometer.parseOdometerKm
+import com.shawnkowalchuk.milo.core.odometer.parseOdometer
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
@@ -36,17 +37,21 @@ private const val KEEP_WATCHING_MS = 5_000L
  * @param figure the odometer now, or null before the first reading has been typed in.
  * @param zone the phone's time zone, in which the day of the reading is written.
  * @param couldNotSave true if the last reading could not be stored. Said on the tile.
+ * @param unit the unit chosen in Settings: the figure is in it, and a reading typed now is a
+ * reading in it, as a dashboard in that unit shows it.
  */
 data class OdometerCardState(
     val figure: OdometerFigure?,
     val zone: ZoneId,
     val couldNotSave: Boolean,
+    val unit: DistanceUnit,
 )
 
 /**
  * The tile as the stored readings and trips make it now. Pure, so it is tested without a phone.
  *
  * @param finished every finished trip; the ones that moved the odometer are picked out here.
+ * @param unit the unit chosen in Settings, which the figure is worked out and shown in.
  */
 fun odometerCardState(
     readings: List<OdometerReading>,
@@ -54,10 +59,20 @@ fun odometerCardState(
     nowMs: Long,
     zone: ZoneId,
     couldNotSave: Boolean,
+    unit: DistanceUnit,
 ): OdometerCardState = OdometerCardState(
-    figure = odometerAt(nowMs, localDateOf(nowMs, zone), zone, readings, drivenTrips(finished)),
+    figure =
+        odometerAt(
+            nowMs,
+            localDateOf(nowMs, zone),
+            zone,
+            readings,
+            drivenTrips(finished),
+            unit,
+        ),
     zone = zone,
     couldNotSave = couldNotSave,
+    unit = unit,
 )
 
 /**
@@ -85,25 +100,36 @@ class OdometerViewModel(
     private val couldNotSave = MutableStateFlow(false)
 
     val state: StateFlow<OdometerCardState?> =
-        combine(readings(), trips.observeFinishedTrips(), couldNotSave) {
+        combine(stored(), trips.observeFinishedTrips(), couldNotSave) {
                 stored,
                 finished,
                 failed,
             ->
-            stored?.let { odometerCardState(it, finished, clock(), zone(), failed) }
+            stored?.let {
+                odometerCardState(
+                    it.odometerReadings,
+                    finished,
+                    clock(),
+                    zone(),
+                    failed,
+                    it.distanceUnit,
+                )
+            }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), null)
 
     /**
      * Stores what Shawn typed as the reading on the dashboard now.
      *
+     * @param unit the unit the tile named when he typed it. The reading is kept as typed with
+     * this unit beside it, and is never converted in storage, so it comes back exactly.
      * @return false, and nothing is stored, if it is not a reading; the tile then says so under
      * the field. True once it is on its way to storage.
      */
-    fun onSaveReading(typed: String): Boolean {
-        val km = parseOdometerKm(typed) ?: return false
+    fun onSaveReading(typed: String, unit: DistanceUnit): Boolean {
+        val value = parseOdometer(typed) ?: return false
         viewModelScope.launch {
             try {
-                settings.addOdometerReading(OdometerReading(clock(), km))
+                settings.addOdometerReading(OdometerReading(clock(), value, unit))
                 couldNotSave.value = false
             } catch (notStored: IOException) {
                 couldNotSave.value = true
@@ -114,8 +140,11 @@ class OdometerViewModel(
         return true
     }
 
-    /** The stored readings, or null once the settings file has turned out to be unreadable. */
-    private fun readings(): Flow<List<OdometerReading>?> = settings.settings
-        .map<MiloSettings, List<OdometerReading>?> { it.odometerReadings }
+    /**
+     * The stored settings, of which the tile reads the readings and the unit together, or null
+     * once the settings file has turned out to be unreadable.
+     */
+    private fun stored(): Flow<MiloSettings?> = settings.settings
+        .map<MiloSettings, MiloSettings?> { it }
         .catch { unreadable -> if (unreadable is IOException) emit(null) else throw unreadable }
 }

@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.TodaySession
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
@@ -35,4 +36,5 @@ internal fun carContent(
     setupNeedsAttention: Boolean = false,
     nowMs: Long = NOW_MS,
     locale: Locale = Locale.CANADA,
-) = carScreenContent(activity, today, setupNeedsAttention, nowMs, locale)
+    unit: DistanceUnit = DistanceUnit.KILOMETRES,
+) = carScreenContent(activity, today, setupNeedsAttention, nowMs, locale, unit)

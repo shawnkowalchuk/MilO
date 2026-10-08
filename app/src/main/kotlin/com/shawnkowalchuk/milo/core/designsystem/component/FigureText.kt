@@ -6,6 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -44,8 +46,9 @@ enum class FigureSize {
  * the unit small on the same line ("48.2 km"). On a plain tile the unit is grey. On the accent
  * tile it is the colour of the figure, because grey cannot be read there.
  *
- * It is one piece of text, so a screen reader reads "48.2 km" and the unit stands on the
- * figure's own line whatever the font size is.
+ * It is one piece of text, so the unit stands on the figure's own line whatever the font size
+ * is, and a screen reader reads the two together: as written ("48.2 km"), or as [spoken] says
+ * them.
  *
  * **How high it is.** The design sets its largest figures on a line exactly as high as the
  * figure (44 for 44), and the theme's styles say the same. Compose does not go by that for a
@@ -56,7 +59,10 @@ enum class FigureSize {
  * as Compose makes it, about 14 dp more than drawn: Home was laid out with it so.
  *
  * @param figure the number as it is to be read, already rounded and written for the language.
- * @param unit the unit alone: "km".
+ * @param unit the unit alone: "km", "mi".
+ * @param spoken what a screen reader says in place of the figure and its unit, or null to have
+ * them read as they are written. A distance passes its figure with the unit's whole word
+ * ("48.2 miles"), because a short word such as "mi" is not said as the unit it stands for.
  */
 @Composable
 fun FigureText(
@@ -64,6 +70,7 @@ fun FigureText(
     unit: String,
     modifier: Modifier = Modifier,
     size: FigureSize = FigureSize.MEDIUM,
+    spoken: String? = null,
 ) {
     val typography = MaterialTheme.typography
     val figureStyle: TextStyle
@@ -120,7 +127,15 @@ fun FigureText(
                     append(" $unit")
                 }
             },
-        modifier = if (size == FigureSize.TOTAL) modifier.asHighAs(figureStyle) else modifier,
+        modifier =
+            (if (size == FigureSize.TOTAL) modifier.asHighAs(figureStyle) else modifier)
+                .then(
+                    if (spoken == null) {
+                        Modifier
+                    } else {
+                        Modifier.semantics { contentDescription = spoken }
+                    },
+                ),
         style = figureStyle,
     )
 }

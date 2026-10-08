@@ -16,10 +16,13 @@ import com.shawnkowalchuk.milo.core.designsystem.component.ExpandableHeading
 import com.shawnkowalchuk.milo.core.designsystem.component.ExpandableTile
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.placesLine
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatDay
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatShortDay
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
@@ -35,7 +38,12 @@ import java.util.Locale
  * has no button: it cannot be changed here until it has ended, and its last line says so.
  */
 @Composable
-internal fun InProgressTile(trip: TripLine, zone: ZoneId, twentyFourHour: Boolean) {
+internal fun InProgressTile(
+    trip: TripLine,
+    zone: ZoneId,
+    twentyFourHour: Boolean,
+    unit: DistanceUnit,
+) {
     val locale = LocalConfiguration.current.locales[0]
     Tile(modifier = Modifier.fillMaxWidth(), gap = MiloTheme.spacing.rowGap) {
         Text(
@@ -46,11 +54,11 @@ internal fun InProgressTile(trip: TripLine, zone: ZoneId, twentyFourHour: Boolea
         )
         // No figure rather than a wrong one, if the running distance is not known. Grey: it
         // is in no total yet.
-        val kilometres = trip.distanceMetres?.let { formatKilometres(it, locale) }
+        val distance = trip.distanceMetres?.let { formatDistance(it, unit, locale) }
         FigureRow(
-            figure = kilometres,
+            figure = distance,
             counted = false,
-            figureSpoken = kilometres?.let { stringResource(R.string.distance_km, it) },
+            figureSpoken = distance?.let { stringResource(distanceSpokenRes(unit), it) },
         ) {
             trip.placesText()?.let { PlacesLine(placesLine(it)) }
             GreyLine(
@@ -89,7 +97,7 @@ internal fun DayTile(
         heading =
             ExpandableHeading(
                 title = dayTitle(heading.isToday, formatShortDay(day.date, locale)),
-                line = dayLine(heading, locale),
+                line = dayLine(heading, locale, context.unit),
                 openLabel = stringResource(R.string.trips_day_press_open),
                 closeLabel = stringResource(R.string.trips_day_press_close),
                 // The drawn date is short ("Mon, Oct 5"). A screen reader is read the whole.
@@ -117,13 +125,13 @@ private fun dayTitle(isToday: Boolean, day: String): String =
  * otherwise hide where they are.
  */
 @Composable
-private fun dayLine(heading: DayHeading, locale: Locale): String {
+private fun dayLine(heading: DayHeading, locale: Locale, unit: DistanceUnit): String {
     val totals =
         pluralStringResource(
             R.plurals.trips_day_summary,
             heading.sessionCount,
             heading.sessionCount,
-            stringResource(R.string.distance_km, formatTenths(heading.businessTenths, locale)),
+            stringResource(distanceRes(unit), formatTenths(heading.businessTenths, locale)),
         )
     if (heading.notCounted == 0) return totals
     val notCounted =

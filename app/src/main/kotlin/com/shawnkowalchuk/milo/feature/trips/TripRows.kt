@@ -25,10 +25,13 @@ import com.shawnkowalchuk.milo.core.designsystem.component.ActionButton
 import com.shawnkowalchuk.milo.core.designsystem.component.ActionButtonRow
 import com.shawnkowalchuk.milo.core.designsystem.component.ActionKind
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.placesLine
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.core.util.formatTimeSpan
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
@@ -52,6 +55,7 @@ import java.util.Locale
 internal class TripRowContext(
     val zone: ZoneId,
     val twentyFourHour: Boolean,
+    val unit: DistanceUnit,
     val openTripId: Long?,
     val onToggle: (Long) -> Unit,
     val onAsk: (TripLine, TripCorrection) -> Unit,
@@ -86,10 +90,10 @@ internal fun TripRow(trip: TripLine, context: TripRowContext, last: Boolean) {
     val rowAndButtons = remember { BringIntoViewRequester() }
     // True from the tap that brings the buttons up until the list has moved to show them.
     var openedByTap by remember { mutableStateOf(false) }
-    val kilometres = trip.distanceMetres?.let { formatKilometres(it, locale) }
+    val distance = trip.distanceMetres?.let { formatDistance(it, context.unit, locale) }
     Column(modifier = Modifier.fillMaxWidth().bringIntoViewRequester(rowAndButtons)) {
         FigureRow(
-            figure = kilometres,
+            figure = distance,
             modifier =
                 Modifier
                     .then(
@@ -113,7 +117,7 @@ internal fun TripRow(trip: TripLine, context: TripRowContext, last: Boolean) {
                     // with its two lines that is more than Android's smallest target.
                     .padding(vertical = spacing.rowGap),
             counted = counted && trip.category == TripCategory.BUSINESS,
-            figureSpoken = kilometres?.let { stringResource(R.string.distance_km, it) },
+            figureSpoken = distance?.let { stringResource(distanceSpokenRes(context.unit), it) },
         ) {
             val times = trip.timesText(context.zone, locale, context.twentyFourHour)
             val places = trip.placesText()
@@ -198,10 +202,10 @@ internal fun TripLine.timesText(zone: ZoneId, locale: Locale, twentyFourHour: Bo
     return stringResource(R.string.trips_time_range, start, end)
 }
 
-/** "12.4 km", or null when the distance is not known. */
+/** "12.4 km" or "7.7 mi", or null when the distance is not known. */
 @Composable
-internal fun TripLine.kilometres(locale: Locale): String? =
-    distanceMetres?.let { stringResource(R.string.distance_km, formatKilometres(it, locale)) }
+internal fun TripLine.distanceText(locale: Locale, unit: DistanceUnit): String? =
+    distanceMetres?.let { stringResource(distanceRes(unit), formatDistance(it, unit, locale)) }
 
 /** The parts of a grey line, each after a middle dot: "5:30 – 5:41 PM · Personal". */
 @Composable

@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -31,6 +32,8 @@ private const val RECORDED_VALUES_RESTORED = "a trip's recorded values were rest
  *
  * @param tripId the trip to edit, or null to add one that MilO missed.
  * @param editing checks and makes the save, the add and the restore, and logs them.
+ * @param unit the unit chosen in Settings, as the whole app holds it. It is read once, when
+ * the screen opens: the distance field is in that unit for as long as the form is open.
  * @param lookUpAddresses asks for the addresses that finished trips lack, with the reason in
  * words for the event log. Called after a restore, which hands typed addresses back to the
  * lookup; a plain function, like the ones for navigation.
@@ -39,6 +42,7 @@ private const val RECORDED_VALUES_RESTORED = "a trip's recorded values were rest
 class TripEditViewModel(
     private val tripId: Long?,
     private val editing: TripEditing,
+    private val unit: StateFlow<DistanceUnit>,
     private val lookUpAddresses: (reason: String) -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -104,7 +108,10 @@ class TripEditViewModel(
         val nowMs = clock()
         val stored = if (tripId == null) null else editing.findEditable(tripId)
         if (tripId != null && stored == null) return Model.NotEditable
-        val session = EditSession(stored, editing.schedule(), zoneNow, openedAtMs = nowMs)
+        // The unit as it is when the form opens. The form keeps it while it is open: what is
+        // typed in the distance field is read in the unit its label names.
+        val session =
+            EditSession(stored, editing.schedule(), zoneNow, nowMs, unit = unit.value)
         return Model.Editing(session, session.openedForm())
     }
 

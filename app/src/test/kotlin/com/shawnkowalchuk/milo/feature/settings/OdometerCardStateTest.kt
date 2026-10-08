@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.settings
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
@@ -27,7 +28,15 @@ class OdometerCardStateTest {
 
     @Test
     fun `before the first reading there is no figure`() {
-        val state = odometerCardState(emptyList(), listOf(trip(readAt, 5_000.0)), now, zone, false)
+        val state =
+            odometerCardState(
+                emptyList(),
+                listOf(trip(readAt, 5_000.0)),
+                now,
+                zone,
+                false,
+                DistanceUnit.KILOMETRES,
+            )
 
         assertNull(state.figure)
     }
@@ -42,11 +51,52 @@ class OdometerCardStateTest {
             )
 
         val state =
-            odometerCardState(listOf(OdometerReading(readAt, 123_456)), trips, now, zone, false)
+            odometerCardState(
+                listOf(OdometerReading(readAt, 123_456, DistanceUnit.KILOMETRES)),
+                trips,
+                now,
+                zone,
+                false,
+                DistanceUnit.KILOMETRES,
+            )
 
         val figure = checkNotNull(state.figure)
-        assertEquals(123_496L, figure.km)
+        assertEquals(123_496L, figure.value)
         assertEquals(400L, figure.drivenTenths)
         assertTrue(figure.estimated)
+    }
+
+    @Test
+    fun `with miles chosen the tile is in miles, and a reading typed in miles is itself`() {
+        val typed = OdometerReading(readAt, 76_543, DistanceUnit.MILES)
+        val trips = listOf(trip(readAt + 3_600_000, 40_000.0))
+
+        val untouched =
+            odometerCardState(listOf(typed), emptyList(), now, zone, false, DistanceUnit.MILES)
+        val driven = odometerCardState(listOf(typed), trips, now, zone, false, DistanceUnit.MILES)
+
+        assertEquals(DistanceUnit.MILES, untouched.unit)
+        assertEquals(76_543L, untouched.figure?.value)
+        assertEquals(typed, untouched.figure?.reading)
+        // 40 km is printed as 24.9 mi: 76 567.9, which a dashboard shows as 76 568.
+        assertEquals(249L, driven.figure?.drivenTenths)
+        assertEquals(76_568L, driven.figure?.value)
+        assertEquals(DistanceUnit.MILES, driven.figure?.unit)
+    }
+
+    @Test
+    fun `a reading typed in kilometres stays his reading after miles are chosen`() {
+        val typed = OdometerReading(readAt, 123_456, DistanceUnit.KILOMETRES)
+
+        val inMiles =
+            odometerCardState(listOf(typed), emptyList(), now, zone, false, DistanceUnit.MILES)
+        val inKilometres =
+            odometerCardState(listOf(typed), emptyList(), now, zone, false, DistanceUnit.KILOMETRES)
+
+        // Shown as 76 712 mi, with the line under it still naming the 123 456 km he typed.
+        assertEquals(76_712L, inMiles.figure?.value)
+        assertEquals(typed, inMiles.figure?.reading)
+        // And back in kilometres it is the figure it was: nothing stored was converted.
+        assertEquals(123_456L, inKilometres.figure?.value)
     }
 }
