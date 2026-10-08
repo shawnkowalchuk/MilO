@@ -142,7 +142,7 @@ Room 3 over Room 2.8.5: this is a new app with nothing to migrate, and Room 3 is
 - No Robolectric means nothing that touches Android classes is unit tested. Trip rules have to be written as pure Kotlin to be testable at all, and everything else rests on the device checklist.
 - No detekt means the file-size limits and similar rules are review conventions, not checks.
 - No lockfile means only declared versions are pinned. Gradle can still resolve a different transitive version (K7).
-- GitHub Free cannot block merges on a private repo (K18). "Red build, no merge" is a rule Shawn follows by hand. CI also cannot test a Bluetooth-triggered start on the real phone.
+- GitHub Free cannot block merges on a private repo (K18). (Since 2026-10-08 the repo is public, where it can; ENGINEERING_STANDARDS §14 says what is switched on.) "Red build, no merge" is a rule Shawn follows by hand. CI also cannot test a Bluetooth-triggered start on the real phone.
 - The debug keystore belongs to this Mac. A build signed on another machine cannot update the installed app, and the uninstall that follows deletes the trip data. A dedicated keystore is a later decision; the risk is recorded in ARCHITECTURE §10.
 
 **What we are now locked into**

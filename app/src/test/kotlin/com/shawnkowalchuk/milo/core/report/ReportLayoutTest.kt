@@ -23,8 +23,10 @@ class ReportLayoutTest {
         }
         assertTrue(page.has("Thursday, October 1, 2026"))
         assertTrue(page.has("Friday, October 2, 2026"))
-        // The column titles once for each day, a subtotal for each, and one total.
-        assertEquals(2, page.texts.count { it.text == "Start" })
+        // The column titles once on the page, above the first day; a subtotal for each day,
+        // and one total.
+        assertEquals(1, page.texts.count { it.text == "Start" })
+        assertTrue(page.find("Start").baseline < page.find("Thursday, October 1, 2026").baseline)
         assertEquals(2, page.texts.count { it.text == "Subtotal" })
         assertTrue(page.has("Total business kilometres for October 2026"))
         assertTrue(page.has("Signature"))

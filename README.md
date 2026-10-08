@@ -1,27 +1,86 @@
 # MilO
 
-MilO is Shawn's own Android app for one phone, a Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It runs on Android 14 and newer only. It records the business kilometres driven in the work truck and makes the monthly mileage report for the accountant, as a PDF and as a CSV file. It has no account, no server and no internet permission: every trip stays on the phone unless Shawn sends or saves a file himself. It is installed over USB from the Mac mini, and is not on the Play Store.
+<p align="center">
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download%20latest%20APK-C6F432?style=for-the-badge&logo=android&logoColor=121316" height="48" alt="Download latest APK"></a>
+  <br>
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a>
+</p>
 
-**What MilO does by itself**
+**An Android app that logs business kilometres by itself.** When the phone connects to the work truck's Bluetooth, MilO starts a trip, records the drive with GPS, sorts it into Business or Personal by the work hours, and at the end of the month makes the mileage report for the accountant, as a PDF and a CSV file.
 
-- Starts a trip when the phone connects to the truck's Bluetooth, records the drive with GPS, and ends the trip two minutes after the truck disconnects, or once the truck has not moved for ten minutes even though it is still connected (both times can be changed in Settings).
-- While the truck stays connected after such a stop, waits beside it and starts the next trip when it moves.
-- Looks up the start and end address of each trip.
-- Saves each trip as Business or Personal, by the work hours set in Settings.
-- Reminds you once a day, from the 1st of the month, until last month's report is recorded as sent.
-- Notifies you if the phone reports driving during the work hours while no trip is being recorded.
-- Writes down what happened in its event log: every Bluetooth connect and disconnect, every Android Auto change it sees, every start and stop of the trip service, every crash.
+<p align="center">
+  <img src="docs/screenshots/home.jpg" width="200" alt="Home: Start trip, today's and the month's kilometres, the truck connected and parked, and the last trip">
+  <img src="docs/screenshots/trips.jpg" width="200" alt="Trips: October 2026, 96.4 km of Business, and one tile for each day">
+  <img src="docs/screenshots/settings.jpg" width="200" alt="Settings: Setup 14 of 14 ready, the truck, the driving alert and the odometer">
+  <img src="docs/screenshots/log.jpg" width="200" alt="Log: what MilO did and when, one kind of line at a time">
+</p>
 
-**What you do**
+> **A personal project, public to read.** MilO was built by Shawn Kowalchuk for one phone (a Xiaomi POCO X5 Pro 5G on Android 14 and HyperOS 2.0) and one truck. It runs on Android 14 and newer. It is not on the Play Store, there is no support, and the code has no license: it is public to read, and all rights are reserved (see [License](#license)). Everything after [License](#license) is the owner's own guide to running it on that phone.
 
-- Set the phone up once (the Setup screen and the HyperOS settings below) and pair the truck once.
-- Look over the trips, and correct one when it is wrong.
+## What it does
+
+**By itself**
+
+- Starts a trip when the phone connects to the truck's Bluetooth, through Android's companion-device service, so it works with MilO closed. It records the drive with GPS and ends the trip two minutes after the truck disconnects.
+- Ends a trip when the truck has stood still for ten minutes even though it is still connected (a parked truck can stay connected for hours), then watches beside it and starts the next trip when the truck drives off.
+- Looks up each trip's start and end address.
+- Saves each trip as Business or Personal by the work hours set in Settings.
+- Keeps the truck's odometer from one reading typed in, plus every truck trip since.
+- Reminds you from the 1st of the month until last month's report is sent, says so if a work day has no trip by noon, and notifies you if the phone reports driving while nothing is being recorded.
+- Writes an event log of every Bluetooth change, every start and stop, and every crash.
+
+**With you**
+
+- Start and End by hand: on the phone, on the Android Auto screen, or on a home-screen widget that also shows this month's and this year's Business kilometres in dollars, at a rate per kilometre set in Settings.
+- Edit, delete or add a missed trip on the Trips screen, and mark any trip Business or Personal.
+- Show every distance in kilometres or miles, the report included: one setting, "Units", in Settings.
 - Send the report: MilO opens the email app with the PDF attached, and you press send.
-- Keep a backup (an export file, and a copy of the signing key).
+- Export and import all data as one file. Android's own backup carries the rest.
 
-**What is proven and what is not.** On 2026-10-06 the truck was paired and started three trips by itself, and both times it disconnected the trip ended after the two minutes (`docs/FINDINGS_LOG.md`, 2026-10-06 (evening)). That evening also showed that the truck can stay connected long after it is parked, so the last trip of the day never ended. The rule built for that the same evening, a trip ends when the truck has not moved for ten minutes and MilO then waits beside it, **has not run on the phone yet**; neither has waking a MilO that HyperOS had closed. That night the finished work was checked once more against the day's own records from the phone: the start and the stop that were seen came out the same. Everything else was built and tested with unit tests, and most of it was run on an emulator; the Android Auto screen has run nowhere. Each entry of `docs/APP_ENCYCLOPEDIA.md` starts with a status line that says what the phone has proven and what it has not, and `docs/DEVICE_TEST_CHECKLIST.md` lists what the phone still has to show.
+<p align="center">
+  <img src="docs/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
+  <sub>A sample report page, drawn from the app's own layout code with made-up trips.</sub>
+</p>
+
+## Installing the APK
+
+1. On the phone, open the [latest release](https://github.com/shawnkowalchuk/MilO/releases/latest) and download the `.apk` file under "Assets".
+2. Open the downloaded file. The first time, Android asks you to allow the app you opened it with (your browser or Files) to **install unknown apps**: allow it, go back, and press Install. Developer options are not needed.
+3. Google Play Protect may warn that the app is from an unknown developer, or offer to scan it. That is because MilO is not on the Play Store; choose to install anyway if you trust it.
+4. Open MilO, go to **Settings**, then the **Setup** tile at the top, and work through it: the permissions, then pairing your truck.
+
+**To update,** install the newer APK over the old one: your trips and settings stay. Never uninstall MilO to update it, because that deletes every trip.
+
+**Worth knowing first:** MilO is built and tested on one Xiaomi phone. On other phones the automatic start depends on how hard the maker stops apps in the background; Setup shows what it can check. The Android Auto screen is not expected to show on a car's display for an app installed this way (Android Auto shows apps from the Play Store). The phone side works the same with or without it.
+
+## Privacy
+
+MilO has no account, no server and **no internet permission**. Every trip stays on the phone. It leaves only in files you send or save yourself (the report, an export), in your own Android backup, and as coordinates handed to Android's Geocoder to look up an address. The screenshots above are from the owner's phone, with the street addresses on Home blurred.
+
+## How it is built
+
+Native Kotlin (2.4, with warnings as errors), Jetpack Compose with Material 3, Navigation 3, Room 3 on bundled SQLite, DataStore, the fused location provider, and the Car App Library for the Android Auto screen. One Gradle module, manual dependency injection, no backend. Every dependency is pinned to its latest stable release and kept current by Dependabot. CI runs gitleaks, Spotless with ktlint, Android Lint, the unit tests (over 2,000, all plain JVM tests) and a debug build on every pull request.
+
+It was built with an AI coding assistant working from a small set of documents that are the project's memory: the rules (`docs/ENGINEERING_STANDARDS.md`), the map (`docs/ARCHITECTURE.md`), every feature and how it works, each with its status (`docs/APP_ENCYCLOPEDIA.md`), a dated journal of every change and decision (`docs/FINDINGS_LOG.md`), and the checks only the phone can run (`docs/DEVICE_TEST_CHECKLIST.md`). [For developers](#for-developers) has more.
+
+## Status
+
+Version 0.1.0, in daily use on the owner's phone since 2026-10-06.
+
+- **Proven in the truck:** pairing the truck; trips started by the truck's Bluetooth and ended by its disconnect (2026-10-06); the parked rule ending a trip, and the watch starting the next one when the truck moved (2026-10-07); Start by hand; the Setup checklist's permission rows.
+- **Built and unit tested, not yet seen on the phone:** among others the Android Auto screen (it has run nowhere), the home-screen widget, emailing the report, the driving alert and the daily check.
+
+Each entry of `docs/APP_ENCYCLOPEDIA.md` opens with a status line that says what the phone has proven, and `docs/DEVICE_TEST_CHECKLIST.md` lists what it still has to show.
+
+## License
+
+No license. The code is public so that it can be read; all rights are reserved, and it may not be copied, changed or redistributed without permission. The typeface, Sora, is under the SIL Open Font License 1.1 (`licenses/Sora-OFL.txt`).
 
 ---
+
+# The owner's guide
+
+The rest of this page is written for the owner and the one phone MilO runs on: installing it from the Mac, setting it up, the HyperOS settings it needs, and everyday use.
 
 ## Install and run from Android Studio
 
@@ -69,7 +128,7 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 
 ## First-time setup in the app
 
-Open MilO and press **Setup** in the bottom bar: its third button, a box with a tick (the bar shows icons and no words). The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
+Open MilO, press **Settings** in the bottom bar (its third button, three sliders; the bar shows icons and no words), and press the **Setup** tile at the top. Home's warning "Setup needs attention" opens it too. The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
 On 2026-10-05 you went through this screen once, everything except pairing the truck. The Physical activity row was added after that.
 
@@ -113,7 +172,7 @@ Do this at the truck, with every other row in order.
 4. Android shows a dialog of its own and asks you to allow it. Choose **Allow**.
 5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." On Setup the truck's row now has its tick, and the warning on Home is gone.
 
-Bluetooth and Location must both be on for this, and the screen says so if one is not. **This step has never been done:** Android's dialog has not been shown by any build of MilO, on any device. If the screen fails, `docs/DEVICE_TEST_CHECKLIST.md` ("Pairing MilO with the truck") has a second way from the Mac.
+Bluetooth and Location must both be on for this, and the screen says so if one is not. The truck was paired this way on 2026-10-06, and started its first trips by itself that day. If the screen ever fails, `docs/DEVICE_TEST_CHECKLIST.md` ("Pairing MilO with the truck") has a second way from the Mac.
 
 ---
 
@@ -204,7 +263,7 @@ Two more settings from the same research notes, which MilO's Setup does not show
 
 ## Everyday use
 
-This is what is built. A start by the truck and an end by its disconnect were seen on 2026-10-06; an end because the truck stood still, and what follows it, have not been seen on the phone yet.
+This is what is built. A start by the truck and an end by its disconnect were seen on 2026-10-06; an end because the truck stood still, and the next trip started when it drove off, on 2026-10-07.
 
 **When a trip starts.** The truck's Bluetooth connects, and within seconds:
 
@@ -221,13 +280,13 @@ If Home is open at that moment, its truck tile first says "Connecting…" and th
 
 Either way there is no sound, and the trip is the "Last trip" on Home and a row on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
 
-**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and the truck's tile on Home says the same. Nothing is being recorded. MilO looks at the phone's position every 30 seconds, and when the truck drives off a new trip starts by itself within about a minute, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time. While MilO waits there is no End trip button: the lime tile on Home reads Start trip.
+**"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and the truck's tile on Home says the same. Nothing is being recorded. For the first hour MilO looks at the phone's position every 30 seconds, and every 5 seconds for ten minutes after the phone reports that you got into a vehicle; after the hour it turns GPS off and lets that report from the phone's motion sensor turn it back on. When the truck drives off (at 15 km/h or more), a new trip starts by itself, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time; the trip then starts from where the truck was parked too. While MilO waits there is no End trip button: the lime tile on Home reads Start trip.
 
 **If you end a trip yourself with End trip while the truck is still connected,** MilO does not wait. It starts nothing by itself until the truck has disconnected and connected again, or until twelve hours have passed and MilO is opened, or you press Start trip. If the truck stays connected all that time, as yours can, nothing tells you that the next drive is not being recorded: open MilO before you drive off, and press Start trip if the lime tile on Home reads Start trip. After a trip you started that way, a stop is waited out as before.
 
 After three days of standing MilO stops watching, to spare the battery, and the truck's tile on Home says "Truck connected. MilO has stopped watching it". Open MilO or press Start trip before you drive off then.
 
-**If a trip did not start.** Press **Start trip** on Home; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add missed trip".
+**If a trip did not start.** Press **Start trip** on Home, on the home-screen widget or on the Android Auto screen; **End trip** ends it. If MilO tried and could not start, it posts "MilO could not start this trip. Tap to start". If the phone notices driving during the work hours with no trip being recorded and the truck not connected, it posts "You seem to be driving": tap it to start one (this needs the Physical activity row of Setup and a paired truck). A trip that was missed altogether is typed in on Trips with "Add missed trip".
 
 **If MilO has stopped noticing the truck.** Once a day MilO asks itself whether a trip has been started. On a work day (a day that is switched on in the work schedule) that has none by 12:00 noon, it posts one notification: "No trip recorded today". If the truck has not been driven that day, there is nothing to do. If it has, tap the notification: MilO opens on Home, which says "Setup needs attention" if something it needs is switched off. The time and the switch are in Settings, on the card "Daily check"; a trip you add by hand does not count. Built on 2026-10-06 and seen on an emulator only: whether this phone lets MilO wake up for it at noon is one of the things still to be tried.
 
@@ -238,8 +297,8 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
 | Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
-| Your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the sound, export and import | **Settings**, the square button with three sliders at the top of Home |
-| The permissions and phone settings, and the truck | **Setup**, the third button (a box with a tick) |
+| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the trip-start sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
+| The permissions and phone settings, and the truck's pairing | **Setup**, the tile at the top of Settings |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
 **The report.** Set your name and the accountant's address in Settings first. The report is in the unit chosen in Settings under "Units" at the moment it is made: kilometres, or miles (built on 2026-10-07, not yet tried on the phone). On the Report screen, "Preview PDF" lets you look at it; **Email the report** opens the email app with the address, the subject and the PDF filled in. MilO sends nothing itself: press send there. Back in MilO it asks "Did you send it?"; "I sent it" marks the month as submitted. "Save PDF and CSV" hands both files to Android's share sheet, "Export CSV" the spreadsheet file alone, and "Mark as sent" records a report you sent some other way. No email draft has been seen yet, on any device: the emulator had no email account.
@@ -275,7 +334,7 @@ There are three things to keep. The first two are yours to do.
 
 3. Connect the phone and press **Run**, as for the first install. The new build replaces the old one in place and keeps every trip and setting.
 
-**Updates only go forward.** Never install an older build over a newer one. A newer build may store trips in a form an older one cannot read, and the older build then stops at every start. Android does not prevent it, because every build so far calls itself version 0.1.0. If it happens, no trip is lost: install the newer build again.
+**Updates only go forward.** Never install an older build over a newer one. A newer build may store trips in a form an older one cannot read, and the older build then stops at every start. Until the first release every build called itself version 0.1.0, so Android did not prevent it; each release raises the number (For developers, "Making a release"), and Android then refuses an older build over a newer one. If it happens, no trip is lost: install the newer build again.
 
 **Never uninstall MilO to fix a problem,** and never clear its data. Both delete every trip. If MilO misbehaves: open the Log, share it, and install a fixed build over the one on the phone.
 
@@ -318,6 +377,29 @@ Never install that build on the phone: it cannot update the real one.
 **Your own trip-start sound.** The repo ships an original synthesized chirp. A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. (Settings in the app can also choose any audio file on the phone, without a rebuild.)
 
 **The typeface.** The screens are set in Sora, which the app carries as `app/src/main/res/font/sora.ttf`. Its licence, the SIL Open Font License 1.1, is `licenses/Sora-OFL.txt`, and stays in the repository for as long as the font does.
+
+### Making a release
+
+Each update that others can download is a GitHub Release with the APK attached. It is built and signed on the Mac, with the same key as the phone's MilO, and uploaded by hand, so the key never leaves the Mac (the owner's choice of 2026-10-08, over building it on GitHub). The download button at the top of this page always opens the newest release.
+
+1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
+2. **Raise the version** in `app/build.gradle.kts`: `versionCode` up by one, and `versionName` to the new number (`0.2.0`). Merge that as its own small pull request. The first release, `0.1.0`, skips this step.
+3. **Build the release APK:**
+
+   ```bash
+   ./gradlew assembleRelease
+   ```
+
+   It is signed with `~/keys/milo.jks`, like the phone's builds. The file is `app/build/outputs/apk/release/app-release.apk`; rename it `MilO-0.2.0.apk`.
+4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO 0.2.0", a few lines on what changed (the FINDINGS_LOG has them), drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
+
+   ```bash
+   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO 0.2.0" --notes "What changed"
+   ```
+
+5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
+
+Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
 
 ### The pre-commit hook
 
@@ -373,6 +455,6 @@ LOG    append to the findings log: what changed and why
 - "How am I supposed to do this?": `docs/ENGINEERING_STANDARDS.md`.
 - "What is the shape of the system, and is this shared between the phone UI and the Android Auto screen?": `docs/ARCHITECTURE.md`.
 
-**What was set up on day 1** (the full checklist is `docs/ENGINEERING_STANDARDS.md` §18): a private GitHub repo with a `.gitignore` for build output, `local.properties` and keystores; one `:app` module with Kotlin `allWarningsAsErrors`, Android Lint `warningsAsErrors`, Spotless and ktlint; the pre-commit hook; the latest stable dependencies pinned as exact versions in `gradle/libs.versions.toml`, with Dependabot so they never go stale; gitleaks in CI; the package structure, design tokens and base components; CI on every PR; and the documents above with ADR-001. Left out on purpose, with the reasons in ADR-001: Sentry, staging and prod environments, a lockfile, detekt, Robolectric, Hilt, Renovate.
+**What was set up on day 1** (the full checklist is `docs/ENGINEERING_STANDARDS.md` §18): a GitHub repo (private until 2026-10-08, public since) with a `.gitignore` for build output, `local.properties` and keystores; one `:app` module with Kotlin `allWarningsAsErrors`, Android Lint `warningsAsErrors`, Spotless and ktlint; the pre-commit hook; the latest stable dependencies pinned as exact versions in `gradle/libs.versions.toml`, with Dependabot so they never go stale; gitleaks in CI; the package structure, design tokens and base components; CI on every PR; and the documents above with ADR-001. Left out on purpose, with the reasons in ADR-001: Sentry, staging and prod environments, a lockfile, detekt, Robolectric, Hilt, Renovate.
 
 **Two habits that matter most.** Keep dependencies fresh continuously: Dependabot and pinned versions mean small updates in place of a once-a-year migration (STANDARDS §2). And write it down when you do it, not later: every feature gets an encyclopedia entry, every change a findings-log line.
