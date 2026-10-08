@@ -82,6 +82,7 @@ class TripFormEndDayTest {
                 start = LocalTime.of(23, 30),
                 end = LocalTime.of(0, 15),
                 kilometres = "30",
+                unit = DistanceUnit.KILOMETRES,
             )
         val nextDay = form.endingNextDay(true)
 
@@ -111,6 +112,7 @@ class TripFormEndDayTest {
                 start = LocalTime.of(9, 0),
                 end = LocalTime.of(9, 40),
                 kilometres = "30",
+                unit = DistanceUnit.KILOMETRES,
             ).endingNextDay(true)
 
         assertEquals(
@@ -213,6 +215,7 @@ class TripFormEndDayTest {
                 date = LocalDate.of(2026, 11, 1),
                 start = LocalTime.of(1, 30),
                 end = LocalTime.of(1, 50),
+                unit = DistanceUnit.KILOMETRES,
             )
 
         assertEquals(firstHalfPastOne, form.startedAtMs(stored = null, edmonton))

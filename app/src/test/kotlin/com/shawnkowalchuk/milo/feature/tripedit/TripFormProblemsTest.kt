@@ -32,6 +32,7 @@ class TripFormProblemsTest {
             start = LocalTime.of(9, 0),
             end = LocalTime.of(9, 40),
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun problems(
@@ -53,7 +54,7 @@ class TripFormProblemsTest {
                 FormProblem.END_MISSING,
                 FormProblem.DISTANCE_MISSING,
             ),
-            problems(TripForm(date = monday)),
+            problems(TripForm(date = monday, unit = DistanceUnit.KILOMETRES)),
         )
     }
 
@@ -96,7 +97,13 @@ class TripFormProblemsTest {
 
     @Test
     fun `a start in the future is refused even before an end is chosen`() {
-        val form = TripForm(date = monday, start = LocalTime.of(15, 0), kilometres = "5")
+        val form =
+            TripForm(
+                date = monday,
+                start = LocalTime.of(15, 0),
+                kilometres = "5",
+                unit = DistanceUnit.KILOMETRES,
+            )
 
         assertEquals(
             listOf(FormProblem.END_MISSING, FormProblem.IN_THE_FUTURE),

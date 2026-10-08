@@ -86,6 +86,7 @@ private fun TripsPreview() {
             changeFailed = false,
             summary = summary,
             openDays = setOf(day),
+            unit = DistanceUnit.KILOMETRES,
         )
     MiloTheme {
         Surface {

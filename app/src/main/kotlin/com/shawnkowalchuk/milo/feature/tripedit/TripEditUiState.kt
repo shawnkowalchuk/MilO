@@ -53,7 +53,7 @@ data class EditSession(
     val schedule: WorkSchedule?,
     val zone: ZoneId,
     val openedAtMs: Long,
-    val unit: DistanceUnit = DistanceUnit.KILOMETRES,
+    val unit: DistanceUnit,
 ) {
     /** The form as it is when the screen opens: the stored trip's, or the empty one. */
     fun openedForm(): TripForm =

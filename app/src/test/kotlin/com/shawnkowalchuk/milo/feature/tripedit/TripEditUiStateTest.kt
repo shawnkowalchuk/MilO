@@ -51,7 +51,7 @@ class TripEditUiStateTest {
         )
 
     private fun session(trip: Trip?, schedule: WorkSchedule? = DEFAULT_WORK_SCHEDULE) =
-        EditSession(trip, schedule, edmonton, openedAtMs)
+        EditSession(trip, schedule, edmonton, openedAtMs, DistanceUnit.KILOMETRES)
 
     private fun shown(
         form: TripForm,

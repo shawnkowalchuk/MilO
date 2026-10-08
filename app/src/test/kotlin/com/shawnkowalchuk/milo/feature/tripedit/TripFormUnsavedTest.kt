@@ -120,7 +120,14 @@ class TripFormUnsavedTest {
 
     private fun shown(form: TripForm, closing: Boolean = false, savedStartMs: Long? = null) =
         tripEditUiState(
-            session = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs),
+            session =
+                EditSession(
+                    stored,
+                    DEFAULT_WORK_SCHEDULE,
+                    edmonton,
+                    openedAtMs,
+                    DistanceUnit.KILOMETRES,
+                ),
             form = form,
             check = null,
             saveFailed = false,
@@ -152,10 +159,15 @@ class TripFormUnsavedTest {
 
     @Test
     fun `the session's opening form is the stored trip's, or the empty one on that day`() {
-        val editing = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs)
-        val adding = EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs)
+        val kilometres = DistanceUnit.KILOMETRES
+        val editing = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs, kilometres)
+        val adding =
+            EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs, kilometres)
 
         assertEquals(opened, editing.openedForm())
-        assertEquals(TripForm(date = LocalDate.of(2026, 10, 6)), adding.openedForm())
+        assertEquals(
+            TripForm(date = LocalDate.of(2026, 10, 6), unit = kilometres),
+            adding.openedForm(),
+        )
     }
 }

@@ -50,7 +50,9 @@ const val MAX_DISTANCE_LENGTH = 10
  * alone.
  * @param unit the unit the distance field is in: the one chosen in Settings when the form was
  * opened (since 2026-10-07). The field's label names it, what is typed is read in it, and the
- * stored distance is shown in it. It stays the same for as long as the form is open.
+ * stored distance is shown in it. It stays the same for as long as the form is open. It has no
+ * default, on purpose: a form built without it would read miles he typed as kilometres, so the
+ * compiler makes every caller say which.
  */
 data class TripForm(
     val date: LocalDate,
@@ -61,7 +63,7 @@ data class TripForm(
     val to: String? = null,
     val kilometres: String? = null,
     val chosenCategory: TripCategory? = null,
-    val unit: DistanceUnit = DistanceUnit.KILOMETRES,
+    val unit: DistanceUnit,
 )
 
 /**

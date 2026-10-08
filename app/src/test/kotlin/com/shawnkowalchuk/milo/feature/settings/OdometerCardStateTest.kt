@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.feature.settings
 
+import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
@@ -98,5 +99,25 @@ class OdometerCardStateTest {
         assertEquals(typed, inMiles.figure?.reading)
         // And back in kilometres it is the figure it was: nothing stored was converted.
         assertEquals(123_456L, inKilometres.figure?.value)
+    }
+
+    @Test
+    fun `with miles chosen the tile says that the number typed is taken as miles`() {
+        // A reading typed in the wrong unit would stand on the report for the accountant, so
+        // the sentence before the first reading and the field's label both name the unit.
+        assertEquals(
+            R.string.settings_odometer_none_miles,
+            odometerFirstReadingRes(DistanceUnit.MILES),
+        )
+        assertEquals(R.string.settings_odometer_field_miles, odometerFieldRes(DistanceUnit.MILES))
+    }
+
+    @Test
+    fun `in kilometres the tile's words are the ones it always had`() {
+        assertEquals(
+            R.string.settings_odometer_none,
+            odometerFirstReadingRes(DistanceUnit.KILOMETRES),
+        )
+        assertEquals(R.string.settings_odometer_field, odometerFieldRes(DistanceUnit.KILOMETRES))
     }
 }

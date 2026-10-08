@@ -28,11 +28,19 @@ class TripEditProblemPlacesTest {
             start = LocalTime.of(9, 0),
             end = LocalTime.of(9, 40),
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 
     /** The screen after a press on Save at 14:00, with a trip recorded since [recordingSince]. */
     private fun afterSave(form: TripForm, recordingSince: Long? = null) = tripEditUiState(
-        session = EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, nowMs),
+        session =
+            EditSession(
+                stored = null,
+                DEFAULT_WORK_SCHEDULE,
+                edmonton,
+                nowMs,
+                DistanceUnit.KILOMETRES,
+            ),
         form = form,
         check = FormCheck(nowMs, recordingSince),
         saveFailed = false,
@@ -85,7 +93,8 @@ class TripEditProblemPlacesTest {
 
     @Test
     fun `with something wrong in both cards the screen moves to the first, the times`() {
-        val state = afterSave(TripForm(date = LocalDate.of(2026, 10, 5)))
+        val state =
+            afterSave(TripForm(date = LocalDate.of(2026, 10, 5), unit = DistanceUnit.KILOMETRES))
 
         assertEquals(
             listOf(FormProblem.START_MISSING, FormProblem.END_MISSING),

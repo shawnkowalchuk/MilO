@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.odometer.odometerAt
@@ -46,6 +47,22 @@ data class OdometerCardState(
     val couldNotSave: Boolean,
     val unit: DistanceUnit,
 )
+
+/**
+ * The sentence before the first reading. With miles chosen it names the unit: the number typed
+ * is stored as miles whatever the dashboard shows, and a reading in the wrong unit would stand
+ * on the report for the accountant. In kilometres it is the sentence it always was.
+ */
+fun odometerFirstReadingRes(unit: DistanceUnit): Int = when (unit) {
+    DistanceUnit.KILOMETRES -> R.string.settings_odometer_none
+    DistanceUnit.MILES -> R.string.settings_odometer_none_miles
+}
+
+/** The label of the field a reading is typed in, on the same terms. */
+fun odometerFieldRes(unit: DistanceUnit): Int = when (unit) {
+    DistanceUnit.KILOMETRES -> R.string.settings_odometer_field
+    DistanceUnit.MILES -> R.string.settings_odometer_field_miles
+}
 
 /**
  * The tile as the stored readings and trips make it now. Pure, so it is tested without a phone.

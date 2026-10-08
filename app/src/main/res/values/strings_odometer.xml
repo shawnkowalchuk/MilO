@@ -10,6 +10,11 @@
     <!-- Before the first reading has been typed in. -->
     <string name="settings_odometer_none">Type the number on the truck\'s dashboard once. MilO adds every truck trip to it from then on.</string>
     <!--
+        The same with miles chosen. It names the unit, because the number is taken as miles
+        whatever the dashboard shows; in kilometres the words stay as they were.
+    -->
+    <string name="settings_odometer_none_miles">Type the miles on the truck\'s dashboard once. MilO adds every truck trip to it from then on.</string>
+    <!--
         Under the figure when it is the reading itself. The argument is the reading in the
         unit it was typed in, such as 123,456 km.
     -->
@@ -21,6 +26,8 @@
     <string name="settings_odometer_enter">Enter reading</string>
     <string name="settings_odometer_adjust">Adjust</string>
     <string name="settings_odometer_field">Reading on the dashboard now</string>
+    <!-- The field's label with miles chosen: what is typed is stored as miles. -->
+    <string name="settings_odometer_field_miles">Reading on the dashboard now, in miles</string>
     <!-- The grey example inside the empty field. -->
     <string name="settings_odometer_example">123456</string>
     <!-- The argument is the unit's whole word, kilometres or miles. -->

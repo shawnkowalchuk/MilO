@@ -208,6 +208,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                             canAskToAdd = true,
                             centsPerKm = DEFAULT_CENTS_PER_KM,
                             couldNotSave = false,
+                            unit = DistanceUnit.KILOMETRES,
                         ),
                         {},
                         { true },

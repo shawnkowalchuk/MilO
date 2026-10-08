@@ -33,10 +33,13 @@ abstract class TripEditingFixture {
         LocalDateTime.parse(dateTime).atZone(edmonton).toInstant().toEpochMilli()
 
     protected val nowMs = local("2026-10-05T14:00:00")
+
+    /** The settings file the edit screen reads: empty, so everything is as out of the box. */
+    protected val settingsFile = FakeSettingsFile()
     protected val editing =
         TripEditing(
             trips = TripRepository(trips),
-            settings = SettingsStore(FakeSettingsFile()),
+            settings = SettingsStore(settingsFile),
             eventLog = EventLogRepository(log),
             clock = { nowMs },
         )
@@ -88,5 +91,6 @@ abstract class TripEditingFixture {
             from = "Shop",
             to = "Site 7",
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 }

@@ -59,8 +59,9 @@ internal fun OdometerTile(viewModel: OdometerViewModel) {
  * Built from the screen's existing parts: a tile, its label, a figure, a note, the text field
  * of the report's details and the tile's buttons.
  *
- * @param onSaveReading stores what was typed as a reading in the unit the tile is in, and
- * answers false if it is not a reading.
+ * @param onSaveReading stores what was typed as a reading in the unit the tile is in at the
+ * press, and answers false if it is not a reading. With miles chosen the field's label and the
+ * sentence before the first reading name the unit, so what is stored is what the tile said.
  */
 @Composable
 internal fun OdometerTileContent(
@@ -80,7 +81,7 @@ internal fun OdometerTileContent(
         TileHeading(stringResource(R.string.settings_odometer_title))
         val figure = shown.figure
         if (figure == null) {
-            Note(stringResource(R.string.settings_odometer_none))
+            Note(stringResource(odometerFirstReadingRes(shown.unit)))
         } else {
             val whole = formatOdometer(figure.value, locale)
             FigureText(
@@ -98,7 +99,7 @@ internal fun OdometerTileContent(
         }
         if (editing) {
             TextEntry(
-                label = stringResource(R.string.settings_odometer_field),
+                label = stringResource(odometerFieldRes(shown.unit)),
                 initialText = typed,
                 onTextChange = {
                     typed = it

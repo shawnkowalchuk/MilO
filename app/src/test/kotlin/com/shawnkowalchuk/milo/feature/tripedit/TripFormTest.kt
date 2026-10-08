@@ -58,7 +58,10 @@ class TripFormTest {
             )
 
         // No time, no address, no distance and no category is filled in for him.
-        assertEquals(TripForm(date = LocalDate.of(2026, 10, 6)), form)
+        assertEquals(
+            TripForm(date = LocalDate.of(2026, 10, 6), unit = DistanceUnit.KILOMETRES),
+            form,
+        )
         assertNull(form.startedAtMs(stored = null, edmonton))
         assertNull(form.toTypedTrip(edmonton))
     }
@@ -85,6 +88,7 @@ class TripFormTest {
                 date = LocalDate.of(2026, 10, 5),
                 start = LocalTime.of(8, 14),
                 end = LocalTime.of(8, 39),
+                unit = DistanceUnit.KILOMETRES,
             ),
             opened,
         )
@@ -327,7 +331,10 @@ class TripFormTest {
     @Test
     fun `an untouched distance field stands for the stored distance, or for none`() {
         assertEquals(TypedDistance.Metres(12_344.7), opened.distance(stored))
-        assertEquals(TypedDistance.Missing, TripForm(date = opened.date).distance(stored = null))
+        assertEquals(
+            TypedDistance.Missing,
+            TripForm(date = opened.date, unit = DistanceUnit.KILOMETRES).distance(stored = null),
+        )
     }
 
     // ---- A trip that is added -------------------------------------------------------------------
@@ -341,6 +348,7 @@ class TripFormTest {
                 end = LocalTime.of(9, 40),
                 from = " Shop ",
                 kilometres = "23,4",
+                unit = DistanceUnit.KILOMETRES,
             )
 
         assertEquals(
@@ -364,6 +372,7 @@ class TripFormTest {
                 start = LocalTime.of(9, 0),
                 end = LocalTime.of(9, 40),
                 kilometres = "23.4",
+                unit = DistanceUnit.KILOMETRES,
             )
 
         assertNull(form.copy(start = null).toTypedTrip(edmonton))
@@ -382,6 +391,7 @@ class TripFormTest {
                 date = LocalDate.of(2026, 3, 8),
                 start = LocalTime.of(2, 30),
                 end = LocalTime.of(4, 0),
+                unit = DistanceUnit.KILOMETRES,
             )
 
         assertEquals(local("2026-03-08T03:30:00"), form.startedAtMs(stored = null, edmonton))

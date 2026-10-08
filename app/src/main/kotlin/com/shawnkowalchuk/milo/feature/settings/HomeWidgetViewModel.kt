@@ -39,7 +39,7 @@ data class HomeWidgetCardState(
     val canAskToAdd: Boolean,
     val centsPerKm: Int,
     val couldNotSave: Boolean,
-    val unit: DistanceUnit = DistanceUnit.KILOMETRES,
+    val unit: DistanceUnit,
 )
 
 /**

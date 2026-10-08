@@ -73,7 +73,7 @@ data class TripsUiState(
     val submission: MonthSubmission? = null,
     val changedSinceSent: ChangedSinceSent? = null,
     val openDays: Set<LocalDate> = emptySet(),
-    val unit: DistanceUnit = DistanceUnit.KILOMETRES,
+    val unit: DistanceUnit,
 )
 
 /**

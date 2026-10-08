@@ -102,6 +102,7 @@ class HomeWidgetViewModelTest {
                 canAskToAdd = true,
                 centsPerKm = 70,
                 couldNotSave = false,
+                unit = DistanceUnit.KILOMETRES,
             ),
             viewModel.state.value,
         )
