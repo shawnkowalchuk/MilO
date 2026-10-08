@@ -17,12 +17,14 @@ private val TagHeight = 20.dp
 
 /**
  * The design's small tag: one short word in capitals, in monospace, on a fully round patch of
- * its own colour. It names the kind of a line of the event log ("TRIP", "ERROR"), so that a
- * column of lines can be scanned by colour. It cannot be pressed.
+ * its own colour. It names the kind of a line of the event log ("TRIP", "ERROR"), and since
+ * 2026-10-08 the kind of a change on the What's new screen ("NEW", "FIXED"), so that a column
+ * of lines can be scanned by colour. It cannot be pressed.
  *
  * The colour is never the only sign: the word says the same.
  *
- * @param colors the patch and its word, one of `MiloTheme.colors.logTags`.
+ * @param colors the patch and its word, one of `MiloTheme.colors.logTags` or
+ * `MiloTheme.colors.changeTags`.
  */
 @Composable
 fun Tag(text: String, colors: FillAndText, modifier: Modifier = Modifier) {

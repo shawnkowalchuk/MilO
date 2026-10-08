@@ -16,15 +16,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
+import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
+import com.shawnkowalchuk.milo.platform.bluetooth.Truck
 import com.shawnkowalchuk.milo.platform.system.SetupFix
 import com.shawnkowalchuk.milo.platform.system.SystemScreen
 
@@ -40,12 +45,14 @@ internal class PairingActions(
     val onPick: (PairedDevice) -> Unit,
     val onAllowNearbyDevices: () -> Unit,
     val onOpenScreen: (SystemScreen) -> Unit,
+    val onRemove: (Truck) -> Unit = {},
 )
 
 /**
  * The truck pairing screen: Shawn picks the truck from the phone's paired Bluetooth devices,
- * Android asks for his consent in a dialog of its own, and the screen says how it went. Picking
- * another device later changes the truck.
+ * Android asks for his consent in a dialog of its own, and the screen says how it went. Since
+ * 2026-10-08 picking another device adds it beside the truck, and each paired vehicle can be
+ * removed, after a question.
  *
  * @param onBack leaves the screen. Navigation belongs to the app, not the feature.
  */
@@ -96,6 +103,7 @@ fun PairingScreen(viewModel: PairingViewModel, onBack: () -> Unit, modifier: Mod
                 permissionDialog.launch(NEARBY_DEVICES.permissions.toTypedArray())
             },
             onOpenScreen = viewModel::onOpenScreen,
+            onRemove = viewModel::onRemove,
         )
     PairingContent(state = state, actions = actions, onBack = onBack, modifier = modifier)
 }
@@ -139,7 +147,28 @@ internal fun PairingContent(
             stringResource(R.string.pairing_intro),
             Modifier.padding(horizontal = spacing.extraSmall),
         )
-        TruckGroup(truck = state.truck, attempt = state.attempt)
+        // The vehicle Remove was pressed on, until the question is answered. Its address, which
+        // survives a rotation; the line is looked up again, and is gone once it is removed.
+        var removing by rememberSaveable { mutableStateOf<String?>(null) }
+        TruckGroup(
+            vehicles = state.vehicles,
+            attempt = state.attempt,
+            onRemove = { removing = it.vehicle.address },
+        )
+        state.vehicles.firstOrNull { it.vehicle.address == removing }?.let { line ->
+            val name = line.name ?: stringResource(R.string.truck_without_a_name)
+            ConfirmDialog(
+                title = stringResource(R.string.pairing_remove_title, name),
+                text = stringResource(R.string.pairing_remove_text),
+                confirmLabel = stringResource(R.string.pairing_action_remove),
+                dismissLabel = stringResource(R.string.pairing_remove_keep),
+                onConfirm = {
+                    removing = null
+                    actions.onRemove(line.vehicle)
+                },
+                onDismiss = { removing = null },
+            )
+        }
         state.blocker?.let { BlockerGroup(blocker = it, actions = actions) }
         if (state.devices.isNotEmpty()) {
             DevicesGroup(

@@ -27,6 +27,11 @@ import kotlinx.serialization.json.Json
 // Format 2 (2026-10-07) differs from format 1 in one thing: a sent report says which unit it
 // was printed in ("distanceUnit"). A file of format 1 has no such key, and its reports are all
 // in kilometres, which is all MilO printed then.
+//
+// Format 3 (2026-10-08) differs from format 2 in two things: a trip says which paired vehicle it
+// was in ("vehicleAddress", its Bluetooth address, or null for none), and what Shawn labelled it
+// ("label", or null). A file of format 1 or 2 has neither key; its trips are given the first
+// vehicle after the import, as the trips on the phone were (`TripVehicleCatchUp`), and no label.
 
 /** What the key "format" holds. A file that says anything else is not an export of MilO's. */
 const val EXPORT_FORMAT = "milo-export"
@@ -35,10 +40,13 @@ const val EXPORT_FORMAT = "milo-export"
  * The version of the form described above. Raise it for any change to the form, and keep
  * reading every earlier version: a file from a newer version is refused, never guessed at.
  */
-const val EXPORT_FORMAT_VERSION = 2
+const val EXPORT_FORMAT_VERSION = 3
 
 /** The first version of the form in which a sent report names its unit. */
 internal const val FORMAT_WITH_REPORT_UNIT = 2
+
+/** The first version of the form in which a trip names its vehicle and has its label. */
+internal const val FORMAT_WITH_TRIP_VEHICLE = 3
 
 /** The names of the numbers of a row of "points", in order. Written into the file as a legend. */
 val EXPORT_POINT_COLUMNS: List<String> =
@@ -64,9 +72,12 @@ const val EXPORT_ABOUT =
 /**
  * The JSON this file is written and read with: strict. An unknown key, a missing one, a text
  * where a number belongs and a number that is not finite are all refused, and every key is
- * written, also one whose value is null, so that "not there" always means "damaged".
+ * written, also one whose value is null, so that "not there" always means "damaged". Two keys
+ * have a value to fall back on, so that a file of an older format, which lacks them, can still
+ * be read: a report's unit, and a trip's vehicle and label. They are written always, also when
+ * null (`encodeDefaults`).
  */
-internal val ExportJson: Json = Json
+internal val ExportJson: Json = Json { encodeDefaults = true }
 
 /**
  * How many of each thing the file holds. Written near the top, and checked by the reader
@@ -83,7 +94,14 @@ data class ExportContents(
     val settings: Boolean,
 )
 
-/** A closed trip as the file holds it: every column of the table that outlives the recording. */
+/**
+ * A closed trip as the file holds it: every column of the table that outlives the recording.
+ *
+ * @param vehicleAddress the paired vehicle it was in, or null for none. Written by format 3 and
+ * later, always. It falls back on null so that a file of an older format, which has no such
+ * key, can still be read; one of those that names a vehicle is refused (`ExportedTrip.problem`).
+ * @param label what Shawn called the trip, or null. The same as [vehicleAddress] in every way.
+ */
 @Serializable
 data class ExportedTrip(
     val id: Long,
@@ -112,6 +130,8 @@ data class ExportedTrip(
     val recordedStartedAtMs: Long?,
     val recordedEndedAtMs: Long?,
     val recordedDistanceMetres: Double?,
+    val vehicleAddress: String? = null,
+    val label: String? = null,
 )
 
 /**

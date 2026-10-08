@@ -58,6 +58,13 @@ data class TripEditKey(val tripId: Long?) : NavKey
 @Serializable
 data class ReportKey(val year: Int, val month: Int) : NavKey
 
+/**
+ * The What's new screen (2026-10-08). Not in the bottom bar: it is opened from the Version tile
+ * on Settings, and once by itself after an update.
+ */
+@Serializable
+data object WhatsNewKey : NavKey
+
 /** The four screens of the bottom navigation bar, in the order the bar shows them. */
 enum class TopLevelDestination(val key: NavKey, val labelRes: Int, val icon: ImageVector) {
     HOME(HomeKey, R.string.nav_home, MiloIcons.Home),

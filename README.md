@@ -22,11 +22,12 @@
 **By itself**
 
 - Starts a trip when the phone connects to the truck's Bluetooth, through Android's companion-device service, so it works with MilO closed. It records the drive with GPS and ends the trip two minutes after the truck disconnects.
+- Pairs several work vehicles if you drive more than one: any of them starts a trip, each trip records which vehicle it was in, and each vehicle has its own odometer.
 - Ends a trip when the truck has stood still for ten minutes even though it is still connected (a parked truck can stay connected for hours), then watches beside it and starts the next trip when the truck drives off.
 - Plays two sounds you can hear even on silent: one when it connects to the truck, one when the truck drives off. Each can be a built-in sound or an audio file of your own.
 - Looks up each trip's start and end address.
 - Saves each trip as Business or Personal by the work hours set in Settings.
-- Keeps the truck's odometer from one reading typed in, plus every truck trip since.
+- Keeps each vehicle's odometer from one reading typed in, plus every trip in it since.
 - Reminds you from the 1st of the month until last month's report is sent, says so if a work day has no trip by noon, and notifies you if the phone reports driving while nothing is being recorded.
 - Writes an event log of every Bluetooth change, every start and stop, and every crash.
 
@@ -34,6 +35,7 @@
 
 - Start and End by hand: on the phone, on the Android Auto screen, or on a home-screen widget that also shows this month's and this year's Business kilometres in dollars, at a rate per kilometre set in Settings.
 - Edit, delete or add a missed trip on the Trips screen, and mark any trip Business or Personal.
+- Label a trip with what it was for, picked from the labels used before: the label used where the trip ended is chosen already. The report prints it as the trip's purpose.
 - Show every distance in kilometres or miles, the report included: one setting, "Units", in Settings.
 - Send the report: MilO opens the email app with the PDF attached, and you press send.
 - Export and import all data as one file. Android's own backup carries the rest.
@@ -175,6 +177,8 @@ Do this at the truck, with every other row in order.
 4. Android shows a dialog of its own and asks you to allow it. Choose **Allow**.
 5. The screen says "Paired with (the truck's name)" and "Paired, and Android is watching for it. A trip starts by itself when it connects." On Setup the truck's row now has its tick, and the warning on Home is gone.
 
+**Another vehicle** is paired the same way: Settings, the tile "Vehicles", **Pair or remove**, then **Add**. Each vehicle on that screen has **Remove**. Any paired vehicle starts a trip by itself.
+
 Bluetooth and Location must both be on for this, and the screen says so if one is not. The truck was paired this way on 2026-10-06, and started its first trips by itself that day. If the screen ever fails, `docs/DEVICE_TEST_CHECKLIST.md` ("Pairing MilO with the truck") has a second way from the Mac.
 
 ---
@@ -300,9 +304,9 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | What | Where |
 |---|---|
 | Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
-| Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
+| Every trip, a month at a time: press a day to see its trips, and a trip to edit it, label it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
-| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the connect and trip-start sounds and the list of your own sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
+| The vehicles and an odometer for each, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the connect and trip-start sounds and the list of your own sounds, the home-screen widget and its rate, export and import, the version and what changed in it, and Buy me a coffee | **Settings**, the third button (three sliders) |
 | The permissions and phone settings, and the truck's pairing | **Setup**, the tile at the top of Settings |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
@@ -388,7 +392,7 @@ Never install that build on the phone: it cannot update the real one.
 Each update that others can download is a GitHub Release with the APK attached. It is built and signed on the Mac, with the same key as the phone's MilO, and uploaded by hand, so the key never leaves the Mac (the owner's choice of 2026-10-08, over building it on GitHub). The download button at the top of this page always opens the newest release.
 
 1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
-2. **Raise the version** in `app/build.gradle.kts`: `versionCode` up by one, and `versionName` to the new number (`0.2.0`). Merge that as its own small pull request. The first release, `0.1.0`, skips this step.
+2. **Date the version.** In `app/src/main/assets/changelog.json` the newest version has `"date": null`. Set it to the day (`"2026-10-12"`), run `python3 tools/changes_page.py`, and merge that as its own small pull request. Its number is already the build's `versionName`: CI makes sure of it. (The version itself was raised when its first change was merged: "The list of changes", below.)
 3. **Build the release APK:**
 
    ```bash
@@ -396,19 +400,32 @@ Each update that others can download is a GitHub Release with the APK attached. 
    ```
 
    It is signed with `~/keys/milo.jks`, like the phone's builds. The file is `app/build/outputs/apk/release/app-release.apk`; rename it `MilO-0.2.0.apk`.
-4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO 0.2.0", a few lines on what changed (the FINDINGS_LOG has them), drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
+4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO Trip Log 0.2.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
 
    ```bash
-   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO 0.2.0" --notes "What changed"
+   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO Trip Log 0.2.0" --notes "What changed"
    ```
 
 5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
 
+### The list of changes
+
+What the app's What's new screen (Settings, Version) and the website's `/changes` page show is one file, `app/src/main/assets/changelog.json` (since 2026-10-08, in place of the database GopherForms and SeaWingman use: MilO has no server). Each version has a `version`, a `date` (`null` until it is released) and its `changes`, each a `kind` (`new`, `improved`, `fixed` or `security`), a `title` and, if needed, a `body`:
+
+```json
+{ "kind": "fixed", "title": "The odometer after an import", "body": "It counts the imported trips again." }
+```
+
+- **With every change you will notice,** a line goes into the newest version, in the same pull request, and `python3 tools/changes_page.py` writes the website's page again.
+- **After a release,** the next such pull request opens a new version above it: the next number, `"date": null`, and in `app/build.gradle.kts` `versionName` set to that number and `versionCode` up by one.
+- **CI refuses** a list that breaks its rules (newest first, only the newest undated, the newest equal to `versionName`) or a page that is not the one the list makes; the error says what to fix.
+- After an update to a new version, the phone opens What's new once by itself.
+
 ### The website
 
-`https://milotriplog.top` is a landing page and a privacy policy (ADR-003): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
+`https://milotriplog.top` is a landing page, a comparison, What's new and a privacy policy (ADR-003), under the name "MilO Trip Log" (since 2026-10-08): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
 
 To look at a change before merging, open `website/index.html` in a browser, or run `firebase serve --only hosting` in the repository and open the address it prints.
 

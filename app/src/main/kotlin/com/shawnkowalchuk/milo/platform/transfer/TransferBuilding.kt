@@ -1,7 +1,6 @@
 package com.shawnkowalchuk.milo.platform.transfer
 
 import android.content.Context
-import android.content.pm.PackageManager
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -13,6 +12,7 @@ import com.shawnkowalchuk.milo.data.transfer.buildBackupNoteStore
 import com.shawnkowalchuk.milo.data.transfer.buildIncomingImport
 import com.shawnkowalchuk.milo.data.transfer.buildSafetyCopies
 import com.shawnkowalchuk.milo.platform.bluetooth.SystemCompanionLink
+import com.shawnkowalchuk.milo.platform.system.readInstalledVersion
 import java.io.File
 import java.net.URI
 import java.net.URISyntaxException
@@ -55,7 +55,7 @@ fun buildDataTransfer(parts: TransferParts): DataTransfer {
             main = parts.main,
             points = parts.points,
             settings = parts.settings,
-            appVersion = versionNameOf(appContext),
+            appVersion = readInstalledVersion(appContext).name,
             clock = parts.clock,
             zone = parts.zone,
         )
@@ -127,12 +127,4 @@ private fun isFileHere(uri: String): Boolean = try {
     false
 } catch (noFile: IllegalArgumentException) {
     false
-}
-
-/** MilO's version as Android names it, for the first lines of an export. */
-private fun versionNameOf(context: Context): String = try {
-    context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
-} catch (notInstalled: PackageManager.NameNotFoundException) {
-    // Cannot happen for MilO's own package. The export is worth more than its version line.
-    "unknown"
 }

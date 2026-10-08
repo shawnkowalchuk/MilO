@@ -237,7 +237,7 @@ private class ExportParts(
 
     private fun trip(text: String, number: Int): Trip {
         val read = decodeText<ExportedTrip>(text, "Trip number $number")
-        read.problem()?.let { throw damaged("Trip ${read.id}: $it") }
+        read.problem(formatVersion)?.let { throw damaged("Trip ${read.id}: $it") }
         return read.toTrip()
     }
 

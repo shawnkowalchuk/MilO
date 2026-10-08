@@ -1,0 +1,65 @@
+{
+  "releases": [
+    {
+      "version": "0.1.0",
+      "date": null,
+      "changes": [
+        {
+          "kind": "new",
+          "title": "What's new",
+          "body": "Settings shows the version of MilO on the phone. Tap it for this list: every version and what changed in it. After an update it opens once by itself."
+        },
+        {
+          "kind": "new",
+          "title": "Trips start by themselves",
+          "body": "When the phone connects to your truck's Bluetooth, a trip starts and MilO records the drive with GPS, even with the app closed. It ends when the truck disconnects, or once the truck has stood still for 10 minutes."
+        },
+        {
+          "kind": "new",
+          "title": "Several vehicles",
+          "body": "Pair each work vehicle in Setup, and any of them starts a trip. Each trip records which vehicle it was in, each vehicle has its own odometer, and the report names the vehicle when the month had more than one."
+        },
+        {
+          "kind": "new",
+          "title": "Business or Personal",
+          "body": "Trips in your work hours are saved as Business, the others as Personal or not at all. Any trip can be changed, edited or added by hand on the Trips screen."
+        },
+        {
+          "kind": "new",
+          "title": "A label for each trip",
+          "body": "Press a trip, then Label, and pick one of the labels you used before or type a new one. The label used where the trip ended, within 200 m, is listed first and already chosen. The report prints it as the trip's purpose."
+        },
+        {
+          "kind": "new",
+          "title": "The monthly report",
+          "body": "A PDF and a CSV of the month's Business trips, with the odometer at the start and the end, handed to your email app addressed to your accountant. A reminder on the 1st, until it is sent."
+        },
+        {
+          "kind": "new",
+          "title": "Android Auto and the home-screen widget",
+          "body": "The trip on the car's screen and on a widget, each with a Start or End button. The widget also shows this month's and this year's Business distance in dollars, for reference."
+        },
+        {
+          "kind": "new",
+          "title": "Two sounds of your choosing",
+          "body": "One when the truck connects, one when it drives off. Each can be MilO's own sound or an audio file from the phone."
+        },
+        {
+          "kind": "new",
+          "title": "Kilometres or miles",
+          "body": "Every screen, the widget and the report in the unit you choose. Trips are stored the same either way."
+        },
+        {
+          "kind": "new",
+          "title": "Your data stays yours",
+          "body": "No account and no server. Export all your data to one file and import it again, and Android's own backup keeps a copy in your Google account."
+        },
+        {
+          "kind": "new",
+          "title": "Buy me a coffee",
+          "body": "A tile above Version in Settings opens MilO's page on Buy Me a Coffee in the browser, for anyone who would like to say thanks. MilO stays free, with no ads."
+        }
+      ]
+    }
+  ]
+}

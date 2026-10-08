@@ -49,6 +49,11 @@ jobs:
             exit 1
           fi
 
+      # The What's new page is written from the app's list of changes; a page that is not the
+      # one the list makes is not put live.
+      - name: Check the What's new page
+        run: python3 tools/changes_page.py --check
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
         with:

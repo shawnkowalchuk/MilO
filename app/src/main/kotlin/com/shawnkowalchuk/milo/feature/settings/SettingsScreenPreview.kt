@@ -231,6 +231,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                 dataTile = {
                     DataTileContent(sample.data, DataActions({}, {}, {}, {}, {}, {}))
                 },
+                versionTile = {},
             )
         }
     }

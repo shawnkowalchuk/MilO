@@ -20,26 +20,34 @@ import kotlinx.coroutines.withContext
  * enough: with Android Auto the truck keeps the hands-free profile and sends audio over the
  * cable. "Not connected" needs both to say so. A profile that gave no answer could be the one
  * the truck is on, so the reading is then "unknown", never "not connected".
+ *
+ * @param handsFreeVehicle and [audioVehicle] the vehicle each profile lists, if it lists one:
+ * the reading says which vehicle it found (since 2026-10-08).
  */
-internal fun readingFromProfiles(handsFree: ProfileAnswer, audio: ProfileAnswer): TruckReading =
-    when {
-        handsFree == ProfileAnswer.TRUCK_CONNECTED ->
-            TruckReading.connected("the hands-free profile lists the truck")
+internal fun readingFromProfiles(
+    handsFree: ProfileAnswer,
+    audio: ProfileAnswer,
+    handsFreeVehicle: String? = null,
+    audioVehicle: String? = null,
+): TruckReading = when {
+    handsFree == ProfileAnswer.TRUCK_CONNECTED ->
+        TruckReading.connected("the hands-free profile lists the truck", handsFreeVehicle)
 
-        audio == ProfileAnswer.TRUCK_CONNECTED ->
-            TruckReading.connected("the audio profile lists the truck")
+    audio == ProfileAnswer.TRUCK_CONNECTED ->
+        TruckReading.connected("the audio profile lists the truck", audioVehicle)
 
-        handsFree == ProfileAnswer.NO_ANSWER ->
-            TruckReading.unknown("the hands-free profile gave no answer")
+    handsFree == ProfileAnswer.NO_ANSWER ->
+        TruckReading.unknown("the hands-free profile gave no answer")
 
-        audio == ProfileAnswer.NO_ANSWER ->
-            TruckReading.unknown("the audio profile gave no answer")
+    audio == ProfileAnswer.NO_ANSWER ->
+        TruckReading.unknown("the audio profile gave no answer")
 
-        else -> TruckReading.notConnected("neither the hands-free nor the audio profile lists it")
-    }
+    else -> TruckReading.notConnected("neither the hands-free nor the audio profile lists it")
+}
 
 /**
- * The real answer to "is the truck connected right now?" (ADR-002).
+ * The real answer to "is the truck connected right now?" (ADR-002). Since 2026-10-08 it asks
+ * about every paired vehicle at once, and says which one it found.
  *
  * How it is read depends on the Android version:
  * - **From Android 16 QPR2 (API 36.1):** `BluetoothDevice.isConnected` for the classic
@@ -72,54 +80,73 @@ class BluetoothTruckConnection(context: Context, private val settings: SettingsS
         if (permission != PackageManager.PERMISSION_GRANTED) {
             return@withContext TruckReading.unknown("MilO is not allowed to use Bluetooth")
         }
-        val address =
+        val addresses =
             try {
-                settings.current().truckAddress
+                settings.current().trucks().map { it.address }
             } catch (unreadable: IOException) {
                 // The trip controller logs the unreadable file itself, with its stack trace.
                 return@withContext TruckReading.unknown("the settings cannot be read")
             }
         when {
-            address == null -> TruckReading.notConnected("no truck is paired")
+            addresses.isEmpty() -> TruckReading.notConnected("no truck is paired")
             adapter == null -> TruckReading.notConnected("this phone has no Bluetooth")
-            else -> readBluetooth(adapter, address)
+            else -> readBluetooth(adapter, addresses)
         }
     }
 
-    private suspend fun readBluetooth(adapter: BluetoothAdapter, address: String): TruckReading =
-        try {
-            when {
-                !adapter.isEnabled -> TruckReading.notConnected("Bluetooth is switched off")
+    private suspend fun readBluetooth(
+        adapter: BluetoothAdapter,
+        addresses: List<String>,
+    ): TruckReading = try {
+        when {
+            !adapter.isEnabled -> TruckReading.notConnected("Bluetooth is switched off")
 
-                // `BluetoothDevice.isConnected` arrived in a minor release (API 36.1).
-                // `SDK_INT_FULL`, the number that counts minor releases, is itself only there
-                // from API 36, so the plain level is checked first.
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
-                    Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1 -> {
-                    val truck = adapter.getRemoteDevice(address)
-                    linkReading(truck.isConnected(BluetoothDevice.TRANSPORT_BREDR))
+            // `BluetoothDevice.isConnected` arrived in a minor release (API 36.1).
+            // `SDK_INT_FULL`, the number that counts minor releases, is itself only there
+            // from API 36, so the plain level is checked first.
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+                Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1 -> {
+                // A plain loop, not a lambda: Lint follows the version check into it.
+                var found: String? = null
+                for (address in addresses) {
+                    val device = adapter.getRemoteDevice(address)
+                    if (device.isConnected(BluetoothDevice.TRANSPORT_BREDR)) {
+                        found = address
+                        break
+                    }
                 }
-
-                else -> readProfiles(address)
+                linkReading(found)
             }
-        } catch (denied: SecurityException) {
-            // The permission was there a moment ago: it was taken away in between.
-            TruckReading.unknown("Android refused the Bluetooth call ($denied)")
-        } catch (malformed: IllegalArgumentException) {
-            // Android rejects an address that is not six pairs of capital hex digits.
-            TruckReading.unknown("the stored truck address is not a Bluetooth address ($malformed)")
-        }
 
-    private fun linkReading(connected: Boolean): TruckReading = if (connected) {
-        TruckReading.connected("its classic Bluetooth link is up")
+            else -> readProfiles(addresses)
+        }
+    } catch (denied: SecurityException) {
+        // The permission was there a moment ago: it was taken away in between.
+        TruckReading.unknown("Android refused the Bluetooth call ($denied)")
+    } catch (malformed: IllegalArgumentException) {
+        // Android rejects an address that is not six pairs of capital hex digits.
+        TruckReading.unknown("the stored truck address is not a Bluetooth address ($malformed)")
+    }
+
+    /** @param found the vehicle whose classic link is up, or null if none is. */
+    private fun linkReading(found: String?): TruckReading = if (found != null) {
+        TruckReading.connected("its classic Bluetooth link is up", found)
     } else {
         TruckReading.notConnected("its classic Bluetooth link is down")
     }
 
     /** Asks both profiles at the same time, so a slow proxy is waited for once, not twice. */
-    private suspend fun readProfiles(address: String): TruckReading = coroutineScope {
-        val handsFreeAnswer = async { handsFree?.answerFor(address) ?: ProfileAnswer.NO_ANSWER }
-        val audioAnswer = async { audio?.answerFor(address) ?: ProfileAnswer.NO_ANSWER }
-        readingFromProfiles(handsFreeAnswer.await(), audioAnswer.await())
+    private suspend fun readProfiles(addresses: List<String>): TruckReading = coroutineScope {
+        val noAnswer = ProfileReply(ProfileAnswer.NO_ANSWER)
+        val handsFreeReply = async { handsFree?.answerFor(addresses) ?: noAnswer }
+        val audioReply = async { audio?.answerFor(addresses) ?: noAnswer }
+        val handsFreeAnswer = handsFreeReply.await()
+        val audioAnswer = audioReply.await()
+        readingFromProfiles(
+            handsFreeAnswer.answer,
+            audioAnswer.answer,
+            handsFreeAnswer.vehicle,
+            audioAnswer.vehicle,
+        )
     }
 }

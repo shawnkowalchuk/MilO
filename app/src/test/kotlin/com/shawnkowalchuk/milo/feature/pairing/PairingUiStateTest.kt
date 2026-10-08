@@ -17,6 +17,9 @@ private val TRUCK_DEVICE = PairedDevice("AA:BB:CC:DD:EE:FF", "Work truck")
 private val EARBUDS = PairedDevice("11:22:33:44:55:66", "Earbuds")
 private val STORED_TRUCK = Truck("AA:BB:CC:DD:EE:FF", "Work truck", associationId = 7)
 
+/** A second vehicle paired beside the truck: in these tests, the device the earbuds are. */
+private val STORED_EARBUDS = Truck("11:22:33:44:55:66", "Earbuds", associationId = 8)
+
 /**
  * What the pairing screen shows for each thing the phone and `TruckPairing` can report. Android's
  * consent dialog and the pairing itself can only be tested on the phone.
@@ -27,7 +30,7 @@ class PairingUiStateTest {
         PairingInputs(
             paired = PairedDeviceList(listOf(EARBUDS, TRUCK_DEVICE), problem = null),
             locationOn = true,
-            truck = null,
+            trucks = emptyList(),
             status = PairingStatus(PairingState.NO_TRUCK, "no truck is paired"),
             progress = PairingProgress.Idle,
             attemptedHere = false,
@@ -99,7 +102,7 @@ class PairingUiStateTest {
     fun `the stored truck is marked in the list, whatever the spelling of its address`() {
         val smallLetters = STORED_TRUCK.copy(address = "aa:bb:cc:dd:ee:ff")
 
-        val state = pairingUiState(ready.copy(truck = smallLetters))
+        val state = pairingUiState(ready.copy(trucks = listOf(smallLetters)))
 
         assertEquals(listOf(false, true), state.devices.map { it.isTruck })
     }
@@ -119,11 +122,14 @@ class PairingUiStateTest {
 
         for ((pairingState, watch) in expected) {
             val inputs =
-                ready.copy(truck = STORED_TRUCK, status = PairingStatus(pairingState, "detail"))
+                ready.copy(
+                    trucks = listOf(STORED_TRUCK),
+                    status = PairingStatus(pairingState, "detail"),
+                )
 
             assertEquals(
                 "$pairingState",
-                TruckLine("Work truck", watch),
+                TruckLine("Work truck", watch, STORED_TRUCK),
                 pairingUiState(inputs).truck,
             )
         }
@@ -131,7 +137,7 @@ class PairingUiStateTest {
 
     @Test
     fun `before the first check of the pairing the truck's line says it is checking`() {
-        val inputs = ready.copy(truck = STORED_TRUCK, status = null)
+        val inputs = ready.copy(trucks = listOf(STORED_TRUCK), status = null)
 
         assertEquals(TruckWatch.CHECKING, pairingUiState(inputs).truck?.watch)
     }
@@ -165,7 +171,7 @@ class PairingUiStateTest {
     fun `a finished pairing names the truck, and another device can be picked to change it`() {
         val inputs =
             ready.copy(
-                truck = STORED_TRUCK,
+                trucks = listOf(STORED_TRUCK),
                 status = PairingStatus(PairingState.ARMED, "association 7 is observed"),
                 progress = PairingProgress.Paired(STORED_TRUCK),
                 attemptedHere = true,
@@ -174,8 +180,45 @@ class PairingUiStateTest {
         val state = pairingUiState(inputs)
 
         assertEquals(PairingAttempt.Paired("Work truck"), state.attempt)
-        assertEquals(TruckLine("Work truck", TruckWatch.WATCHED), state.truck)
+        assertEquals(TruckLine("Work truck", TruckWatch.WATCHED, STORED_TRUCK), state.truck)
         assertTrue(state.canPick)
+    }
+
+    // ---- Several vehicles (2026-10-08) ------------------------------------------------------------
+
+    @Test
+    fun `every paired vehicle has its line, and each is marked in the phone's list`() {
+        val inputs =
+            ready.copy(
+                trucks = listOf(STORED_TRUCK, STORED_EARBUDS),
+                status = PairingStatus(PairingState.ARMED, "both observed"),
+            )
+
+        val state = pairingUiState(inputs)
+
+        assertEquals(listOf("Work truck", "Earbuds"), state.vehicles.map { it.name })
+        assertEquals(listOf(true, true), state.devices.map { it.isTruck })
+    }
+
+    @Test
+    fun `among several vehicles only those the check names have lost their association`() {
+        val inputs =
+            ready.copy(
+                trucks = listOf(STORED_TRUCK, STORED_EARBUDS),
+                status =
+                    PairingStatus(
+                        PairingState.ASSOCIATION_MISSING,
+                        "detail",
+                        missing = listOf(STORED_EARBUDS.address),
+                    ),
+            )
+
+        val state = pairingUiState(inputs)
+
+        assertEquals(
+            listOf(TruckWatch.WATCHED, TruckWatch.ASSOCIATION_MISSING),
+            state.vehicles.map { it.watch },
+        )
     }
 
     @Test

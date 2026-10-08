@@ -244,6 +244,29 @@ class FakeTripDao : TripDao {
         }
     }
 
+    override suspend fun setVehicle(tripId: Long, address: String, open: TripStatus): Int =
+        changeIf(tripId, { it.status == open && it.vehicleAddress == null }) {
+            it.copy(vehicleAddress = address)
+        }
+
+    override suspend fun setLabel(tripId: Long, label: String?, open: TripStatus): Int =
+        changeIf(tripId, { it.status != open }) { it.copy(label = label) }
+
+    override suspend fun findLabelled(): List<Trip> = rows.filter { it.label != null }
+
+    override suspend fun fillVehicle(address: String): Int {
+        var filled = 0
+        rows.replaceAll { trip ->
+            if (trip.vehicleAddress == null && (trip.truckSeen || trip.addedByHand)) {
+                filled++
+                trip.copy(vehicleAddress = address)
+            } else {
+                trip
+            }
+        }
+        return filled
+    }
+
     /** Like the real queries: only a row with the expected status is changed. */
     private fun change(tripId: Long, status: TripStatus, update: (Trip) -> Trip): Int =
         changeIf(tripId, { it.status == status }, update)

@@ -57,12 +57,14 @@ internal fun transferParts(
     tripInProgress = { container.tripController.activity.value.trip != null },
     checkPairing = { occasion -> container.truckPairing.check(occasion) },
     afterImport = { occasion ->
-        // The truck may have to be paired again, the imported trips may lack an address or
-        // a category, and the settings that the alert, the reminder and the daily check go by
+        // The truck may have to be paired again, the imported trips may lack an address, a
+        // category or a vehicle, and the settings that the alert, the reminder and the daily check go by
         // have changed, as have the trips of today.
         container.truckPairing.check(occasion)
         container.tripAddresses.catchUp(occasion)
         container.tripCategoryCatchUp.catchUp(occasion)
+        // And their vehicle: the import had the pass over them run again (2026-10-08).
+        container.tripVehicleCatchUp.catchUp(occasion)
         container.drivingAlert.arm(occasion)
         container.reports.reminder.look(occasion)
         container.checks.nothingRecorded.arm(occasion)

@@ -84,6 +84,8 @@ enum class TripKind(val status: TripStatus) {
  * @param mark whether the trip was added by hand, or edited by hand since it was recorded. The
  * row says so, because its figures are Shawn's and not MilO's.
  * @param editable whether the edit screen can be opened for it: a counted trip, and no other.
+ * @param label what Shawn labelled the trip ("Work"), or null (since 2026-10-08). The row
+ * writes it after the times, and the report prints it as the trip's purpose.
  */
 data class TripLine(
     val id: Long,
@@ -99,6 +101,7 @@ data class TripLine(
     val markableAs: List<TripCategory> = emptyList(),
     val mark: ByHandMark? = null,
     val editable: Boolean = false,
+    val label: String? = null,
 )
 
 /**
@@ -250,6 +253,7 @@ private fun Trip.toLine(kind: TripKind): TripLine = TripLine(
     markableAs = categoriesOffered(status, category),
     mark = byHandMark,
     editable = canBeEdited,
+    label = label,
 )
 
 /**

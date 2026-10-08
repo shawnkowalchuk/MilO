@@ -1293,12 +1293,72 @@ Not on the phone: in any browser, once Hosting is switched on, the deploy key is
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | not run |
+| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | seen 2026-10-08: the merges of #27 and #28 deployed, and Shawn opened the sitemap on `milotriplog.top` |
 | WEB-2 | **The domain.** Open `https://milotriplog.top` and `https://www.milotriplog.top`. | The same page, with the padlock; the www address ends on `milotriplog.top`. | not run |
 | WEB-3 | **On the phone.** Open the site in the phone's browser. | The lime tile with "Download the latest APK", the screenshots two across, nothing cut off or wider than the screen. | not run |
 | WEB-4 | **The download.** Tap "Download the latest APK". | The newest GitHub Release (empty until the first release is published). | not run |
 | WEB-5 | **The privacy page.** Tap Privacy; then open `https://milotriplog.top/privacy` directly. | The policy, both ways. | not run |
 | WEB-6 | **A wrong address.** Open `https://milotriplog.top/nothing`. | "That page is not here", with a link home. | not run |
+| WEB-7 | **What's new.** After the merge that brings it, open `https://milotriplog.top/changes`, and "What's new" in the menu of another page. | "What's new", then "Version 0.1.0 · Not released yet" with eight lines, each with a lime NEW tag; nothing wider than the phone's screen. | not run |
+| WEB-8 | **The name.** Open any page, and share `https://milotriplog.top` in a message. | "MilO Trip Log" in the top line and the tab's title, the preview says "MilO Trip Log: business mileage that logs itself", and every footer ends with "not affiliated with any other app or company named Milo". | not run |
+
+## Version and What's new (2026-10-08)
+
+Shawn's request of 2026-10-08: the version on Settings, which opens what changed in each version, like GopherForms; and once after an update. Built and unit tested only; never drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| WN-1 | **Once after the update.** Install the build over the one on the phone (past the first start) and open MilO. | What's new opens by itself over Home: "0.1.0 · not released yet · on this phone" over a tile of eleven changes, each with a lime NEW tag. The back arrow and Back lead to Home. | not run |
+| WN-2 | **Not again.** Swipe MilO out of the recent apps and open it again. | Home; What's new does not open. | not run |
+| WN-3 | **The Version tile.** Open Settings and scroll to the end. | Under backup, export and import: "Version" with its arrowhead, "0.1.0 · build 1", and "What changed in each version" in grey. | not run |
+| WN-4 | **Open it.** Tap the tile. | What's new on top of Settings; Back leads to Settings. | not run |
+| WN-5 | **The list scrolls.** On What's new, scroll to the end. | Every change can be read; the last one clears the bottom bar. | not run |
+| WN-6 | **A large font.** Set the phone's font size to its largest, open What's new and the Version tile, then set it back. | The tags grow with the words; nothing is cut off. | not run |
+| WN-7 | **Turned on its side.** On What's new, turn the phone. | The same list, scrolled to the same place. | not run |
+| WN-8 | **A fresh install never sees it.** Only on a phone or emulator without MilO, never on the POCO with its trips: install, press OK, then Done. | Setup, then Settings; What's new does not open by itself. | not run |
+| WN-9 | **The next version.** When a build with a new version is installed (after 0.1.0 is released and the next version opened), open MilO. | What's new opens once, with the new version on top marked "on this phone". | not run |
+
+## Several vehicles (2026-10-08)
+
+Shawn's request of 2026-10-08: pair several work vehicles; each trip records its vehicle; an odometer for each. Needs a second vehicle with Bluetooth (or any car stereo or headset that the phone pairs with as a stand-in). Built and unit tested only; never run anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| MV-1 | **The update.** Install the build over the one on the phone, with the truck paired, and open Settings. | The tile is titled "Vehicles" and shows the truck's name; the odometer tile is as before. The Log has a TRIP line "Earlier trips in the truck given its address (…): N". | not run |
+| MV-2 | **Add a vehicle.** Settings, Vehicles, "Pair or remove", then Add, and pick the second vehicle in Android's dialog. | Both are listed. Settings' tile says "<truck> + 1 more"; there are two odometer tiles, "Odometer · <truck>" and "Odometer · <second>". | not run |
+| MV-3 | **The second starts a trip.** With MilO closed, get into the second vehicle and let the phone connect. | A trip starts by itself. The Log names "the vehicle <second>" as what started it, and a TRIP line "in the vehicle <address>". | not run |
+| MV-4 | **The truck still does.** The same with the truck. | A trip starts, as before; its line names the truck's address. | not run |
+| MV-5 | **Another vehicle's disconnect.** During a trip in the truck, have the second vehicle (or the stand-in) connect and disconnect nearby. | The trip goes on; the Log shows the connection being read, not a disconnect of the truck. | not run |
+| MV-6 | **Setup.** Look at Setup's truck row with both paired. | Ready; no vehicle is named as missing. | not run |
+| MV-7 | **The odometer.** Type a reading on each vehicle's tile, then drive a trip in each. | Each tile adds only its own vehicle's trips. | not run |
+| MV-8 | **The report.** Make the month's report with trips in both vehicles. | Two odometers, one per vehicle, each named; under each trip's addresses, in grey, its vehicle's name. The CSV has a Vehicle column with the names. | not run |
+| MV-9 | **One vehicle's report.** Make a report of a period with trips in the truck only. | No vehicle under the trips, as before. | not run |
+| MV-10 | **Remove the second.** Pairing screen, Remove on the second vehicle, and confirm. | It is gone from the list and from Settings; its odometer tile is gone. Connecting to it starts no trip. | not run |
+| MV-11 | **Remove the truck while another is paired.** (Only if a stand-in is paired, then pair the truck again.) | The other becomes the first: Settings shows its name alone. | not run |
+| MV-12 | **Export and import.** Export, then import the file. | Every trip keeps its vehicle (MV-8's report is the same after). The second vehicle is still paired on the phone. | not run |
+
+## Trip labels (2026-10-08)
+
+Shawn's request of 2026-10-08: a label for each trip, picked from those used before, the one used where the trip ended suggested. Built and unit tested only; never drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| LB-1 | **The button.** On Trips, open a day and press a finished trip. | Edit, Label, the other category on the first line; Delete on its own line under them. | not run |
+| LB-2 | **The first label.** Press Label. | "Trip label", the sentence "Type a label, such as a client or a site…", a field "New label", Save greyed. Type "Work" and Save. | not run |
+| LB-3 | **On the list.** Look at the trip's row. | Its grey line reads "<times> · Work · Business". | not run |
+| LB-4 | **Suggested at the same place.** After another trip that ends where the labelled one ended (within 200 m), press it and Label. | "Work was used where this trip ended. …"; "Work" is first and already chosen; Save is lime. Save. | not run |
+| LB-5 | **Not suggested elsewhere.** Label on a trip that ended somewhere else. | "Choose a label used before, or type a new one…"; Work is listed but not chosen. Cancel changes nothing. | not run |
+| LB-6 | **Take it away.** Label on the trip from LB-2, choose "No label", Save. | The label is gone from its row. | not run |
+| LB-7 | **On the report.** Make the month's report. | Under a labelled trip's addresses, in grey, its label; the CSV's Purpose column has it. | not run |
+| LB-8 | **The Log.** Open the Log, TRIP lines. | One line per label saved or taken away, such as "Trip 12: labelled "Work" on the Trips screen (was none, the label used where it ended before)". | not run |
+
+## Buy me a coffee (2026-10-08)
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| BC-1 | **The tile.** Open Settings and scroll to the end. | Above Version: "Buy me a coffee" with its arrowhead, "buymeacoffee.com/SeaWingman" and a grey sentence. | not run |
+| BC-2 | **Open it.** Tap the tile. | The browser opens buymeacoffee.com/SeaWingman; Back returns to MilO's Settings. | not run |
+| BC-3 | **The website.** Open milotriplog.top on the phone after the merge. | A yellow "☕ Buy me a coffee" button in the last tile, a "Buy me a coffee" link in the footer; both open the same page. Nothing is wider than the screen. | not run |
 
 ## Later work packages
 

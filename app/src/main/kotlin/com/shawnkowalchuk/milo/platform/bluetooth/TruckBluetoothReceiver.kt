@@ -56,7 +56,9 @@ class TruckBluetoothReceiver : BroadcastReceiver() {
         val controller = container.tripController
         when (val decision = decideBroadcast(via, signal, intent.deviceAddress(), lookup)) {
             is SignalDecision.Ignore -> controller.note(EventCategory.TRIGGER, decision.why)
-            is SignalDecision.Fire -> controller.onTrigger(decision.trigger, decision.source)
+
+            is SignalDecision.Fire ->
+                controller.onTrigger(decision.trigger, decision.source, decision.vehicle)
         }
         // In the trip service there is nothing to protect: the service keeps the process alive.
         if (!inService) controller.whenCaughtUp(holdUntilHandled())

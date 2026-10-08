@@ -9,22 +9,26 @@ import android.content.Intent
 private const val EXTRA_TRIGGER = "com.shawnkowalchuk.milo.extra.TRIGGER"
 private const val EXTRA_SOURCE = "com.shawnkowalchuk.milo.extra.SOURCE"
 private const val EXTRA_AT_MS = "com.shawnkowalchuk.milo.extra.AT_MS"
+private const val EXTRA_VEHICLE = "com.shawnkowalchuk.milo.extra.VEHICLE"
 
 /**
  * The intent that starts [TripService] for [trigger].
  *
  * @param atMs when the trigger fired, or null to use the moment the intent arrives (for an
  * intent built in advance, such as a notification's).
+ * @param vehicle the paired vehicle the trigger named, or null ([StartRequest.vehicle]).
  */
 internal fun tripServiceIntent(
     context: Context,
     trigger: TripTrigger,
     source: String,
     atMs: Long?,
+    vehicle: String? = null,
 ): Intent = Intent(context, TripService::class.java)
     .putExtra(EXTRA_TRIGGER, trigger.name)
     .putExtra(EXTRA_SOURCE, source)
     .apply { if (atMs != null) putExtra(EXTRA_AT_MS, atMs) }
+    .apply { if (vehicle != null) putExtra(EXTRA_VEHICLE, vehicle) }
 
 /** Reads [tripServiceIntent] back. An intent MilO did not build is treated as a reconcile. */
 internal fun startRequestFrom(intent: Intent): StartRequest {
@@ -35,5 +39,6 @@ internal fun startRequestFrom(intent: Intent): StartRequest {
         trigger = trigger ?: TripTrigger.RECONCILE,
         source = intent.getStringExtra(EXTRA_SOURCE) ?: "an intent without a source",
         atMs = intent.getLongExtra(EXTRA_AT_MS, System.currentTimeMillis()),
+        vehicle = intent.getStringExtra(EXTRA_VEHICLE),
     )
 }

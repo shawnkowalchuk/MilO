@@ -21,6 +21,9 @@
   --text-secondary: #9298a3;
   --accent: #c6f432;
   --accent-pressed: #ddff7a;
+  /* Buy Me a Coffee's own yellow, for its button alone (2026-10-08). */
+  --coffee: #ffdd00;
+  --coffee-pressed: #ffe94d;
   --tile-radius: 26px;
   --small-radius: 22px;
   --button-radius: 18px;
@@ -43,6 +46,8 @@ body {
   font-family: "Sora", system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.55;
+  /* A web address is one long word: on a phone it breaks rather than run off the page. */
+  overflow-wrap: break-word;
 }
 
 a {
@@ -189,6 +194,25 @@ main > * {
 .accent .button:hover,
 .accent .button:focus-visible {
   color: var(--accent-pressed);
+}
+
+/*
+ * The Buy me a coffee button: Buy Me a Coffee's yellow with black words, as its own button
+ * has them, drawn here so that the page loads nothing from another site.
+ */
+.coffee {
+  display: inline-block;
+  background: var(--coffee);
+  color: #000;
+  border-radius: var(--button-radius);
+  padding: 12px 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.coffee:hover,
+.coffee:focus-visible {
+  background: var(--coffee-pressed);
 }
 
 .hero .small {
@@ -358,6 +382,74 @@ footer a {
 
 .policy {
   max-width: 46em;
+}
+
+/* What's new: each version a tile, each change a row with its kind's tag, as in the app's
+   What's new screen. The tags' colours are the app's (MiloChangeTagColors in Color.kt). */
+.release h2 {
+  margin-bottom: 4px;
+}
+
+.tile .changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tile .changes li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--outline);
+}
+
+.tile .changes li:first-child {
+  border-top: 0;
+}
+
+.tile .changes li:last-child {
+  padding-bottom: 0;
+}
+
+.changes p {
+  margin: 4px 0 0;
+}
+
+.tag {
+  display: inline-block;
+  min-width: 6.5em;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.tag-new {
+  background: var(--accent);
+  color: var(--page);
+}
+
+.tag-improved {
+  background: #2a3350;
+  color: #c9d6ff;
+}
+
+.tag-fixed {
+  background: #2a2416;
+  color: #ffe7a8;
+}
+
+.tag-security {
+  background: #3a1c1f;
+  color: #ffb3b3;
 }
 
 @media (min-width: 720px) {

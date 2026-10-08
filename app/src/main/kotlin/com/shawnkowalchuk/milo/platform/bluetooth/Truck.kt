@@ -8,7 +8,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The truck as it was stored at pairing.
+ * A vehicle MilO starts trips for, as it was stored at pairing: the truck it always had, and
+ * since 2026-10-08 any other vehicle paired beside it (`data/settings/VehicleStorage.kt`). Each
+ * is matched, read and watched for the same way.
  *
  * @param address its Bluetooth address, in capitals, the way Android's Bluetooth classes write it.
  * @param name its name as the phone shows it, or null if it has none.
@@ -29,10 +31,18 @@ data class Truck(val address: String, val name: String?, val associationId: Int?
 /** A device from the phone's own list of paired Bluetooth devices. The pairing screen lists them. */
 data class PairedDevice(val address: String, val name: String?)
 
-/** The paired truck, or null before pairing. */
+/** The first paired vehicle, the truck MilO always had, or null before pairing. */
 fun MiloSettings.truck(): Truck? = truckAddress?.let {
     Truck(it, truckName, truckAssociationId)
 }
+
+/** Every paired vehicle, the first one first and the others in the order they were paired. */
+fun MiloSettings.trucks(): List<Truck> = listOfNotNull(truck()) +
+    moreVehicles.map { Truck(it.address, it.name, it.associationId) }
+
+/** The paired vehicle an event names, by address or by association id, or null if none. */
+fun List<Truck>.named(address: String?, associationId: Int?): Truck? =
+    firstOrNull { it.isDevice(address, associationId) }
 
 /**
  * Bluetooth addresses are compared without regard to case. Android's Bluetooth classes write
@@ -46,13 +56,19 @@ fun sameAddress(one: String?, other: String?): Boolean =
 fun String.asBluetoothAddress(): String = uppercase(Locale.ROOT)
 
 /**
- * What a trigger learns when it asks which device is the truck.
+ * What a trigger learns when it asks which devices are the paired vehicles.
  *
- * @param truck the paired truck, or null.
- * @param problem why the question could not be answered, or null when it was. A null [truck]
- * with no [problem] means that no truck is paired.
+ * @param trucks every paired vehicle, the first one first; empty if none is paired.
+ * @param problem why the question could not be answered, or null when it was. No [trucks] with
+ * no [problem] means that no vehicle is paired.
  */
-data class TruckLookup(val truck: Truck?, val problem: String? = null)
+data class TruckLookup(val trucks: List<Truck>, val problem: String? = null) {
+    /** For a lookup that found one truck, or none. */
+    constructor(truck: Truck?, problem: String? = null) : this(listOfNotNull(truck), problem)
+
+    /** The first paired vehicle, or null. */
+    val truck: Truck? get() = trucks.firstOrNull()
+}
 
 /** The longest a trigger waits for the settings before it stops trying to tell whose event it is. */
 private const val LOOKUP_LIMIT_MS = 1_000L
@@ -75,7 +91,7 @@ class PairedTruck(private val settings: SettingsStore) {
         if (current == null) {
             TruckLookup(null, "the settings took more than $LOOKUP_LIMIT_MS ms to read")
         } else {
-            TruckLookup(current.truck())
+            TruckLookup(current.trucks())
         }
     } catch (unreadable: IOException) {
         // The settings file is never reset (see buildSettingsStore). The trip controller logs

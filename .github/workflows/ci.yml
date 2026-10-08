@@ -46,6 +46,12 @@ jobs:
           # Commenting on the pull request would need write access. The failed check is enough.
           GITLEAKS_ENABLE_COMMENTS: "false"
 
+      # The list of changes the app's What's new screen shows, and the website's page made from
+      # it: the list keeps its rules, its newest version is the build's versionName, and the page
+      # is the one the list makes. Standard library only; the runner image has Python 3.
+      - name: Check the list of changes
+        run: python3 tools/changes_page.py --check
+
       - name: Set up JDK 17
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:

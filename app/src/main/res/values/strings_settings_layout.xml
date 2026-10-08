@@ -104,4 +104,16 @@
     <string name="settings_data_export_short">Export</string>
     <string name="settings_data_import_short">Import</string>
     <string name="settings_about_data">About backup, export and import</string>
+
+    <!--
+        The tile above Version (2026-10-08) that opens Shawn's page on Buy Me a Coffee in the
+        browser. Its value is the page's address as it can be typed in.
+    -->
+    <string name="settings_coffee_label">Buy me a coffee</string>
+    <string name="settings_coffee_value">buymeacoffee.com/SeaWingman</string>
+    <string name="settings_coffee_hint">MilO is free, with no ads and no account. A coffee helps keep it that way. Opens in your browser.</string>
+    <!-- Spoken by the screen reader for what a press on the tile does. -->
+    <string name="settings_coffee_open">open the page in the browser</string>
+    <!-- On the tile after a press, on a phone with no app that opens a web page. -->
+    <string name="settings_coffee_no_browser">No app on this phone opens web pages. The address above can be typed into a browser on another device.</string>
 </resources>

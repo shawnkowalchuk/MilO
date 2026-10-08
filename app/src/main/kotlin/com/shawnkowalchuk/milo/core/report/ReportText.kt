@@ -20,6 +20,9 @@ import java.util.Locale
 /** The mark a trip carries on the report when it was added or edited by hand. */
 const val REPORT_MARK = "*"
 
+/** Between a trip's label and its vehicle on the line under its addresses. */
+private const val DETAIL_JOINER = " · "
+
 /**
  * The words of the PDF. Each one is user-visible text, so none is written in this package.
  *
@@ -46,6 +49,8 @@ const val REPORT_MARK = "*"
  * @param odometerKm a format with one place, the figure: an odometer reading as typed.
  * @param odometerEstimated the same for a figure MilO worked out, which carries "est.".
  * @param odometerNote what "est." means, under the heading when a figure carries it.
+ * @param odometerOfVehicle a format with two places, the vehicle's name and the label of one
+ * of its odometer figures: for a report with more than one vehicle's odometer (2026-10-08).
  * @param footer a format with two places, the sender's name and the period.
  * @param page a format with two places: this page's number and the number of pages.
  */
@@ -81,6 +86,7 @@ data class ReportWords(
     val odometerKm: String,
     val odometerEstimated: String,
     val odometerNote: String,
+    val odometerOfVehicle: String,
     val footer: String,
     val page: String,
 )
@@ -93,7 +99,12 @@ data class ReportWords(
  */
 data class ReportFormat(val locale: Locale, val twentyFourHour: Boolean)
 
-/** One trip as it is printed. */
+/**
+ * One trip as it is printed.
+ *
+ * @param detail the line under its addresses (since 2026-10-08): its label, its purpose, and
+ * the vehicle it was in where the report has several, joined by a dot. Null with neither.
+ */
 data class PrintedRow(
     val start: String,
     val end: String,
@@ -101,6 +112,7 @@ data class PrintedRow(
     val to: String,
     val km: String,
     val marked: Boolean,
+    val detail: String? = null,
 )
 
 /**
@@ -127,7 +139,8 @@ data class PrintedDay(
  * @param fields who the report is from, each a label and its value: name, company and
  * vehicle. One that is not set is left out.
  * @param odometer the odometer at the start and the end of the period, each a label and its
- * value, on a tile of their own; empty while no reading has been typed in.
+ * value, on a tile of their own; empty while no reading has been typed in. Two lines for each
+ * vehicle that has a reading, each label naming its vehicle where there are several.
  * @param notes the lines under the heading: that only Business trips are listed, and, for a
  * revision, what it replaces.
  * @param emptyNote said in place of the days when the period has no trip, else null.
@@ -176,12 +189,13 @@ fun printedReport(report: MileageReport, words: ReportWords, format: ReportForma
                 sender.vehicle?.let { words.vehicle to it },
             ),
         odometer =
-            report.odometer?.let { span ->
+            report.odometers.flatMap { odometer ->
+                val name = odometer.vehicle.takeIf { report.odometers.size > 1 }
                 listOf(
-                    span.start.printed(report.period.firstDay, words, locale),
-                    span.end.printed(report.period.lastDay, words, locale),
+                    odometer.span.start.printed(report.period.firstDay, words, locale, name),
+                    odometer.span.end.printed(report.period.lastDay, words, locale, name),
                 )
-            }.orEmpty(),
+            },
         notes =
             listOfNotNull(
                 words.businessOnly,
@@ -189,9 +203,12 @@ fun printedReport(report: MileageReport, words: ReportWords, format: ReportForma
                     val replaced = longDate.format(it.replacesSentOn)
                     String.format(locale, words.revisionNote, it.number, replaced)
                 },
-                words.odometerNote.takeIf { report.odometer?.anyEstimated == true },
+                words.odometerNote.takeIf { report.odometers.any { it.span.anyEstimated } },
             ),
-        days = report.days.map { it.printed(report.zone, report.unit, words, format) },
+        days =
+            report.days.map {
+                it.printed(report.zone, report.unit, words, format, report.severalVehicles)
+            },
         emptyNote = words.noTrips.takeIf { report.days.isEmpty() },
         totalLabel = String.format(locale, words.total, period),
         totalKm = totalKm,
@@ -206,6 +223,7 @@ private fun ReportDay.printed(
     unit: DistanceUnit,
     words: ReportWords,
     format: ReportFormat,
+    severalVehicles: Boolean,
 ): PrintedDay {
     val heading = formatDay(date, format.locale)
     return PrintedDay(
@@ -222,22 +240,38 @@ private fun ReportDay.printed(
                     to = trip.to ?: words.noAddress,
                     km = formatTenths(trip.tenths(unit), format.locale),
                     marked = trip.mark != null,
+                    detail =
+                        listOfNotNull(trip.label, trip.vehicle.takeIf { severalVehicles })
+                            .joinToString(DETAIL_JOINER)
+                            .ifEmpty { null },
                 )
             },
         subtotalKm = formatTenths(tenths(unit), format.locale),
     )
 }
 
-/** One odometer figure as it is printed: its label with the day, and the figure. */
+/**
+ * One odometer figure as it is printed: its label with the day, and the figure.
+ *
+ * @param vehicle the vehicle's name, where the report has more than one vehicle's odometer.
+ */
 private fun OdometerFigure.printed(
     day: LocalDate,
     words: ReportWords,
     locale: Locale,
+    vehicle: String? = null,
 ): Pair<String, String> {
     val figure = formatOdometer(value, locale)
     val written = if (estimated) words.odometerEstimated else words.odometerKm
-    return String.format(locale, words.odometerOn, formatMediumDay(day, locale)) to
-        String.format(locale, written, figure)
+    val label = String.format(locale, words.odometerOn, formatMediumDay(day, locale))
+    val named = if (vehicle ==
+        null
+    ) {
+        label
+    } else {
+        String.format(locale, words.odometerOfVehicle, vehicle, label)
+    }
+    return named to String.format(locale, written, figure)
 }
 
 private val OdometerSpan.anyEstimated: Boolean get() = start.estimated || end.estimated

@@ -28,8 +28,13 @@ enum class PairingBlocker {
 /** Whether Android will wake MilO for the stored truck. */
 enum class TruckWatch { WATCHED, ASSOCIATION_MISSING, NOT_SUPPORTED, CHECK_FAILED, CHECKING }
 
-/** The truck MilO has stored, and whether it is being watched for. */
-data class TruckLine(val name: String?, val watch: TruckWatch)
+/**
+ * A paired vehicle (the truck, or since 2026-10-08 one beside it), and whether it is being
+ * watched for.
+ *
+ * @param vehicle the vehicle as stored, for the Remove button.
+ */
+data class TruckLine(val name: String?, val watch: TruckWatch, val vehicle: Truck)
 
 /** How far the attempt to pair that was started on this screen has got. */
 sealed interface PairingAttempt {
@@ -47,16 +52,17 @@ sealed interface PairingAttempt {
     data class Failed(val why: String) : PairingAttempt
 }
 
-/** A device from the phone's list. [isTruck] marks the one MilO has stored as the truck. */
+/** A device from the phone's list. [isTruck] marks one MilO has stored as a paired vehicle. */
 data class DeviceLine(val device: PairedDevice, val isTruck: Boolean)
 
 /**
  * Everything the pairing screen shows.
  *
+ * @param vehicles every paired vehicle, the truck first.
  * @param consent Android's consent dialog, waiting to be shown by the screen, or null.
  */
 data class PairingUiState(
-    val truck: TruckLine? = null,
+    val vehicles: List<TruckLine> = emptyList(),
     val blocker: PairingBlocker? = null,
     val devices: List<DeviceLine> = emptyList(),
     val attempt: PairingAttempt = PairingAttempt.None,
@@ -64,13 +70,16 @@ data class PairingUiState(
 ) {
     /** A truck can be picked when nothing is in the way and no attempt is under way. */
     val canPick: Boolean get() = blocker == null && attempt != PairingAttempt.Asking
+
+    /** The first paired vehicle, the truck, or null. */
+    val truck: TruckLine? get() = vehicles.firstOrNull()
 }
 
 /**
  * What the screen's state is worked out from.
  *
  * @param paired the phone's paired devices as last read, or why they could not be read.
- * @param truck the truck in the settings, or null.
+ * @param trucks every paired vehicle in the settings, the truck first; empty if none.
  * @param status the last check of the pairing, or null before the first one.
  * @param progress `TruckPairing`'s progress. It belongs to the whole app and outlives the
  * screen, so it can still show the result of an attempt made on an earlier visit.
@@ -82,7 +91,7 @@ data class PairingUiState(
 data class PairingInputs(
     val paired: PairedDeviceList,
     val locationOn: Boolean,
-    val truck: Truck?,
+    val trucks: List<Truck>,
     val status: PairingStatus?,
     val progress: PairingProgress,
     val attemptedHere: Boolean,
@@ -108,11 +117,16 @@ fun consentWasDeclined(resultCode: Int): Boolean =
 
 /** Decides what the pairing screen shows. A pure function, so it is tested without a phone. */
 fun pairingUiState(inputs: PairingInputs): PairingUiState = PairingUiState(
-    truck = inputs.truck?.let { TruckLine(it.name, truckWatch(inputs.status)) },
+    vehicles = inputs.trucks.map { TruckLine(it.name, truckWatch(inputs.status, it), it) },
     blocker = blockerOf(inputs.paired, inputs.locationOn),
     devices =
-        inputs.paired.devices.map {
-            DeviceLine(it, isTruck = sameAddress(it.address, inputs.truck?.address))
+        inputs.paired.devices.map { device ->
+            DeviceLine(
+                device,
+                isTruck = inputs.trucks.any {
+                    sameAddress(device.address, it.address)
+                },
+            )
         },
     attempt = if (inputs.attemptedHere) attemptOf(inputs) else PairingAttempt.None,
     consent =
@@ -134,10 +148,21 @@ private fun blockerOf(paired: PairedDeviceList, locationOn: Boolean): PairingBlo
     else -> null
 }
 
-private fun truckWatch(status: PairingStatus?): TruckWatch = when (status?.state) {
+/**
+ * Whether Android watches for [vehicle]. Among several, "association missing" is said of the
+ * vehicles the check named only (since 2026-10-08); the others are watched for.
+ */
+private fun truckWatch(status: PairingStatus?, vehicle: Truck): TruckWatch = when (status?.state) {
     PairingState.ARMED -> TruckWatch.WATCHED
 
-    PairingState.ASSOCIATION_MISSING -> TruckWatch.ASSOCIATION_MISSING
+    PairingState.ASSOCIATION_MISSING -> {
+        val missing = status.missing
+        if (missing.isNotEmpty() && missing.none { sameAddress(it, vehicle.address) }) {
+            TruckWatch.WATCHED
+        } else {
+            TruckWatch.ASSOCIATION_MISSING
+        }
+    }
 
     PairingState.NOT_SUPPORTED -> TruckWatch.NOT_SUPPORTED
 

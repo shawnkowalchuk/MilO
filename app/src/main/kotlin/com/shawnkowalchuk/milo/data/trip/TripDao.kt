@@ -71,6 +71,31 @@ interface TripDao {
     @Query("UPDATE trips SET truckSeen = 1 WHERE id = :tripId AND status = :open")
     suspend fun markTruckSeen(tripId: Long, open: TripStatus): Int
 
+    /** The open trip's vehicle, written once: a trip does not change vehicles (2026-10-08). */
+    @Query(
+        "UPDATE trips SET vehicleAddress = :address " +
+            "WHERE id = :tripId AND status = :open AND vehicleAddress IS NULL",
+    )
+    suspend fun setVehicle(tripId: Long, address: String, open: TripStatus): Int
+
+    /** A closed trip's label, or none with null (since 2026-10-08). Not an open trip's. */
+    @Query("UPDATE trips SET label = :label WHERE id = :tripId AND status != :open")
+    suspend fun setLabel(tripId: Long, label: String?, open: TripStatus): Int
+
+    /** Every trip that has a label, for the labels to pick from. */
+    @Query("SELECT * FROM trips WHERE label IS NOT NULL")
+    suspend fun findLabelled(): List<Trip>
+
+    /**
+     * Gives every trip that was in the truck before MilO knew several vehicles the truck's
+     * address: those it saw connected and those typed in by hand (`TripVehicleCatchUp`).
+     */
+    @Query(
+        "UPDATE trips SET vehicleAddress = :address " +
+            "WHERE vehicleAddress IS NULL AND (truckSeen = 1 OR addedByHand = 1)",
+    )
+    suspend fun fillVehicle(address: String): Int
+
     /** Pass two times to start the grace period, two nulls to cancel it. */
     @Query(
         "UPDATE trips SET graceStartedAtMs = :startedAtMs, graceDeadlineMs = :deadlineMs " +

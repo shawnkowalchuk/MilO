@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TripEffect
 import com.shawnkowalchuk.milo.core.trip.TripEvent
 import com.shawnkowalchuk.milo.core.trip.TripRules
+import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStateMachine
 import com.shawnkowalchuk.milo.core.trip.TripTransition
@@ -110,7 +111,23 @@ internal class TripWorker(
             is TripWork.CaughtUp -> work.done()
         }
         noticeDrivingOff()
+        noticeVehicle()
         service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
+    }
+
+    /**
+     * The open trip is given the paired vehicle last seen connected (since 2026-10-08, when
+     * MilO learned several), once it is a trip in a paired vehicle: the truck started it, or
+     * was seen during it. A trip started with the button that no vehicle joined has none.
+     * Looked at after every piece of work, like the driving off, because the reading that
+     * names the vehicle can come after the trigger that opened the trip.
+     */
+    private suspend fun noticeVehicle() {
+        val trip = known?.trip ?: return
+        if (!trip.truckSeen && trip.startedBy != TripStartCause.TRUCK) return
+        val vehicle = evidence.vehicleNow ?: return
+        val line = ledger.noteVehicle(vehicle) ?: return
+        eventLog.add(clock(), line.category, line.message)
     }
 
     /**
@@ -357,6 +374,7 @@ internal class TripWorker(
     }
 
     private fun publish() {
-        mutableActivity.value = tripActivityOf(ledger.open, known, startFailure)
+        mutableActivity.value =
+            tripActivityOf(ledger.open, known, startFailure, evidence.vehicleNow)
     }
 }

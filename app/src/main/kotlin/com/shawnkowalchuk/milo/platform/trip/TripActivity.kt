@@ -18,12 +18,16 @@ import com.shawnkowalchuk.milo.platform.system.PreflightProblem
  * arrives or MilO is opened on the phone.
  * @param parked what MilO is doing about a truck that is connected and standing still, or null
  * when that is not the case. Never set while [trip] is.
+ * @param vehicle the address of the paired vehicle this is about (since 2026-10-08, when MilO
+ * learned several): the open trip's vehicle, or else the one last seen connected while the truck
+ * is believed connected. Null when no vehicle is connected or none is known. Home names it.
  */
 data class TripActivity(
     val trip: CurrentTrip? = null,
     val startFailure: StartFailure? = null,
     val truckConnected: Boolean? = null,
     val parked: ParkedTruckWatch? = null,
+    val vehicle: String? = null,
 )
 
 /**
@@ -75,14 +79,18 @@ data class StartFailure(val problems: List<PreflightProblem>, val detail: String
 /**
  * What to show, from what the controller holds: the open trip row with its running distance,
  * and what the trip rules know. A trip is shown only when both agree that one is open.
+ *
+ * @param vehicleNow the paired vehicle last seen connected (`TripEvidence.vehicleNow`).
  */
 internal fun tripActivityOf(
     open: OpenTrip?,
     known: TripState?,
     startFailure: StartFailure?,
+    vehicleNow: String? = null,
 ): TripActivity {
     val trip = known?.trip
     val truckConnected = known?.truckConnected
+    val connectedVehicle = vehicleNow?.takeIf { truckConnected == true }
     if (open == null || trip == null) {
         val parked =
             when (known?.parked?.takeIf { trip == null }?.watching) {
@@ -90,7 +98,7 @@ internal fun tripActivityOf(
                 true -> ParkedTruckWatch.WAITING_TO_MOVE
                 false -> ParkedTruckWatch.NO_LONGER_WATCHED
             }
-        return TripActivity(null, startFailure, truckConnected, parked)
+        return TripActivity(null, startFailure, truckConnected, parked, connectedVehicle)
     }
     return TripActivity(
         trip =
@@ -105,5 +113,6 @@ internal fun tripActivityOf(
             ),
         startFailure = startFailure,
         truckConnected = truckConnected,
+        vehicle = open.vehicle ?: connectedVehicle,
     )
 }

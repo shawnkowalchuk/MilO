@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.platform.bluetooth.PairedDevice
+import com.shawnkowalchuk.milo.platform.bluetooth.Truck
 
 // The pairing screen as Android Studio draws it, in the states an emulator cannot reach: it
 // has no Bluetooth device to list. In a file of its own beside the screen's. Sample values are
@@ -26,13 +27,20 @@ private fun PairingPreview(state: PairingUiState?) {
     }
 }
 
-/** A truck is stored and watched, just after it was paired on this visit. */
+private val PREVIEW_TRUCK = Truck("AA:BB:CC:DD:EE:FF", "Work truck", 7)
+private val PREVIEW_VAN = Truck("22:33:44:55:66:77", "Van", 8)
+
+/** Two vehicles are stored and watched, just after the second was paired on this visit. */
 @Preview
 @Composable
 private fun PairingWithTruckPreview() {
     PairingPreview(
         PairingUiState(
-            truck = TruckLine("Work truck", TruckWatch.WATCHED),
+            vehicles =
+                listOf(
+                    TruckLine("Work truck", TruckWatch.WATCHED, PREVIEW_TRUCK),
+                    TruckLine("Van", TruckWatch.WATCHED, PREVIEW_VAN),
+                ),
             devices = devices.mapIndexed { index, device -> DeviceLine(device, index == 0) },
             attempt = PairingAttempt.Paired("Work truck"),
         ),
@@ -64,7 +72,9 @@ private fun PairingAskingPreview() {
 private fun PairingLocationOffPreview() {
     PairingPreview(
         PairingUiState(
-            truck = TruckLine("Work truck", TruckWatch.ASSOCIATION_MISSING),
+            vehicles = listOf(
+                TruckLine("Work truck", TruckWatch.ASSOCIATION_MISSING, PREVIEW_TRUCK),
+            ),
             blocker = PairingBlocker.LOCATION_OFF,
             devices = devices.mapIndexed { index, device -> DeviceLine(device, index == 0) },
             attempt = PairingAttempt.Failed("Android reported error 3"),

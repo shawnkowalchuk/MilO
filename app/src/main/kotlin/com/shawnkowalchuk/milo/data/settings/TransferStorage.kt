@@ -72,7 +72,12 @@ data class TransferredSettings(
     val reminderDay: Int,
 )
 
-/** The part of the stored settings that an export carries. */
+/**
+ * The part of the stored settings that an export carries.
+ *
+ * TODO(debt): the first vehicle only, as before several vehicles. The others stay as they are
+ * on the phone that imports (FINDINGS_LOG, 2026-10-08).
+ */
 fun MiloSettings.transferred(): TransferredSettings = TransferredSettings(
     truck = truckAddress?.let { TransferredTruck(it, truckName) },
     gracePeriodSeconds = gracePeriodSeconds,
@@ -156,6 +161,8 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
         stored.writeReminderEnabled(arrived.reminderEnabled)
         stored.writeReminderDay(arrived.reminderDay)
         stored.writeReportHandOver(null)
+        // The trips were replaced, and the file may not say which vehicle each was in.
+        stored.forgetTripVehiclesFilled()
         if (truck is TruckChange.Store) {
             stored[SettingsStore.TRUCK_ADDRESS] = truck.truck.address
             stored.setOrRemove(SettingsStore.TRUCK_NAME, truck.truck.name)
@@ -184,6 +191,8 @@ suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, drop
         stored.forgetParkedTruck()
         stored.forgetDrivenOffTrip()
         if (dropAssociation) stored.remove(SettingsStore.TRUCK_ASSOCIATION_ID)
+        // The other vehicles' ids are the other phone's (since 2026-10-08): see there.
+        stored.forgetMoreVehicleAssociations()
         if (dropOwnSound) stored.forgetOwnSounds()
     }
 }

@@ -32,6 +32,7 @@ import java.time.YearMonth
  * @param onEdit opens the edit screen for a finished trip, and [onAdd] opens it empty, for a
  * trip MilO missed. Both lead to another screen, so both are the app's to carry out.
  * @param onReport opens the Report screen for a month, on the same terms.
+ * @param onLabel opens the choice of a finished trip's label.
  */
 internal class TripsActions(
     val onPreviousMonth: () -> Unit,
@@ -43,6 +44,7 @@ internal class TripsActions(
     val onEdit: (Long) -> Unit,
     val onAdd: () -> Unit,
     val onReport: (YearMonth) -> Unit,
+    val onLabel: (Long) -> Unit,
 )
 
 /**
@@ -66,6 +68,9 @@ internal class TripsActions(
  * A finished trip's times, addresses and distance are changed on a screen of their own, and a
  * trip MilO missed is typed in there too.
  *
+ * A finished trip can be given a label, chosen from the labels used before, in a dialog that
+ * [labels] keeps (`LabelDialog`).
+ *
  * @param savedTripStartMs when a trip that was just saved on that screen starts, or null. The
  * month it is in is then shown and its day is opened, and [onSavedTripShown] says that this has
  * been done.
@@ -77,6 +82,7 @@ internal class TripsActions(
 @Composable
 fun TripsScreen(
     viewModel: TripsViewModel,
+    labels: TripLabelViewModel,
     savedTripStartMs: Long?,
     onSavedTripShown: () -> Unit,
     onEditTrip: (Long) -> Unit,
@@ -85,6 +91,7 @@ fun TripsScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
+    val labelState by labels.state.collectAsState()
 
     // The current month can change while MilO sits in the background over midnight.
     CameToFrontEffect(viewModel::onCameToFront)
@@ -99,7 +106,8 @@ fun TripsScreen(
     }
 
     TripsContent(
-        state = state,
+        // A label that could not be saved is said as a change that could not be made.
+        state = if (labelState.saveFailed) state.copy(changeFailed = true) else state,
         actions =
             TripsActions(
                 onPreviousMonth = viewModel::onPreviousMonth,
@@ -111,9 +119,13 @@ fun TripsScreen(
                 onEdit = onEditTrip,
                 onAdd = onAddTrip,
                 onReport = onOpenReport,
+                onLabel = labels::onLabel,
             ),
         modifier = modifier,
     )
+    labelState.pick?.let { pick ->
+        LabelDialog(pick = pick, onSave = labels::onSave, onDismiss = labels::onDismiss)
+    }
 }
 
 @Composable
@@ -157,6 +169,11 @@ internal fun TripsContent(
                 // and a trip that was moved to another day is not left behind with open ones.
                 openTripId = null
                 actions.onEdit(trip.id)
+            },
+            onLabel = { trip ->
+                // Put away as well: the row shows its label once it is saved.
+                openTripId = null
+                actions.onLabel(trip.id)
             },
         )
     val onToggleDay = { day: TripDay ->

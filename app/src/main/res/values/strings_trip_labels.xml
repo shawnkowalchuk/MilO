@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        A trip's label (2026-10-08): a few words Shawn gives a trip, such as Work or a client's
+        name, chosen from the labels used before. The report prints it as the trip's purpose.
+    -->
+
+    <!-- The button under a pressed trip, and what a screen reader says it is. -->
+    <string name="trips_button_label">Label</string>
+    <string name="trips_action_label">Label trip</string>
+
+    <!-- The dialog that chooses the label. -->
+    <string name="trips_label_title">Trip label</string>
+    <!--
+        Its first sentence, when a trip that ended within 200 m of where this one did has a
+        label. The argument is that label, such as Work. It is already chosen below.
+    -->
+    <string name="trips_label_used_here">%1$s was used where this trip ended. Save it, choose another, or type a new one. The report prints it as the trip\'s purpose.</string>
+    <!-- Its first sentence when labels were used before, but none where this trip ended. -->
+    <string name="trips_label_choose">Choose a label used before, or type a new one. The report prints it as the trip\'s purpose.</string>
+    <!-- Its first sentence when no trip has a label yet. -->
+    <string name="trips_label_first">Type a label, such as a client or a site. The report prints it as the trip\'s purpose, and it is offered again for later trips.</string>
+    <!-- The choice that takes a trip's label away. Shown only for a trip that has one. -->
+    <string name="trips_label_none">No label</string>
+    <!-- The field for a label that was not used before. -->
+    <string name="trips_label_new">New label</string>
+    <string name="trips_label_save">Save</string>
+</resources>

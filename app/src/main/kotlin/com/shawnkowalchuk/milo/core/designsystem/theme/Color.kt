@@ -216,13 +216,28 @@ data class MiloLogTagColors(
 )
 
 /**
+ * The fill and text of the small tag that names the kind of a change on the What's new screen
+ * (since 2026-10-08): GopherForms' four kinds, in its order of colours (blue for new there,
+ * teal, amber, red), taken from the colours this design already has. The design draws no such
+ * list, so no colour was added for it.
+ */
+@Immutable
+data class MiloChangeTagColors(
+    val new: FillAndText,
+    val improved: FillAndText,
+    val fixed: FillAndText,
+    val security: FillAndText,
+)
+
+/**
  * The design's colours that Material has no role for, or no role with a name that says what
  * they are for. Reach them through `MiloTheme.colors`.
  *
  * **In use today:** [control], [fieldFill], [fieldBorder], [chipSelected] and [chip], and since
  * Home was laid out as the design draws it, [quietFill], [idleOutline], [idleIcon], [linkGlint]
  * and the amber tile's three ([attentionTile], [attentionSecondaryText], [attentionButton]),
- * since Trips was, [danger], and since the Log was, [logText] and [logTags]. One more,
+ * since Trips was, [danger], since the Log was, [logText] and [logTags], and since the What's
+ * new screen (2026-10-08), [changeTags]. One more,
  * [accentPressed], is the design's colour for a part that comes with another screen's own
  * layout. It is named here so that the part finds it; nothing uses it yet, and what is said of
  * it below is what the design draws with it.
@@ -250,6 +265,7 @@ data class MiloLogTagColors(
  * @param danger an action that takes something away ("Delete").
  * @param chipSelected the filter chip that is in force.
  * @param chip every other filter chip. It is the tile's colour: chips stand on the page.
+ * @param changeTags the tags of the What's new screen: see [MiloChangeTagColors].
  */
 @Immutable
 data class MiloColors(
@@ -269,6 +285,7 @@ data class MiloColors(
     val chipSelected: FillAndText,
     val chip: FillAndText,
     val logTags: MiloLogTagColors,
+    val changeTags: MiloChangeTagColors,
 )
 
 internal val MiloExtraColors =
@@ -295,5 +312,12 @@ internal val MiloExtraColors =
                 androidAuto = FillAndText(fill = AndroidAutoTagFill, text = AndroidAutoTagText),
                 service = FillAndText(fill = ControlFill, text = TextLog),
                 error = FillAndText(fill = ErrorTagFill, text = ErrorTagText),
+            ),
+        changeTags =
+            MiloChangeTagColors(
+                new = FillAndText(fill = Accent, text = Page),
+                improved = FillAndText(fill = BluetoothTagFill, text = BluetoothTagText),
+                fixed = FillAndText(fill = AttentionFill, text = AttentionText),
+                security = FillAndText(fill = ErrorTagFill, text = ErrorTagText),
             ),
     )

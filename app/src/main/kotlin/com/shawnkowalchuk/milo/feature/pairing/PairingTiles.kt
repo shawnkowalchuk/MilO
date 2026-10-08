@@ -29,23 +29,39 @@ import com.shawnkowalchuk.milo.platform.system.SystemScreen
 // owner's design groups the rows of Setup: the truck and how the last attempt went, what is in
 // the way, and the phone's devices to pick from.
 
-/** The stored truck with its state in plain words, then the result of the attempt just made. */
+/**
+ * The paired vehicles, each with its state in plain words and, since 2026-10-08, a button that
+ * removes it; then the result of the attempt just made.
+ *
+ * @param onRemove asks first: the screen shows the question.
+ */
 @Composable
-internal fun TruckGroup(truck: TruckLine?, attempt: PairingAttempt) {
+internal fun TruckGroup(
+    vehicles: List<TruckLine>,
+    attempt: PairingAttempt,
+    onRemove: (TruckLine) -> Unit,
+) {
     GroupLabel(stringResource(R.string.pairing_truck_title))
     Tile(modifier = Modifier.fillMaxWidth(), gap = MiloTheme.spacing.rowGap) {
-        if (truck == null) {
+        if (vehicles.isEmpty()) {
             StatusRow(
                 label = stringResource(R.string.pairing_no_truck),
                 status = RowStatus.PROBLEM,
                 supportingText = stringResource(R.string.pairing_no_truck_detail),
             )
-        } else {
-            StatusRow(
-                label = truck.name ?: stringResource(R.string.truck_without_a_name),
-                status = truck.watch.rowStatus(),
-                supportingText = stringResource(truck.watch.textRes()),
-            )
+        }
+        for (line in vehicles) {
+            key(line.vehicle.address) {
+                StatusRow(
+                    label = line.name ?: stringResource(R.string.truck_without_a_name),
+                    status = line.watch.rowStatus(),
+                    supportingText = stringResource(line.watch.textRes()),
+                    action =
+                        StatusRowAction(stringResource(R.string.pairing_action_remove)) {
+                            onRemove(line)
+                        },
+                )
+            }
         }
         AttemptRow(attempt)
     }
@@ -148,8 +164,8 @@ internal fun BlockerGroup(blocker: PairingBlocker, actions: PairingActions) {
 /**
  * The phone's paired devices as the rows of one tile, with a hairline between two of them.
  * Each has its own button, so it is plain what a press will do: "Pair" in the accent colour
- * while no truck is stored, because that is the one thing to do here; once a truck is stored,
- * a quiet "Pair again" on it and a quiet "Use this one" on every other device.
+ * while no truck is stored, because that is the one thing to do here; once one is stored, a
+ * quiet "Pair again" on each paired vehicle and a quiet "Add" on every other device.
  *
  * @param canPick false greys every button: something is in the way, or Android is being asked.
  */
@@ -212,6 +228,7 @@ private fun DeviceRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        // Another device is added beside the vehicles paired (since 2026-10-08): "Add".
         RowButton(
             text =
                 stringResource(

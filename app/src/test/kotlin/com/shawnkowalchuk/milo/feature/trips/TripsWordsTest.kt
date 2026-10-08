@@ -205,10 +205,11 @@ class TripsWordsTest {
     }
 
     @Test
-    fun `pressed, a finished trip offers Edit, the other category and Delete, in that order`() {
+    fun `pressed, a finished trip offers Edit, Label, the other category and Delete, in order`() {
         assertEquals(
             listOf(
                 TripAction.Edit,
+                TripAction.Label,
                 TripAction.Mark(TripCategory.PERSONAL),
                 TripAction.Correct(TripCorrection.DELETE),
             ),
@@ -216,7 +217,7 @@ class TripsWordsTest {
         )
         assertEquals(
             TripAction.Mark(TripCategory.BUSINESS),
-            line(1, category = TripCategory.PERSONAL).actions(pressed = true)[1],
+            line(1, category = TripCategory.PERSONAL).actions(pressed = true)[2],
         )
     }
 
@@ -225,6 +226,7 @@ class TripsWordsTest {
         assertEquals(
             listOf(
                 TripAction.Edit,
+                TripAction.Label,
                 TripAction.Mark(TripCategory.BUSINESS),
                 TripAction.Mark(TripCategory.PERSONAL),
                 TripAction.Correct(TripCorrection.DELETE),
@@ -270,6 +272,7 @@ class TripsWordsTest {
         val words =
             listOf(
                 TripAction.Edit,
+                TripAction.Label,
                 TripAction.Mark(TripCategory.BUSINESS),
                 TripAction.Mark(TripCategory.PERSONAL),
                 TripAction.Correct(TripCorrection.DELETE),
@@ -280,6 +283,7 @@ class TripsWordsTest {
         assertEquals(
             listOf(
                 R.string.trips_button_edit to R.string.trips_action_edit,
+                R.string.trips_button_label to R.string.trips_action_label,
                 R.string.trip_business to R.string.trips_action_mark_business,
                 R.string.trip_personal to R.string.trips_action_mark_personal,
                 R.string.trips_button_delete to R.string.trips_action_delete,

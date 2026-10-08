@@ -17,6 +17,14 @@ private const val PROXY_WAIT_MS = 3_000L
 internal enum class ProfileAnswer { TRUCK_CONNECTED, TRUCK_NOT_CONNECTED, NO_ANSWER }
 
 /**
+ * What one Bluetooth profile says about the paired vehicles.
+ *
+ * @param vehicle with [ProfileAnswer.TRUCK_CONNECTED], the address of the vehicle it lists:
+ * the first of them in the order they were asked about, if it lists several.
+ */
+internal data class ProfileReply(val answer: ProfileAnswer, val vehicle: String? = null)
+
+/**
  * One Bluetooth profile (hands-free or audio) and the question "is the truck connected on it?".
  *
  * The profile's list of connected devices can only be read through a proxy, which Android hands
@@ -31,18 +39,22 @@ internal class ProfileProxy(
     private val adapter: BluetoothAdapter,
     private val profile: Int,
 ) {
-    /** Whether the device with [address] is among those connected on this profile. */
-    suspend fun answerFor(address: String): ProfileAnswer = try {
+    /** Whether one of the devices with [addresses] is among those connected on this profile. */
+    suspend fun answerFor(addresses: List<String>): ProfileReply = try {
         val connected = connectedAddresses()
+        val found =
+            connected?.let { listed ->
+                addresses.firstOrNull { a -> listed.any { sameAddress(it, a) } }
+            }
         when {
-            connected == null -> answerWithoutProxy()
-            connected.any { sameAddress(it, address) } -> ProfileAnswer.TRUCK_CONNECTED
-            else -> ProfileAnswer.TRUCK_NOT_CONNECTED
+            connected == null -> ProfileReply(answerWithoutProxy())
+            found != null -> ProfileReply(ProfileAnswer.TRUCK_CONNECTED, found)
+            else -> ProfileReply(ProfileAnswer.TRUCK_NOT_CONNECTED)
         }
     } catch (denied: SecurityException) {
         // The caller checked the Bluetooth permission a moment ago: it was taken away in
         // between. Without it there is no answer.
-        ProfileAnswer.NO_ANSWER
+        ProfileReply(ProfileAnswer.NO_ANSWER)
     }
 
     /**

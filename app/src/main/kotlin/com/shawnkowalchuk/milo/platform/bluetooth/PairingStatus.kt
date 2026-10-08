@@ -33,8 +33,17 @@ enum class PairingState {
     FAILED,
 }
 
-/** @param detail the state in words, for the event log and for a screen that wants to say more. */
-data class PairingStatus(val state: PairingState, val detail: String)
+/**
+ * @param detail the state in words, for the event log and for a screen that wants to say more.
+ * @param missing the paired vehicles whose association Android no longer lists (since
+ * 2026-10-08): each has to be paired again. With [PairingState.ASSOCIATION_MISSING] it can be
+ * the truck, another vehicle, or both.
+ */
+data class PairingStatus(
+    val state: PairingState,
+    val detail: String,
+    val missing: List<String> = emptyList(),
+)
 
 /** Where an attempt to pair the truck has got to. The pairing screen shows it. */
 sealed interface PairingProgress {

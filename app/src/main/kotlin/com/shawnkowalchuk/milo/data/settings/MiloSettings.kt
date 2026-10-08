@@ -36,14 +36,20 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Nine fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
- * [lastDrivingAlertAtMs], [reportHandOver], [reminderShown], [lastExport] and the last three;
- * and one value inside [nothingRecorded] is not either. They are small pieces of state that
- * must outlive the process, and the settings store is where such values live.
+ * Eleven fields are not settings Shawn chooses: [tripVehiclesFilled], [parkedTruck],
+ * [drivenOffTripId], [whatsNewSeenVersion], [lastDrivingAlertAtMs], [reportHandOver],
+ * [reminderShown], [lastExport] and the last three; and one value inside [nothingRecorded] is
+ * not either. They are small pieces of state that must outlive the process, and the settings
+ * store is where such values live.
  *
- * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
+ * @param truckAddress the Bluetooth address of the paired truck, or null before pairing. Since
+ * 2026-10-08 MilO knows several vehicles, and this is the first of them (`VehicleStorage.kt`).
  * @param truckName the truck's name as the phone shows it, for display only.
  * @param truckAssociationId the id of the companion device association, or null without one.
+ * @param moreVehicles the vehicles beside the first, in the order they were paired (since
+ * 2026-10-08; kept in `VehicleStorage.kt`). Read every vehicle through `trucks()`.
+ * @param tripVehiclesFilled true once the trips recorded before several vehicles have been
+ * given the first one (`data/trip/TripVehicleCatchUp`). Not a setting.
  * @param gracePeriodSeconds how long a trip waits after the truck disconnects.
  * @param minimumTripDistanceMetres trips shorter than this are discarded.
  * @param parkedLimitSeconds how long a trip may go without real movement before it is closed
@@ -66,6 +72,8 @@ enum class ConfirmedStep(val key: String) {
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
  * @param firstRunStage how far the first start has got: the page that says what MilO does, then
  * Setup with its Done button, then nothing (since 2026-10-08; kept in `OnboardingStorage.kt`).
+ * @param whatsNewSeenVersion the versionName whose list of changes this phone was last shown,
+ * or null if none ever was (since 2026-10-08; kept in `WhatsNewStorage.kt`). Not a setting.
  * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
  * Business kilometres for reference (since 2026-10-07; kept in `WidgetStorage.kt`). 70¢ until
  * Shawn sets another in Settings.
@@ -120,6 +128,8 @@ data class MiloSettings(
     val truckAddress: String? = null,
     val truckName: String? = null,
     val truckAssociationId: Int? = null,
+    val moreVehicles: List<StoredVehicle> = emptyList(),
+    val tripVehiclesFilled: Boolean = false,
     val gracePeriodSeconds: Int = DEFAULT_GRACE_PERIOD_SECONDS,
     val minimumTripDistanceMetres: Int = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES,
     val parkedLimitSeconds: Int = DEFAULT_PARKED_LIMIT_SECONDS,
@@ -135,6 +145,7 @@ data class MiloSettings(
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
     val firstRunStage: FirstRunStage = FirstRunStage.INTRO,
+    val whatsNewSeenVersion: String? = null,
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,

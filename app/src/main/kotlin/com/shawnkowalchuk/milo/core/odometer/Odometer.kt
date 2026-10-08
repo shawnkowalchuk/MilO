@@ -12,7 +12,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 // The truck's odometer as MilO knows it (Shawn's decisions of 2026-10-07): he types the reading
-// on the dashboard, and MilO adds the kilometres of every truck trip recorded since. Pure
+// on the dashboard, and MilO adds the kilometres of every truck trip recorded since. Since
+// 2026-10-08 every paired vehicle has an odometer of its own: its readings and its trips. Pure
 // functions, so the Settings screen and the report for the accountant work it out alike, and
 // the rules are tested without a phone.
 //
@@ -37,15 +38,38 @@ private const val MAX_DIGITS = 7
  *
  * @param value whole kilometres or whole miles, as typed.
  * @param unit which of the two. A reading from before 2026-10-07 is in kilometres.
+ * @param vehicle the Bluetooth address of the paired vehicle whose dashboard it was read on
+ * (since 2026-10-08, when MilO learned several), or null for a reading typed before: those
+ * are the first vehicle's, the truck's ([ofVehicle]).
  */
-data class OdometerReading(val atMs: Long, val value: Long, val unit: DistanceUnit)
+data class OdometerReading(
+    val atMs: Long,
+    val value: Long,
+    val unit: DistanceUnit,
+    val vehicle: String? = null,
+)
 
 /**
  * A truck trip as the odometer counts it: when it started, and how far it went. Which trips
  * are truck trips is the data layer's to say (`movesOdometer`): Business, Personal and those
  * not sorted yet, recorded with the truck connected or typed in by hand.
+ *
+ * @param vehicle the paired vehicle it was in (since 2026-10-08), or null if none was recorded:
+ * a trip from before then that has not been given the truck's address yet ([ofVehicle]).
  */
-data class DrivenTrip(val startedAtMs: Long, val metres: Double)
+data class DrivenTrip(val startedAtMs: Long, val metres: Double, val vehicle: String? = null)
+
+/**
+ * The readings of one vehicle's odometer (since 2026-10-08, when MilO learned several): those
+ * typed for it, and if it is the first vehicle, the truck, those typed before there were
+ * several, which name none.
+ */
+fun List<OdometerReading>.ofVehicle(address: String, isFirst: Boolean): List<OdometerReading> =
+    filter { it.vehicle?.equals(address, ignoreCase = true) ?: isFirst }
+
+/** The trips that moved one vehicle's odometer, on the same terms as its readings. */
+fun List<DrivenTrip>.drivenIn(address: String, isFirst: Boolean): List<DrivenTrip> =
+    filter { it.vehicle?.equals(address, ignoreCase = true) ?: isFirst }
 
 /**
  * The odometer at one moment.

@@ -53,8 +53,13 @@ private fun isPosition(latitude: Double?, longitude: Double?): Boolean =
         latitude in -MAX_LATITUDE..MAX_LATITUDE && longitude in -MAX_LONGITUDE..MAX_LONGITUDE
     }
 
-/** What is wrong with a trip of the file, in words that finish "Trip 12: …", or null. */
-internal fun ExportedTrip.problem(): String? = when {
+/**
+ * What is wrong with a trip of the file, in words that finish "Trip 12: …", or null.
+ *
+ * @param formatVersion as for a sent report: from format 3 on a trip may name its vehicle; in a
+ * file of an earlier format none does.
+ */
+internal fun ExportedTrip.problem(formatVersion: Int = EXPORT_FORMAT_VERSION): String? = when {
     id !in 1..MAX_IMPORTED_ID -> "its id is not a number a trip can have"
 
     STATUS_WORDS.constantFor(status) == null ->
@@ -80,6 +85,13 @@ internal fun ExportedTrip.problem(): String? = when {
         "a position of it is not a place on the earth, or is only half there"
 
     addressAttempts < 0 -> "its number of address lookups is negative"
+
+    formatVersion < FORMAT_WITH_TRIP_VEHICLE && (vehicleAddress != null || label != null) ->
+        "it names a vehicle or a label, which a file of format $formatVersion does not hold"
+
+    vehicleAddress?.isBlank() == true -> "its vehicle has no address"
+
+    label?.isBlank() == true -> "its label is empty"
 
     else -> null
 }
