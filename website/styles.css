@@ -1,0 +1,289 @@
+/*
+ * The look of the app, in a web page: the page, tile and text colours, the lime accent and the
+ * corners are copied from the app's design system (core/designsystem/theme/Color.kt and
+ * Shape.kt), and the typeface is the app's own Sora (fonts/sora.ttf, the same file as
+ * app/src/main/res/font/sora.ttf). Change them together. Dark only, like the app.
+ */
+
+@font-face {
+  font-family: "Sora";
+  src: url("/fonts/sora.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+:root {
+  --page: #121316;
+  --tile: #1e2025;
+  --quiet: #24262b;
+  --outline: #3a3e46;
+  --text: #f2f3f5;
+  --text-secondary: #9298a3;
+  --accent: #c6f432;
+  --accent-pressed: #ddff7a;
+  --tile-radius: 26px;
+  --small-radius: 22px;
+  --button-radius: 18px;
+  --gap: 12px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+a {
+  color: var(--accent);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* The top line: the mark and the name, as at the top of Home, and three links. */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 4px 0 16px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 22px;
+  text-decoration: none;
+}
+
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.top nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.top nav a:hover,
+.top nav a:focus-visible {
+  color: var(--text);
+}
+
+main {
+  display: grid;
+  gap: var(--gap);
+}
+
+.tile {
+  background: var(--tile);
+  border-radius: var(--tile-radius);
+  padding: 24px;
+}
+
+.tile h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tile p {
+  margin: 0 0 12px;
+}
+
+.tile p:last-child,
+.tile ul:last-child,
+.tile ol:last-child {
+  margin-bottom: 0;
+}
+
+.tile ul,
+.tile ol {
+  margin: 0 0 12px;
+  padding-left: 1.25em;
+}
+
+.tile li + li {
+  margin-top: 6px;
+}
+
+.secondary {
+  color: var(--text-secondary);
+}
+
+/* The one lime tile of the page, as on Home: dark words on the accent. */
+.accent {
+  background: var(--accent);
+  color: var(--page);
+}
+
+.accent a {
+  color: var(--page);
+}
+
+.hero {
+  padding: 32px 24px;
+}
+
+.hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(32px, 7vw, 52px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.hero .lead {
+  max-width: 40em;
+  font-size: 18px;
+  margin-bottom: 22px;
+}
+
+/* The main button, dark on the lime tile. Two classes, so the lime tile's own link colour
+   does not reach its words. */
+.accent .button {
+  display: inline-block;
+  background: var(--page);
+  color: var(--accent);
+  border-radius: var(--button-radius);
+  padding: 16px 26px;
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.accent .button:hover,
+.accent .button:focus-visible {
+  color: var(--accent-pressed);
+}
+
+.hero .small {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+
+/* Four phone screenshots: two across on a phone, four on a wide screen. */
+.shots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  margin: 0;
+}
+
+.shots figure {
+  margin: 0;
+  background: var(--tile);
+  border-radius: var(--small-radius);
+  padding: 10px 10px 12px;
+}
+
+.shots img {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+}
+
+.shots figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.pair {
+  display: grid;
+  gap: var(--gap);
+}
+
+.report img {
+  display: block;
+  width: 100%;
+  max-width: 620px;
+  margin: 4px auto 10px;
+  border-radius: 12px;
+}
+
+.report .secondary {
+  font-size: 14px;
+  text-align: center;
+}
+
+footer {
+  margin-top: 24px;
+  padding: 8px 4px 24px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+footer p {
+  margin: 0 0 6px;
+}
+
+footer a {
+  color: var(--text-secondary);
+}
+
+/* The privacy policy: one tile of text, read top to bottom. */
+.policy h1 {
+  margin: 0 0 6px;
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.15;
+}
+
+.policy h2 {
+  margin-top: 28px;
+}
+
+.policy {
+  max-width: 46em;
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding: 24px;
+  }
+
+  .shots {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .pair {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero {
+    padding: 44px 40px;
+  }
+
+  .tile {
+    padding: 28px 32px;
+  }
+}

@@ -1285,6 +1285,19 @@ Shawn's request of 2026-10-08: the sound MilO had stays for the connect, and a s
 | TS-9 | **Start by hand.** With the truck off, press Start on Home, then walk about with the phone. | The connect sound at the press; no trip-start sound while walking. (End the trip afterwards.) | not run |
 | TS-10 | **Switched off.** Switch "Trip-start sound" off and drive a trip. | The connect sound only. Switch it on again after. | not run |
 
+## The website (2026-10-08)
+
+Not on the phone: in any browser, once Hosting is switched on, the deploy key is in GitHub and the domain is connected (README, "The website"). Built and drawn in Chromium only; never deployed.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | not run |
+| WEB-2 | **The domain.** Open `https://milotriplog.top` and `https://www.milotriplog.top`. | The same page, with the padlock; the www address ends on `milotriplog.top`. | not run |
+| WEB-3 | **On the phone.** Open the site in the phone's browser. | The lime tile with "Download the latest APK", the screenshots two across, nothing cut off or wider than the screen. | not run |
+| WEB-4 | **The download.** Tap "Download the latest APK". | The newest GitHub Release (empty until the first release is published). | not run |
+| WEB-5 | **The privacy page.** Tap Privacy; then open `https://milotriplog.top/privacy` directly. | The policy, both ways. | not run |
+| WEB-6 | **A wrong address.** Open `https://milotriplog.top/nothing`. | "That page is not here", with a link home. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

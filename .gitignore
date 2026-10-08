@@ -21,6 +21,10 @@ captures/
 keystore.properties
 .env
 .env.*
+# The website's deploy key (ADR-003) lives only in GitHub's secrets. A downloaded copy of it,
+# under the names Firebase and Google Cloud give such files, must never be committed.
+*firebase-adminsdk*.json
+service-account*.json
 
 # --- Android Studio --------------------------------------------------------------------------
 # Everything under .idea is per-machine state, except the folders below. Those hold settings
@@ -39,7 +43,13 @@ keystore.properties
 
 # --- A personal trip-start sound --------------------------------------------------------------
 # An audio file placed in this folder as trip_start_chirp.<ext> replaces the bundled chirp in
-# debug builds made on this machine (see README, "Your own trip-start sound"). It stays out of
+# debug builds made on this machine (see README, "Your own connect sound"). It stays out of
 # git on purpose: the owner's own clip may be someone else's copyright.
 app/src/debug/res/raw/
 /r2d2.mp3
+
+# --- The website (ADR-003) --------------------------------------------------------------------
+# What the Firebase command-line tool leaves behind on the Mac after a deploy or a local preview.
+.firebase/
+firebase-debug.log
+firebase-debug.*.log

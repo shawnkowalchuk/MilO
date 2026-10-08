@@ -95,6 +95,8 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
                           #   audio, Android Auto
 ```
 
+Outside the app module, `website/` is the public website (ADR-003): plain HTML and CSS, Firebase Hosting's public folder (`firebase.json`). It shares no code with the app; its colours, corners and font are copied from the design system and said so in `website/styles.css`.
+
 **Rules:**
 - **Flow:** Composable → ViewModel → repository or platform class. Composables never call system services or DAOs directly.
 - **The Android entry points live in `app/`:** `MiloApplication` and `MainActivity`. No class sits in the root package.
@@ -224,6 +226,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 
 - **This app has no secrets.** No backend, no accounts, no API keys, so no `.env` and nothing to inject.
 - **The one secret is the signing keystore and its password.** The keystore is `~/keys/milo.jks`, outside the repo. Its password is kept in the macOS Keychain under the name `milo-keystore`, and the build reads it from there each time (`app/build.gradle.kts`); it is in no file in the repo and is never typed into a script. Three things keep it from spreading: Gradle's configuration cache is switched off, because it would save a copy in the project's `.gradle` folder; an Android Studio sync is given a placeholder, because Studio saves what a sync returns; and nothing prints it. What the Keychain does not do is hide it from other programs running as Shawn, which can read the entry without a prompt. Both the keystore and the password must be backed up off the Mac: without them MilO can only be reinstalled by wiping its trips. **A missing keystore or a missing Keychain entry stops the build**, with instructions. The only places a build without the key is allowed are GitHub's CI and a run with `-Pmilo.signing.debugKey=true`; there the debug build gets the throwaway debug key, the release build is left unsigned, and neither may ever be installed over the real one.
+- **The website's deploy key** (since 2026-10-08, ADR-003): a Google Cloud service-account key that can deploy to Firebase Hosting, for `milotriplog.top`. It is in GitHub's Actions secrets as `FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG` and nowhere else: made and stored there by `firebase init hosting:github` on the Mac, never downloaded into the repository (`.gitignore` names the usual key file names as a backstop). The deploy workflow fails with instructions if it is missing. It can replace the website and nothing else; it is revoked in the Google Cloud console. The app knows nothing of it.
 - **If a secret is ever added,** it is prompted for or injected at runtime, never written into a script, and a missing one fails loudly at startup.
 - **Secret-scanning (gitleaks)** in the pre-commit hook and in CI.
 
@@ -248,6 +251,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 
 - **CI on every PR** (GitHub Actions, one job): gitleaks scan, then `./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug` on JDK 17. Red build = no merge.
 - **A second workflow runs on push to `main` only.** It submits the dependency graph for Dependabot alerts (§12). It checks nothing and blocks nothing.
+- **A third workflow, `website.yml`, deploys the website** (since 2026-10-08, ADR-003): on push to `main` when `website/`, `firebase.json`, `.firebaserc` or the workflow changed, and by hand from the Actions tab. It uploads `website/` to Firebase Hosting's live site with the deploy key (§12). Plain files, no build; it checks nothing. The Firebase command-line tool it runs is pinned in the workflow, where Dependabot cannot see it, and is raised by hand.
 - **That rule is kept by hand.** GitHub Free could not block merges while the repo was private. Since it is public (2026-10-08), branch protection can require the CI check before a merge; it is not switched on yet, so for now only Shawn stops a red build from merging.
 - **CI cannot test a Bluetooth-triggered start.** The device checklist (§11) does.
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.

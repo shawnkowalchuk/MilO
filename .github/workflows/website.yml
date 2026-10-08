@@ -1,0 +1,61 @@
+name: Website
+
+# Puts website/ live on Firebase Hosting, at milotriplog.top, when a change to the site reaches
+# main (ADR-003). The app is neither built nor touched here, and no other file is uploaded.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/website.yml"
+  # A deploy by hand from the Actions tab, for instance the first one, or after the deploy key
+  # was replaced.
+  workflow_dispatch:
+
+# Every action below is pinned to a full commit SHA, with the release it belongs to in the trailing
+# comment, as in ci.yml. Dependabot reads the comment and updates the SHA and the comment together.
+
+# Least privilege: the job only reads the code. Writing to Firebase Hosting is what the deploy
+# key in the repository's secrets allows, and nothing in GitHub is written.
+permissions:
+  contents: read
+
+# Two merges in a row deploy one after the other: a deploy is never cut off half-way.
+concurrency:
+  group: website-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy the website
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A missing key fails the run, saying what to do, rather than with the deploy step's own
+      # error (ENGINEERING_STANDARDS §12: a missing secret fails loudly).
+      - name: Check that the deploy key is set
+        env:
+          DEPLOY_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::The repository secret FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG is not set. README, \"The website\", says how to make it."
+            exit 1
+          fi
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG }}
+          # The live site, not a preview channel. The project is the one named in .firebaserc.
+          channelId: live
+          # TODO(debt): pinned, like every version in this repository; the action's default is
+          #  "latest". Dependabot cannot see this one, so it is raised by hand. See
+          #  docs/FINDINGS_LOG.md, 2026-10-08, "The website".
+          firebaseToolsVersion: "15.33.0"

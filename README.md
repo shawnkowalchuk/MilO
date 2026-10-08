@@ -3,16 +3,16 @@
 <p align="center">
   <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download%20latest%20APK-C6F432?style=for-the-badge&logo=android&logoColor=121316" height="48" alt="Download latest APK"></a>
   <br>
-  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a>
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a> · <a href="https://milotriplog.top">milotriplog.top</a>
 </p>
 
 **An Android app that logs business kilometres by itself.** When the phone connects to the work truck's Bluetooth, MilO starts a trip, records the drive with GPS, sorts it into Business or Personal by the work hours, and at the end of the month makes the mileage report for the accountant, as a PDF and a CSV file.
 
 <p align="center">
-  <img src="docs/screenshots/home.jpg" width="200" alt="Home: Start trip, today's and the month's kilometres, the truck connected and parked, and the last trip">
-  <img src="docs/screenshots/trips.jpg" width="200" alt="Trips: October 2026, 96.4 km of Business, and one tile for each day">
-  <img src="docs/screenshots/settings.jpg" width="200" alt="Settings: Setup 14 of 14 ready, the truck, the driving alert and the odometer">
-  <img src="docs/screenshots/log.jpg" width="200" alt="Log: what MilO did and when, one kind of line at a time">
+  <img src="website/screenshots/home.jpg" width="200" alt="Home: Start trip, today's and the month's kilometres, the truck connected and parked, and the last trip">
+  <img src="website/screenshots/trips.jpg" width="200" alt="Trips: October 2026, 96.4 km of Business, and one tile for each day">
+  <img src="website/screenshots/settings.jpg" width="200" alt="Settings: Setup 14 of 14 ready, the truck, the driving alert and the odometer">
+  <img src="website/screenshots/log.jpg" width="200" alt="Log: what MilO did and when, one kind of line at a time">
 </p>
 
 > **A personal project, public to read.** MilO was built by Shawn Kowalchuk for one phone (a Xiaomi POCO X5 Pro 5G on Android 14 and HyperOS 2.0) and one truck. It runs on Android 14 and newer. It is not on the Play Store, there is no support, and the code has no license: it is public to read, and all rights are reserved (see [License](#license)). Everything after [License](#license) is the owner's own guide to running it on that phone.
@@ -39,7 +39,7 @@
 - Export and import all data as one file. Android's own backup carries the rest.
 
 <p align="center">
-  <img src="docs/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
+  <img src="website/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
   <sub>A sample report page, drawn from the app's own layout code with made-up trips.</sub>
 </p>
 
@@ -405,6 +405,32 @@ Each update that others can download is a GitHub Release with the APK attached. 
 5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
+
+### The website
+
+`https://milotriplog.top` is a landing page and a privacy policy (ADR-003): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
+
+To look at a change before merging, open `website/index.html` in a browser, or run `firebase serve --only hosting` in the repository and open the address it prints.
+
+**The privacy page makes promises about the app.** A change to what the app keeps or sends changes `website/privacy.html` in the same pull request.
+
+**Setting it up, once** (as for reactimate.top):
+
+1. **Check the project ID.** Firebase console, the cog, **Project settings**, "Project ID". It must be `milotriplog`; if it is anything else (Firebase adds a few letters when a name is taken), `.firebaserc` and the secret's name in `.github/workflows/website.yml` change with it.
+2. **Switch Hosting on:** Firebase console, **Build**, **Hosting**, **Get started**. Click through; the command-line steps it shows are already done in this repository.
+3. **Make the deploy key and give it to GitHub,** on the Mac, in the MilO folder with `main` pulled:
+
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   firebase init hosting:github
+   ```
+
+   Give it the repository `shawnkowalchuk/MilO`. It makes a service account that may deploy to Hosting and nothing more, and stores its key in GitHub as the secret `FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG` (GitHub, the repository's **Settings**, **Secrets and variables**, **Actions**). Answer **No** to running a build script. It also writes one or two `firebase-hosting-*.yml` files into `.github/workflows/`: **delete them**, MilO has its own. The key is never saved in the repository; do not download one from the Firebase console.
+4. **Deploy:** merge a change to `website/`, or run "Website" from the Actions tab. The site is then at `https://milotriplog.web.app`.
+5. **Connect the domain:** Firebase console, **Hosting**, **Add custom domain**, `milotriplog.top`. Firebase shows the DNS records to enter at the registrar `milotriplog.top` was bought from (a TXT record that proves it is yours, then the A record): enter them there, and press **Verify**. Then add `www.milotriplog.top` the same way, set to redirect to `milotriplog.top`. Firebase makes the HTTPS certificate itself, within minutes or up to a day.
+
+**If the key ever leaks,** delete it in the Google Cloud console (IAM, **Service accounts**, the `github-action-…` account, **Keys**) and run step 3 again. It can replace the website and nothing else.
 
 ### The pre-commit hook
 

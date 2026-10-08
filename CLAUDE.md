@@ -50,7 +50,8 @@ The recurring pain: deps go stale, then updating them is a nightmare. Prevent it
 ## Secrets & passwords — never hardcoded
 
 - Never write a password, API key, token, or secret into code, a script, or anything committed to git. Ever. (It lives in git history forever.)
-- MilO has no backend, no API keys and no sign-in. Its only secrets are the signing keystore and its passwords. They live outside the repository and are **prompted for or read at build time** from a git-ignored file, never committed.
+- MilO has no backend, no API keys and no sign-in. The app's only secrets are the signing keystore and its passwords. They live outside the repository and are **prompted for or read at build time** from a git-ignored file, never committed.
+- The website (`website/`, milotriplog.top) has one secret of its own since 2026-10-08: the Firebase Hosting deploy key, kept only in GitHub's Actions secrets (ADR-003). It is never downloaded into the repository. The website is not one of the app's two surfaces; the app gets no Firebase.
 - If a secret is ever added (an API key, a token), it follows the same rule and gets an ADR first.
 - If a required secret is missing, fail loudly. (STANDARDS §12.)
 

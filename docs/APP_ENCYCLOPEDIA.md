@@ -95,6 +95,7 @@ Each line gives the phase the brief put the capability in, and the states of its
 - [Backup, export and import](#backup-export-and-import) — phase 4, part B. Built, not yet proven on the phone
 - [Units: kilometres or miles](#units-kilometres-or-miles) — not in the brief; Shawn's request of 2026-10-07. Built, not yet proven on the phone (unit tests and an emulator; the Android Auto screen has run nowhere)
 - [Settings](#settings) — phases 1 to 4. Built, not yet proven on the phone
+- [Website](#website) — not in the brief; Shawn's request of 2026-10-08. Built, not yet live (the Firebase setup and the domain are Shawn's steps)
 - [Design system](#design-system) — every phase. Built, not yet proven on the phone (the "Bento" look of 2026-10-06 was drawn on an emulator only)
 
 ---
@@ -1655,6 +1656,38 @@ Who reads and writes: the trip controller reads the grace period, the parked lim
 - The day names follow the phone's language. **Whether a time has 24 hours or AM and PM follows the phone's own "Use 24-hour format" switch:** the dial, the two times beside it, and every trip's times on Home and Trips, so that they agree with each other and with the phone's clock. Until the review of 2026-10-06 the language alone decided, and on a phone set to 24 hours in English the dial had AM and PM, where one missed tap stores a time that is valid and wrong. Where the phone's switch and the language's own habit disagree, the time is written plainly, "16:30" or "4:30 PM", and not in the language's own short form. Seen on an emulator, never on the phone (device check 152).
 - **"That change could not be saved" still stands at the top of the screen,** in a tile above the first two, whichever tile the press was in. For a press far down the screen it is out of view, the fault the schedule's own red line had until the review of 2026-10-06. It needs a settings file that cannot be written, and was left for a change of its own.
 - **The time picker is Material 3's, which that library still marks as experimental** in the release the build pins (1.4.0). It is used through one component (`TimeDialog`), so a change to it in a later release is one file's repair; the weekly update PR would fail to compile, not misbehave.
+
+---
+
+## Website
+
+**Status:** Built, not yet live. The pages were drawn in Chromium at a phone's width and a desktop's on 2026-10-08 (no line wider than the screen, the font loaded, no file missing). Nothing has been deployed: Hosting, the deploy key and the domain are Shawn's steps (README, "The website") · **Surfaces:** Web (not one of the app's two surfaces; the app is not changed) · **Last updated:** 2026-10-08
+
+**What it does**
+`https://milotriplog.top` tells a visitor what MilO is and lets them download it, and holds MilO's privacy policy (Shawn, 2026-10-08: "i created a web project in firebase for another project reactimate. i want to do the same for milo. i allready purchased a domain name milotriplog.top and created the project in firebase"). Asked, Shawn chose "Landing + privacy page", "Auto on merge, like Reactimate" and "Plain HTML and CSS" (ADR-003).
+
+**How it works (step by step)**
+1. **The pages** are plain files in `website/`: `index.html` (the lime tile with "Business mileage that logs itself." and the button "Download the latest APK", which opens the newest GitHub Release; the four phone screenshots; "By itself" and "With you"; the sample report page; the install steps; a privacy summary; "A personal project"), `privacy.html` (the policy) and `404.html`. No JavaScript, no cookies, no analytics, nothing loaded from another site.
+2. **The look is the app's:** the page, tile and text colours, the lime, the corner radii and the Sora typeface are copied from the design system (`website/styles.css` says from where), the mark is the launcher icon's (`website/mark.svg`, also the browser's tab icon), and the font is a copy of the app's file. Dark only, like the app. One page at a phone's width: the screenshots two across, four on a wide screen.
+3. **Firebase Hosting** serves `website/` (`firebase.json`): `/privacy` without `.html`, the not-found page for any other address, a Content-Security-Policy that allows only the site's own images, styles and font, and cache times of a week for images and the font and an hour for the stylesheet.
+4. **A merge to `main` that changes the site deploys it** (`.github/workflows/website.yml`): the job checks that the deploy key is set (it fails with instructions if not), then uploads `website/` to the live site with Firebase's own action. "Run workflow" on the Actions tab does the same by hand.
+
+**Where the code lives**
+`website/` (the pages, the stylesheet, the mark, `screenshots/`, `fonts/`); `firebase.json` and `.firebaserc` at the root; `.github/workflows/website.yml`. ADR-003 has the decisions; README, "The website", the setup.
+
+**Depends on**
+Firebase Hosting in the project `milotriplog`; the deploy key in GitHub's Actions secrets (`FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG`); the domain's DNS records at its registrar; GitHub Releases for the download.
+
+**Edge cases & gotchas**
+- **The privacy page makes promises about the app** (what it keeps, what leaves the phone and how, every permission and why). A change to any of that changes `website/privacy.html` in the same pull request.
+- **Until the first release is published,** the download button opens an empty Releases page (README, "Making a release").
+- **The project ID is assumed to be `milotriplog`.** Shawn gave "MilOtriplog"; IDs are lowercase, and Firebase adds letters to one that is taken. If the console shows another, `.firebaserc` and the secret's name in the workflow change with it, or the first deploy fails.
+- **The screenshots are the README's too:** they moved from `docs/screenshots/` to `website/screenshots/`, one copy for both. The home screenshot's street addresses are blurred; the Settings one shows Shawn's name, as the README does.
+- The font is a copy of `app/src/main/res/font/sora.ttf`; the two are changed together, and its licence goes with it (`website/fonts/Sora-OFL.txt`).
+- The Firebase command-line tool the deploy runs is pinned in the workflow (15.33.0), where Dependabot cannot see it (`[DEBT]`).
+
+**Related**
+[Settings](#settings) and [Connect and trip-start sounds](#connect-and-trip-start-sounds) (what the landing page says the app does); [Backup, export and import](#backup-export-and-import) (what the privacy page says leaves the phone).
 
 ---
 

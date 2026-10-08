@@ -14,6 +14,8 @@ MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi 
 
 Reliable automatic trip start is the number one requirement. Most of section 10 exists because of it.
 
+**Beside the app, a website** (since 2026-10-08, ADR-003): `milotriplog.top`, a landing page and a privacy policy as plain files in `website/`, served by Firebase Hosting and deployed by `.github/workflows/website.yml` on a merge to `main`. It shares no code with the app, and the app does not talk to it or to Firebase.
+
 ---
 
 ## 2. The stack (and why)
@@ -642,7 +644,7 @@ platform/system/     # what the phone's permissions and settings say: the prefli
 platform/diagnostics/  # crash and kill capture into the event log, and its trimming at start
 ```
 
-Outside the app module, `tools/` holds scripts that are run by hand and are not part of the build. Today there is one: the script that synthesises the two built-in sounds, the connect sound's chirp and the trip-start sound's chime. `licenses/` holds the licence of what the app carries that is someone else's work and is not a library. Today there is one: the font's, `Sora-OFL.txt`.
+Outside the app module, `website/` is the website (ADR-003): `index.html`, `privacy.html`, `404.html`, `styles.css`, `mark.svg` (the app's mark, from its launcher icon), `screenshots/` (the phone's screenshots and the sample report page, which the README shows too; until 2026-10-08 in `docs/screenshots/`) and `fonts/` (a copy of the app's `sora.ttf` and its licence). `firebase.json` makes it Firebase Hosting's public folder, with clean addresses (`/privacy`), a Content-Security-Policy that allows nothing but the site's own files, and cache times; `.firebaserc` names the Firebase project, `milotriplog`. `tools/` holds scripts that are run by hand and are not part of the build. Today there is one: the script that synthesises the two built-in sounds, the connect sound's chirp and the trip-start sound's chime. `licenses/` holds the licence of what the app carries that is someone else's work and is not a library. Today there is one: the font's, `Sora-OFL.txt`.
 
 The Android entry points (`MiloApplication` and `MainActivity`) live in `app/`. No class sits in the root package. Features never import from each other. Shared code moves to `core/` or `data/`. Kotlin files are PascalCase and named after their main class. No file over about 300 lines, no Composable over about 200. (STANDARDS §3.)
 
@@ -894,9 +896,10 @@ None of these is a service of our own. Each is a system or Google component alre
 | AlarmManager (system) | Having MilO look at the monthly reminder once a day, and ask once a day whether a trip has been recorded | `platform/reminder/ReminderAlarm`, delivered to `ReminderReceiver`; `platform/nothingrecorded/NothingRecordedAlarm`, delivered to `NothingRecordedReceiver` | **The daily check's** (2026-10-06, evening): one **inexact** alarm (`set`, type `RTC_WAKEUP`) for the moment the next day is checked from, noon out of the box; no permission; taken back while the check is switched off. On an emulator it started a MilO whose process had been ended, and was asked for again after a restart of the emulator; whether HyperOS lets it through is untested (section 10). **The reminder's:** built (2026-10-06). One **inexact** alarm (`set`, type `RTC`) for 09:00 of the next day: no permission, no exact-alarm permission declared, up to about an hour late, and not delivered to a sleeping phone until it wakes. Forgotten by Android at a reboot and a force stop, so asked for again at every process start. On an emulator it started a MilO whose process had been killed; whether HyperOS lets it do that with Autostart off is untested (section 10) |
 | AppWidgetManager (system) | The home-screen widget: drawing it, asking the home screen to add it, and its provider being disabled while its switch is off | `platform/widget/` | Built (2026-10-07), never run. The home screen app draws the widget; what HyperOS's does with a disabled provider's widget is not known (device check W-9) |
 | Android's backup (Auto Backup, and the transfer to a new phone) | An off-phone copy of the main database and the settings; the raw points too when a phone is moved to another | The `<application>` element of the manifest, `res/xml/data_extraction_rules.xml`, `platform/transfer/MiloBackupAgent` | Switched on (2026-10-06). 25 MB cap for the cloud, all or nothing (section 6). Android decides when, and restores only into a build signed with the same key. Ran on an emulator with Android's test transport (`bmgr`): backed up, removed, installed, restored. **Never on the phone**, and Google's own transports (the cloud, phone to phone) have not been used at all |
-| GitHub | Public repo (since 2026-10-08), CI, Dependabot updates, and Dependabot alerts fed by the dependency graph workflow | `.github/` | Development only |
+| GitHub | Public repo (since 2026-10-08), CI, Dependabot updates, and Dependabot alerts fed by the dependency graph workflow; the website's deploys | `.github/` | Development only |
+| Firebase Hosting (Google) | The website, `milotriplog.top` (since 2026-10-08, ADR-003). Not used by the app | `website/`, `firebase.json`, `.firebaserc`, `.github/workflows/website.yml` | Static files only: no Firebase SDK, functions, database or analytics. Deployed with the deploy key in GitHub's Actions secrets (`FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG`). The domain is connected in the Firebase console, with the records it gives entered at the registrar; Firebase provides the certificate |
 
-No Sentry, no analytics, no API keys.
+No Sentry, no analytics, no API keys. The website's deploy key is the one secret outside the Mac (STANDARDS §12).
 
 ---
 
@@ -905,6 +908,7 @@ No Sentry, no analytics, no API keys.
 | Environment | Backend project | Used for | URL / build channel |
 |---|---|---|---|
 | The phone | None | Everything: development, testing and Shawn's real trips | Debug build signed with the dedicated key in `~/keys/milo.jks`, installed from Android Studio or with `./gradlew installDebug` |
+| The website | Firebase project `milotriplog` (Hosting only) | The public page and the privacy policy | `https://milotriplog.top`, and Firebase's own `https://milotriplog.web.app`; live on every merge that changes `website/` |
 
 There is one environment because there is no backend to separate (STANDARDS §13). The build on the phone holds real trip data, so an uninstall is data loss.
 
