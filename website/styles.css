@@ -251,6 +251,26 @@ footer a {
   color: var(--text-secondary);
 }
 
+/* The questions: each opens in place, as the app's "About …" lines do. */
+.faq details {
+  border-top: 1px solid var(--outline);
+  padding: 12px 0;
+}
+
+.faq details:last-child {
+  padding-bottom: 0;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.faq details p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+
 /* The privacy policy: one tile of text, read top to bottom. */
 .policy h1 {
   margin: 0 0 6px;

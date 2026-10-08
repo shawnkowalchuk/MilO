@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MilO: business mileage that logs itself</title>
-  <meta name="description" content="MilO is an Android app that logs business kilometres by itself. It starts a trip when the phone connects to the work truck, records the drive, and makes the monthly mileage report for the accountant.">
+  <title>MilO: a free automatic mileage tracker for Android</title>
+  <meta name="description" content="MilO is a free Android mileage tracker that logs business trips by itself: it starts a trip when your phone connects to the truck's Bluetooth, records the drive with GPS, and makes the monthly mileage report. No account, no subscription, no ads.">
   <link rel="canonical" href="https://milotriplog.top/">
   <link rel="icon" href="/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
@@ -12,8 +12,99 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://milotriplog.top/">
   <meta property="og:title" content="MilO: business mileage that logs itself">
-  <meta property="og:description" content="An Android app that starts a trip when your phone connects to the work truck and makes the monthly mileage report for you.">
-  <meta property="og:image" content="https://milotriplog.top/screenshots/home.jpg">
+  <meta property="og:description" content="A free Android app that starts a trip when your phone connects to the work truck and makes the monthly mileage report for you.">
+  <meta property="og:image" content="https://milotriplog.top/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MilO: business mileage that logs itself, beside the app's Home screen">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "MilO",
+    "description": "A mileage tracker for Android that starts a trip when the phone connects to the work truck's Bluetooth, records the drive with GPS, sorts it into Business or Personal by the work hours, and makes the monthly mileage report as a PDF and a CSV file.",
+    "url": "https://milotriplog.top/",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Android 14 or newer",
+    "downloadUrl": "https://github.com/shawnkowalchuk/MilO/releases/latest",
+    "screenshot": "https://milotriplog.top/screenshots/home.jpg",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
+    "author": { "@type": "Person", "name": "Shawn Kowalchuk" }
+  }
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is MilO free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. MilO is a free download with no subscription, no ads and no in-app purchases. It is a personal project, so there is no support either."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does MilO start a trip by itself?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "You pair your vehicle's Bluetooth once, in Setup. From then on Android wakes MilO when the phone connects to it, even with the app closed, and MilO records the drive with GPS. The trip ends two minutes after the vehicle disconnects, or when it has stood still for ten minutes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does MilO need an account or the internet?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No account, and the app has no internet permission: your trips stay on your phone. Only the street addresses are looked up by the phone's own address service, which on most phones uses the internet."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the report enough for the CRA or the IRS?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The report lists each trip's date, start and end times, start and end addresses, distance and Business or Personal, with the odometer at the start and end of the period. It has no column for each trip's purpose, which both the CRA and the IRS ask a logbook to show. Ask your accountant what else your records need."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does MilO work on iPhone?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. MilO is for Android 14 or newer only."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Kilometres or miles?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Either. One setting switches every distance in the app, and the report, between kilometres and miles."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it record drives in other vehicles?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Only the paired vehicle starts a trip by itself. Any other drive can be started with the Start button, or added by hand afterwards, and MilO can remind you when the phone notices you driving during work hours with nothing being recorded."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is MilO on Google Play?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not at the moment. You install it from its GitHub release, as the steps above describe."
+      }
+    }
+  ]
+}
+  </script>
 </head>
 <body>
   <div class="page">
@@ -21,6 +112,7 @@
       <a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">MilO</a>
       <nav aria-label="Main">
         <a href="#install">Install</a>
+        <a href="/compare">Compare</a>
         <a href="/privacy">Privacy</a>
         <a href="https://github.com/shawnkowalchuk/MilO">GitHub</a>
       </nav>
@@ -99,6 +191,47 @@
         <h2>Your trips stay on your phone</h2>
         <p>MilO has no account, no server and no internet permission. Your trips leave the phone only in files you send or save yourself, in your own Android backup, and as positions handed to Android's own address lookup.</p>
         <p><a href="/privacy">Read the privacy policy</a></p>
+      </section>
+
+      <section class="tile faq" id="questions">
+        <h2>Questions</h2>
+          <details>
+            <summary>Is MilO free?</summary>
+            <p>Yes. MilO is a free download with no subscription, no ads and no in-app purchases. It is a personal project, so there is no support either.</p>
+          </details>
+          <details>
+            <summary>How does MilO start a trip by itself?</summary>
+            <p>You pair your vehicle&#x27;s Bluetooth once, in Setup. From then on Android wakes MilO when the phone connects to it, even with the app closed, and MilO records the drive with GPS. The trip ends two minutes after the vehicle disconnects, or when it has stood still for ten minutes.</p>
+          </details>
+          <details>
+            <summary>Does MilO need an account or the internet?</summary>
+            <p>No account, and the app has no internet permission: your trips stay on your phone. Only the street addresses are looked up by the phone&#x27;s own address service, which on most phones uses the internet.</p>
+          </details>
+          <details>
+            <summary>Is the report enough for the CRA or the IRS?</summary>
+            <p>The report lists each trip&#x27;s date, start and end times, start and end addresses, distance and Business or Personal, with the odometer at the start and end of the period. It has no column for each trip&#x27;s purpose, which both the CRA and the IRS ask a logbook to show. Ask your accountant what else your records need.</p>
+          </details>
+          <details>
+            <summary>Does MilO work on iPhone?</summary>
+            <p>No. MilO is for Android 14 or newer only.</p>
+          </details>
+          <details>
+            <summary>Kilometres or miles?</summary>
+            <p>Either. One setting switches every distance in the app, and the report, between kilometres and miles.</p>
+          </details>
+          <details>
+            <summary>Does it record drives in other vehicles?</summary>
+            <p>Only the paired vehicle starts a trip by itself. Any other drive can be started with the Start button, or added by hand afterwards, and MilO can remind you when the phone notices you driving during work hours with nothing being recorded.</p>
+          </details>
+          <details>
+            <summary>Is MilO on Google Play?</summary>
+            <p>Not at the moment. You install it from its GitHub release, as the steps above describe.</p>
+          </details>
+      </section>
+
+      <section class="tile">
+        <h2>How MilO compares</h2>
+        <p>TripLog, MileIQ, Driversnote and Everlance are complete services, with an account, a cloud and an iPhone app. MilO is narrower: free, Android only, and nothing leaves your phone. <a href="/compare">See the comparison</a>.</p>
       </section>
 
       <section class="tile">
