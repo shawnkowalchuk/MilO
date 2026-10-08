@@ -683,6 +683,9 @@
     <!-- The CSV file: the two column titles the PDF does not have, and its last column. -->
     <string name="report_csv_date">Date</string>
     <string name="report_csv_by_hand">By hand</string>
+    <!-- The trip's label, its purpose, and the vehicle it was in (since 2026-10-08). -->
+    <string name="report_csv_label">Purpose</string>
+    <string name="report_csv_vehicle">Vehicle</string>
     <string name="report_csv_added">added</string>
     <string name="report_csv_edited">edited</string>
 

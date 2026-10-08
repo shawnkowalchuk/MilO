@@ -5,6 +5,8 @@ import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
@@ -119,5 +121,49 @@ class OdometerCardStateTest {
             odometerFirstReadingRes(DistanceUnit.KILOMETRES),
         )
         assertEquals(R.string.settings_odometer_field, odometerFieldRes(DistanceUnit.KILOMETRES))
+    }
+
+    @Test
+    fun `each paired vehicle has a tile of its own readings and trips, named among several`() {
+        val truck = "AA:BB:CC:DD:EE:FF"
+        val van = "22:33:44:55:66:77"
+        val settings =
+            MiloSettings(
+                truckAddress = truck,
+                truckName = "Work truck",
+                moreVehicles = listOf(StoredVehicle(van, "Van", 8, pairedAtMs = 5L)),
+                odometerReadings =
+                    listOf(
+                        // Typed before several vehicles: the truck's.
+                        OdometerReading(readAt, 100_000, DistanceUnit.KILOMETRES),
+                        OdometerReading(readAt, 50_000, DistanceUnit.KILOMETRES, vehicle = van),
+                    ),
+            )
+        val trips =
+            listOf(
+                trip(readAt + 3_600_000, 40_000.0).copy(vehicleAddress = truck),
+                trip(readAt + 7_200_000, 15_000.0).copy(vehicleAddress = van),
+            )
+
+        val states = odometerCardStates(settings, trips, now, zone, couldNotSave = false)
+
+        assertEquals(listOf(truck, van), states.map { it.vehicle })
+        assertEquals(listOf("Work truck", "Van"), states.map { it.vehicleName })
+        assertEquals(listOf(100_040L, 50_015L), states.map { it.figure?.value })
+    }
+
+    @Test
+    fun `with one vehicle the tile is not named, and with none it takes every reading`() {
+        val one = MiloSettings(truckAddress = "AA:BB:CC:DD:EE:FF", truckName = "Work truck")
+        val none =
+            MiloSettings(
+                odometerReadings = listOf(OdometerReading(readAt, 7, DistanceUnit.KILOMETRES)),
+            )
+
+        assertNull(odometerCardStates(one, emptyList(), now, zone, false).single().vehicleName)
+        assertEquals(
+            7L,
+            odometerCardStates(none, emptyList(), now, zone, false).single().figure?.value,
+        )
     }
 }

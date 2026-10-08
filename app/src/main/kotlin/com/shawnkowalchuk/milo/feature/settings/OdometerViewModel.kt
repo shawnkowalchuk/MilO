@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
+import com.shawnkowalchuk.milo.core.odometer.drivenIn
 import com.shawnkowalchuk.milo.core.odometer.odometerAt
+import com.shawnkowalchuk.milo.core.odometer.ofVehicle
 import com.shawnkowalchuk.milo.core.odometer.parseOdometer
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
@@ -13,7 +15,9 @@ import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.settings.addOdometerReading
+import com.shawnkowalchuk.milo.data.settings.pairedVehicles
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.data.trip.drivenTrips
@@ -40,12 +44,17 @@ private const val KEEP_WATCHING_MS = 5_000L
  * @param couldNotSave true if the last reading could not be stored. Said on the tile.
  * @param unit the unit chosen in Settings: the figure is in it, and a reading typed now is a
  * reading in it, as a dashboard in that unit shows it.
+ * @param vehicle the paired vehicle whose odometer it is (since 2026-10-08), or null with none
+ * paired; a reading typed on the tile is that vehicle's.
+ * @param vehicleName its name, for the tile's heading, where more than one vehicle is paired.
  */
 data class OdometerCardState(
     val figure: OdometerFigure?,
     val zone: ZoneId,
     val couldNotSave: Boolean,
     val unit: DistanceUnit,
+    val vehicle: String? = null,
+    val vehicleName: String? = null,
 )
 
 /**
@@ -69,6 +78,9 @@ fun odometerFieldRes(unit: DistanceUnit): Int = when (unit) {
  *
  * @param finished every finished trip; the ones that moved the odometer are picked out here.
  * @param unit the unit chosen in Settings, which the figure is worked out and shown in.
+ * @param vehicle the paired vehicle whose odometer it is, or null for every reading and trip
+ * (no vehicle paired). [isFirst] says whether it is the first vehicle, whose odometer also
+ * takes the readings and trips that name none (`ofVehicle`).
  */
 fun odometerCardState(
     readings: List<OdometerReading>,
@@ -77,20 +89,62 @@ fun odometerCardState(
     zone: ZoneId,
     couldNotSave: Boolean,
     unit: DistanceUnit,
-): OdometerCardState = OdometerCardState(
-    figure =
-        odometerAt(
+    vehicle: StoredVehicle? = null,
+    isFirst: Boolean = true,
+    named: Boolean = false,
+): OdometerCardState {
+    val driven = drivenTrips(finished)
+    val address = vehicle?.address
+    return OdometerCardState(
+        figure =
+            odometerAt(
+                nowMs,
+                localDateOf(nowMs, zone),
+                zone,
+                if (address == null) readings else readings.ofVehicle(address, isFirst),
+                if (address == null) driven else driven.drivenIn(address, isFirst),
+                unit,
+            ),
+        zone = zone,
+        couldNotSave = couldNotSave,
+        unit = unit,
+        vehicle = address,
+        vehicleName = vehicle?.let { it.name ?: it.address }?.takeIf { named },
+    )
+}
+
+/**
+ * One tile for each paired vehicle (since 2026-10-08), the first first, each named where there
+ * are several; one unnamed tile of every reading and trip while none is paired.
+ */
+fun odometerCardStates(
+    settings: MiloSettings,
+    finished: List<Trip>,
+    nowMs: Long,
+    zone: ZoneId,
+    couldNotSave: Boolean,
+): List<OdometerCardState> {
+    val unit = settings.distanceUnit
+    val vehicles = settings.pairedVehicles()
+    if (vehicles.isEmpty()) {
+        return listOf(
+            odometerCardState(settings.odometerReadings, finished, nowMs, zone, couldNotSave, unit),
+        )
+    }
+    return vehicles.mapIndexed { index, vehicle ->
+        odometerCardState(
+            settings.odometerReadings,
+            finished,
             nowMs,
-            localDateOf(nowMs, zone),
             zone,
-            readings,
-            drivenTrips(finished),
+            couldNotSave,
             unit,
-        ),
-    zone = zone,
-    couldNotSave = couldNotSave,
-    unit = unit,
-)
+            vehicle = vehicle,
+            isFirst = index == 0,
+            named = vehicles.size > 1,
+        )
+    }
+}
 
 /**
  * The Settings screen's tile for the truck's odometer (Shawn's decisions of 2026-10-07): the
@@ -116,22 +170,14 @@ class OdometerViewModel(
 ) : ViewModel() {
     private val couldNotSave = MutableStateFlow(false)
 
-    val state: StateFlow<OdometerCardState?> =
+    /** One tile for each paired vehicle ([odometerCardStates]), or null until they are read. */
+    val state: StateFlow<List<OdometerCardState>?> =
         combine(stored(), trips.observeFinishedTrips(), couldNotSave) {
                 stored,
                 finished,
                 failed,
             ->
-            stored?.let {
-                odometerCardState(
-                    it.odometerReadings,
-                    finished,
-                    clock(),
-                    zone(),
-                    failed,
-                    it.distanceUnit,
-                )
-            }
+            stored?.let { odometerCardStates(it, finished, clock(), zone(), failed) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), null)
 
     /**
@@ -139,14 +185,15 @@ class OdometerViewModel(
      *
      * @param unit the unit the tile named when he typed it. The reading is kept as typed with
      * this unit beside it, and is never converted in storage, so it comes back exactly.
+     * @param vehicle the vehicle whose tile it was typed on, or null with none paired.
      * @return false, and nothing is stored, if it is not a reading; the tile then says so under
      * the field. True once it is on its way to storage.
      */
-    fun onSaveReading(typed: String, unit: DistanceUnit): Boolean {
+    fun onSaveReading(typed: String, unit: DistanceUnit, vehicle: String? = null): Boolean {
         val value = parseOdometer(typed) ?: return false
         viewModelScope.launch {
             try {
-                settings.addOdometerReading(OdometerReading(clock(), value, unit))
+                settings.addOdometerReading(OdometerReading(clock(), value, unit, vehicle))
                 couldNotSave.value = false
             } catch (notStored: IOException) {
                 couldNotSave.value = true

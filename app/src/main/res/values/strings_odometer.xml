@@ -7,6 +7,8 @@
     -->
 
     <string name="settings_odometer_title">Odometer</string>
+    <!-- Where several vehicles are paired: "Odometer · Van". -->
+    <string name="settings_odometer_title_of">Odometer · %1$s</string>
     <!-- Before the first reading has been typed in. -->
     <string name="settings_odometer_none">Type the number on the truck\'s dashboard once. MilO adds every truck trip to it from then on.</string>
     <!--
@@ -49,5 +51,7 @@
     -->
     <string name="report_pdf_odometer_estimated">%1$s km est.</string>
     <string name="report_pdf_odometer_estimated_mi">%1$s mi est.</string>
+    <!-- With more than one vehicle's odometer: the vehicle's name, then "Odometer, 1 Oct 2026". -->
+    <string name="report_pdf_odometer_of_vehicle">%1$s · %2$s</string>
     <string name="report_pdf_odometer_note">est.: worked out by MilO from a reading of the dashboard and the truck trips recorded since, not read off the dashboard on that day.</string>
 </resources>

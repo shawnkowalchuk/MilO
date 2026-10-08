@@ -12,6 +12,10 @@ import com.shawnkowalchuk.milo.core.odometer.DrivenTrip
  */
 val Trip.movesOdometer: Boolean get() = isCounted && (truckSeen || addedByHand)
 
-/** The trips among [trips] that moved the odometer, as the odometer counts them. */
-fun drivenTrips(trips: List<Trip>): List<DrivenTrip> =
-    trips.filter { it.movesOdometer }.map { DrivenTrip(it.startedAtMs, it.distanceMetres) }
+/**
+ * The trips among [trips] that moved an odometer, as the odometer counts them, each with the
+ * vehicle it was in (since 2026-10-08): each vehicle's odometer takes its own (`drivenIn`).
+ */
+fun drivenTrips(trips: List<Trip>): List<DrivenTrip> = trips
+    .filter { it.movesOdometer }
+    .map { DrivenTrip(it.startedAtMs, it.distanceMetres, it.vehicleAddress) }

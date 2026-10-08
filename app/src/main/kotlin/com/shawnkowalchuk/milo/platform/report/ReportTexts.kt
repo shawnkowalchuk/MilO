@@ -100,6 +100,7 @@ class ReportTexts(context: Context) {
                     },
                 ),
             odometerNote = text(R.string.report_pdf_odometer_note),
+            odometerOfVehicle = text(R.string.report_pdf_odometer_of_vehicle),
             footer = text(R.string.report_pdf_footer),
             page = text(R.string.report_pdf_page),
         )
@@ -114,6 +115,8 @@ class ReportTexts(context: Context) {
         end = text(R.string.report_pdf_column_end),
         from = text(R.string.report_pdf_column_from),
         to = text(R.string.report_pdf_column_to),
+        label = text(R.string.report_csv_label),
+        vehicle = text(R.string.report_csv_vehicle),
         km = text(unitShortRes(unit)),
         byHand = text(R.string.report_csv_by_hand),
         added = text(R.string.report_csv_added),

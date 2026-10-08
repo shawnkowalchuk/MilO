@@ -73,8 +73,14 @@ class ReportOdometerTest {
             withOdometer(figure(120_000, false), figure(121_234, false)).copy(
                 odometers =
                     listOf(
-                        VehicleOdometer("Work truck", OdometerSpan(figure(120_000, false), figure(121_234, false))),
-                        VehicleOdometer("Van", OdometerSpan(figure(50_000, false), figure(50_100, true))),
+                        VehicleOdometer(
+                            "Work truck",
+                            OdometerSpan(figure(120_000, false), figure(121_234, false)),
+                        ),
+                        VehicleOdometer(
+                            "Van",
+                            OdometerSpan(figure(50_000, false), figure(50_100, true)),
+                        ),
                     ),
             )
 

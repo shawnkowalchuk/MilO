@@ -45,6 +45,21 @@ data class StoredVehicle(
     val pairedAtMs: Long,
 )
 
+/**
+ * Every paired vehicle, the first one (the truck, which has no time of pairing: 0) first and
+ * the others in the order they were paired.
+ */
+fun MiloSettings.pairedVehicles(): List<StoredVehicle> =
+    listOfNotNull(truckAddress?.let { StoredVehicle(it, truckName, truckAssociationId, 0) }) +
+        moreVehicles
+
+/**
+ * How a vehicle is named on the report and the screens: its name as the phone shows it, or its
+ * address where it has none or is no longer paired.
+ */
+fun MiloSettings.vehicleNamed(address: String): String =
+    pairedVehicles().firstOrNull { it.address.equals(address, ignoreCase = true) }?.name ?: address
+
 /** The vehicles beside the first, in the order they were paired. */
 internal fun Preferences.readMoreVehicles(): List<StoredVehicle> = this[MORE_VEHICLES]
     .orEmpty()

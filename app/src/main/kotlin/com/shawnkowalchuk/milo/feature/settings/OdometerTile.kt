@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,13 +40,19 @@ import java.util.Locale
 private const val MAX_TYPED_LENGTH = 12
 
 /**
- * The odometer's tile: see [OdometerTileContent]. Nothing is drawn until the settings have
- * been read.
+ * The odometer's tile, one for each paired vehicle since 2026-10-08: see [OdometerTileContent].
+ * Nothing is drawn until the settings have been read.
  */
 @Composable
 internal fun OdometerTile(viewModel: OdometerViewModel) {
-    val state by viewModel.state.collectAsState()
-    state?.let { OdometerTileContent(it, viewModel::onSaveReading) }
+    val states by viewModel.state.collectAsState()
+    for (shown in states.orEmpty()) {
+        key(shown.vehicle) {
+            OdometerTileContent(shown) { typed, unit ->
+                viewModel.onSaveReading(typed, unit, shown.vehicle)
+            }
+        }
+    }
 }
 
 /**
@@ -78,7 +85,15 @@ internal fun OdometerTileContent(
         padding = TilePadding.EVEN,
         gap = MiloTheme.spacing.tileGap,
     ) {
-        TileHeading(stringResource(R.string.settings_odometer_title))
+        // Where several vehicles are paired, each tile names its own (2026-10-08).
+        val name = shown.vehicleName
+        TileHeading(
+            if (name == null) {
+                stringResource(R.string.settings_odometer_title)
+            } else {
+                stringResource(R.string.settings_odometer_title_of, name)
+            },
+        )
         val figure = shown.figure
         if (figure == null) {
             Note(stringResource(odometerFirstReadingRes(shown.unit)))

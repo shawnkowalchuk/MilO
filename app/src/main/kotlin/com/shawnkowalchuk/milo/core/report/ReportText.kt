@@ -264,7 +264,13 @@ private fun OdometerFigure.printed(
     val figure = formatOdometer(value, locale)
     val written = if (estimated) words.odometerEstimated else words.odometerKm
     val label = String.format(locale, words.odometerOn, formatMediumDay(day, locale))
-    val named = if (vehicle == null) label else String.format(locale, words.odometerOfVehicle, vehicle, label)
+    val named = if (vehicle ==
+        null
+    ) {
+        label
+    } else {
+        String.format(locale, words.odometerOfVehicle, vehicle, label)
+    }
     return named to String.format(locale, written, figure)
 }
 

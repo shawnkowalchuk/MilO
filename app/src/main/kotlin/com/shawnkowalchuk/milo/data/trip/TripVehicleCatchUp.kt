@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.data.crash.CrashRecord
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.fillOdometerVehicle
 import com.shawnkowalchuk.milo.data.settings.setTripVehiclesFilled
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -18,8 +19,8 @@ import kotlinx.coroutines.sync.withLock
  * truck's address is in the settings file, which a migration cannot read.
  *
  * It runs at a process start until it has once got through: it fills the trips that were in the
- * truck (seen connected, or typed in by hand) and have no vehicle, and notes in the settings
- * that it is done. With no truck stored there is nothing to fill, and it notes the same. Done
+ * truck (seen connected, or typed in by hand) and have no vehicle, and the odometer readings
+ * typed before, and notes in the settings that it is done. With no truck stored there is nothing to fill, and it notes the same. Done
  * twice, it changes nothing: it only fills what is empty.
  *
  * @param clock wall-clock milliseconds.
@@ -66,6 +67,8 @@ class TripVehicleCatchUp(
         if (now.tripVehiclesFilled) return
         val truck = now.truckAddress
         val filled = if (truck == null) 0 else trips.fillVehicle(truck)
+        // And the odometer readings typed for the truck before: they name no vehicle either.
+        if (truck != null) settings.fillOdometerVehicle(truck)
         settings.setTripVehiclesFilled()
         val what =
             if (truck == null) {

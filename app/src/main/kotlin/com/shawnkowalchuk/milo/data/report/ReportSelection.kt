@@ -99,4 +99,7 @@ private fun Trip.onReport(): ReportTrip = ReportTrip(
             ByHandMark.EDITED -> ReportMark.EDITED
             null -> null
         },
+    label = label,
+    // The address: the report names it from the paired vehicles (`mileageReport`).
+    vehicle = vehicleAddress,
 )

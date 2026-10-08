@@ -113,7 +113,12 @@ class ReportCsvTest {
     @Test
     fun `a trip's label and its vehicle have columns of their own`() {
         val labelled =
-            trip(monday, "08:00", from = "A", to = "B").copy(label = "Work, site 4", vehicle = "Van")
+            trip(
+                monday,
+                "08:00",
+                from = "A",
+                to = "B",
+            ).copy(label = "Work, site 4", vehicle = "Van")
 
         assertEquals("2026-10-05,08:00,08:20,A,B,\"Work, site 4\",Van,12.3,", lines(labelled)[1])
     }
