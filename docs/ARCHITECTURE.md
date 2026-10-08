@@ -14,7 +14,7 @@ MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi 
 
 Reliable automatic trip start is the number one requirement. Most of section 10 exists because of it.
 
-**Beside the app, a website** (since 2026-10-08, ADR-003): `milotriplog.top`, a landing page and a privacy policy as plain files in `website/`, served by Firebase Hosting and deployed by `.github/workflows/website.yml` on a merge to `main`. It shares no code with the app, and the app does not talk to it or to Firebase.
+**Beside the app, a website** (since 2026-10-08, ADR-003): `milotriplog.top`, "MilO Trip Log", a landing page, a comparison, What's new and a privacy policy as plain files in `website/`, served by Firebase Hosting and deployed by `.github/workflows/website.yml` on a merge to `main`. It shares no code with the app, and the app does not talk to it or to Firebase.
 
 ---
 
@@ -420,6 +420,7 @@ A broadcast or a callback names a device, and the receiver decides on the spot w
 Until 2026-10-07 the bar's third screen was Setup, and Settings was opened with a button at the end of Home's top line. Shawn asked for "the bottom button Setup to now be Settings", for the button on Home to go, and chose to reach Setup from a tile at the top of Settings.
 
 - **Before every screen, once: the first start** (since 2026-10-08). While `first_run_stage` is not set, `MiloApp` draws the page that says what MilO does (`feature/onboarding/`) in place of the bottom bar's frame and the back stack's screens. OK stores `setup` and opens Setup on top of Home; while the stage is `setup`, `MiloNavigation` hands Setup a Done action, and Done stores `done` and shows Settings as the bar's button does. The back stack is the same one throughout, so nothing about it changed (APP_ENCYCLOPEDIA, First-start onboarding).
+- **Once after an update: What's new** (since 2026-10-08). `MiloApp` watches `WhatsNewNoticeViewModel`, and when the first start is over and `whats_new_seen_version` is not the version installed, it puts `WhatsNewKey` on top of the back stack and stores the version. The same screen is opened by the Version tile at the end of Settings. Its list is `app/src/main/assets/changelog.json`, read through `data/changelog/` (APP_ENCYCLOPEDIA, Version and What's new).
 - Each screen is a `@Serializable` key (`HomeKey`, `TripsKey`, `SettingsKey`, `LogKey`, `SetupKey`, `PairingKey`, and the two keys that carry something: `TripEditKey`, the id of the trip to edit, or nothing for a trip that is being added, and `ReportKey`, the year and month the Trips screen was showing), because Navigation 3 saves the back stack with kotlinx.serialization when Android puts MilO away. Seen on an emulator on 2026-10-06: with Settings open and MilO's process killed in the background, opening MilO again showed Settings. The same was seen with the edit screen: it came back, for a stored trip and for an empty form alike, with the trip as it is stored. What had been typed and not saved was gone, because the form lives in the screen's ViewModel and not in the saved state.
 - Home is always at the bottom. Pressing a button of the bar leaves Home alone, or Home with that screen on top; whatever was open above is closed. So Back from Trips, Settings or Log leads to Home, and Back from Home leaves MilO.
 - The bar marks the bar screen the back stack is in (`topLevelOf`): the screen directly on top of Home, if it is one of the bar's, and Home otherwise. So Settings stays marked under Setup and the pairing screen opened from it; Home under Setup opened from Home's warning, under the pairing screen opened from Home's own truck tile, and under the Report screen opened from Home's own report tile; Trips under the edit screen and under the Report screen opened from Trips. Settings opened from the Report screen is a bar screen opened on top of another one: Trips stays marked there, Settings shows the way back at its top, and Back leads back to the report. It is the only screen that is sometimes the bar's and sometimes opened on top; `MiloNavigation` tells the two apart by its place on the back stack.
@@ -524,15 +525,17 @@ One Gradle module, `:app`. Packages under `com.shawnkowalchuk.milo`:
 
 ```
 app/                 # MiloApplication, the AppContainer (with ReportObjects, TransferObjects,
-                     #   CarObjects, CheckObjects and WidgetObjects, the parts of it around
-                     #   the report, around backup, export and import, around Android Auto,
-                     #   around the daily "nothing recorded" check, and around the
-                     #   home-screen widget), MainActivity, the navigation
+                     #   CarObjects, CheckObjects, WidgetObjects and WhatsNewObjects, the
+                     #   parts of it around the report, around backup, export and import,
+                     #   around Android Auto, around the daily "nothing recorded" check,
+                     #   around the home-screen widget, and around the version with its
+                     #   list of changes), MainActivity, the navigation
                      #   host, and the question before a screen is left with unsaved work
 feature/<name>/      # one package per feature: its Composable screens, its ViewModel,
                      #   its feature-only logic. Today: home/, trips/, tripedit/, report/,
                      #   setup/, pairing/, eventlog/, settings/, onboarding/ (the first
-                     #   start's page, since 2026-10-08)
+                     #   start's page, since 2026-10-08), whatsnew/ (the Version tile and
+                     #   the What's new screen, since 2026-10-08)
 core/designsystem/   # theme tokens (colour, spacing, typography, shape), the shared base
                      #   components, and in text/ the words two features must say alike
                      #   (what a trip is saved as, where it went, whether a month's
@@ -572,7 +575,9 @@ data/                # the only layer that touches storage. The two Room databas
                      #   screen offers, how the schedule is kept, the report's four settings,
                      #   the report that waits for "Did you send it?", the monthly
                      #   reminder's values, and the daily check's), crash/ (crash files),
-                     #   sound/ (MilO's copies of the chosen sounds),
+                     #   sound/ (MilO's copies of the chosen sounds), changelog/ (the list
+                     #   of versions and their changes built into the app, read from its
+                     #   assets: `app/src/main/assets/changelog.json`),
                      #   report/ (the list of sent reports, the rule for which trips a
                      #   report lists, the rules for "submitted", for what removing a report
                      #   does and for "changed since it was sent", and the files that are
@@ -644,7 +649,7 @@ platform/system/     # what the phone's permissions and settings say: the prefli
 platform/diagnostics/  # crash and kill capture into the event log, and its trimming at start
 ```
 
-Outside the app module, `website/` is the website (ADR-003): `index.html`, `privacy.html`, `404.html`, `styles.css`, `mark.svg` (the app's mark, from its launcher icon), `screenshots/` (the phone's screenshots and the sample report page, which the README shows too; until 2026-10-08 in `docs/screenshots/`) and `fonts/` (a copy of the app's `sora.ttf` and its licence). `firebase.json` makes it Firebase Hosting's public folder, with two short addresses (`/privacy`, `/compare`, as rewrites; no `cleanUrls`, which would send every `.html` address through a redirect, Google's verification file among them), a Content-Security-Policy that allows nothing but the site's own files, and cache times; `.firebaserc` names the Firebase project, `milotriplog`. `tools/` holds scripts that are run by hand and are not part of the build. Today there is one: the script that synthesises the two built-in sounds, the connect sound's chirp and the trip-start sound's chime. `licenses/` holds the licence of what the app carries that is someone else's work and is not a library. Today there is one: the font's, `Sora-OFL.txt`.
+Outside the app module, `website/` is the website (ADR-003), under the name "MilO Trip Log": `index.html`, `compare.html`, `changes.html` (What's new, written by `tools/changes_page.py` from the app's list of changes; never edited by hand), `privacy.html`, `404.html`, `styles.css`, `mark.svg` (the app's mark, from its launcher icon), `screenshots/` (the phone's screenshots and the sample report page, which the README shows too; until 2026-10-08 in `docs/screenshots/`) and `fonts/` (a copy of the app's `sora.ttf` and its licence). `firebase.json` makes it Firebase Hosting's public folder, with three short addresses (`/privacy`, `/compare`, `/changes`, as rewrites; no `cleanUrls`, which would send every `.html` address through a redirect, Google's verification file among them), a Content-Security-Policy that allows nothing but the site's own files, and cache times; `.firebaserc` names the Firebase project, `milotriplog`. `tools/` holds scripts that are run by hand and are not part of the build. Today there are two: the script that synthesises the two built-in sounds, the connect sound's chirp and the trip-start sound's chime; and `changes_page.py` (since 2026-10-08), which checks the list of changes and writes the website's What's new page from it, and which CI and the website's deploy run with `--check`. `licenses/` holds the licence of what the app carries that is someone else's work and is not a library. Today there is one: the font's, `Sora-OFL.txt`.
 
 The Android entry points (`MiloApplication` and `MainActivity`) live in `app/`. No class sits in the root package. Features never import from each other. Shared code moves to `core/` or `data/`. Kotlin files are PascalCase and named after their main class. No file over about 300 lines, no Composable over about 200. (STANDARDS §3.)
 
@@ -799,6 +804,7 @@ Each is one `UPDATE` that sets the status and matches on the status it starts fr
 | `home_widget_enabled` | boolean | true | Since 2026-10-07. Whether the home-screen widget is offered (its switch in Settings). Off: every widget on the home screen is drawn as switched off and the widget's provider component is disabled, at the press and again at every process start (`HomeWidget.applySwitch`). Not in an export file |
 | `home_widget_cents_per_km` | int | 70 (absent) | Since 2026-10-07 (evening). The rate the widget prices the Business kilometres at, in cents a kilometre, set on the widget's tile in Settings; 1 to 500. A stored value outside that is read as 70. The widget follows it and is drawn again at once. Not in an export file: a gap, with the parked limit and the odometer readings (`TransferStorage.kt`, `TODO(debt)`) |
 | `first_run_stage` | string | absent | Since 2026-10-08. How far the first start has got: absent until OK on the page that says what MilO does, then `setup` (Setup has its Done button), then `done`. A value a build does not know is read as `done`. Not in an export file: it is this phone's |
+| `whats_new_seen_version` | string | absent | Since 2026-10-08. The versionName whose list of changes this phone was last shown. What's new opens by itself once when the first start is over and this is not the version installed; the first start's OK stores it, so a fresh install never sees it. Not in an export file: it is this phone's |
 | `nothing_recorded_shown_on_day` | integer | none | Since 2026-10-06 (evening). The day the check's notification was last shown, as days since 1970-01-01. Written each time it is shown, and read at every look: no second one is shown on that day, also after a restart of the process. The three keys are spelled out in `data/settings/NothingRecordedStorage.kt`, and are read as one value, `MiloSettings.nothingRecorded` |
 | `last_export_at_ms`, `last_export_with_points` | integer, boolean | none | Since 2026-10-06 (phase 4, part B). When "Export all data" last wrote a file, and whether the raw GPS points were in it (`LastExport`). Written together after an export that succeeded; absent before the first. The Settings screen shows it. The keys are spelled out in `data/settings/TransferStorage.kt` |
 | `auto_start_held_off_since_ms` | integer | none | ADR-002's hold-off: the time a trip was ended by hand with the truck still connected. Absent means not held off. The time is kept because two of the three things that release the hold-off are measured from it |

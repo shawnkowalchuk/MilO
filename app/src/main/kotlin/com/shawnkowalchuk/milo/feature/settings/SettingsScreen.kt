@@ -94,6 +94,8 @@ internal class ScheduleActions(
  * "Open Settings"). Null when it is the bottom bar's: the bar is how it is left then.
  * @param setupTile the tile that opens the Setup checklist. The app hands it in, because it is
  * the Setup feature's: a feature never imports another one.
+ * @param versionTile the version on this phone, which opens the What's new screen: the last
+ * tile, handed in for the same reason (since 2026-10-08).
  */
 @Composable
 fun SettingsScreen(
@@ -105,6 +107,7 @@ fun SettingsScreen(
     onChangeTruck: () -> Unit,
     onBack: (() -> Unit)?,
     setupTile: @Composable () -> Unit,
+    versionTile: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
@@ -172,6 +175,7 @@ fun SettingsScreen(
         odometerTile = { OdometerTile(odometerViewModel) },
         widgetTile = { HomeWidgetTile(widgetViewModel) },
         dataTile = { DataTile(dataViewModel) },
+        versionTile = versionTile,
     )
 }
 
@@ -192,6 +196,8 @@ fun SettingsScreen(
  * @param dataTile the tile for backup, export and import. It is handed in whole, because it
  * has a state of its own: it is shown also when the settings cannot be read, which is when a
  * copy of the trips is wanted most.
+ * @param versionTile the version on this phone, under everything, as GopherForms has it. Shown
+ * whatever the settings file says: the version does not come from it.
  */
 @Composable
 internal fun SettingsContent(
@@ -204,6 +210,7 @@ internal fun SettingsContent(
     odometerTile: @Composable () -> Unit,
     widgetTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
+    versionTile: @Composable () -> Unit,
 ) {
     val spacing = MiloTheme.spacing
     TileColumn(
@@ -266,6 +273,7 @@ internal fun SettingsContent(
         // Last: it is used a few times a year, and it is the one tile that can replace
         // everything, so it is not among the settings that are changed in passing.
         if (state != SettingsUiState.Reading) dataTile()
+        versionTile()
     }
 }
 

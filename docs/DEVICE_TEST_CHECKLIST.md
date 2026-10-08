@@ -1293,12 +1293,30 @@ Not on the phone: in any browser, once Hosting is switched on, the deploy key is
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | not run |
+| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | seen 2026-10-08: the merges of #27 and #28 deployed, and Shawn opened the sitemap on `milotriplog.top` |
 | WEB-2 | **The domain.** Open `https://milotriplog.top` and `https://www.milotriplog.top`. | The same page, with the padlock; the www address ends on `milotriplog.top`. | not run |
 | WEB-3 | **On the phone.** Open the site in the phone's browser. | The lime tile with "Download the latest APK", the screenshots two across, nothing cut off or wider than the screen. | not run |
 | WEB-4 | **The download.** Tap "Download the latest APK". | The newest GitHub Release (empty until the first release is published). | not run |
 | WEB-5 | **The privacy page.** Tap Privacy; then open `https://milotriplog.top/privacy` directly. | The policy, both ways. | not run |
 | WEB-6 | **A wrong address.** Open `https://milotriplog.top/nothing`. | "That page is not here", with a link home. | not run |
+| WEB-7 | **What's new.** After the merge that brings it, open `https://milotriplog.top/changes`, and "What's new" in the menu of another page. | "What's new", then "Version 0.1.0 · Not released yet" with eight lines, each with a lime NEW tag; nothing wider than the phone's screen. | not run |
+| WEB-8 | **The name.** Open any page, and share `https://milotriplog.top` in a message. | "MilO Trip Log" in the top line and the tab's title, the preview says "MilO Trip Log: business mileage that logs itself", and every footer ends with "not affiliated with any other app or company named Milo". | not run |
+
+## Version and What's new (2026-10-08)
+
+Shawn's request of 2026-10-08: the version on Settings, which opens what changed in each version, like GopherForms; and once after an update. Built and unit tested only; never drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| WN-1 | **Once after the update.** Install the build over the one on the phone (past the first start) and open MilO. | What's new opens by itself over Home: "0.1.0 · not released yet · on this phone" over a tile of eight changes, each with a lime NEW tag. The back arrow and Back lead to Home. | not run |
+| WN-2 | **Not again.** Swipe MilO out of the recent apps and open it again. | Home; What's new does not open. | not run |
+| WN-3 | **The Version tile.** Open Settings and scroll to the end. | Under backup, export and import: "Version" with its arrowhead, "0.1.0 · build 1", and "What changed in each version" in grey. | not run |
+| WN-4 | **Open it.** Tap the tile. | What's new on top of Settings; Back leads to Settings. | not run |
+| WN-5 | **The list scrolls.** On What's new, scroll to the end. | Every change can be read; the last one clears the bottom bar. | not run |
+| WN-6 | **A large font.** Set the phone's font size to its largest, open What's new and the Version tile, then set it back. | The tags grow with the words; nothing is cut off. | not run |
+| WN-7 | **Turned on its side.** On What's new, turn the phone. | The same list, scrolled to the same place. | not run |
+| WN-8 | **A fresh install never sees it.** Only on a phone or emulator without MilO, never on the POCO with its trips: install, press OK, then Done. | Setup, then Settings; What's new does not open by itself. | not run |
+| WN-9 | **The next version.** When a build with a new version is installed (after 0.1.0 is released and the next version opened), open MilO. | What's new opens once, with the new version on top marked "on this phone". | not run |
 
 ## Later work packages
 

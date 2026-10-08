@@ -36,10 +36,11 @@ enum class ConfirmedStep(val key: String) {
 /**
  * Everything the settings store holds, read in one piece.
  *
- * Nine fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
- * [lastDrivingAlertAtMs], [reportHandOver], [reminderShown], [lastExport] and the last three;
- * and one value inside [nothingRecorded] is not either. They are small pieces of state that
- * must outlive the process, and the settings store is where such values live.
+ * Ten fields are not settings Shawn chooses: [parkedTruck], [drivenOffTripId],
+ * [whatsNewSeenVersion], [lastDrivingAlertAtMs], [reportHandOver], [reminderShown],
+ * [lastExport] and the last three; and one value inside [nothingRecorded] is not either. They
+ * are small pieces of state that must outlive the process, and the settings store is where such
+ * values live.
  *
  * @param truckAddress the Bluetooth address of the paired truck, or null before pairing.
  * @param truckName the truck's name as the phone shows it, for display only.
@@ -66,6 +67,8 @@ enum class ConfirmedStep(val key: String) {
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
  * @param firstRunStage how far the first start has got: the page that says what MilO does, then
  * Setup with its Done button, then nothing (since 2026-10-08; kept in `OnboardingStorage.kt`).
+ * @param whatsNewSeenVersion the versionName whose list of changes this phone was last shown,
+ * or null if none ever was (since 2026-10-08; kept in `WhatsNewStorage.kt`). Not a setting.
  * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
  * Business kilometres for reference (since 2026-10-07; kept in `WidgetStorage.kt`). 70¢ until
  * Shawn sets another in Settings.
@@ -135,6 +138,7 @@ data class MiloSettings(
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
     val firstRunStage: FirstRunStage = FirstRunStage.INTRO,
+    val whatsNewSeenVersion: String? = null,
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,

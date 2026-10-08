@@ -23,6 +23,7 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.data.settings.FirstRunStage
 import com.shawnkowalchuk.milo.feature.onboarding.OnboardingScreen
 import com.shawnkowalchuk.milo.feature.onboarding.OnboardingViewModel
+import com.shawnkowalchuk.milo.feature.whatsnew.WhatsNewNoticeViewModel
 import java.time.YearMonth
 
 /**
@@ -97,6 +98,20 @@ fun MiloApp(
         val onboarding: OnboardingViewModel =
             viewModel(factory = onboardingViewModelFactory(container))
         val firstRun by onboarding.stage.collectAsState()
+
+        // After an update, the What's new screen opens once by itself, on top of whatever
+        // shows (2026-10-08). The first start's OK counts as having seen it: a fresh install
+        // is told what MilO does by the first page instead.
+        val whatsNew: WhatsNewNoticeViewModel =
+            viewModel(factory = whatsNewNoticeViewModelFactory(container))
+        val whatsNewDue by whatsNew.due.collectAsState()
+        LaunchedEffect(whatsNewDue) {
+            if (whatsNewDue) {
+                backStack.openOnTop(WhatsNewKey)
+                whatsNew.onShown()
+            }
+        }
+
         when (firstRun) {
             null -> Unit
 
@@ -104,6 +119,7 @@ fun MiloApp(
                 OnboardingScreen(
                     onOk = {
                         onboarding.onOk()
+                        whatsNew.onFirstStart()
                         backStack.openOnTop(SetupKey)
                     },
                 )

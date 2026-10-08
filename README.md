@@ -388,7 +388,7 @@ Never install that build on the phone: it cannot update the real one.
 Each update that others can download is a GitHub Release with the APK attached. It is built and signed on the Mac, with the same key as the phone's MilO, and uploaded by hand, so the key never leaves the Mac (the owner's choice of 2026-10-08, over building it on GitHub). The download button at the top of this page always opens the newest release.
 
 1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
-2. **Raise the version** in `app/build.gradle.kts`: `versionCode` up by one, and `versionName` to the new number (`0.2.0`). Merge that as its own small pull request. The first release, `0.1.0`, skips this step.
+2. **Date the version.** In `app/src/main/assets/changelog.json` the newest version has `"date": null`. Set it to the day (`"2026-10-12"`), run `python3 tools/changes_page.py`, and merge that as its own small pull request. Its number is already the build's `versionName`: CI makes sure of it. (The version itself was raised when its first change was merged: "The list of changes", below.)
 3. **Build the release APK:**
 
    ```bash
@@ -396,19 +396,32 @@ Each update that others can download is a GitHub Release with the APK attached. 
    ```
 
    It is signed with `~/keys/milo.jks`, like the phone's builds. The file is `app/build/outputs/apk/release/app-release.apk`; rename it `MilO-0.2.0.apk`.
-4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO 0.2.0", a few lines on what changed (the FINDINGS_LOG has them), drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
+4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO Trip Log 0.2.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
 
    ```bash
-   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO 0.2.0" --notes "What changed"
+   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO Trip Log 0.2.0" --notes "What changed"
    ```
 
 5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
 
+### The list of changes
+
+What the app's What's new screen (Settings, Version) and the website's `/changes` page show is one file, `app/src/main/assets/changelog.json` (since 2026-10-08, in place of the database GopherForms and SeaWingman use: MilO has no server). Each version has a `version`, a `date` (`null` until it is released) and its `changes`, each a `kind` (`new`, `improved`, `fixed` or `security`), a `title` and, if needed, a `body`:
+
+```json
+{ "kind": "fixed", "title": "The odometer after an import", "body": "It counts the imported trips again." }
+```
+
+- **With every change you will notice,** a line goes into the newest version, in the same pull request, and `python3 tools/changes_page.py` writes the website's page again.
+- **After a release,** the next such pull request opens a new version above it: the next number, `"date": null`, and in `app/build.gradle.kts` `versionName` set to that number and `versionCode` up by one.
+- **CI refuses** a list that breaks its rules (newest first, only the newest undated, the newest equal to `versionName`) or a page that is not the one the list makes; the error says what to fix.
+- After an update to a new version, the phone opens What's new once by itself.
+
 ### The website
 
-`https://milotriplog.top` is a landing page and a privacy policy (ADR-003): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
+`https://milotriplog.top` is a landing page, a comparison, What's new and a privacy policy (ADR-003), under the name "MilO Trip Log" (since 2026-10-08): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
 
 To look at a change before merging, open `website/index.html` in a browser, or run `firebase serve --only hosting` in the repository and open the address it prints.
 

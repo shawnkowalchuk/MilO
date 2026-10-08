@@ -251,8 +251,10 @@ fun MiloNavigation(
                                 onOpenSetup = { backStack.openOnTop(SetupKey) },
                             )
                         },
+                        versionTile = { VersionTileEntry(container, backStack) },
                     )
                 }
+                entry<WhatsNewKey> { WhatsNewEntry(container, backStack) }
                 entry<LogKey> {
                     EventLogScreen(
                         viewModel =

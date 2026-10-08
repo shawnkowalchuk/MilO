@@ -264,11 +264,12 @@ class AppContainer(context: Context) {
         )
     }
 
-    // Five parts of this container, each in a class of its own because this file is at its
+    // Six parts of this container, each in a class of its own because this file is at its
     // size limit: the report for the accountant with the monthly reminder to send it; Android's
     // backup with the export and import of all data; the watch on Android Auto outside trips;
-    // the daily check that a work day has a trip; and the home-screen widget. None of the last
-    // three can touch a trip; the widget's buttons reach the trip controller as any button does.
+    // the daily check that a work day has a trip; the home-screen widget; and the version with
+    // its list of changes. None of the last four can touch a trip; the widget's buttons reach
+    // the trip controller as any button does.
     val reports: ReportObjects by lazy { ReportObjects(appContext, this) }
     val transfer: TransferObjects by lazy {
         val main = miloDatabase.mainTransferDao()
@@ -277,6 +278,7 @@ class AppContainer(context: Context) {
     val car: CarObjects by lazy { CarObjects(appContext, this) }
     val checks: CheckObjects by lazy { CheckObjects(appContext, this) }
     val widgets: WidgetObjects by lazy { WidgetObjects(appContext, this) }
+    val whatsNew: WhatsNewObjects by lazy { WhatsNewObjects(appContext) }
 
     /**
      * Makes an audio file Shawn picked the connect sound or the trip-start sound, by copying it

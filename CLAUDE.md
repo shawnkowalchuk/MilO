@@ -68,10 +68,13 @@ BUILD the smallest correct version, following existing patterns
    ↓
 UPDATE docs/APP_ENCYCLOPEDIA.md if behavior was added or changed
    ↓
+ADD a line to app/src/main/assets/changelog.json if the founder will notice the change
+(STANDARDS §14), then run python3 tools/changes_page.py for the website's What's new page
+   ↓
 APPEND to docs/FINDINGS_LOG.md: what changed, and the WHY that isn't obvious from the code
 ```
 
-The last two steps are not optional. They are why next month's session won't repeat this month's mistakes.
+The last three steps are not optional. They are why next month's session won't repeat this month's mistakes.
 
 ---
 
@@ -86,6 +89,7 @@ Confirm all of these — say which ones you did:
 - [ ] Any new dependency is the current stable version, pinned
 - [ ] **`docs/APP_ENCYCLOPEDIA.md` updated** if behavior changed
 - [ ] **`docs/FINDINGS_LOG.md` appended** with what changed and why
+- [ ] **The list of changes** (`changelog.json`) has a line for anything the founder will notice, and `website/changes.html` was written again
 - [ ] If a corner was knowingly cut, it's logged as `[DEBT]` in the findings log and tagged `// TODO(debt):` in code
 
 If you cannot check one, say so plainly rather than claiming it's done.
