@@ -418,15 +418,11 @@ To look at a change before merging, open `website/index.html` in a browser, or r
 
 1. **The project ID is `milotriplog`** (Firebase console, the cog, **Project settings**; checked on 2026-10-08). `.firebaserc` and the secret's name in `.github/workflows/website.yml` depend on it. The free Spark plan is enough: it includes Hosting and a custom domain.
 2. **Switch Hosting on:** Firebase console, **Build**, **Hosting**, **Get started**. Click through; the command-line steps it shows are already done in this repository.
-3. **Make the deploy key and give it to GitHub,** on the Mac, in the MilO folder with `main` pulled:
+3. **Make the deploy key and give it to GitHub,** once, on any computer. It needs the Firebase command-line tool and a folder that holds this repository's `firebase.json` and `.firebaserc`.
+   - **On a Windows PC** (how it was done on 2026-10-08): download the Firebase tool as one program, [firebase-tools-instant-win.exe](https://firebase.tools/bin/win/instant/latest), and open it: it opens a window where `firebase` works. Download the repository as a ZIP (on GitHub, **Code**, **Download ZIP**, of `main` once the website is merged) and unzip it. In the window, go into the unzipped folder (`cd` and the folder's path), then run `firebase login` and `firebase init hosting:github`.
+   - **On the Mac:** `npm install -g firebase-tools`, then in the MilO folder `firebase login` and `firebase init hosting:github`.
 
-   ```bash
-   npm install -g firebase-tools
-   firebase login
-   firebase init hosting:github
-   ```
-
-   Give it the repository `shawnkowalchuk/MilO`. It makes a service account that may deploy to Hosting and nothing more, and stores its key in GitHub as the secret `FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG` (GitHub, the repository's **Settings**, **Secrets and variables**, **Actions**). Answer **No** to running a build script. It also writes one or two `firebase-hosting-*.yml` files into `.github/workflows/`: **delete them**, MilO has its own. The key is never saved in the repository; do not download one from the Firebase console.
+   Answer **Y** to proceed, give it the repository `shawnkowalchuk/MilO` and let it sign in to GitHub in the browser. It makes a service account that may deploy to Hosting and nothing more, and stores its key in GitHub as the secret `FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG` (GitHub, the repository's **Settings**, **Secrets and variables**, **Actions**, where it can be checked). Answer **No** to running a build script and **No** to automatic deployment: MilO has its own workflow. Any `firebase-hosting-*.yml` files it writes into `.github/workflows/` are not wanted: in a ZIP copy, delete the folder afterwards; in the repository, delete the files. The key is never saved in the repository; do not download one from the Firebase console.
 4. **Deploy:** merge a change to `website/`, or run "Website" from the Actions tab. The site is then at `https://milotriplog.web.app`.
 5. **Connect the domain:** Firebase console, **Hosting**, **Add custom domain**, `milotriplog.top`. Firebase shows the DNS records to enter at the registrar `milotriplog.top` was bought from (a TXT record that proves it is yours, then the A record): enter them there, and press **Verify**. Then add `www.milotriplog.top` the same way, set to redirect to `milotriplog.top`. Firebase makes the HTTPS certificate itself, within minutes or up to a day.
 
