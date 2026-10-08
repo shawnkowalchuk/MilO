@@ -6,7 +6,7 @@
 >
 > **This is one of four documents** that work together — see §17 for how they fit.
 >
-> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-07
+> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-08
 
 ---
 
@@ -31,7 +31,7 @@ That five-minute habit is the entire game. Ad-hoc development is just this loop 
 | Platforms | Android only, native Kotlin, Android 14 and newer. One phone: Xiaomi POCO X5 Pro 5G, Android 14 (HyperOS 2.0). Phone UI plus an Android Auto screen. Never on the Play Store. |
 | Primary user | Shawn only. No accounts. |
 | Target launch milestone | Phase 1: a trip starts by itself every time the truck connects. |
-| Repo URL | https://github.com/shawnkowalchuk/MilO (private) |
+| Repo URL | https://github.com/shawnkowalchuk/MilO (public since 2026-10-08, private before; no license, all rights reserved) |
 
 ---
 
@@ -248,7 +248,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 
 - **CI on every PR** (GitHub Actions, one job): gitleaks scan, then `./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug` on JDK 17. Red build = no merge.
 - **A second workflow runs on push to `main` only.** It submits the dependency graph for Dependabot alerts (§12). It checks nothing and blocks nothing.
-- **That rule is kept by hand.** GitHub Free cannot block merges on a private repo, so only Shawn stops a red build from merging.
+- **That rule is kept by hand.** GitHub Free could not block merges while the repo was private. Since it is public (2026-10-08), branch protection can require the CI check before a merge; it is not switched on yet, so for now only Shawn stops a red build from merging.
 - **CI cannot test a Bluetooth-triggered start.** The device checklist (§11) does.
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.
 - **Tag releases** (`v1.2.0`). There is no `CHANGELOG.md`: FINDINGS_LOG.md is the dated record of what changed. A release is the build installed on the phone when a phase is finished; there is no release pipeline.
@@ -305,7 +305,7 @@ These four documents are the project's memory. The assistant reads the map *befo
 
 Do these *before* writing a single product feature. Left out on purpose (reasons in ADR-001): Sentry, staging and prod, a lockfile, detekt, Robolectric, Hilt, Renovate.
 
-- [x] Private GitHub repo created, `.gitignore` in place (build output, `local.properties`, keystores)
+- [x] GitHub repo created (private; public since 2026-10-08), `.gitignore` in place (build output, `local.properties`, keystores)
 - [x] Gradle project builds: one `:app` module, AGP 9.4.1, Kotlin 2.4.20, wrapper 9.8.0 with `distributionSha256Sum`
 - [x] Quality gates on: Kotlin `allWarningsAsErrors`, Android Lint `warningsAsErrors` + `abortOnError`, Spotless + ktlint
 - [x] `.githooks/pre-commit` (gitleaks, then `spotlessCheck`); `core.hooksPath` set; gitleaks installed
