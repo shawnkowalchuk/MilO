@@ -1,7 +1,8 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
@@ -84,7 +85,9 @@ enum class CarAction(val labelRes: Int, val trigger: TripTrigger, val source: St
 /**
  * The trip in progress as the "This trip" row prints it.
  *
- * @param kilometres the number only, with one decimal, from [formatKilometres].
+ * @param kilometres the trip's distance, the number only, with one decimal, from
+ * [formatDistance]. It is in the unit of the content it is part of ([CarScreenContent.unit]),
+ * kilometres or miles: the name is from when kilometres were the only unit.
  * @param hours and [minutes] the time since the trip started, in whole minutes.
  */
 data class TripFigures(val kilometres: String, val hours: Long, val minutes: Long)
@@ -92,8 +95,9 @@ data class TripFigures(val kilometres: String, val hours: Long, val minutes: Lon
 /**
  * Today's finished trips as the "Today" row prints them.
  *
- * @param kilometres the number only: the sum of the trips' own figures, each rounded to a
- * tenth of a kilometre first (`sumOfTenths`), like every total on the phone and on the report.
+ * @param kilometres the trips' distance, the number only: the sum of the trips' own figures,
+ * each rounded to a tenth first (`sumOfTenths`), like every total on the phone and on the
+ * report. In the unit of the content it is part of, like [TripFigures.kilometres].
  */
 data class TodayFigures(val tripCount: Int, val kilometres: String)
 
@@ -103,12 +107,16 @@ data class TodayFigures(val tripCount: Int, val kilometres: String)
  *
  * @param trip null when no trip is open.
  * @param today null while today's trips have not been read, or could not be.
+ * @param unit the unit the two figures are in, and are to be written with (since 2026-10-07).
+ * It is part of the content, so a change of the unit in Settings is a change that is drawn at
+ * once, not one that waits like a trip's running figures.
  */
 data class CarScreenContent(
     val status: CarStatus,
     val trip: TripFigures?,
     val today: TodayFigures?,
     val action: CarAction,
+    val unit: DistanceUnit,
 )
 
 /**
@@ -118,7 +126,8 @@ data class CarScreenContent(
  * decided by `todayTrips` in `data/trip/TripTotals.kt`, which the phone's home screen uses too.
  * @param setupNeedsAttention the home screen's rule (`needsAttention`): a required row of the
  * setup checklist is not in order.
- * @param locale decides the decimal separator of the kilometre figures.
+ * @param locale decides the decimal separator of the distance figures.
+ * @param unit the unit chosen in Settings: the figures are worked out and written in it.
  */
 fun carScreenContent(
     activity: TripActivity,
@@ -126,16 +135,19 @@ fun carScreenContent(
     setupNeedsAttention: Boolean,
     nowMs: Long,
     locale: Locale,
+    unit: DistanceUnit,
 ): CarScreenContent {
     val trip = activity.trip
     return CarScreenContent(
         status = carStatus(activity, setupNeedsAttention),
-        trip = trip?.let { tripFigures(it, nowMs, locale) },
+        trip = trip?.let { tripFigures(it, nowMs, locale, unit) },
         // Added up as the phone's screens and the report add up: trip by trip, as printed.
-        today = today?.let { TodayFigures(it.count, formatTenths(it.totalTenths, locale)) },
+        today =
+            today?.let { TodayFigures(it.count, formatTenths(it.totalTenths(unit), locale)) },
         // One button, because exactly one of the two makes sense at any moment. End is offered
         // for as long as a trip is open, the grace period included, as on the phone.
         action = if (trip == null) CarAction.START_TRIP else CarAction.END_TRIP,
+        unit = unit,
     )
 }
 
@@ -184,12 +196,17 @@ private fun refusalStatus(failure: StartFailure): CarStatus =
         null -> CarStatus.REFUSED_BY_ANDROID
     }
 
-private fun tripFigures(trip: CurrentTrip, nowMs: Long, locale: Locale): TripFigures {
+private fun tripFigures(
+    trip: CurrentTrip,
+    nowMs: Long,
+    locale: Locale,
+    unit: DistanceUnit,
+): TripFigures {
     // Whole minutes, rounded down, and never negative: the phone's clock can be set back while
     // a trip is open.
     val sinceStart = wholeHoursAndMinutes(nowMs - trip.startedAtMs)
     return TripFigures(
-        kilometres = formatKilometres(trip.distanceMetres, locale),
+        kilometres = formatDistance(trip.distanceMetres, unit, locale),
         hours = sinceStart.hours,
         minutes = sinceStart.minutes,
     )

@@ -29,6 +29,7 @@ class WidgetObjects(private val appContext: Context, private val container: AppC
             activity = container.tripController.activity,
             trips = container.tripRepository,
             settings = container.settingsStore,
+            shownUnit = container.shownUnit.unit,
             eventLog = container.eventLogRepository,
             clock = System::currentTimeMillis,
             zone = ZoneId::systemDefault,

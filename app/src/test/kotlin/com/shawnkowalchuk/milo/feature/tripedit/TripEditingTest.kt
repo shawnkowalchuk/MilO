@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.trip.isCounted
 import java.io.IOException
@@ -164,7 +165,7 @@ class TripEditingTest : TripEditingFixture() {
         val lookingUp = recorded().copy(startAddress = null, endAddress = null)
         trips.rows[0] = lookingUp
         // The form is opened, and then the lookup's answer arrives.
-        val form = formFor(lookingUp, edmonton)
+        val form = formFor(lookingUp, edmonton, DistanceUnit.KILOMETRES)
         trips.rows[0] = lookingUp.copy(startAddress = "12 Shop Rd, Edmonton")
 
         // Saved with the from field as it was opened: empty, and untouched.

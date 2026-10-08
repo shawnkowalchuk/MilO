@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.report.ReportTrip
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -62,7 +63,7 @@ class TripCategoryTotalsTest {
 
     @Test
     fun `Business and Personal are added up apart, and only counted trips are in either`() {
-        val totals = categoryTotals(mixedDay)
+        val totals = categoryTotals(mixedDay, DistanceUnit.KILOMETRES)
 
         // 20.0 km and 21.2 km, as each is printed: 41.2 km.
         assertEquals(Tally(2, 412), totals.business)
@@ -76,7 +77,7 @@ class TripCategoryTotalsTest {
         val business = trip(0, 20, 5_000.0, TripCategory.BUSINESS)
         val longPersonal = trip(60, 240, 400_000.0, TripCategory.PERSONAL)
 
-        val totals = categoryTotals(listOf(business, longPersonal))
+        val totals = categoryTotals(listOf(business, longPersonal), DistanceUnit.KILOMETRES)
 
         assertEquals(Tally(1, 50), totals.business)
         assertEquals(Tally(1, 4_000), totals.personal)
@@ -86,7 +87,10 @@ class TripCategoryTotalsTest {
     fun `no trips add up to three empty totals`() {
         val nothing = Tally(0, 0)
 
-        assertEquals(CategoryTotals(nothing, nothing, nothing), categoryTotals(emptyList()))
+        assertEquals(
+            CategoryTotals(nothing, nothing, nothing),
+            categoryTotals(emptyList(), DistanceUnit.KILOMETRES),
+        )
     }
 
     @Test
@@ -94,10 +98,10 @@ class TripCategoryTotalsTest {
         val one = trip(0, 20, 5_000.0, TripCategory.BUSINESS)
         val other = trip(60, 20, 7_000.0, TripCategory.BUSINESS)
 
-        val before = categoryTotals(listOf(one, other))
+        val before = categoryTotals(listOf(one, other), DistanceUnit.KILOMETRES)
         // What "Mark as Personal" does to a row.
         val marked = other.copy(category = TripCategory.PERSONAL, categorySetByHand = true)
-        val after = categoryTotals(listOf(one, marked))
+        val after = categoryTotals(listOf(one, marked), DistanceUnit.KILOMETRES)
 
         assertEquals(Tally(2, 120), before.business)
         assertEquals(Tally(1, 50), after.business)
@@ -109,7 +113,13 @@ class TripCategoryTotalsTest {
     fun `each total is the sum of the figures printed for its trips, as on the report`() {
         // Each prints as 0.1 km, so three of them are 0.3 km. Their 447 m rounded once would be
         // 0.4 km: a total that the rows above it do not add up to, and not the report's.
-        val totals = categoryTotals(List(3) { trip(it * 10L, 5, 149.0, TripCategory.BUSINESS) })
+        val totals =
+            categoryTotals(
+                List(3) {
+                    trip(it * 10L, 5, 149.0, TripCategory.BUSINESS)
+                },
+                DistanceUnit.KILOMETRES,
+            )
 
         assertEquals(3, totals.business.tenths)
     }
@@ -124,9 +134,12 @@ class TripCategoryTotalsTest {
         }
         val onReport = distances.map { ReportTrip(0, null, null, null, it) }
 
-        val business = categoryTotals(trips).business
+        val business = categoryTotals(trips, DistanceUnit.KILOMETRES).business
 
-        assertEquals(ReportDay(LocalDate.of(2026, 10, 5), onReport).tenths, business.tenths)
+        assertEquals(
+            ReportDay(LocalDate.of(2026, 10, 5), onReport).tenths(DistanceUnit.KILOMETRES),
+            business.tenths,
+        )
         assertEquals(193 * 115L, business.tenths)
     }
 
@@ -136,9 +149,9 @@ class TripCategoryTotalsTest {
     fun `today's figures are split the same way, with the drive time of the Business trips`() {
         val today = todayTrips(mixedDay)
 
-        assertEquals(Tally(2, 412), today.totals.business)
-        assertEquals(Tally(1, 65), today.totals.personal)
-        assertEquals(Tally(1, 30), today.totals.unsorted)
+        assertEquals(Tally(2, 412), today.totals(DistanceUnit.KILOMETRES).business)
+        assertEquals(Tally(1, 65), today.totals(DistanceUnit.KILOMETRES).personal)
+        assertEquals(Tally(1, 30), today.totals(DistanceUnit.KILOMETRES).unsorted)
         assertEquals(55 * MINUTE_MS, today.businessDriveTimeMs)
     }
 
@@ -149,7 +162,7 @@ class TripCategoryTotalsTest {
         // Business, Personal and unsorted together, each trip as it is printed:
         // 20.0 + 21.2 + 6.5 + 3.0 km.
         assertEquals(4, today.count)
-        assertEquals(507, today.totalTenths)
+        assertEquals(507, today.totalTenths(DistanceUnit.KILOMETRES))
         assertEquals(80 * MINUTE_MS, today.driveTimeMs)
     }
 
@@ -168,7 +181,7 @@ class TripCategoryTotalsTest {
     fun `a day of Personal trips only has no Business figures, and is not an empty day`() {
         val today = todayTrips(listOf(trip(0, 30, 12_000.0, TripCategory.PERSONAL)))
 
-        assertEquals(Tally(0, 0), today.totals.business)
+        assertEquals(Tally(0, 0), today.totals(DistanceUnit.KILOMETRES).business)
         assertEquals(0L, today.businessDriveTimeMs)
         assertEquals(1, today.count)
     }

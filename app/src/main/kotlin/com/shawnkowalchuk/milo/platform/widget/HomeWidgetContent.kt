@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.platform.widget
 import com.shawnkowalchuk.milo.core.allowance.allowanceCents
 import com.shawnkowalchuk.milo.core.allowance.formatCentsPerKm
 import com.shawnkowalchuk.milo.core.allowance.formatWholeDollars
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.TimeSpan
 import com.shawnkowalchuk.milo.core.util.daysSpan
 import com.shawnkowalchuk.milo.core.util.localDateOf
@@ -26,7 +27,12 @@ import java.util.Locale
 /**
  * The business kilometres of this month and this year, priced at the rate set in Settings, as
  * the widget prints them: "Oct $412", "2026 $3,980", "$0.70". For reference only; the report
- * for the accountant stays in kilometres.
+ * for the accountant shows no dollars.
+ *
+ * **Always from kilometres, at the rate per kilometre,** whichever unit is chosen in Settings
+ * (Shawn's rate is the CRA's kind of rate, which is set per kilometre). The dollars are worked
+ * out exactly as before there was a choice of unit, so choosing miles cannot move them by a
+ * cent.
  *
  * @param rate the rate they are priced at, in dollars a kilometre, for the widget to name.
  */
@@ -58,6 +64,8 @@ data class HomeWidgetContent(
  * @param yearTrips the trips that started this year, in any state, or null if not known. Only
  * the counted Business ones are priced, added up as every total in MilO is (`categoryTotals`).
  * @param centsPerKm the rate set in Settings, or null if the settings could not be read.
+ * @param unit the unit chosen in Settings. The trip's distance is shown in it; the dollars do
+ * not depend on it.
  */
 fun homeWidgetContent(
     activity: TripActivity,
@@ -66,8 +74,17 @@ fun homeWidgetContent(
     nowMs: Long,
     zone: ZoneId,
     locale: Locale,
+    unit: DistanceUnit,
 ): HomeWidgetContent = HomeWidgetContent(
-    screen = carScreenContent(activity, today = null, setupNeedsAttention = false, nowMs, locale),
+    screen =
+        carScreenContent(
+            activity,
+            today = null,
+            setupNeedsAttention = false,
+            nowMs,
+            locale,
+            unit,
+        ),
     tripStartedAtMs = activity.trip?.startedAtMs,
     dollars =
         if (yearTrips != null && centsPerKm != null) {
@@ -93,8 +110,13 @@ private fun widgetDollars(
     val month = YearMonth.from(localDateOf(nowMs, zone))
     val monthStartMs = monthSpan(month, zone).fromMs
     val inMonth = yearTrips.filter { it.startedAtMs >= monthStartMs }
+
+    // In kilometres, whatever unit is shown: the rate is a rate per kilometre.
     fun priced(trips: List<Trip>): String = formatWholeDollars(
-        allowanceCents(categoryTotals(trips).business.tenths, centsPerKm),
+        allowanceCents(
+            categoryTotals(trips, DistanceUnit.KILOMETRES).business.tenths,
+            centsPerKm,
+        ),
         locale,
     )
     return WidgetDollars(

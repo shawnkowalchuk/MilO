@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.report.SentReport
@@ -47,6 +48,8 @@ private const val CAME_TO_FRONT = "the Home screen came to the front"
  * which truck is paired, whether automatic start is held off, and the monthly reminder's two.
  * @param sentReports every report recorded as sent.
  * @param openTripStart where the trip in progress started, from the address lookup.
+ * @param unit the unit chosen in Settings, as the whole app holds it: every figure of Home is
+ * worked out and written in it, and follows a change at once.
  * @param lookUpAddresses asks for the addresses that finished trips still lack, with the reason
  * in words for the event log. A plain function, like the ones for navigation.
  */
@@ -54,6 +57,7 @@ class HomeSources(
     val settings: Flow<MiloSettings>,
     val sentReports: Flow<List<SentReport>>,
     val openTripStart: StateFlow<OpenTripStart?>,
+    val unit: StateFlow<DistanceUnit>,
     val lookUpAddresses: (reason: String) -> Unit,
 )
 
@@ -120,9 +124,12 @@ class HomeViewModel(
         day
             .flatMapLatest { now ->
                 val span = monthSpan(YearMonth.from(now.date), now.zone)
-                trips
-                    .observeTripsStartedBetween(span.fromMs, span.untilMs)
-                    .map { stored -> homeTrips(now.date, now.zone, stored) }
+                // The unit is joined to the trips, not to the day: choosing another one adds
+                // the same trips up again, and reads nothing.
+                combine(
+                    trips.observeTripsStartedBetween(span.fromMs, span.untilMs),
+                    sources.unit,
+                ) { stored, unit -> homeTrips(now.date, now.zone, stored, unit) }
             }.whileWatched(null)
 
     /** The month whose report is waiting to be sent, or null: see [reportWaiting]. */
@@ -170,13 +177,20 @@ class HomeViewModel(
                 controller.activity,
                 setupNeedsAttention,
                 stored,
+                sources.unit,
                 ::HomeNow,
             ),
             combine(figures, report, sources.openTripStart, nowMs, ::HomeRead),
             ::homeUi,
         ).whileWatched(
             homeUi(
-                HomeNow(moment.value.date, controller.activity.value, false, stored = null),
+                HomeNow(
+                    moment.value.date,
+                    controller.activity.value,
+                    setupNeedsAttention = false,
+                    stored = null,
+                    unit = sources.unit.value,
+                ),
                 HomeRead(figures = null, reportWaiting = null, openTripStart = null, clock()),
             ),
         )

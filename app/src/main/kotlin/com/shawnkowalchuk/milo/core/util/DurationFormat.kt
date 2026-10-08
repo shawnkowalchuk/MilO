@@ -30,7 +30,7 @@ fun wholeHoursAndMinutes(durationMs: Long): HoursAndMinutes {
  * A number of seconds as the minutes figure shown to the user: 120 becomes "2", 150 becomes
  * "2.5". Whole minutes carry no decimal, so the usual values read as plain numbers.
  *
- * Only the number is returned, like `formatKilometres`: the unit is in strings.xml.
+ * Only the number is returned, like `formatDistance`: the unit is in strings.xml.
  *
  * @param locale decides the decimal separator.
  * @throws IllegalArgumentException if [seconds] is negative. A setting like that cannot be right.

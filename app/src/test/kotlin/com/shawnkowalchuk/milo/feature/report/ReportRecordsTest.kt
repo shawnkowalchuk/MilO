@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.FakeSentReportDao
@@ -8,8 +9,10 @@ import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.report.SentReportRepository
 import com.shawnkowalchuk.milo.data.report.monthSubmission
+import com.shawnkowalchuk.milo.data.report.printedTenths
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setDistanceUnit
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
 import com.shawnkowalchuk.milo.platform.trip.UnreadableSettingsFile
@@ -38,13 +41,20 @@ class ReportRecordsTest {
     private val october = YearMonth.of(2026, 10)
     private val handedOverAtMs = nowMs - 3 * 24 * 60 * 60_000L
     private val month =
-        ReportHandOver(ReportPeriod.Month(october), tripCount = 31, tenths = 4123, handedOverAtMs)
+        ReportHandOver(
+            ReportPeriod.Month(october),
+            tripCount = 31,
+            tenths = 4123,
+            handedOverAtMs,
+            DistanceUnit.KILOMETRES,
+        )
     private val range =
         ReportHandOver(
             ReportPeriod.Range(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 18)),
             tripCount = 12,
             tenths = 1500,
             atMs = handedOverAtMs,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun logged(category: EventCategory): List<String> =
@@ -155,8 +165,8 @@ class ReportRecordsTest {
 
     @Test
     fun `a file that was made leaves a line, and names no one and no address`() = runTest {
-        records.created("PDF", month.period, 31, 4123)
-        records.created("CSV", range.period, 12, 1500)
+        records.created("PDF", month.period, 31, 4123, DistanceUnit.KILOMETRES)
+        records.created("CSV", range.period, 12, 1500, DistanceUnit.KILOMETRES)
 
         assertEquals(
             listOf(
@@ -166,6 +176,53 @@ class ReportRecordsTest {
             logged(EventCategory.REPORT),
         )
     }
+
+    // ---- A report in miles (2026-10-07) ----------------------------------------------------------
+
+    /** The same month as a report printed in miles: 31 trips, 256.2 mi. */
+    private val monthInMiles = month.copy(tenths = 2_562, unit = DistanceUnit.MILES)
+
+    @Test
+    fun `a report sent in miles is recorded as the miles it printed, whatever is chosen later`() =
+        runTest {
+            // He switches back to kilometres before he answers. The report did not change.
+            settings.setDistanceUnit(DistanceUnit.KILOMETRES)
+
+            val stored = checkNotNull(records.answeredSent(monthInMiles))
+
+            assertEquals(DistanceUnit.MILES, stored.distanceUnit)
+            assertEquals(2_562L, stored.printedTenths)
+            assertEquals(31, stored.tripCount)
+            // In metres like every stored distance: 256.2 times 1 609.344.
+            assertEquals(412_313.9328, stored.distanceMetres, 0.0)
+            // The month is submitted by it exactly as by a report in kilometres.
+            assertEquals(stored, monthSubmission(october, dao.rows)?.first)
+            assertEquals(
+                listOf(
+                    "Report for 2026-10 recorded as sent, on Shawn's word: the first report for " +
+                        "this period, 31 trips, 256.2 mi. The month is now marked as submitted",
+                ),
+                logged(EventCategory.REPORT),
+            )
+        }
+
+    @Test
+    fun `every line about a report in miles names miles, beside lines that name kilometres`() =
+        runTest {
+            records.created("PDF", month.period, 31, 2_562, DistanceUnit.MILES)
+            records.handedOver(monthInMiles)
+            records.markedSent(month.period, 31, 2_562, DistanceUnit.MILES)
+            records.removed(dao.rows.single().id)
+            records.created("CSV", month.period, 31, 4_123, DistanceUnit.KILOMETRES)
+
+            val lines = logged(EventCategory.REPORT)
+            assertEquals(5, lines.size)
+            for (line in lines.take(4)) {
+                assertTrue(line, line.contains("31 trips, 256.2 mi"))
+                assertFalse(line, line.contains(" km"))
+            }
+            assertEquals("CSV for 2026-10 created: 31 trips, 412.3 km", lines.last())
+        }
 
     @Test
     fun `the log names a period the same way in every language`() {

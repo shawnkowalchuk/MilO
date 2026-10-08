@@ -29,10 +29,12 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckLinkLook
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.placesWords
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 
@@ -49,7 +51,7 @@ internal fun RecordingTiles(
     TilePair(
         first = { half -> SmallTruckTile(ui.truck.state, half) },
         second = { half ->
-            TodayTile(ui.figures?.today, FigureSize.MEDIUM, format.locale, half)
+            TodayTile(ui.figures, FigureSize.MEDIUM, format, half)
         },
     )
     TodayListTile(ui.figures, format, actions.onOpenTrips)
@@ -80,10 +82,12 @@ private fun RecordingTile(ui: HomeUi, trip: CurrentTrip, format: HomeFormat, onE
             verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.small),
             itemVerticalAlignment = Alignment.Bottom,
         ) {
+            val soFar = formatDistance(trip.distanceMetres, format.unit, format.locale)
             FigureText(
-                figure = formatKilometres(trip.distanceMetres, format.locale),
-                unit = stringResource(R.string.unit_km),
+                figure = soFar,
+                unit = stringResource(unitShortRes(format.unit)),
                 size = FigureSize.HERO,
+                spoken = stringResource(distanceSpokenRes(format.unit), soFar),
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -198,12 +202,12 @@ private fun todayListLabel(figures: HomeTrips?): String {
  */
 @Composable
 private fun TodayRow(trip: HomeTrip, format: HomeFormat) {
-    val kilometres = formatKilometres(trip.distanceMetres, format.locale)
+    val distance = formatDistance(trip.distanceMetres, format.unit, format.locale)
     FigureRow(
-        figure = kilometres,
+        figure = distance,
         modifier = Modifier.padding(vertical = MiloTheme.spacing.tileGap),
         counted = trip.category == TripCategory.BUSINESS,
-        figureSpoken = stringResource(R.string.distance_km, kilometres),
+        figureSpoken = stringResource(distanceSpokenRes(format.unit), distance),
     ) {
         Text(text = placesWords(trip.places), style = MaterialTheme.typography.bodyLarge)
         Text(

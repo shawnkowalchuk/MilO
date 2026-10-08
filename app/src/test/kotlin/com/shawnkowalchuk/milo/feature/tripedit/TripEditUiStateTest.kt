@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.RecordedValues
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripEdit
@@ -50,7 +51,7 @@ class TripEditUiStateTest {
         )
 
     private fun session(trip: Trip?, schedule: WorkSchedule? = DEFAULT_WORK_SCHEDULE) =
-        EditSession(trip, schedule, edmonton, openedAtMs)
+        EditSession(trip, schedule, edmonton, openedAtMs, DistanceUnit.KILOMETRES)
 
     private fun shown(
         form: TripForm,
@@ -66,8 +67,8 @@ class TripEditUiStateTest {
         closing = false,
     )
 
-    private val opened = formFor(stored, edmonton)
-    private val blank = blankForm(openedAtMs, edmonton)
+    private val opened = formFor(stored, edmonton, DistanceUnit.KILOMETRES)
+    private val blank = blankForm(openedAtMs, edmonton, DistanceUnit.KILOMETRES)
 
     // ---- The fields -----------------------------------------------------------------------------
 
@@ -273,17 +274,32 @@ class TripEditUiStateTest {
         assertNull(shown(opened).recorded)
         assertEquals(
             RecordedValues(stored.startedAtMs, local("2026-10-05T08:39:02"), 12_344.7),
-            shown(formFor(edited, edmonton), trip = edited).recorded,
+            shown(formFor(edited, edmonton, DistanceUnit.KILOMETRES), trip = edited).recorded,
         )
-        assertNull(shown(formFor(addedByHand, edmonton), trip = addedByHand).recorded)
-        assertTrue(shown(formFor(addedByHand, edmonton), trip = addedByHand).addedByHand)
+        assertNull(
+            shown(
+                formFor(addedByHand, edmonton, DistanceUnit.KILOMETRES),
+                trip = addedByHand,
+            ).recorded,
+        )
+        assertTrue(
+            shown(
+                formFor(addedByHand, edmonton, DistanceUnit.KILOMETRES),
+                trip = addedByHand,
+            ).addedByHand,
+        )
     }
 
     @Test
     fun `a stored trip that ran past midnight says so`() {
         val overnight = stored.copy(endedAtMs = local("2026-10-06T00:10:00"))
 
-        assertTrue(shown(formFor(overnight, edmonton), trip = overnight).endsNextDay)
+        assertTrue(
+            shown(
+                formFor(overnight, edmonton, DistanceUnit.KILOMETRES),
+                trip = overnight,
+            ).endsNextDay,
+        )
         assertFalse(shown(opened).endsNextDay)
     }
 }

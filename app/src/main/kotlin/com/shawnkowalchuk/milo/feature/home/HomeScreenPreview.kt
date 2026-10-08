@@ -15,6 +15,7 @@ import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.TodaySession
 import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
@@ -79,6 +80,7 @@ private val sampleFigures =
             ),
         rows = sampleRows,
         month = MonthFigures(YearMonth.of(2026, 10), businessTenths = 2_140, businessPercent = 89),
+        unit = DistanceUnit.KILOMETRES,
     )
 
 private val sampleIdle =
@@ -91,6 +93,7 @@ private val sampleIdle =
         reportWaiting = YearMonth.of(2026, 9),
         startAddress = null,
         nowMs = MORNING + 400 * MINUTE,
+        unit = DistanceUnit.KILOMETRES,
     )
 
 private val sampleTrip =

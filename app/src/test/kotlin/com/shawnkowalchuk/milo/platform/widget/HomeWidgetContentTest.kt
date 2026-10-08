@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.platform.widget
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.platform.car.CarAction
 import com.shawnkowalchuk.milo.platform.car.STARTED_AT_MS
@@ -47,7 +48,8 @@ class HomeWidgetContentTest {
         centsPerKm: Int? = 70,
         nowMs: Long = at(10, 7),
         activity: TripActivity = TripActivity(),
-    ) = homeWidgetContent(activity, yearTrips, centsPerKm, nowMs, zone, Locale.US)
+        unit: DistanceUnit = DistanceUnit.KILOMETRES,
+    ) = homeWidgetContent(activity, yearTrips, centsPerKm, nowMs, zone, Locale.US, unit)
 
     @Test
     fun `this month and this year are priced at the one rate, and the rate is named`() {
@@ -95,6 +97,57 @@ class HomeWidgetContentTest {
         assertEquals("$73", dollars.month)
         assertEquals("$803", dollars.year)
         assertEquals("$0.73", dollars.rate)
+    }
+
+    // ---- Kilometres or miles (2026-10-07): the money is not converted ----------------------------
+
+    @Test
+    fun `the dollars are the same whichever unit distances are shown in`() {
+        // Distances that round differently in the two units, a Personal trip, and months.
+        val trips =
+            listOf(
+                trip(at(2, 10), 0.349),
+                trip(at(3, 1), 12.35),
+                trip(at(10, 1), 100.05),
+                trip(at(10, 2), 1_500.0),
+                trip(at(10, 3), 0.05),
+                trip(at(10, 4), 80.0, category = TripCategory.PERSONAL),
+            )
+
+        for (cents in listOf(1, 70, 73, 113, 500)) {
+            val inKilometres = content(trips, centsPerKm = cents)
+            val inMiles = content(trips, centsPerKm = cents, unit = DistanceUnit.MILES)
+
+            assertEquals("$cents cents", inKilometres.dollars, inMiles.dollars)
+        }
+    }
+
+    @Test
+    fun `in miles the dollars are still business kilometres at the rate per kilometre`() {
+        // 193 trips of 11.504 km print as 11.5 km each: 2 219.5 km, $1,553.65 at 70 cents.
+        // Priced from the miles on screen (7.1 mi each, at $1.13 a mile) it would be $1,548.
+        val trips = List(193) { trip(at(10, 1), 11.504) }
+
+        val dollars = checkNotNull(content(trips, unit = DistanceUnit.MILES).dollars)
+
+        assertEquals("$1,554", dollars.month)
+        assertEquals("$1,554", dollars.year)
+        // The rate is the one set in Settings, a rate per kilometre, and is named as that.
+        assertEquals("$0.70", dollars.rate)
+    }
+
+    @Test
+    fun `in miles the open trip's figure is in miles`() {
+        val shown =
+            content(
+                emptyList(),
+                activity = TripActivity(trip = carTrip()),
+                unit = DistanceUnit.MILES,
+            )
+
+        assertEquals("7.7", shown.screen.trip?.kilometres)
+        assertEquals(DistanceUnit.MILES, shown.screen.unit)
+        assertEquals(STARTED_AT_MS, shown.tripStartedAtMs)
     }
 
     @Test

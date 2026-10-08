@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -31,6 +32,10 @@ private const val RECORDED_VALUES_RESTORED = "a trip's recorded values were rest
  *
  * @param tripId the trip to edit, or null to add one that MilO missed.
  * @param editing checks and makes the save, the add and the restore, and logs them.
+ * @param unit the unit chosen in Settings, as the whole app holds it in memory. The form takes
+ * its unit from the settings file when the screen opens ([TripEditing.formSettings]) and keeps
+ * it for as long as it is open; this one is used only if that file cannot be read, so that the
+ * form is then in the unit every other screen shows.
  * @param lookUpAddresses asks for the addresses that finished trips lack, with the reason in
  * words for the event log. Called after a restore, which hands typed addresses back to the
  * lookup; a plain function, like the ones for navigation.
@@ -39,6 +44,7 @@ private const val RECORDED_VALUES_RESTORED = "a trip's recorded values were rest
 class TripEditViewModel(
     private val tripId: Long?,
     private val editing: TripEditing,
+    private val unit: StateFlow<DistanceUnit>,
     private val lookUpAddresses: (reason: String) -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -104,7 +110,18 @@ class TripEditViewModel(
         val nowMs = clock()
         val stored = if (tripId == null) null else editing.findEditable(tripId)
         if (tripId != null && stored == null) return Model.NotEditable
-        val session = EditSession(stored, editing.schedule(), zoneNow, openedAtMs = nowMs)
+        // The schedule and the unit as they are stored when the form opens. The form keeps
+        // the unit while it is open: what is typed in the distance field is read in the unit
+        // its label names.
+        val fromSettings = editing.formSettings()
+        val session =
+            EditSession(
+                stored = stored,
+                schedule = fromSettings?.schedule,
+                zone = zoneNow,
+                openedAtMs = nowMs,
+                unit = fromSettings?.unit ?: unit.value,
+            )
         return Model.Editing(session, session.openedForm())
     }
 

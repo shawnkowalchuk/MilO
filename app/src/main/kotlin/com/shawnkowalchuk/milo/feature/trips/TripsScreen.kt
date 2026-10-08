@@ -134,6 +134,7 @@ internal fun TripsContent(
         TripRowContext(
             zone = state.zone,
             twentyFourHour = twentyFourHour,
+            unit = state.unit,
             openTripId = openTripId,
             onToggle = { id -> openTripId = if (openTripId == id) null else id },
             onAsk = { trip, correction ->
@@ -195,7 +196,9 @@ internal fun TripsContent(
             return@LazyColumn
         }
         summary.inProgress?.let { trip ->
-            item(key = "in progress") { InProgressTile(trip, state.zone, twentyFourHour) }
+            item(key = "in progress") {
+                InProgressTile(trip, state.zone, twentyFourHour, state.unit)
+            }
         }
         summary.emptyWordsRes()?.let { words ->
             item(key = "nothing to list") {
@@ -221,6 +224,7 @@ internal fun TripsContent(
             trip = askedAbout,
             zone = state.zone,
             twentyFourHour = twentyFourHour,
+            unit = state.unit,
             onDelete = {
                 askedAboutId = null
                 openTripId = null

@@ -1,9 +1,10 @@
 package com.shawnkowalchuk.milo.core.report
 
 import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.sumOfTenths
-import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
+import com.shawnkowalchuk.milo.core.util.tenthsOf
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -15,6 +16,10 @@ import java.time.ZoneId
 // once, and a day's subtotal and the period's total are sums of those rounded figures, so that
 // whoever adds a column up by hand gets the figure printed under it. The rule is `sumOfTenths`
 // in `core/util/DistanceFormat.kt`, which the screens add up by as well.
+//
+// Since 2026-10-07 a report is in the unit MilO was set to when it was made
+// ([MileageReport.unit]): in miles a trip is rounded once to a tenth of a mile, and the
+// subtotals and the total are sums of those figures. The trips themselves are held in metres.
 
 /** Why a trip's figures are Shawn's own and not what MilO recorded. The report marks both. */
 enum class ReportMark {
@@ -43,14 +48,14 @@ data class ReportTrip(
     val distanceMetres: Double,
     val mark: ReportMark? = null,
 ) {
-    /** The distance as it is printed, and as it is added up. */
-    val tenths: Long get() = tenthsOfAKilometre(distanceMetres)
+    /** The distance as it is printed in [unit], and as it is added up. */
+    fun tenths(unit: DistanceUnit): Long = tenthsOf(distanceMetres, unit)
 }
 
 /** The trips that started on one calendar day, in the order they started. */
 data class ReportDay(val date: LocalDate, val trips: List<ReportTrip>) {
-    /** The day's subtotal: the sum of the figures printed for its trips. */
-    val tenths: Long get() = sumOfTenths(trips.map { it.distanceMetres })
+    /** The day's subtotal in [unit]: the sum of the figures printed for its trips. */
+    fun tenths(unit: DistanceUnit): Long = sumOfTenths(trips.map { it.distanceMetres }, unit)
 }
 
 /**
@@ -74,8 +79,9 @@ data class ReportRevision(val number: Int, val replacesSentOn: LocalDate)
  * should show business and personal mileage separate").
  *
  * @param tripCount how many counted Personal trips started in the period.
- * @param tenths their kilometres, added up as the report adds up its own (`sumOfTenths`), so
- * the figure is the one the Trips screen shows for the month's Personal trips.
+ * @param tenths their distance in tenths of the report's unit, added up as the report adds up
+ * its own (`sumOfTenths`), so the figure is the one the Trips screen shows for the month's
+ * Personal trips.
  */
 data class PersonalDriving(val tripCount: Int, val tenths: Long)
 
@@ -85,6 +91,9 @@ data class PersonalDriving(val tripCount: Int, val tenths: Long)
  * @param generatedOn the day the report was made, in [zone].
  * @param revision null for the first report of its period.
  * @param zone the time zone its days and times of day are worked out in: the phone's.
+ * @param unit the unit every distance of the report is printed in: the one MilO was set to
+ * when the report was made (Shawn's answer of 2026-10-07, "Follow the setting"). [personal]
+ * and [odometer] are in it too.
  * @param days oldest first, and only days that have a trip.
  * @param personal what the period's Personal trips add up to. They are not listed.
  * @param odometer the truck's odometer at the start and the end of the period, or null while
@@ -96,14 +105,15 @@ data class MileageReport(
     val generatedOn: LocalDate,
     val revision: ReportRevision?,
     val zone: ZoneId,
+    val unit: DistanceUnit,
     val days: List<ReportDay>,
     val personal: PersonalDriving,
     val odometer: OdometerSpan? = null,
 ) {
     val tripCount: Int get() = days.sumOf { it.trips.size }
 
-    /** The period's total: the sum of the days' subtotals. */
-    val totalTenths: Long get() = days.sumOf { it.tenths }
+    /** The period's total in [unit]: the sum of the days' subtotals. */
+    val totalTenths: Long get() = days.sumOf { it.tenths(unit) }
 
     /** How many of its trips carry an asterisk. */
     val markedCount: Int get() = days.sumOf { day -> day.trips.count { it.mark != null } }

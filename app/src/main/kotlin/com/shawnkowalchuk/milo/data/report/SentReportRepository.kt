@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -38,6 +39,8 @@ class SentReportRepository(private val dao: SentReportDao) {
      * @param sentAtMs when the email app was opened with the report: the day it counts as
      * sent.
      * @param tripCount and [distanceMetres] are what the report listed and added up to.
+     * @param unit the unit the report was printed in, which the total is a whole number of
+     * tenths of.
      * @return the row as stored, with the revision number it was given.
      */
     suspend fun recordSent(
@@ -45,6 +48,7 @@ class SentReportRepository(private val dao: SentReportDao) {
         sentAtMs: Long,
         tripCount: Int,
         distanceMetres: Double,
+        unit: DistanceUnit,
     ): SentReport {
         require(sentAtMs >= 0) { "A timestamp cannot be negative: $sentAtMs ms" }
         require(tripCount >= 0) { "A report cannot list a negative number of trips: $tripCount" }
@@ -61,6 +65,7 @@ class SentReportRepository(private val dao: SentReportDao) {
                 distanceMetres = distanceMetres,
                 // Given its number inside the insert's transaction.
                 revision = 0,
+                distanceUnit = unit,
             ),
         )
     }

@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.report.ReportMark
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -89,7 +90,7 @@ class ReportSelectionTest {
         val selection = selectForReport(trips, october, EDMONTON)
 
         assertEquals(2, selection.personalLeftOut)
-        assertEquals(182L, selection.personalTenths)
+        assertEquals(182L, selection.personalTenths(DistanceUnit.KILOMETRES))
     }
 
     @Test
@@ -168,6 +169,6 @@ class ReportSelectionTest {
     fun `a period without trips has nothing on it and nothing left off`() {
         val selection = selectForReport(listOf(storedTrip("2026-09-15T08:00")), october, EDMONTON)
 
-        assertEquals(ReportSelection(emptyList(), 0, 0, 0, false, personalTenths = 0), selection)
+        assertEquals(ReportSelection(emptyList(), 0, 0, 0, false, emptyList()), selection)
     }
 }

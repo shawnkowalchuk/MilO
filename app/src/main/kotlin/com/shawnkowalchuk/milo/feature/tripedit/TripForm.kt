@@ -1,8 +1,10 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.localDateOf
+import com.shawnkowalchuk.milo.core.util.metresOf
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripEdit
 import com.shawnkowalchuk.milo.data.trip.TypedAddress
@@ -27,8 +29,6 @@ const val MAX_ADDRESS_LENGTH = 120
 /** The longest text the distance field takes: six digits, a separator and three decimals. */
 const val MAX_DISTANCE_LENGTH = 10
 
-private const val METRES_PER_KILOMETRE_DIGITS = 3
-
 /**
  * What the form holds.
  *
@@ -44,9 +44,15 @@ private const val METRES_PER_KILOMETRE_DIGITS = 3
  * day it started, 1 for one that ran past midnight. Shawn says which with a switch
  * ([endingNextDay]). A stored trip opens with the number of days it really ran over.
  * @param from and [to] are the addresses as typed, or null while the field is untouched.
- * @param kilometres the distance as typed, or null while the field is untouched.
+ * @param kilometres the distance as typed, or null while the field is untouched. It is typed
+ * in [unit]: the name is from when kilometres were the only unit.
  * @param chosenCategory the category Shawn pressed in the form, or null if he left the choice
  * alone.
+ * @param unit the unit the distance field is in: the one chosen in Settings when the form was
+ * opened (since 2026-10-07). The field's label names it, what is typed is read in it, and the
+ * stored distance is shown in it. It stays the same for as long as the form is open. It has no
+ * default, on purpose: a form built without it would read miles he typed as kilometres, so the
+ * compiler makes every caller say which.
  */
 data class TripForm(
     val date: LocalDate,
@@ -57,16 +63,18 @@ data class TripForm(
     val to: String? = null,
     val kilometres: String? = null,
     val chosenCategory: TripCategory? = null,
+    val unit: DistanceUnit,
 )
 
 /**
  * The form for a trip MilO missed: empty, on today's date. No time, no address and no distance
  * is filled in for him. A guess that is saved unnoticed would be a wrong line on the report.
  */
-fun blankForm(nowMs: Long, zone: ZoneId): TripForm = TripForm(date = localDateOf(nowMs, zone))
+fun blankForm(nowMs: Long, zone: ZoneId, unit: DistanceUnit): TripForm =
+    TripForm(date = localDateOf(nowMs, zone), unit = unit)
 
 /** The form for [trip]: its day and its two times, with every field untouched. */
-fun formFor(trip: Trip, zone: ZoneId): TripForm {
+fun formFor(trip: Trip, zone: ZoneId, unit: DistanceUnit): TripForm {
     val start = Instant.ofEpochMilli(trip.startedAtMs).atZone(zone)
     val end = trip.endedAtMs?.let { Instant.ofEpochMilli(it).atZone(zone) }
     return TripForm(
@@ -75,6 +83,7 @@ fun formFor(trip: Trip, zone: ZoneId): TripForm {
         end = end?.toLocalTime()?.truncatedTo(ChronoUnit.MINUTES),
         endDayOffset =
             end?.let { ChronoUnit.DAYS.between(start.toLocalDate(), it.toLocalDate()) } ?: 0,
+        unit = unit,
     )
 }
 
@@ -124,7 +133,7 @@ sealed interface TypedDistance {
     /** Nothing was typed. */
     data object Missing : TypedDistance
 
-    /** Something that is not a number of kilometres. */
+    /** Something that is not a number of kilometres or of miles. */
     data object NotANumber : TypedDistance
 
     /** A distance. Negative if a minus sign was typed, which the form refuses by name. */
@@ -132,18 +141,18 @@ sealed interface TypedDistance {
 }
 
 /**
- * Reads a distance in kilometres as it is typed: digits, with a dot or a comma before up to
- * three decimals, so that it reads the same whichever of the two the phone's keyboard offers.
- * No thousands separator is taken: "1,234" is one and a bit kilometres, never a thousand.
+ * Reads a distance in [unit] as it is typed: digits, with a dot or a comma before up to three
+ * decimals, so that it reads the same whichever of the two the phone's keyboard offers. No
+ * thousands separator is taken: "1,234" is one and a bit kilometres, never a thousand.
+ *
+ * What comes back is metres, the unit every distance is stored in: 12.3 typed in kilometres is
+ * 12 300 m, and typed in miles 19 794.9312 m (a mile is 1 609.344 m).
  */
-fun parseKilometres(text: String): TypedDistance {
+fun parseDistance(text: String, unit: DistanceUnit): TypedDistance {
     val typed = text.trim()
     if (typed.isEmpty()) return TypedDistance.Missing
     if (!DISTANCE_AS_TYPED.matches(typed)) return TypedDistance.NotANumber
-    val kilometres = BigDecimal(typed.replace(',', '.'))
-    return TypedDistance.Metres(
-        kilometres.movePointRight(METRES_PER_KILOMETRE_DIGITS).toDouble(),
-    )
+    return TypedDistance.Metres(metresOf(BigDecimal(typed.replace(',', '.')), unit))
 }
 
 private val DISTANCE_AS_TYPED = Regex("""-?(\d{1,6}([.,]\d{0,3})?|[.,]\d{1,3})""")
@@ -152,19 +161,23 @@ private val DISTANCE_AS_TYPED = Regex("""-?(\d{1,6}([.,]\d{0,3})?|[.,]\d{1,3})""
  * The distance the form stands for. An untouched field stands for the stored distance, exact to
  * the metre. So does a field in which the figure the form showed was typed again: the form
  * shows one decimal, and "12.3" typed over a stored 12 344 m is not a change of 44 m.
+ *
+ * Both hold in either unit, because the figure the form showed is worked out here as the form
+ * showed it, in [TripForm.unit]: a trip that is opened in miles and saved with its distance as
+ * it stood keeps its stored metres, to the last one.
  */
 fun TripForm.distance(stored: Trip?): TypedDistance {
     val typed =
         kilometres
             ?: return stored?.let { TypedDistance.Metres(it.distanceMetres) }
                 ?: TypedDistance.Missing
-    val parsed = parseKilometres(typed)
+    val parsed = parseDistance(typed, unit)
     val storedMetres = stored?.distanceMetres
-    // A stored distance that cannot be written as kilometres (storage should never hold one)
-    // was not shown either, so nothing typed can be "the figure that was shown".
+    // A stored distance that cannot be written as a figure (storage should never hold one) was
+    // not shown either, so nothing typed can be "the figure that was shown".
     val wasShown = storedMetres != null && storedMetres.isFinite() && storedMetres >= 0.0
     if (parsed is TypedDistance.Metres && storedMetres != null && wasShown) {
-        val shown = parseKilometres(formatKilometres(storedMetres, Locale.ROOT))
+        val shown = parseDistance(formatDistance(storedMetres, unit, Locale.ROOT), unit)
         if (parsed == shown) return TypedDistance.Metres(storedMetres)
     }
     return parsed

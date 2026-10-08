@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
@@ -83,6 +84,23 @@ class CarScreenContentTest {
         assertEquals(CarStatus.RECORDING, shown.status)
         assertEquals(TripFigures(kilometres = "12.4", hours = 0, minutes = 23), shown.trip)
         assertEquals(CarAction.END_TRIP, shown.action)
+    }
+
+    @Test
+    fun `with miles chosen the trip and today's trips are in miles, added up as printed`() {
+        val today = todayOf(23_449.0, 149.0, 149.0, 5_000.0)
+        val recording = TripActivity(trip = carTrip(12_449.0), truckConnected = true)
+
+        val shown = carContent(recording, today, unit = DistanceUnit.MILES)
+
+        assertEquals(TripFigures(kilometres = "7.7", hours = 0, minutes = 23), shown.trip)
+        // 14.6 + 0.1 + 0.1 + 3.1 mi, each trip rounded to a tenth of a mile first.
+        assertEquals(TodayFigures(tripCount = 4, kilometres = "17.9"), shown.today)
+        assertEquals(DistanceUnit.MILES, shown.unit)
+        // The same moment in kilometres is what it always was.
+        val inKilometres = carContent(recording, today)
+        assertEquals(TodayFigures(tripCount = 4, kilometres = "28.6"), inKilometres.today)
+        assertEquals(DistanceUnit.KILOMETRES, inKilometres.unit)
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.trips
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import com.shawnkowalchuk.milo.platform.address.TripPlace
@@ -52,6 +53,7 @@ class TripMonthLeftOutTest {
             liveTripId = null,
             liveDistanceMetres = null,
             liveStart = null,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     @Test

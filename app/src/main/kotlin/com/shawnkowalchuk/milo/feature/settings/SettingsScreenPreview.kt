@@ -11,6 +11,7 @@ import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.withHoursOnEveryDay
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.LastExport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.platform.transfer.PointsTaken
@@ -151,13 +152,20 @@ private val PREVIEW_ODOMETER =
     OdometerCardState(
         figure =
             OdometerFigure(
-                km = 123_802,
-                reading = OdometerReading(atMs = 1_791_000_000_000, km = 123_456),
+                value = 123_802,
+                unit = DistanceUnit.KILOMETRES,
+                reading =
+                    OdometerReading(
+                        atMs = 1_791_000_000_000,
+                        value = 123_456,
+                        unit = DistanceUnit.KILOMETRES,
+                    ),
                 drivenTenths = 3_462,
                 estimated = true,
             ),
         zone = ZoneId.of("America/Edmonton"),
         couldNotSave = false,
+        unit = DistanceUnit.KILOMETRES,
     )
 
 @Preview
@@ -182,6 +190,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                         {},
                         {},
                         {},
+                        {},
                         schedule,
                         report,
                         reminder,
@@ -191,7 +200,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                 checkTile = {
                     sample.check?.let { NothingRecordedTileContent(it, {}, { _, _ -> }) }
                 },
-                odometerTile = { OdometerTileContent(PREVIEW_ODOMETER) { true } },
+                odometerTile = { OdometerTileContent(PREVIEW_ODOMETER) { _, _ -> true } },
                 widgetTile = {
                     HomeWidgetTileContent(
                         HomeWidgetCardState(
@@ -199,6 +208,7 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                             canAskToAdd = true,
                             centsPerKm = DEFAULT_CENTS_PER_KM,
                             couldNotSave = false,
+                            unit = DistanceUnit.KILOMETRES,
                         ),
                         {},
                         { true },

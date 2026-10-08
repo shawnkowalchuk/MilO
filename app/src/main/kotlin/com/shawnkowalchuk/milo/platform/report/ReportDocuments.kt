@@ -58,7 +58,7 @@ class ReportDocuments(
      */
     suspend fun createPdf(report: MileageReport): ReportFile = withContext(oneAtATime) {
         val format = texts.format()
-        val words = texts.words(report.tripCount, report.personal.tripCount)
+        val words = texts.words(report.tripCount, report.personal.tripCount, report.unit)
         val printed = printedReport(report, words, format)
         val paints = ReportPaints(typeface())
         val pages = layoutReport(printed, paints, format.locale)
@@ -80,7 +80,7 @@ class ReportDocuments(
      * @throws IOException if the file cannot be written.
      */
     suspend fun createCsv(report: MileageReport): ReportFile = withContext(oneAtATime) {
-        val text = UTF8_MARK + reportCsv(report, texts.csvWords())
+        val text = UTF8_MARK + reportCsv(report, texts.csvWords(report.unit))
         val file = files.write(fileName(report, CSV_EXTENSION)) { out ->
             out.write(text.toByteArray(Charsets.UTF_8))
         }

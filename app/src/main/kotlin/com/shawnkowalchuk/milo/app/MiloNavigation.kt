@@ -120,6 +120,7 @@ fun MiloNavigation(
                                                 ),
                                             tripActivity = container.tripController.activity,
                                             openTripStart = container.tripAddresses.openTripStart,
+                                            unit = container.shownUnit.unit,
                                             sentReports =
                                                 container.sentReportRepository.observeSent(),
                                             lookUpAddresses = container.tripAddresses::catchUp,
@@ -154,6 +155,7 @@ fun MiloNavigation(
                                                     eventLog = container.eventLogRepository,
                                                     clock = System::currentTimeMillis,
                                                 ),
+                                            unit = container.shownUnit.unit,
                                             lookUpAddresses = container.tripAddresses::catchUp,
                                             clock = System::currentTimeMillis,
                                             zone = ZoneId::systemDefault,
@@ -284,5 +286,6 @@ private fun homeSources(container: AppContainer) = HomeSources(
     settings = container.settingsStore.settings,
     sentReports = container.sentReportRepository.observeSent(),
     openTripStart = container.tripAddresses.openTripStart,
+    unit = container.shownUnit.unit,
     lookUpAddresses = container.tripAddresses::catchUp,
 )

@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.settings
 
 import com.shawnkowalchuk.milo.core.schedule.weekHours
 import com.shawnkowalchuk.milo.core.schedule.workDaysAgree
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -109,6 +110,8 @@ sealed interface SettingsUiState {
      * @param canShortenGrace false at the lower end of the range, and so for the other five:
      * the button is greyed out there.
      * @param parkedLimitSeconds how long a trip may stand still before it is ended.
+     * @param distanceUnit the unit every distance is shown in: kilometres or miles. The
+     * shortest trip that counts is stored in metres and only written in it.
      * @param usesOwnSound true if a trip start plays the file Shawn chose, false for the
      * built-in sound.
      * @param ownSoundName what that file was called, or null if the phone gave no name.
@@ -140,6 +143,7 @@ sealed interface SettingsUiState {
         val minimumDistanceMetres: Int,
         val canLowerMinimum: Boolean,
         val canRaiseMinimum: Boolean,
+        val distanceUnit: DistanceUnit,
         val soundEnabled: Boolean,
         val usesOwnSound: Boolean,
         val ownSoundName: String?,
@@ -187,6 +191,7 @@ fun settingsUiState(
     minimumDistanceMetres = settings.minimumTripDistanceMetres,
     canLowerMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepDown(settings.minimumTripDistanceMetres),
     canRaiseMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepUp(settings.minimumTripDistanceMetres),
+    distanceUnit = settings.distanceUnit,
     soundEnabled = settings.soundEnabled,
     usesOwnSound = settings.customSoundUri != null,
     ownSoundName = settings.customSoundName,

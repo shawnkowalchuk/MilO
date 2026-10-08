@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.core.report
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.odometer.OdometerSpan
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatMediumDay
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -16,10 +17,16 @@ import org.junit.Test
  * MilO worked out carrying "est.", and a note that says what that means.
  */
 class ReportOdometerTest {
-    private val reading = OdometerReading(edmonton("2026-10-01T07:00"), 120_000)
+    private val reading =
+        OdometerReading(edmonton("2026-10-01T07:00"), 120_000, DistanceUnit.KILOMETRES)
 
-    private fun figure(km: Long, estimated: Boolean) =
-        OdometerFigure(km, reading, drivenTenths = 0, estimated = estimated)
+    private fun figure(km: Long, estimated: Boolean) = OdometerFigure(
+        km,
+        DistanceUnit.KILOMETRES,
+        reading,
+        drivenTenths = 0,
+        estimated = estimated,
+    )
 
     private fun withOdometer(start: OdometerFigure, end: OdometerFigure): MileageReport =
         report(listOf(trip(DAY_ONE, "08:14"))).copy(odometer = OdometerSpan(start, end))

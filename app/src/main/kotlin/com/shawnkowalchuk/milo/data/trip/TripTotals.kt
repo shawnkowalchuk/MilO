@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.data.trip
 
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.sumOfTenths
 
 // Which stored trips count, and what a day or a month of them adds up to. Pure functions,
@@ -12,6 +13,10 @@ import com.shawnkowalchuk.milo.core.util.sumOfTenths
 // rounded to a tenth of a kilometre, and the rounded figures are added (`sumOfTenths` in
 // `core/util/DistanceFormat.kt`). So the rows of a day add up to the figure in its heading,
 // the days to the month, and the month's Business figure is the total its report prints.
+//
+// Since 2026-10-07 the unit is asked for each time (`DistanceUnit`): in miles the same holds in
+// tenths of a mile. Whoever asks says which unit the figure is to be printed in, and prints it
+// in that unit; the widget's dollars alone always ask for kilometres, whatever is shown.
 
 /**
  * Whether this trip is in a total: a finished trip, and nothing else. A trip in progress is not
@@ -26,8 +31,8 @@ val Trip.isCounted: Boolean get() = status == TripStatus.FINISHED
 /**
  * A number of trips and what they add up to.
  *
- * @param tenths the total in tenths of a kilometre: the sum of the trips' own figures, each
- * rounded to a tenth first, which is how the report for the accountant adds up.
+ * @param tenths the total in tenths of the unit it was asked for in: the sum of the trips' own
+ * figures, each rounded to a tenth first, which is how the report for the accountant adds up.
  */
 data class Tally(val count: Int, val tenths: Long)
 
@@ -47,18 +52,21 @@ data class CategoryTotals(val business: Tally, val personal: Tally, val unsorted
 /**
  * Adds up the counted trips among [trips] by category. Trips that are not counted ([isCounted])
  * are in none of the three.
+ *
+ * @param unit the unit the three totals are in, and so the unit they must be printed in.
  */
-fun categoryTotals(trips: List<Trip>): CategoryTotals =
-    totalsOf(trips.filter { it.isCounted }, { it.category }, { it.distanceMetres })
+fun categoryTotals(trips: List<Trip>, unit: DistanceUnit): CategoryTotals =
+    totalsOf(trips.filter { it.isCounted }, unit, { it.category }, { it.distanceMetres })
 
 private fun <T> totalsOf(
     counted: List<T>,
+    unit: DistanceUnit,
     category: (T) -> TripCategory?,
     metres: (T) -> Double,
 ): CategoryTotals {
     fun tally(wanted: TripCategory?): Tally {
         val matching = counted.filter { category(it) == wanted }
-        return Tally(matching.size, sumOfTenths(matching.map(metres)))
+        return Tally(matching.size, sumOfTenths(matching.map(metres), unit))
     }
     return CategoryTotals(
         business = tally(TripCategory.BUSINESS),
@@ -99,18 +107,22 @@ data class TodaySession(
  *
  * [count], [totalTenths] and [driveTimeMs] are of every counted trip, Business and Personal
  * together; the Android Auto screen shows those. The home screen shows the split in [totals].
+ *
+ * It holds the trips, not their figures: the two functions that add up are told the unit each
+ * time, so that today's trips read once can be shown in either.
  */
 data class TodayTrips(val sessions: List<TodaySession>) {
     val count: Int get() = sessions.size
 
-    /** Every counted trip of today in one figure, in tenths of a kilometre. */
-    val totalTenths: Long get() = sumOfTenths(sessions.map { it.distanceMetres })
+    /** Every counted trip of today in one figure, in tenths of [unit]. */
+    fun totalTenths(unit: DistanceUnit): Long =
+        sumOfTenths(sessions.map { it.distanceMetres }, unit)
 
     val driveTimeMs: Long get() = sessions.sumOf { it.driveTimeMs }
 
-    /** Today's trips added up by what they are saved as. */
-    val totals: CategoryTotals
-        get() = totalsOf(sessions, { it.category }, { it.distanceMetres })
+    /** Today's trips added up by what they are saved as, in tenths of [unit]. */
+    fun totals(unit: DistanceUnit): CategoryTotals =
+        totalsOf(sessions, unit, { it.category }, { it.distanceMetres })
 
     /** The time spent on today's Business trips. */
     val businessDriveTimeMs: Long

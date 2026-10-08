@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.data.transfer
 
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,22 +54,58 @@ class ExportReaderTest {
     @Test
     fun `a file from a newer MilO is refused as that, whatever else it holds`() {
         assertEquals(
-            ExportProblem.NewerVersion(2),
-            problemOf(with("\"formatVersion\": 1,", "\"formatVersion\": 2,")),
+            ExportProblem.NewerVersion(3),
+            problemOf(with("\"formatVersion\": 2,", "\"formatVersion\": 3,")),
         )
         // Also when its parts are ones this version cannot read at all.
         val newer =
             "{\"format\":\"milo-export\",\"formatVersion\":7,\"journeys\":[{\"a\":1}],\"x\":null}"
         assertEquals(ExportProblem.NewerVersion(7), problemOf(newer))
         // And when the version stands at the end, behind everything it could not read.
-        val atTheEnd = "{\"new\":[{\"a\":[1,2]}],\"formatVersion\":3,\"format\":\"milo-export\"}"
-        assertEquals(ExportProblem.NewerVersion(3), problemOf(atTheEnd))
+        val atTheEnd = "{\"new\":[{\"a\":[1,2]}],\"formatVersion\":4,\"format\":\"milo-export\"}"
+        assertEquals(ExportProblem.NewerVersion(4), problemOf(atTheEnd))
+    }
+
+    // ---- Format 1, from before a sent report named its unit ---------------------------------------
+
+    /** The file as a MilO of format 1 wrote it: that version, and no unit on any sent report. */
+    private fun asFormatOne(): String {
+        val unit = ",\"distanceUnit\":\"KILOMETRES\""
+        assertTrue("The file's sent reports name no unit to take out", whole.contains(unit))
+        return with("\"formatVersion\": 2,", "\"formatVersion\": 1,").replace(unit, "")
+    }
+
+    @Test
+    fun `a file of format 1 is still read, and its sent reports are in kilometres`() {
+        val reading = read(asFormatOne())
+
+        assertTrue("$reading", reading is ExportReading.Good)
+        val reports = (reading as ExportReading.Good).export.sentReports
+        assertEquals(sentReports, reports)
+        assertEquals(setOf(DistanceUnit.KILOMETRES), reports.map { it.distanceUnit }.toSet())
+    }
+
+    @Test
+    fun `a sent report must name its unit from format 2 on, and may not before`() {
+        val unit = ",\"distanceUnit\":\"KILOMETRES\""
+        // Format 2 without the unit: the report cannot be read back as the figure it printed.
+        val withoutUnit = whole.replaceFirst(unit, "")
+        assertTrue(damage(withoutUnit).contains("which unit"))
+        // Format 1 with a unit: MilO never wrote that.
+        val withUnit = with("\"formatVersion\": 2,", "\"formatVersion\": 1,")
+        assertTrue(damage(withUnit).contains("format 1"))
+        // And a unit MilO does not know, which is never read as kilometres.
+        val unknown = whole.replaceFirst(
+            "\"distanceUnit\":\"KILOMETRES\"",
+            "\"distanceUnit\":\"YARDS\"",
+        )
+        assertTrue(damage(unknown).contains("YARDS"))
     }
 
     @Test
     fun `a format version that is no version`() {
         for (version in listOf("0", "-1", "1.5", "\"1\"", "null", "true", "99999999999")) {
-            damage(with("\"formatVersion\": 1,", "\"formatVersion\": $version,"))
+            damage(with("\"formatVersion\": 2,", "\"formatVersion\": $version,"))
         }
         damage("{\"format\":\"milo-export\"}")
     }

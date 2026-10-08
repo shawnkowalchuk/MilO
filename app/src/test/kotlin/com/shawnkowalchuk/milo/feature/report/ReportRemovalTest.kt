@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.FakeSentReportDao
@@ -35,13 +36,21 @@ class ReportRemovalTest {
             EventLogRepository(log),
         ) { nowMs }
     private val october = YearMonth.of(2026, 10)
-    private val month = ReportHandOver(ReportPeriod.Month(october), 31, 4123, nowMs - 60_000)
+    private val month =
+        ReportHandOver(
+            ReportPeriod.Month(october),
+            31,
+            4123,
+            nowMs - 60_000,
+            DistanceUnit.KILOMETRES,
+        )
     private val range =
         ReportHandOver(
             ReportPeriod.Range(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 18)),
             tripCount = 12,
             tenths = 1500,
             atMs = nowMs - 60_000,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun logged(category: EventCategory): List<String> =

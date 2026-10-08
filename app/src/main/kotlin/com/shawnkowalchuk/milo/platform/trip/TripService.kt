@@ -23,6 +23,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 
@@ -225,6 +226,7 @@ class TripService :
             scope.launch {
                 launch { pollTheTruck() }
                 launch { keepNotificationCurrent() }
+                launch { keepNotificationInTheChosenUnit() }
             }
     }
 
@@ -327,6 +329,24 @@ class TripService :
                 }
                 delay(NOTIFICATION_MIN_GAP_MS)
             }
+    }
+
+    /**
+     * Writes the notification again at once when the unit of distances is changed in Settings
+     * (since 2026-10-07), so that it does not go on naming the old one until the trip's figures
+     * next change. It only draws: no trip, timer or trigger is touched. The first value is the
+     * unit the notification was already built with, so it is passed over.
+     */
+    private suspend fun keepNotificationInTheChosenUnit() {
+        val notifications = container.tripNotifications
+        container.shownUnit.unit.drop(1).collect {
+            // On the main thread and only while recording, for the reason given above.
+            mainExecutor.execute {
+                if (work == Work.RECORDING) {
+                    notifications.updateTripInProgress(controller.activity.value.trip)
+                }
+            }
+        }
     }
 
     // ---- The end, wanted or not ------------------------------------------------------------------

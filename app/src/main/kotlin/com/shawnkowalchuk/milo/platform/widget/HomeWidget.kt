@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.SystemClock
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
@@ -56,6 +57,8 @@ private const val CALENDAR_LOOK_MS = 60 * 60_000L
  * that it cannot be loaded.
  *
  * @param activity what the trip controller publishes.
+ * @param shownUnit the unit chosen in Settings, as the whole app holds it. The trip's distance
+ * follows it, and a change is drawn at once. The dollars do not depend on it.
  * @param clock wall-clock milliseconds.
  * @param zone the phone's time zone, for the month and the year.
  * @param scope the application scope: the widget is followed for the life of the process.
@@ -65,6 +68,7 @@ class HomeWidget(
     private val activity: StateFlow<TripActivity>,
     private val trips: TripRepository,
     private val settings: SettingsStore,
+    private val shownUnit: StateFlow<DistanceUnit>,
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -129,6 +133,7 @@ class HomeWidget(
                         clock(),
                         zone(),
                         locale(),
+                        shownUnit.value,
                     ),
                 )
             } finally {
@@ -180,8 +185,14 @@ class HomeWidget(
         var drawn: HomeWidgetContent? = null
         var drawnAtMs = 0L
         // The month is followed too, though nothing is read for it: its turn changes the figures.
-        combine(activity, yearTrips(), centsPerKm(), months()) { now, year, rate, _ ->
-            homeWidgetContent(now, year, rate, clock(), zone(), locale())
+        combine(
+            activity,
+            yearTrips(),
+            centsPerKm(),
+            shownUnit,
+            months(),
+        ) { now, year, rate, unit, _ ->
+            homeWidgetContent(now, year, rate, clock(), zone(), locale(), unit)
         }.distinctUntilChanged()
             .collectLatest { content ->
                 val before = drawn

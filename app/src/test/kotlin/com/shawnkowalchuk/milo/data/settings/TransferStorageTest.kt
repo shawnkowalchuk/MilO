@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -56,7 +57,7 @@ class TransferStorageTest {
         store.setLastProcessExitImportedAtMs(555)
         store.setReminderShown(ReminderShown(YearMonth.of(2026, 9), LocalDate.of(2026, 10, 6)))
         val september = ReportPeriod.Month(YearMonth.of(2026, 9))
-        store.setReportHandOver(ReportHandOver(september, 3, 120, 9))
+        store.setReportHandOver(ReportHandOver(september, 3, 120, 9, DistanceUnit.KILOMETRES))
         store.setLastExport(LastExport(666, withPoints = true))
     }
 

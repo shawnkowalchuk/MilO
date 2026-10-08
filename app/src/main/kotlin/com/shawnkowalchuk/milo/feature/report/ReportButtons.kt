@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.GroupLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryIconButton
@@ -33,9 +35,11 @@ import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileRow
 import com.shawnkowalchuk.milo.core.designsystem.component.WideButton
 import com.shawnkowalchuk.milo.core.designsystem.component.tileRowPlace
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.util.formatDate
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 
 // The lower part of the Report screen: the buttons, as the owner's drawing has them, and under
 // them the list of the reports that were sent, which the drawing does not have.
@@ -183,9 +187,13 @@ private fun SentRow(line: SentLine, state: ReportUiState.Ready, onRemove: () -> 
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(spacing.textGap),
         ) {
-            val km = formatKilometres(line.distanceMetres, locale)
+            // In the unit the report was printed in, as it stood on the report.
+            val total = formatDistance(line.distanceMetres, line.unit, locale)
+            val spoken = stringResource(distanceSpokenRes(line.unit), total)
             Text(
-                text = stringResource(R.string.distance_km, km),
+                text = stringResource(distanceRes(line.unit), total),
+                // A screen reader is read the unit's whole word.
+                modifier = Modifier.semantics { contentDescription = spoken },
                 style = MaterialTheme.typography.titleSmall,
             )
             RowButton(

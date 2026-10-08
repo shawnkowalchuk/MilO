@@ -1,9 +1,9 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.metresOfTenths
-import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.RemovedReport
@@ -11,6 +11,7 @@ import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.report.SentReportRepository
 import com.shawnkowalchuk.milo.data.report.period
+import com.shawnkowalchuk.milo.data.report.printedTenths
 import com.shawnkowalchuk.milo.data.settings.ReportHandOver
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import java.io.IOException
@@ -76,16 +77,27 @@ class ReportRecords(
         }
     }
 
-    /** A file was made and not sent anywhere yet: a PDF to look at, or a CSV. */
-    suspend fun created(what: String, period: ReportPeriod, tripCount: Int, tenths: Long) {
-        log("$what for ${period.inLogWords()} created: ${figures(tripCount, tenths)}")
+    /**
+     * A file was made and not sent anywhere yet: a PDF to look at, or a CSV.
+     *
+     * @param tenths the total the file prints, in tenths of [unit].
+     */
+    suspend fun created(
+        what: String,
+        period: ReportPeriod,
+        tripCount: Int,
+        tenths: Long,
+        unit: DistanceUnit,
+    ) {
+        log("$what for ${period.inLogWords()} created: ${figures(tripCount, tenths, unit)}")
     }
 
     /** The email app was opened with the report. Nothing is known about the email itself. */
     suspend fun handedOver(report: ReportHandOver) {
         log(
             "Report for ${report.period.inLogWords()} handed to the email app: " +
-                "${figures(report.tripCount, report.tenths)}. Android does not say whether " +
+                "${figures(report.tripCount, report.tenths, report.unit)}. Android does not " +
+                "say whether " +
                 "the email is sent, so that is asked when MilO is in front again",
         )
     }
@@ -108,12 +120,18 @@ class ReportRecords(
      * mistake. It is recorded as sent now, and does for a month or a range exactly what "I
      * sent it" does; only the line in the event log says that it was marked by hand.
      *
-     * @param tripCount and [tenths] are what the report lists and adds up to at this moment.
+     * @param tripCount and [tenths] are what the report lists and adds up to at this moment,
+     * the total in tenths of [unit], the unit the report is in.
      * @return the row as stored, or null if storage failed; the event log then says why, and
      * nothing was recorded.
      */
-    suspend fun markedSent(period: ReportPeriod, tripCount: Int, tenths: Long): SentReport? =
-        recordSent(ReportHandOver(period, tripCount, tenths, clock()), ::markedText)
+    suspend fun markedSent(
+        period: ReportPeriod,
+        tripCount: Int,
+        tenths: Long,
+        unit: DistanceUnit,
+    ): SentReport? =
+        recordSent(ReportHandOver(period, tripCount, tenths, clock(), unit), ::markedText)
 
     /**
      * Adds [report] to the list of sent reports, as sent at its own time.
@@ -130,7 +148,10 @@ class ReportRecords(
                     period = report.period,
                     sentAtMs = report.atMs,
                     tripCount = report.tripCount,
-                    distanceMetres = metresOfTenths(report.tenths),
+                    // The printed total itself, in metres, and the unit it was printed in: the
+                    // row reads back as exactly this figure (`printedTenths`).
+                    distanceMetres = metresOfTenths(report.tenths, report.unit),
+                    unit = report.unit,
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -220,7 +241,7 @@ private fun whatWasRecorded(stored: SentReport): String {
             stored.revision == 0 -> "The month is now marked as submitted"
             else -> "The month was marked as submitted before, and stays so"
         }
-    val total = figures(stored.tripCount, tenthsOfAKilometre(stored.distanceMetres))
+    val total = figures(stored.tripCount, stored.printedTenths, stored.distanceUnit)
     return "$which, $total. $effect"
 }
 
@@ -246,7 +267,7 @@ internal fun removedText(removed: RemovedReport): String {
                     "${left.map { it.revision }.sorted().joinToString(", ")}), and keep " +
                     "their numbers"
         }
-    val total = figures(report.tripCount, tenthsOfAKilometre(report.distanceMetres))
+    val total = figures(report.tripCount, report.printedTenths, report.distanceUnit)
     return "Sent report removed from the list by hand, on the Report screen: " +
         "${report.period.inLogWords()}, $which, $total. $effect. No trip and no email was " +
         "touched"
@@ -261,5 +282,17 @@ internal fun ReportPeriod.inLogWords(): String = when (this) {
     is ReportPeriod.Range -> "$firstDay to $lastDay"
 }
 
-private fun figures(tripCount: Int, tenths: Long): String =
-    "$tripCount trips, ${formatTenths(tenths, Locale.ROOT)} km"
+/**
+ * A report's figures as the event log writes them, the total with the unit it was printed in:
+ * "12 trips, 345.6 km", "12 trips, 214.8 mi". The same in every language, like the rest of the
+ * log. A line names the unit of its own figure, so a line in kilometres and one in miles can
+ * stand in one log without either being read as the other.
+ */
+private fun figures(tripCount: Int, tenths: Long, unit: DistanceUnit): String {
+    val word =
+        when (unit) {
+            DistanceUnit.KILOMETRES -> "km"
+            DistanceUnit.MILES -> "mi"
+        }
+    return "$tripCount trips, ${formatTenths(tenths, Locale.ROOT)} $word"
+}

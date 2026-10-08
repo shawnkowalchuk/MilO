@@ -15,6 +15,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.TimeSpan
 import com.shawnkowalchuk.milo.core.util.daySpan
 import com.shawnkowalchuk.milo.core.util.localDateOf
@@ -32,6 +34,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -67,12 +70,15 @@ private const val CLOCK_TICK_MS = 10_000L
  *
  * Everything in this class runs on the main thread: the library calls it there, and
  * `lifecycleScope` runs there.
+ *
+ * @param shownUnit the unit chosen in Settings (`ShownUnit`). A change of it is drawn at once.
  */
 class TripStatusScreen(
     carContext: CarContext,
     private val controller: TripController,
     private val trips: TripRepository,
     private val checklist: SetupChecklist,
+    private val shownUnit: StateFlow<DistanceUnit>,
     private val clock: () -> Long,
 ) : Screen(carContext) {
     /** Today's finished trips, or null until storage has answered. Kept between visits. */
@@ -86,6 +92,7 @@ class TripStatusScreen(
             setupNeedsAttention = false,
             nowMs = clock(),
             locale = locale(),
+            unit = shownUnit.value,
         )
 
     /** What the car was last handed, and when (time since boot). Null: draw the next at once. */
@@ -108,8 +115,8 @@ class TripStatusScreen(
             Pane
                 .Builder()
                 .addRow(row(R.string.car_row_status, carContext.getString(content.status.textRes)))
-                .addRow(row(R.string.car_row_this_trip, tripText(content.trip)))
-                .addRow(row(R.string.car_row_today, todayText(content.today)))
+                .addRow(row(R.string.car_row_this_trip, tripText(content.trip, content.unit)))
+                .addRow(row(R.string.car_row_today, todayText(content.today, content.unit)))
                 .addAction(button(content.action))
                 .build()
         val header =
@@ -134,22 +141,21 @@ class TripStatusScreen(
         .setOnClickListener { controller.onTrigger(action.trigger, action.source) }
         .build()
 
-    private fun tripText(trip: TripFigures?): String = when {
-        trip == null -> carContext.getString(R.string.trip_status_idle)
+    /** A figure with its unit, as every screen writes a distance: "12.3 km". */
+    private fun distance(figure: String, unit: DistanceUnit): String =
+        carContext.getString(distanceRes(unit), figure)
 
-        trip.hours == 0L ->
-            carContext.getString(R.string.car_trip_minutes, trip.kilometres, trip.minutes)
-
-        else ->
-            carContext.getString(
-                R.string.car_trip_hours_minutes,
-                trip.kilometres,
-                trip.hours,
-                trip.minutes,
-            )
+    private fun tripText(trip: TripFigures?, unit: DistanceUnit): String {
+        if (trip == null) return carContext.getString(R.string.trip_status_idle)
+        val shown = distance(trip.kilometres, unit)
+        return if (trip.hours == 0L) {
+            carContext.getString(R.string.car_trip_minutes, shown, trip.minutes)
+        } else {
+            carContext.getString(R.string.car_trip_hours_minutes, shown, trip.hours, trip.minutes)
+        }
     }
 
-    private fun todayText(today: TodayFigures?): String = when {
+    private fun todayText(today: TodayFigures?, unit: DistanceUnit): String = when {
         today == null -> carContext.getString(R.string.car_today_unknown)
 
         today.tripCount == 0 -> carContext.getString(R.string.car_today_none)
@@ -159,7 +165,7 @@ class TripStatusScreen(
                 R.plurals.car_today,
                 today.tripCount,
                 today.tripCount,
-                today.kilometres,
+                distance(today.kilometres, unit),
             )
     }
 
@@ -215,8 +221,14 @@ class TripStatusScreen(
     private fun contents(): Flow<CarScreenContent> {
         // False until the phone has been read: no warning is better than one that flashes.
         val setupOpen = checklist.rows.map { rows -> rows != null && needsAttention(rows) }
-        return combine(controller.activity, today, setupOpen, ticks()) { trip, finished, open, _ ->
-            carScreenContent(trip, finished, open, clock(), locale())
+        return combine(
+            controller.activity,
+            today,
+            setupOpen,
+            shownUnit,
+            ticks(),
+        ) { trip, finished, open, shownIn, _ ->
+            carScreenContent(trip, finished, open, clock(), locale(), shownIn)
         }.distinctUntilChanged()
     }
 

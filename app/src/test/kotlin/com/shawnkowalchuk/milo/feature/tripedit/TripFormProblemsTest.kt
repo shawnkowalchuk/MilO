@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -31,6 +32,7 @@ class TripFormProblemsTest {
             start = LocalTime.of(9, 0),
             end = LocalTime.of(9, 40),
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun problems(
@@ -52,7 +54,7 @@ class TripFormProblemsTest {
                 FormProblem.END_MISSING,
                 FormProblem.DISTANCE_MISSING,
             ),
-            problems(TripForm(date = monday)),
+            problems(TripForm(date = monday, unit = DistanceUnit.KILOMETRES)),
         )
     }
 
@@ -95,7 +97,13 @@ class TripFormProblemsTest {
 
     @Test
     fun `a start in the future is refused even before an end is chosen`() {
-        val form = TripForm(date = monday, start = LocalTime.of(15, 0), kilometres = "5")
+        val form =
+            TripForm(
+                date = monday,
+                start = LocalTime.of(15, 0),
+                kilometres = "5",
+                unit = DistanceUnit.KILOMETRES,
+            )
 
         assertEquals(
             listOf(FormProblem.END_MISSING, FormProblem.IN_THE_FUTURE),
@@ -189,6 +197,73 @@ class TripFormProblemsTest {
         )
     }
 
+    // ---- The same limits with the form in miles (2026-10-07) -------------------------------------
+
+    private val inMiles = filledIn.copy(kilometres = "14.5", unit = DistanceUnit.MILES)
+
+    @Test
+    fun `the limits are the same distance and the same speed with the form in miles`() {
+        val allDay = inMiles.copy(start = LocalTime.of(0, 0), end = LocalTime.of(13, 0))
+
+        assertEquals(emptyList<FormProblem>(), problems(inMiles))
+        // 2 000 km is 1 242.74 mi.
+        assertEquals(emptyList<FormProblem>(), problems(allDay.copy(kilometres = "1242.7")))
+        assertEquals(
+            listOf(FormProblem.DISTANCE_TOO_LONG),
+            problems(allDay.copy(kilometres = "1243")),
+        )
+        // Forty minutes at 180 km/h is 120 km, which is 74.56 mi.
+        assertEquals(emptyList<FormProblem>(), problems(inMiles.copy(kilometres = "74.5")))
+        assertEquals(
+            listOf(FormProblem.DISTANCE_TOO_FAST),
+            problems(inMiles.copy(kilometres = "74.6")),
+        )
+        // What was fine typed as kilometres is too fast typed as miles: the unit is the form's.
+        assertEquals(emptyList<FormProblem>(), problems(filledIn.copy(kilometres = "120")))
+        assertEquals(
+            listOf(FormProblem.DISTANCE_TOO_FAST),
+            problems(inMiles.copy(kilometres = "120")),
+        )
+    }
+
+    @Test
+    fun `in miles the three sentences about the distance name miles, and quote miles`() {
+        assertEquals(
+            Sentence(R.string.trip_edit_problem_distance_missing, names = R.string.unit_mi_name),
+            FormProblem.DISTANCE_MISSING.sentence(DistanceUnit.MILES),
+        )
+        assertEquals(
+            Sentence(
+                R.string.trip_edit_problem_distance_too_long,
+                1_242,
+                numberWith = R.string.distance_mi,
+            ),
+            FormProblem.DISTANCE_TOO_LONG.sentence(DistanceUnit.MILES),
+        )
+        assertEquals(
+            Sentence(
+                R.string.trip_edit_problem_distance_too_fast,
+                111,
+                numberWith = R.string.speed_mph,
+            ),
+            FormProblem.DISTANCE_TOO_FAST.sentence(DistanceUnit.MILES),
+        )
+        // In kilometres the first names kilometres; the other sentences name no unit at all.
+        assertEquals(
+            Sentence(R.string.trip_edit_problem_distance_missing, names = R.string.unit_km_name),
+            FormProblem.DISTANCE_MISSING.sentence(DistanceUnit.KILOMETRES),
+        )
+        val without = FormProblem.entries - FormProblem.DISTANCE_MISSING -
+            FormProblem.DISTANCE_TOO_LONG - FormProblem.DISTANCE_TOO_FAST
+        for (problem in without) {
+            assertEquals(
+                "$problem",
+                problem.sentence(DistanceUnit.KILOMETRES),
+                problem.sentence(DistanceUnit.MILES),
+            )
+        }
+    }
+
     @Test
     fun `the speed is not judged while the times are not in order`() {
         val form = filledIn.copy(end = LocalTime.of(8, 0), kilometres = "500")
@@ -211,7 +286,10 @@ class TripFormProblemsTest {
                 distanceMetres = 12_344.7,
             )
 
-        assertEquals(emptyList<FormProblem>(), problems(formFor(stored, edmonton), stored = stored))
+        assertEquals(
+            emptyList<FormProblem>(),
+            problems(formFor(stored, edmonton, DistanceUnit.KILOMETRES), stored = stored),
+        )
     }
 
     @Test
@@ -227,7 +305,11 @@ class TripFormProblemsTest {
                 distanceMetres = 30_000.0,
             )
         // The distance is untouched, and the end is moved to five minutes after the start.
-        val form = formFor(stored, edmonton).copy(end = LocalTime.of(8, 19))
+        val form = formFor(
+            stored,
+            edmonton,
+            DistanceUnit.KILOMETRES,
+        ).copy(end = LocalTime.of(8, 19))
 
         assertEquals(listOf(FormProblem.DISTANCE_TOO_FAST), problems(form, stored = stored))
     }
@@ -247,7 +329,7 @@ class TripFormProblemsTest {
 
         assertEquals(
             listOf(FormProblem.END_NOT_AFTER_START),
-            problems(formFor(stored, edmonton), stored = stored),
+            problems(formFor(stored, edmonton, DistanceUnit.KILOMETRES), stored = stored),
         )
     }
 
@@ -255,15 +337,23 @@ class TripFormProblemsTest {
 
     @Test
     fun `every problem has a sentence, and the two limits are quoted from the rule`() {
-        val sentences = FormProblem.entries.associateWith { it.sentence() }
+        val sentences = FormProblem.entries.associateWith { it.sentence(DistanceUnit.KILOMETRES) }
 
         assertEquals(FormProblem.entries.size, sentences.values.map { it.text }.toSet().size)
         assertEquals(
-            Sentence(R.string.trip_edit_problem_distance_too_long, MAX_TRIP_KILOMETRES),
+            Sentence(
+                R.string.trip_edit_problem_distance_too_long,
+                MAX_TRIP_KILOMETRES,
+                numberWith = R.string.distance_km,
+            ),
             sentences[FormProblem.DISTANCE_TOO_LONG],
         )
         assertEquals(
-            Sentence(R.string.trip_edit_problem_distance_too_fast, 180),
+            Sentence(
+                R.string.trip_edit_problem_distance_too_fast,
+                180,
+                numberWith = R.string.speed_kmh,
+            ),
             sentences[FormProblem.DISTANCE_TOO_FAST],
         )
     }

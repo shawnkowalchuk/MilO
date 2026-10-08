@@ -12,6 +12,9 @@ import java.util.Locale
  * The words of the CSV: the titles of its seven columns, and what the last column says for a
  * trip that was added or edited by hand. User-visible text, so the caller reads them from the
  * string resources.
+ *
+ * @param km the title of the distance column: the short word of the report's unit, "km" or
+ * "mi", so the column says which of the two its figures are.
  */
 data class CsvWords(
     val date: String,
@@ -26,7 +29,8 @@ data class CsvWords(
 )
 
 // A spreadsheet has to read these the same way whatever language the phone is set to, so the
-// date is written year first, the times on a 24-hour clock, and the kilometres with a dot.
+// date is written year first, the times on a 24-hour clock, and the distance with a dot, in
+// kilometres and in miles alike.
 private val CSV_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ROOT)
 private val CSV_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
 
@@ -44,7 +48,8 @@ private const val FORMULA_STARTS = "=+-@\t\r"
  * It differs from the PDF where a spreadsheet needs it to: each row carries its own date, the
  * formats are fixed (see above), a missing address is an empty cell where the PDF writes it
  * out in words, and there are no subtotals, which would be counted twice by whoever sums the
- * column. The kilometres are the figures the PDF prints, so the column adds up to its total.
+ * column. The distances are the figures the PDF prints, in the report's unit, so the column
+ * adds up to its total.
  */
 fun reportCsv(report: MileageReport, words: CsvWords): String {
     val header =
@@ -57,7 +62,7 @@ fun reportCsv(report: MileageReport, words: CsvWords): String {
                 trip.endedAtMs?.let { CSV_TIME.format(it.at(report.zone)) }.orEmpty(),
                 trip.from.orEmpty(),
                 trip.to.orEmpty(),
-                formatTenths(trip.tenths, Locale.ROOT),
+                formatTenths(trip.tenths(report.unit), Locale.ROOT),
                 when (trip.mark) {
                     ReportMark.ADDED -> words.added
                     ReportMark.EDITED -> words.edited

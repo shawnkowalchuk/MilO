@@ -12,7 +12,9 @@ import com.shawnkowalchuk.milo.data.eventlog.buildEventLogFiles
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.report.SentReportRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.ShownUnit
 import com.shawnkowalchuk.milo.data.settings.buildSettingsStore
+import com.shawnkowalchuk.milo.data.settings.buildShownUnit
 import com.shawnkowalchuk.milo.data.sound.buildOwnSoundStore
 import com.shawnkowalchuk.milo.data.trip.TripCategoryCatchUp
 import com.shawnkowalchuk.milo.data.trip.TripRepository
@@ -91,6 +93,11 @@ class AppContainer(context: Context) {
     }
 
     val settingsStore: SettingsStore by lazy { buildSettingsStore(appContext) }
+
+    /** The unit distances are shown in, held in memory: every surface reads it from here. */
+    val shownUnit: ShownUnit by lazy {
+        buildShownUnit(settingsStore, { eventLogRepository }, applicationScope)
+    }
 
     /** Shared with the crash handler, which [MiloApplication] installs before anything else. */
     val crashFileStore: CrashFileStore = buildCrashFileStore(appContext)
@@ -172,7 +179,9 @@ class AppContainer(context: Context) {
      * Shared by the trip service, its starter and the driving alert, so the notification
      * channels exist once.
      */
-    val tripNotifications: TripNotifications by lazy { TripNotifications(appContext) }
+    val tripNotifications: TripNotifications by lazy {
+        TripNotifications(appContext, unit = { shownUnit.unit.value })
+    }
 
     /**
      * The one owner of trip recording (ADR-002). Every trigger, screen and service reaches it

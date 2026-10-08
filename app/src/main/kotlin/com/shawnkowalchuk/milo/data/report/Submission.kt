@@ -1,7 +1,7 @@
 package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
-import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.YearMonth
 
 // What the list of sent reports says about a period: whether it was sent before, which revision
@@ -133,13 +133,17 @@ fun removalEffect(report: SentReport, sent: List<SentReport>): RemovalEffect =
  * need to be sent again, as a revision.
  *
  * @param sentTripCount and [sentTenths] are the newest report's figures.
- * @param tripCount and [tenths] are what a report made now would hold.
+ * @param tripCount and [tenths] are what a report made now, in the same unit, would hold.
+ * @param unit the unit both totals are in: the one the newest report was printed in, so that
+ * the two figures can be held against each other. It is not the unit MilO is set to now if
+ * that was changed since.
  */
 data class ChangedSinceSent(
     val sentTripCount: Int,
     val sentTenths: Long,
     val tripCount: Int,
     val tenths: Long,
+    val unit: DistanceUnit,
 )
 
 /**
@@ -153,16 +157,24 @@ data class ChangedSinceSent(
  * figures as they were: a time or an address that was edited, or two changes that cancel out.
  * Nothing stores when a trip was last changed.
  *
- * @param tripCount how many Business trips the month has now, and [tenths] what they add up
- * to as the report adds up (`sumOfTenths`).
+ * **It is judged in the unit the newest report was printed in,** not in the unit MilO is set
+ * to (since 2026-10-07). The stored total is that report's own figure, and the month's trips
+ * are added up in the same unit to be held against it. So choosing the other unit in Settings
+ * changes neither side, and can never raise this by itself.
+ *
+ * @param tripCount how many Business trips the month has now.
+ * @param tenthsIn what they add up to in a unit, as the report adds up (`sumOfTenths`): each
+ * trip rounded to a tenth of that unit first. It is asked for the newest report's unit.
  */
 fun changedSinceSent(
     submission: MonthSubmission?,
     tripCount: Int,
-    tenths: Long,
+    tenthsIn: (DistanceUnit) -> Long,
 ): ChangedSinceSent? {
     val newest = submission?.latest ?: return null
-    val sentTenths = tenthsOfAKilometre(newest.distanceMetres)
+    val unit = newest.distanceUnit
+    val sentTenths = newest.printedTenths
+    val tenths = tenthsIn(unit)
     if (newest.tripCount == tripCount && sentTenths == tenths) return null
-    return ChangedSinceSent(newest.tripCount, sentTenths, tripCount, tenths)
+    return ChangedSinceSent(newest.tripCount, sentTenths, tripCount, tenths, unit)
 }

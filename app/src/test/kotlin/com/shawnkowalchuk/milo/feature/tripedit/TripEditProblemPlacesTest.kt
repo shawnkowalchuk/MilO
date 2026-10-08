@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -27,11 +28,19 @@ class TripEditProblemPlacesTest {
             start = LocalTime.of(9, 0),
             end = LocalTime.of(9, 40),
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 
     /** The screen after a press on Save at 14:00, with a trip recorded since [recordingSince]. */
     private fun afterSave(form: TripForm, recordingSince: Long? = null) = tripEditUiState(
-        session = EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, nowMs),
+        session =
+            EditSession(
+                stored = null,
+                DEFAULT_WORK_SCHEDULE,
+                edmonton,
+                nowMs,
+                DistanceUnit.KILOMETRES,
+            ),
         form = form,
         check = FormCheck(nowMs, recordingSince),
         saveFailed = false,
@@ -84,7 +93,8 @@ class TripEditProblemPlacesTest {
 
     @Test
     fun `with something wrong in both cards the screen moves to the first, the times`() {
-        val state = afterSave(TripForm(date = LocalDate.of(2026, 10, 5)))
+        val state =
+            afterSave(TripForm(date = LocalDate.of(2026, 10, 5), unit = DistanceUnit.KILOMETRES))
 
         assertEquals(
             listOf(FormProblem.START_MISSING, FormProblem.END_MISSING),
@@ -114,11 +124,11 @@ class TripEditProblemPlacesTest {
                 R.string.trip_edit_problem_end_not_after_start,
                 names = R.string.trip_edit_ends_next_day,
             ),
-            FormProblem.END_NOT_AFTER_START.sentence(),
+            FormProblem.END_NOT_AFTER_START.sentence(DistanceUnit.KILOMETRES),
         )
         // A sentence quotes a number or a name, never both: the screen fills in one argument.
         for (problem in FormProblem.entries) {
-            val sentence = problem.sentence()
+            val sentence = problem.sentence(DistanceUnit.KILOMETRES)
             assertTrue("$problem", sentence.number == null || sentence.names == null)
         }
     }

@@ -106,7 +106,7 @@ private fun ColumnScope.ReadyTiles(state: ReportUiState.Ready, actions: ReportAc
 
     PeriodTile(state, actions)
     TilePair(
-        first = { half -> BusinessTile(state.summary, half) },
+        first = { half -> BusinessTile(state.summary, state.unit, half) },
         second = { half -> StatusTile(state, half) },
     )
     PdfTile(state, actions)

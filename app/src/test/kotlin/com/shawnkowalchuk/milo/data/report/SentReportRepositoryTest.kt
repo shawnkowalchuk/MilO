@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.io.IOException
 import java.time.LocalDate
 import java.time.YearMonth
@@ -29,6 +30,7 @@ class SentReportRepositoryTest {
                 sentAtMs = 9_000,
                 tripCount = 31,
                 distanceMetres = 412_300.0,
+                unit = DistanceUnit.KILOMETRES,
             )
 
             assertEquals(
@@ -55,6 +57,7 @@ class SentReportRepositoryTest {
             sentAtMs = 9_000,
             tripCount = 4,
             distanceMetres = 26_800.0,
+            unit = DistanceUnit.KILOMETRES,
         )
 
         assertEquals(SentReportKind.RANGE, stored.kind)
@@ -64,16 +67,17 @@ class SentReportRepositoryTest {
 
     @Test
     fun `a period sent again is numbered as the next revision of it, and of no other`() = runTest {
-        val first = sent.recordSent(october, 1_000, 31, 412_300.0)
-        val part = sent.recordSent(range, 2_000, 4, 26_800.0)
-        val second = sent.recordSent(october, 3_000, 32, 420_100.0)
-        val third = sent.recordSent(october, 4_000, 32, 420_100.0)
-        val partAgain = sent.recordSent(range, 5_000, 4, 26_800.0)
+        val first = sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
+        val part = sent.recordSent(range, 2_000, 4, 26_800.0, DistanceUnit.KILOMETRES)
+        val second = sent.recordSent(october, 3_000, 32, 420_100.0, DistanceUnit.KILOMETRES)
+        val third = sent.recordSent(october, 4_000, 32, 420_100.0, DistanceUnit.KILOMETRES)
+        val partAgain = sent.recordSent(range, 5_000, 4, 26_800.0, DistanceUnit.KILOMETRES)
         val september = sent.recordSent(
             ReportPeriod.Month(YearMonth.of(2026, 9)),
             6_000,
             20,
             300_000.0,
+            DistanceUnit.KILOMETRES,
         )
 
         assertEquals(listOf(0, 1, 2), listOf(first, second, third).map { it.revision })
@@ -86,9 +90,9 @@ class SentReportRepositoryTest {
 
     @Test
     fun `the list is read newest first`() = runTest {
-        sent.recordSent(october, 1_000, 31, 412_300.0)
-        sent.recordSent(range, 3_000, 4, 26_800.0)
-        sent.recordSent(october, 2_000, 32, 420_100.0)
+        sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
+        sent.recordSent(range, 3_000, 4, 26_800.0, DistanceUnit.KILOMETRES)
+        sent.recordSent(october, 2_000, 32, 420_100.0, DistanceUnit.KILOMETRES)
 
         assertEquals(listOf(3_000L, 2_000L, 1_000L), sent.observeSent().first().map { it.sentAtMs })
     }
@@ -97,15 +101,40 @@ class SentReportRepositoryTest {
     fun `figures that cannot be a report's are refused, and nothing is stored`() = runTest {
         val wrong =
             listOf<suspend () -> Unit>(
-                { sent.recordSent(october, sentAtMs = -1, tripCount = 1, distanceMetres = 1.0) },
-                { sent.recordSent(october, sentAtMs = 1, tripCount = -1, distanceMetres = 1.0) },
-                { sent.recordSent(october, sentAtMs = 1, tripCount = 1, distanceMetres = -1.0) },
+                {
+                    sent.recordSent(
+                        october,
+                        sentAtMs = -1,
+                        tripCount = 1,
+                        distanceMetres = 1.0,
+                        unit = DistanceUnit.KILOMETRES,
+                    )
+                },
+                {
+                    sent.recordSent(
+                        october,
+                        sentAtMs = 1,
+                        tripCount = -1,
+                        distanceMetres = 1.0,
+                        unit = DistanceUnit.KILOMETRES,
+                    )
+                },
+                {
+                    sent.recordSent(
+                        october,
+                        sentAtMs = 1,
+                        tripCount = 1,
+                        distanceMetres = -1.0,
+                        unit = DistanceUnit.KILOMETRES,
+                    )
+                },
                 {
                     sent.recordSent(
                         october,
                         sentAtMs = 1,
                         tripCount = 1,
                         distanceMetres = Double.NaN,
+                        unit = DistanceUnit.KILOMETRES,
                     )
                 },
             )
@@ -123,7 +152,13 @@ class SentReportRepositoryTest {
 
     @Test
     fun `a report with no trips at all can be recorded as sent`() = runTest {
-        val stored = sent.recordSent(october, 1_000, tripCount = 0, distanceMetres = 0.0)
+        val stored = sent.recordSent(
+            october,
+            1_000,
+            tripCount = 0,
+            distanceMetres = 0.0,
+            unit = DistanceUnit.KILOMETRES,
+        )
 
         assertEquals(0, stored.tripCount)
         assertEquals(0.0, stored.distanceMetres, 0.0)
@@ -131,9 +166,9 @@ class SentReportRepositoryTest {
 
     @Test
     fun `a removed report leaves the list, and the others keep their numbers`() = runTest {
-        val first = sent.recordSent(october, 1_000, 31, 412_300.0)
-        val second = sent.recordSent(october, 2_000, 32, 420_100.0)
-        val part = sent.recordSent(range, 3_000, 4, 26_800.0)
+        val first = sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
+        val second = sent.recordSent(october, 2_000, 32, 420_100.0, DistanceUnit.KILOMETRES)
+        val part = sent.recordSent(range, 3_000, 4, 26_800.0, DistanceUnit.KILOMETRES)
 
         val removed = sent.remove(first.id)
 
@@ -147,23 +182,29 @@ class SentReportRepositoryTest {
     @Test
     fun `the next report after a removal takes the number after the highest one still listed`() =
         runTest {
-            val first = sent.recordSent(october, 1_000, 31, 412_300.0)
-            val second = sent.recordSent(october, 2_000, 32, 420_100.0)
+            val first = sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
+            val second = sent.recordSent(october, 2_000, 32, 420_100.0, DistanceUnit.KILOMETRES)
 
             // The original removed: the revision keeps its 1, and the next is 2.
             sent.remove(first.id)
-            assertEquals(2, sent.recordSent(october, 3_000, 32, 420_100.0).revision)
+            assertEquals(
+                2,
+                sent.recordSent(october, 3_000, 32, 420_100.0, DistanceUnit.KILOMETRES).revision,
+            )
 
             // The newest removed: its number is free again.
             sent.remove(dao.rows.last().id)
-            assertEquals(2, sent.recordSent(october, 4_000, 32, 420_100.0).revision)
+            assertEquals(
+                2,
+                sent.recordSent(october, 4_000, 32, 420_100.0, DistanceUnit.KILOMETRES).revision,
+            )
             assertEquals(listOf(second.id, 4L), dao.rows.map { it.id })
         }
 
     @Test
     fun `removing a report that is not in the list changes nothing, also the second time`() =
         runTest {
-            val only = sent.recordSent(october, 1_000, 31, 412_300.0)
+            val only = sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
 
             assertNull(sent.remove(only.id + 7))
             assertEquals(listOf(only), dao.rows)
@@ -175,7 +216,7 @@ class SentReportRepositoryTest {
 
     @Test
     fun `a removal that storage refuses reaches the caller, and leaves the row`() = runTest {
-        val only = sent.recordSent(october, 1_000, 31, 412_300.0)
+        val only = sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES)
         dao.failNextDelete = IOException("disk full")
 
         assertThrows(IOException::class.java) { runBlocking { sent.remove(only.id) } }
@@ -188,7 +229,7 @@ class SentReportRepositoryTest {
         dao.failNextInsert = IOException("disk full")
 
         assertThrows(IOException::class.java) {
-            runBlocking { sent.recordSent(october, 1_000, 31, 412_300.0) }
+            runBlocking { sent.recordSent(october, 1_000, 31, 412_300.0, DistanceUnit.KILOMETRES) }
         }
         assertEquals(emptyList<SentReport>(), dao.rows)
     }

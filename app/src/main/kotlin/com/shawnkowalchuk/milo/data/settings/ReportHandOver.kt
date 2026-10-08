@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -22,18 +23,23 @@ import java.time.YearMonth
  * The figures are the ones the PDF printed, taken when it was made, so a trip that ends while
  * he is in the email app changes nothing about what is recorded as sent.
  *
- * @param tenths the report's total, in tenths of a kilometre.
+ * @param tenths the report's total as it was printed, in tenths of [unit].
  * @param atMs when the email app was opened with the report. If he says he sent it, this is
  * the day it is recorded as sent, however much later he answers.
+ * @param unit the unit the report was printed in (since 2026-10-07): the one MilO was set to
+ * when it was made. It is what gets recorded, also if the setting is changed before he answers.
  */
 data class ReportHandOver(
     val period: ReportPeriod,
     val tripCount: Int,
     val tenths: Long,
     val atMs: Long,
+    val unit: DistanceUnit,
 )
 
-// How it is kept in the settings file: six values, written and removed together. The key names
+// How it is kept in the settings file: six values, written and removed together, and since
+// 2026-10-07 the unit beside them. A hand-over in kilometres is written as it always was, with
+// no unit: one that is waiting from before that day is read as the kilometres it was. The key names
 // and the two words for the kind of period are what is written to the file; they are spelled
 // here and never taken from a constant's own name, so nothing that is renamed in code can lose
 // a question that is waiting.
@@ -44,6 +50,7 @@ private val LAST_DAY = longPreferencesKey("report_handed_over_last_day")
 private val TRIP_COUNT = intPreferencesKey("report_handed_over_trip_count")
 private val TENTHS = longPreferencesKey("report_handed_over_tenths")
 private val AT_MS = longPreferencesKey("report_handed_over_at_ms")
+private val UNIT = stringPreferencesKey("report_handed_over_unit")
 
 private const val KIND_MONTH = "MONTH"
 private const val KIND_RANGE = "RANGE"
@@ -67,13 +74,20 @@ internal fun Preferences.readReportHandOver(): ReportHandOver? {
     val tripCount = this[TRIP_COUNT]?.takeIf { it >= 0 } ?: return null
     val tenths = this[TENTHS]?.takeIf { it >= 0 } ?: return null
     val atMs = this[AT_MS]?.takeIf { it >= 0 } ?: return null
-    return ReportHandOver(period, tripCount, tenths, atMs)
+    // No unit is the kilometres of every hand-over before there was a choice. A word MilO does
+    // not write is read as "nothing is waiting", like every other value that makes no report.
+    val unit =
+        when (val word = this[UNIT]) {
+            null -> DistanceUnit.KILOMETRES
+            else -> distanceUnitOf(word) ?: return null
+        }
+    return ReportHandOver(period, tripCount, tenths, atMs, unit)
 }
 
 /** Writes the hand-over, or removes it when null. Called inside one edit. */
 internal fun MutablePreferences.writeReportHandOver(handOver: ReportHandOver?) {
     if (handOver == null) {
-        listOf(KIND, FIRST_DAY, LAST_DAY, TRIP_COUNT, TENTHS, AT_MS).forEach { remove(it) }
+        listOf(KIND, FIRST_DAY, LAST_DAY, TRIP_COUNT, TENTHS, AT_MS, UNIT).forEach { remove(it) }
         return
     }
     this[KIND] =
@@ -86,6 +100,10 @@ internal fun MutablePreferences.writeReportHandOver(handOver: ReportHandOver?) {
     this[TRIP_COUNT] = handOver.tripCount
     this[TENTHS] = handOver.tenths
     this[AT_MS] = handOver.atMs
+    when (handOver.unit) {
+        DistanceUnit.KILOMETRES -> remove(UNIT)
+        DistanceUnit.MILES -> this[UNIT] = handOver.unit.storedWord
+    }
 }
 
 /** The calendar day [epochDay] days after 1970-01-01, or null for a number that is no day. */

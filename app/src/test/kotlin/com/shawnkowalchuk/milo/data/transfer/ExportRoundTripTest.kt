@@ -4,9 +4,12 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.metresOfTenths
 import com.shawnkowalchuk.milo.data.MILO_DATABASE_VERSION
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.report.SentReportKind
+import com.shawnkowalchuk.milo.data.report.printedTenths
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.transferred
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -122,6 +125,23 @@ class ExportRoundTripTest {
     }
 
     @Test
+    fun `a report sent in miles comes back in miles, with the total it printed to the tenth`() {
+        // 214.8 mi, as `ReportRecords` stores it: the printed tenths in metres, and the unit.
+        val inMiles =
+            sentReports.first().copy(
+                distanceMetres = metresOfTenths(2_148, DistanceUnit.MILES),
+                distanceUnit = DistanceUnit.MILES,
+            )
+
+        val back = good(fileOf(sourceOf(reports = listOf(inMiles) + sentReports.drop(1))))
+
+        assertEquals(inMiles, back.sentReports.first())
+        assertEquals(2_148L, back.sentReports.first().printedTenths)
+        // The others are untouched by their neighbour's unit.
+        assertEquals(sentReports.drop(1), back.sentReports.drop(1))
+    }
+
+    @Test
     fun `settings as they are out of the box come back as they are out of the box`() {
         val untouched = MiloSettings().transferred()
 
@@ -177,7 +197,7 @@ class ExportRoundTripTest {
 
         val document = Json.parseToJsonElement(text).jsonObject
         assertEquals("milo-export", document.getValue("format").jsonPrimitive.content)
-        assertEquals("1", document.getValue("formatVersion").jsonPrimitive.content)
+        assertEquals("2", document.getValue("formatVersion").jsonPrimitive.content)
         val exportedAt = document.getValue("exportedAt").jsonPrimitive.content
         assertEquals("2026-10-06T14:02:11-06:00", exportedAt)
         val contents = document.getValue("contents").jsonObject
@@ -187,7 +207,7 @@ class ExportRoundTripTest {
         assertEquals(8, document.getValue("trips").jsonArray.size)
         assertEquals(4, document.getValue("points").jsonArray.size)
         // What it is, in its first two lines, for whoever opens it in an editor.
-        assertTrue(text.startsWith("{\n\"format\": \"milo-export\",\n\"formatVersion\": 1,\n"))
+        assertTrue(text.startsWith("{\n\"format\": \"milo-export\",\n\"formatVersion\": 2,\n"))
     }
 
     @Test
@@ -239,11 +259,13 @@ class ExportRoundTripTest {
         assertEquals(TripStartCause.entries.toSet(), START_CAUSE_WORDS.keys)
         assertEquals(TripCategory.entries.toSet(), CATEGORY_WORDS.keys)
         assertEquals(SentReportKind.entries.toSet(), REPORT_KIND_WORDS.keys)
+        assertEquals(DistanceUnit.entries.toSet(), REPORT_UNIT_WORDS.keys)
         // Pinned: a file written today must be read by every later version.
         assertEquals(setOf("FINISHED", "DISCARDED", "DELETED"), STATUS_WORDS.values.toSet())
         assertEquals(setOf("TRUCK", "MANUAL"), START_CAUSE_WORDS.values.toSet())
         assertEquals(setOf("BUSINESS", "PERSONAL"), CATEGORY_WORDS.values.toSet())
         assertEquals(setOf("MONTH", "RANGE"), REPORT_KIND_WORDS.values.toSet())
+        assertEquals(setOf("KILOMETRES", "MILES"), REPORT_UNIT_WORDS.values.toSet())
         assertEquals("monday", DAY_WORDS.values.first())
     }
 

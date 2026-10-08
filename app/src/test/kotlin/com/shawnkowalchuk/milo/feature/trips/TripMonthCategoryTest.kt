@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.Instant
@@ -57,6 +58,7 @@ class TripMonthCategoryTest {
             liveTripId = null,
             liveDistanceMetres = null,
             liveStart = null,
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private fun line(trip: Trip, showLeftOut: Boolean = true): TripLine =
