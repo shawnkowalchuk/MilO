@@ -40,61 +40,66 @@ private const val BOLD = 700
 /**
  * The kinds of text on the report, each with its size in points and its weight, from 100 to
  * 900 as a font names it.
+ *
+ * Since 2026-10-08 the sizes are a step smaller than they were (a trip's line 8
+ * points, not 9), so that a month of trips takes fewer pages (Shawn: "It also should be more
+ * compressed. i can see this being pages and pages."). At 8 points most addresses fit on one
+ * line without being shortened, which Shawn chose over abbreviating them.
  */
 enum class ReportTextStyle(val size: Float, val weight: Int) {
     /** The app's initial, on the lime square of its mark. */
-    MARK(16f, BOLD),
+    MARK(13f, BOLD),
 
     /** The app's name, beside its mark at the top of the first page. */
-    BRAND(16f, SEMI_BOLD),
+    BRAND(14f, SEMI_BOLD),
 
     /** The quieter line under the app's name, and under the period: what this is and when. */
-    BRAND_LINE(9f, REGULAR),
+    BRAND_LINE(8f, REGULAR),
 
     /** The period, large, at the end of the top tile. */
-    PERIOD(16f, SEMI_BOLD),
+    PERIOD(14f, SEMI_BOLD),
 
     /** The small label at the top of a tile of figures: "Business", "Personal". */
-    TILE_LABEL(9f, SEMI_BOLD),
+    TILE_LABEL(8f, SEMI_BOLD),
 
     /** The kilometres of a tile of figures, large. */
-    FIGURE(26f, BOLD),
+    FIGURE(20f, BOLD),
 
     /** The unit after a large figure. */
-    FIGURE_UNIT(12f, SEMI_BOLD),
+    FIGURE_UNIT(10f, SEMI_BOLD),
 
     /** The line under a large figure: how many trips it adds up. */
-    TILE_LINE(9f, MEDIUM),
+    TILE_LINE(8f, MEDIUM),
 
     /** The label over a detail of the sender, such as "Name". */
-    LABEL(8f, MEDIUM),
+    LABEL(7.5f, MEDIUM),
 
     /** The detail under its label. */
-    VALUE(10f, SEMI_BOLD),
+    VALUE(9f, SEMI_BOLD),
 
     /** A note: what the report lists, the legend, the words under the signature line. */
-    NOTE(8.5f, REGULAR),
+    NOTE(8f, REGULAR),
 
     /** A day's heading. */
-    DAY(10f, SEMI_BOLD),
+    DAY(8.5f, SEMI_BOLD),
 
     /** The titles of the columns. */
-    COLUMN(7.5f, SEMI_BOLD),
+    COLUMN(7f, SEMI_BOLD),
 
     /** A trip's times, addresses and kilometres. */
-    CELL(9f, REGULAR),
+    CELL(8f, REGULAR),
 
     /** A day's subtotal. */
-    SUM(9f, SEMI_BOLD),
+    SUM(8f, SEMI_BOLD),
 
     /** What the period's total is of. */
-    TOTAL_LABEL(11f, SEMI_BOLD),
+    TOTAL_LABEL(10f, SEMI_BOLD),
 
     /** The period's total. */
-    TOTAL(22f, BOLD),
+    TOTAL(18f, BOLD),
 
     /** The line at the bottom of every page. */
-    FOOTER(7.5f, REGULAR),
+    FOOTER(7f, REGULAR),
 
     /** The app's initial on the small mark at the start of that line. */
     FOOTER_MARK(6f, BOLD),

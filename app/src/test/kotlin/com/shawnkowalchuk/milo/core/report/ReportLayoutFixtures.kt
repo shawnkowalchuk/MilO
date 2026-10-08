@@ -57,8 +57,8 @@ internal fun PageItem.Text.end(): Float = if (rightAligned) x else x + MEASURE.w
 /**
  * What must hold for every report made by [reportOf], however its days fall on the pages: every
  * trip is there once and in order, nothing is outside the margins, no heading is left alone,
- * no two rows share a line, and every subtotal stands under its day's last trip on that trip's
- * page.
+ * no two rows share a line, each page has the column titles once, above its days, and every
+ * subtotal stands under its day's last trip on that trip's page.
  */
 internal fun assertSound(pages: List<ReportPage>, tripsPerDay: List<Int>) {
     val expected = tripsPerDay.flatMapIndexed { day, count -> List(count) { fromOf(day, it) } }
@@ -84,6 +84,12 @@ internal fun assertSound(pages: List<ReportPage>, tripsPerDay: List<Int>) {
         }
         val baselines = page.rows.map { it.baseline }
         assertEquals("Rows overlap on page ${page.number}", baselines.distinct(), baselines)
+        // The column titles once on a page that has trips, above everything else of its table.
+        if (page.rows.isNotEmpty()) {
+            val titles = page.texts.filter { it.text == WORDS.columnStart }
+            assertEquals("Column titles on page ${page.number}", 1, titles.size)
+            assertTrue(page.headings.all { it.baseline > titles.single().baseline })
+        }
     }
 
     val subtotals = pages.sumOf { page -> page.texts.count { it.text == WORDS.subtotal } }

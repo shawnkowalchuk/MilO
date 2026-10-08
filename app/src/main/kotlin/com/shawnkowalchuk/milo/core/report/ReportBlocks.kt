@@ -5,10 +5,10 @@ package com.shawnkowalchuk.milo.core.report
 // from its own top, and knows how high it is; `layoutReport` decides which page it lands on.
 
 /** The room between two columns. */
-private const val GUTTER = 8f
+private const val GUTTER = 6f
 
 /** The room above and below the text of a trip's row. */
-private const val ROW_PADDING = 3f
+private const val ROW_PADDING = 2f
 
 /** Between the kilometres and the asterisk of a marked trip. */
 private const val MARK_GAP = 2f
@@ -17,38 +17,40 @@ private const val MARK_GAP = 2f
 private const val MIN_ADDRESS_WIDTH = 60f
 
 /** The room under a day, before the next one. */
-internal const val DAY_GAP = 14f
+internal const val DAY_GAP = 8f
 
 /**
  * The table of a day stands this far in from the margins, so that its first and last columns
  * line up with the words of the day's heading on its tile.
  */
-private const val TABLE_INSET = 10f
+private const val TABLE_INSET = 8f
 
-// The tiles, as the app draws them: 10 apart, with round corners, the words inside them as far
-// from the edge as on the screens. The corners are smaller than the screens' because the page
-// is larger than a phone: what reads as round on a phone reads as a bubble on paper.
-private const val TILE_GAP = 10f
-private const val TILE_RADIUS = 14f
-private const val TILE_PADDING = 18f
-private const val SMALL_TILE_PADDING = 16f
+// The tiles, as the app draws them, with round corners, but set closer than on the screens:
+// 6 apart, the words 10 to 12 from the edge (since 2026-10-08: "Same look, tighter",
+// so the trips start higher on the first page). The corners are smaller than the screens'
+// because the page is larger than a phone: what reads as round on a phone reads as a bubble
+// on paper.
+private const val TILE_GAP = 6f
+private const val TILE_RADIUS = 10f
+private const val TILE_PADDING = 12f
+private const val SMALL_TILE_PADDING = 10f
 
 /** The app's mark: a square of the accent with the app's initial, its corner as on Home. */
-private const val MARK_SIZE = 36f
-private const val MARK_RADIUS = 11f
+private const val MARK_SIZE = 28f
+private const val MARK_RADIUS = 8f
 
 /** Between the mark and the app's name. */
-private const val NAME_GAP = 12f
+private const val NAME_GAP = 10f
 
 /** How far a capital's middle stands above its baseline, as a share of the font size. */
 private const val CAP_MIDDLE = 0.36f
 
 /** The tile a day's heading stands on. */
-private const val DAY_BAR_HEIGHT = 22f
-private const val DAY_BAR_RADIUS = 8f
+private const val DAY_BAR_HEIGHT = 16f
+private const val DAY_BAR_RADIUS = 5f
 
 /** The room under the report's heading, before the first day. */
-private const val SECTION_GAP = 16f
+private const val SECTION_GAP = 10f
 
 // Rules are drawn with a thickness of their own. A hairline (thickness 0) is one device pixel
 // wide whatever the scale, and can print almost invisibly.
@@ -61,7 +63,7 @@ private const val SIGNATURE_GAP = 40f
 private const val DATE_LINE = 140f
 
 /** The room above the signature line: enough to sign in. */
-private const val SIGNATURE_ROOM = 44f
+private const val SIGNATURE_ROOM = 36f
 
 /** Between a line to write on and the word under it. */
 private const val SIGNATURE_WORDS_GAP = 2f
@@ -348,7 +350,7 @@ internal fun dayHeadingBlock(heading: String): Block = block {
     down(DAY_BAR_HEIGHT + ROW_PADDING * 2)
 }
 
-/** The titles of the five columns, small and quiet. Each trip under them starts with a rule. */
+/** The titles of the five columns, small and quiet, once on each page above its first day. */
 internal fun columnTitlesBlock(words: ReportWords, columns: Columns): Block = block {
     val style = ReportTextStyle.COLUMN
     val quiet = ReportInk.QUIET

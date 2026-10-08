@@ -54,12 +54,14 @@ private class Pages {
  * Lays the report out on US Letter pages.
  *
  * The rules, in the order they are applied:
- * - **A day that fits on a page is not split.** If it does not fit in what is left of the
- *   present page, it starts the next one.
- * - **A day that is longer than a page is split** between two of its trips, and goes on at the
- *   top of the next page under its heading, repeated with "(continued)", and the column titles.
- * - **A heading is never left alone:** a day's heading and column titles are always followed
- *   by at least one of its trips on the same page.
+ * - **A page is filled before the next is begun** (Shawn's choice of 2026-10-08: "Fill the
+ *   page, continue the day"). A day starts in whatever room the page has left; if it does not
+ *   fit, it is split between two of its trips and goes on at the top of the next page under its
+ *   heading, repeated with "(continued)". Until then a day that fitted on a page was moved to
+ *   the next one whole, which could leave half a page empty and the day looking missing.
+ * - **The column titles stand once on each page,** above its first day, not under every day.
+ * - **A heading is never left alone:** a day's heading, and the column titles above it, are
+ *   always followed by at least one of its trips on the same page.
  * - **A trip is never cut,** however many lines its addresses wrap to, and a day's subtotal
  *   stands on the same page as the day's last trip.
  * - **The total, the legend and the signature line stay together.**
@@ -98,13 +100,10 @@ private fun Pages.placeDay(
     val titles = columnTitlesBlock(words, columns)
     val rows = day.rows.map { rowBlock(it, columns, measure) }
     val subtotal = subtotalBlock(day, words, columns)
-    val head = heading.height + titles.height
-    val whole = head + rows.sumOf { it.height.toDouble() }.toFloat() + subtotal.height
 
-    // Kept whole on the next page, if a whole page can hold it. A page that holds no day yet
-    // (the first, under the report's heading) is not left empty for that: the day starts there
-    // and is split, which wastes less paper than a page with a heading and nothing else.
-    if (whole > spaceLeft && whole <= CONTENT_BOTTOM - CONTENT_TOP && holdsADay) newPage()
+    // What a part of the day needs above its first trip: its heading, and the column titles
+    // while the page has none yet.
+    fun head(): Float = heading.height + if (holdsADay) 0f else titles.height
 
     // What a trip needs to be placed: the day's last trip takes the subtotal along.
     fun needed(index: Int): Float =
@@ -114,9 +113,9 @@ private fun Pages.placeDay(
     while (next < rows.size) {
         // Not even the heading and one trip fit here. On a page with nothing on it there is no
         // better place to go, so the row is placed all the same, never looped over.
-        if (head + needed(next) > spaceLeft && !atTop) newPage()
+        if (head() + needed(next) > spaceLeft && !atTop) newPage()
+        if (!holdsADay) place(titles)
         place(if (next == 0) heading else dayHeadingBlock(day.continuedHeading))
-        place(titles)
         holdsADay = true
         do {
             place(rows[next])

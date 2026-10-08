@@ -22,6 +22,21 @@
 
 ## Log
 
+### 2026-10-08
+
+**`[FINDING]` October 7 was on the report all along, on page 2: a day that fitted on a page was moved there whole**
+Shawn sent October 2026 to the accountant as a test: "it only showed october 6 but i had entries for october 7 too", and sent the PDF (`Mileage-2026-10-Shawn-Kowalchuk.pdf`). Page 1 held the top tiles and October 6 (2 trips, 48.7 km) and then half a page of nothing; page 2 held October 7 (6 trips, 47.7 km) and the total, 96.4 km for 8 trips, which is right. The layout's rule "a day that fits on a page is not split; if it does not fit in what is left of the page, it starts the next one" (2026-10-06) had sent October 7's six trips to page 2 because they did not fit under October 6. Nothing was missing; the page made it look so.
+
+**`[DECISION]` The report fills its pages and is more compact; the addresses stay whole**
+Asked, Shawn chose "Fill the page, continue the day", adding: "It also should be more compressed. i can see this being pages and pages." Then: "Keep full addresses" (over Canada Post's short forms, "12846 146 St NW, Edmonton", and over dropping the city), "Day groups, slimmer" (over one flat table with a Date column and no daily subtotals), and "Same look, tighter" for the top of page 1 (over one compact band, and over leaving it). Phone only: the Android Auto screen makes no report.
+
+**`[CHANGE]` A compact report that fills its pages**
+- **Page breaks** (`layoutReport`): the rule that moved a whole day to the next page is gone. A day starts in the room left and goes on at the top of the next page under its heading with "(continued)", as a day longer than a page always did. A heading is still never left alone, a row is never cut, and a subtotal still stands with its day's last trip.
+- **The column titles stand once on each page,** above its first day, not under every day. On a page that continues a day they come first, then "(the day) (continued)".
+- **Smaller and tighter** (`ReportTextStyle`, `ReportBlocks`): a trip's line 8 points (9), the column titles 7 (7.5), the day's heading 8.5 (10) on a 16-point bar (22), 2 points above and below a row (3), 8 between two days (14), 6 between two columns (8). At the top: tiles 6 apart (10), 10 to 12 points of room inside them (16 to 18), the mark 28 points (36), the large figures 20 points (26), the total 18 (22); the notes 8 (8.5), the footer 7 (7.5). The look, the colours, the order and every word are unchanged.
+- **What it comes to:** laid out and drawn on a computer from the layout itself, in static instances of Sora at the four weights. Shawn's own October of 8 trips is one page (two before), with both days and the total on it. A month of 8 trips on each of its 22 working days is 7 pages (12 before). At 8 points most of the addresses fit on one line whole; the longest ("14820 Yellowhead Trail Northwest, Edmonton") still wrap.
+- **Tests:** four were written for what changed and were rewritten: the day that "starts the next one, whole" now starts on page 1 and goes on; the day longer than a page has the column titles above its repeated heading; a short report has the column titles once; the footer's cut name, with a smaller footer, keeps one more letter at the old width. The shared check of every layout (`assertSound`) now also holds each page to one set of column titles above its days. `core/report`, `core/util` and `core/odometer`, 168 tests, ran here with the pinned Kotlin 2.4.20 and warnings as errors; ktlint 1.8.0 is clean. The drawing pass (`platform/report/ReportPdf.kt`) did not change: it draws whatever sizes the layout hands it. Not yet made on the phone: device checks NL-124 and NL-125.
+
 ### 2026-10-07 (evening)
 
 **`[DECISION]` The widget's rate: one rate for every kilometre, set in Settings, $0.70 to start**

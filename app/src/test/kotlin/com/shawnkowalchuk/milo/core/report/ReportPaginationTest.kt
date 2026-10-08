@@ -78,37 +78,36 @@ class ReportPaginationTest {
         // And a footer that fits is left as it is.
         val style = ReportTextStyle.FOOTER
         assertEquals("Sam Driver", cutToFit("Sam Driver", 40f, style, MEASURE))
-        assertEquals("Sam Dr…", cutToFit("Sam Driver", 28f, style, MEASURE))
+        assertEquals("Sam Dr…", cutToFit("Sam Driver", 26f, style, MEASURE))
         assertEquals("…", cutToFit("Sam Driver", 2f, style, MEASURE))
     }
 
     @Test
-    fun `a day that does not fit in what is left of the page starts the next one, whole`() {
-        // Under the heading and two days, page 1 has room left for a heading and a couple of
-        // trips, but not for the third day's twelve. The day is not started there and split:
-        // it moves to page 2 in one piece.
-        val sizes = listOf(6, 4, 12, 12)
-        val pages = layout(reportOf(6, 4, 12, 12))
+    fun `a day that does not fit in what is left of the page starts there and goes on`() {
+        // Under the heading and two days, page 1 has room for the third day's heading and
+        // some of its forty trips, though a page of its own could hold all of them. The page is
+        // filled first: the day starts on page 1 and goes on at the top of page 2 (Shawn's
+        // choice of 2026-10-08; until then it moved to page 2 whole and left page 1 half empty).
+        val sizes = listOf(6, 4, 40)
+        val pages = layout(reportOf(6, 4, 40))
 
         assertSound(pages, sizes)
-        assertTrue(pages.none { page -> page.texts.any { it.text.endsWith("(continued)") } })
-        sizes.forEachIndexed { day, count ->
-            val first = pageOf(pages, fromOf(day, 0))
-            assertEquals("Day ${day + 1} is split", first, pageOf(pages, fromOf(day, count - 1)))
-        }
-        assertEquals(1, pageOf(pages, fromOf(1, 0)))
-        assertEquals(2, pageOf(pages, fromOf(2, 0)))
-        // The room that was left would have held its heading and its first trips.
-        val lastOnPage1 = pages[0].texts.filterNot { it.inFooter }
-        val roomLeft = CONTENT_BOTTOM - lastOnPage1.maxOf { it.baseline }
-        assertTrue("Only $roomLeft points were left", roomLeft > 4 * ReportTextStyle.CELL.leading)
-        // It starts the page: its heading is the first thing on it.
-        val heading = pages[1].find("Saturday, October 3, 2026")
-        assertTrue(pages[1].texts.none { it.baseline < heading.baseline })
+        assertEquals(1, pageOf(pages, fromOf(2, 0)))
+        assertEquals(2, pageOf(pages, fromOf(2, 39)))
+        // Page 1 is full: what is left under its last trip would not hold another one.
+        val lastRow = pages[0].rows.last()
+        val roomLeft = CONTENT_BOTTOM - lastRow.baseline
+        assertTrue("$roomLeft points were left", roomLeft < 3 * ReportTextStyle.CELL.leading)
+        // Page 2 starts with the column titles, then the day's heading again.
+        val titles = pages[1].find("Start")
+        val continued = pages[1].find("Saturday, October 3, 2026 (continued)")
+        assertTrue(pages[1].texts.none { it.baseline < titles.baseline })
+        assertTrue(titles.baseline < continued.baseline)
+        assertTrue(continued.baseline < pages[1].rows.first().baseline)
     }
 
     @Test
-    fun `a day longer than a page goes on under its heading, repeated, and the column titles`() {
+    fun `a day longer than a page goes on under the column titles and its heading, repeated`() {
         val pages = layout(reportOf(100))
 
         assertSound(pages, listOf(100))
@@ -116,12 +115,13 @@ class ReportPaginationTest {
         val heading = "Thursday, October 1, 2026"
         assertTrue(pages.first().has(heading))
         for (page in pages.drop(1).filter { it.rows.isNotEmpty() }) {
-            val continued = page.find("$heading (continued)")
-            // At the top of the page, with the column titles between it and the first trip.
-            assertTrue(page.texts.none { it.baseline < continued.baseline })
+            // The column titles first on the page, then the heading, then the first trip.
             val titles = page.find("Start")
+            val continued = page.find("$heading (continued)")
+            assertTrue(page.texts.none { it.baseline < titles.baseline })
             val firstRow = page.rows.first()
-            assertTrue(continued.baseline < titles.baseline && titles.baseline < firstRow.baseline)
+            assertTrue(titles.baseline < continued.baseline)
+            assertTrue(continued.baseline < firstRow.baseline)
             assertFalse(page.has(heading))
         }
         // One subtotal for the whole day, on the page its last trip is on.
