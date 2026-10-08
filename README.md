@@ -1,5 +1,11 @@
 # MilO
 
+<p align="center">
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download%20latest%20APK-C6F432?style=for-the-badge&logo=android&logoColor=121316" height="48" alt="Download latest APK"></a>
+  <br>
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a>
+</p>
+
 **An Android app that logs business kilometres by itself.** When the phone connects to the work truck's Bluetooth, MilO starts a trip, records the drive with GPS, sorts it into Business or Personal by the work hours, and at the end of the month makes the mileage report for the accountant, as a PDF and a CSV file.
 
 <p align="center">
@@ -34,6 +40,17 @@
   <img src="docs/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
   <sub>A sample report page, drawn from the app's own layout code with made-up trips.</sub>
 </p>
+
+## Installing the APK
+
+1. On the phone, open the [latest release](https://github.com/shawnkowalchuk/MilO/releases/latest) and download the `.apk` file under "Assets".
+2. Open the downloaded file. The first time, Android asks you to allow the app you opened it with (your browser or Files) to **install unknown apps**: allow it, go back, and press Install. Developer options are not needed.
+3. Google Play Protect may warn that the app is from an unknown developer, or offer to scan it. That is because MilO is not on the Play Store; choose to install anyway if you trust it.
+4. Open MilO, go to **Settings**, then the **Setup** tile at the top, and work through it: the permissions, then pairing your truck.
+
+**To update,** install the newer APK over the old one: your trips and settings stay. Never uninstall MilO to update it, because that deletes every trip.
+
+**Worth knowing first:** MilO is built and tested on one Xiaomi phone. On other phones the automatic start depends on how hard the maker stops apps in the background; Setup shows what it can check. The Android Auto screen is not expected to show on a car's display for an app installed this way (Android Auto shows apps from the Play Store). The phone side works the same with or without it.
 
 ## Privacy
 
@@ -316,7 +333,7 @@ There are three things to keep. The first two are yours to do.
 
 3. Connect the phone and press **Run**, as for the first install. The new build replaces the old one in place and keeps every trip and setting.
 
-**Updates only go forward.** Never install an older build over a newer one. A newer build may store trips in a form an older one cannot read, and the older build then stops at every start. Android does not prevent it, because every build so far calls itself version 0.1.0. If it happens, no trip is lost: install the newer build again.
+**Updates only go forward.** Never install an older build over a newer one. A newer build may store trips in a form an older one cannot read, and the older build then stops at every start. Until the first release every build called itself version 0.1.0, so Android did not prevent it; each release raises the number (For developers, "Making a release"), and Android then refuses an older build over a newer one. If it happens, no trip is lost: install the newer build again.
 
 **Never uninstall MilO to fix a problem,** and never clear its data. Both delete every trip. If MilO misbehaves: open the Log, share it, and install a fixed build over the one on the phone.
 
@@ -359,6 +376,29 @@ Never install that build on the phone: it cannot update the real one.
 **Your own trip-start sound.** The repo ships an original synthesized chirp. A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. (Settings in the app can also choose any audio file on the phone, without a rebuild.)
 
 **The typeface.** The screens are set in Sora, which the app carries as `app/src/main/res/font/sora.ttf`. Its licence, the SIL Open Font License 1.1, is `licenses/Sora-OFL.txt`, and stays in the repository for as long as the font does.
+
+### Making a release
+
+Each update that others can download is a GitHub Release with the APK attached. It is built and signed on the Mac, with the same key as the phone's MilO, and uploaded by hand, so the key never leaves the Mac (the owner's choice of 2026-10-08, over building it on GitHub). The download button at the top of this page always opens the newest release.
+
+1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
+2. **Raise the version** in `app/build.gradle.kts`: `versionCode` up by one, and `versionName` to the new number (`0.2.0`). Merge that as its own small pull request. The first release, `0.1.0`, skips this step.
+3. **Build the release APK:**
+
+   ```bash
+   ./gradlew assembleRelease
+   ```
+
+   It is signed with `~/keys/milo.jks`, like the phone's builds. The file is `app/build/outputs/apk/release/app-release.apk`; rename it `MilO-0.2.0.apk`.
+4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO 0.2.0", a few lines on what changed (the FINDINGS_LOG has them), drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
+
+   ```bash
+   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO 0.2.0" --notes "What changed"
+   ```
+
+5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
+
+Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
 
 ### The pre-commit hook
 

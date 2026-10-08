@@ -24,6 +24,14 @@
 
 ### 2026-10-08
 
+**`[DECISION]` Releases on GitHub: an APK built on the Mac and uploaded by hand**
+Shawn: "Put a Big Download Button at the Top", and "Every time you update the app, bundle it into an `.apk` file and upload it to the Releases section". Asked how a release should be built and signed, Shawn chose "You build on the Mac, then upload" over a GitHub Actions build signed with a new public key, and over one signed with the phone's own key kept in GitHub's secrets. So no secret is added anywhere and no ADR is needed: the release is `assembleRelease`, signed with `~/keys/milo.jks` as the debug build already is, and its APK installs over the phone's MilO too. Each release raises `versionCode` by one and sets `versionName` (until now every build was 1 and "0.1.0"); a comment at the two numbers in `app/build.gradle.kts` says so.
+
+**`[CHANGE]` A download button, an install section and a release guide in the README**
+- **At the very top:** a large lime "Download latest APK" button and a text link under it, both to `releases/latest`, which always opens the newest release; with "Android 14 or newer" and a link to the install steps. **No release exists yet:** until the first is published, the link opens an empty Releases page.
+- **"Installing the APK":** download it on the phone, allow the browser or Files to install unknown apps when Android asks (Developer options are not needed), Play Protect may warn about an unknown developer, then Settings, Setup. Updating is installing the newer APK over the old one; uninstalling deletes the trips. And what to expect elsewhere: MilO is tested on one Xiaomi phone, and the Android Auto screen is not expected on a car's display for an app installed this way (ARCHITECTURE, "Distribution risk").
+- **"Making a release"** (For developers): the five steps, and never an APK from CI or from `-Pmilo.signing.debugKey=true`. ENGINEERING_STANDARDS §14 says the same in one rule. **`assembleRelease` has never been run:** the first release is to be installed on the phone and looked at before it is published.
+
 **`[DECISION]` The repository is public, with no license**
 Shawn made the GitHub repository public on 2026-10-08 ("i made the project public on github"). Asked about a license, Shawn chose "No license, all rights reserved" over MIT and Apache 2.0: the code is public to read, and may not be copied, changed or redistributed without permission. Asked about the street addresses that the debugging notes of 2026-10-07 had quoted (the shop's, and clients' sites, with times), Shawn chose "Replace with generic words" over leaving them and over rewriting the git history (which would have broken every clone and the open pull request). **The older versions of those lines stay in the git history,** where anyone can still read them.
 

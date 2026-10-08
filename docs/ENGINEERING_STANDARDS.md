@@ -251,7 +251,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 - **That rule is kept by hand.** GitHub Free could not block merges while the repo was private. Since it is public (2026-10-08), branch protection can require the CI check before a merge; it is not switched on yet, so for now only Shawn stops a red build from merging.
 - **CI cannot test a Bluetooth-triggered start.** The device checklist (§11) does.
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.
-- **Tag releases** (`v1.2.0`). There is no `CHANGELOG.md`: FINDINGS_LOG.md is the dated record of what changed. A release is the build installed on the phone when a phase is finished; there is no release pipeline.
+- **Tag releases** (`v1.2.0`). There is no `CHANGELOG.md`: FINDINGS_LOG.md is the dated record of what changed. **Since 2026-10-08 a release is also a GitHub Release with the APK attached,** for anyone to download: built with `assembleRelease` on the Mac, signed with the phone's own key, and uploaded by hand (Shawn's choice over a CI build, so the key never leaves the Mac). Every release raises `versionCode` by one and sets `versionName`; neither is ever lowered. The steps are in README, "Making a release". There is no release pipeline.
 
 ---
 
