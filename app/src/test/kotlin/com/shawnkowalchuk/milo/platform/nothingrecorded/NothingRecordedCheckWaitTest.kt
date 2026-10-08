@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.data.settings.setNothingRecordedTime
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
 import java.time.DayOfWeek
@@ -179,7 +180,7 @@ class NothingRecordedCheckWaitTest : NothingRecordedCheckFixture() {
         val linesBefore = lines().size
 
         settings.setGracePeriodSeconds(300)
-        settings.setSoundEnabled(false)
+        settings.setSoundEnabled(TripSound.CONNECT, false)
         runCurrent()
 
         assertEquals(1, alarmsAskedFor.size)

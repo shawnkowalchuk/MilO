@@ -12,6 +12,7 @@ import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.PollPacer
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.point.RawPoint
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckBluetoothReceiver
 import com.shawnkowalchuk.milo.platform.car.AndroidAutoWatcher
 import kotlin.math.max
@@ -37,7 +38,7 @@ private const val MINUTE_CHECK = "minute check"
  * The foreground service that records a trip (ADR-002, "The service"). It is the part of the app
  * Android keeps alive during a drive, and everything that only makes sense while a trip is open
  * lives in it: the GPS fixes, the timers, the watch on Android Auto and on the truck's Bluetooth
- * broadcasts, the notification and the trip-start sound. It stays up, doing less, while MilO
+ * broadcasts, the notification and the two sounds. It stays up, doing less, while MilO
  * waits beside a truck that is connected and parked ([Work.WATCHING_PARKED]).
  *
  * It decides nothing. It reports to the [TripController] (a fix, a timer running out, Android
@@ -63,7 +64,7 @@ class TripService :
 
     private lateinit var location: LocationRecorder
     private lateinit var androidAuto: AndroidAutoWatcher
-    private lateinit var sound: TripStartSound
+    private lateinit var sound: TripSoundPlayer
 
     /** Hears the truck disconnect during a trip, even if the manifest receiver does not. */
     private val truckReceiver = TruckBluetoothReceiver()
@@ -116,7 +117,12 @@ class TripService :
                 androidAutoConnected = connected
                 controller.onAndroidAuto(connected, "CarConnection reports type $rawType")
             }
-        sound = TripStartSound(this) { controller.note(EventCategory.SERVICE, it) }
+        // A sound waits for the one before it to end: the trip-start sound can come seconds
+        // after the connect sound.
+        sound =
+            TripSoundPlayer(this, waitTurn = true) { note ->
+                controller.note(EventCategory.SERVICE, note)
+            }
     }
 
     /** Not a bound service: nothing binds to it. */
@@ -162,11 +168,11 @@ class TripService :
 
     // ---- What the controller asks for (called from its worker thread) ---------------------------
 
-    override fun record(checkAtMs: Long?, tripJustStarted: Boolean) {
+    override fun record(checkAtMs: Long?, sounds: List<TripSound>) {
         mainExecutor.execute {
             if (destroyed) return@execute
             turnTo(Work.RECORDING)
-            if (tripJustStarted) announceTripStart()
+            if (sounds.isNotEmpty()) announce(sounds)
             checkTimer.set(checkAtMs)
         }
     }
@@ -269,10 +275,14 @@ class TripService :
         parkedGpsTimer.set(nextChangeMs)
     }
 
-    /** Recording has really begun: the moment for the trip-start sound, once per trip. */
-    private fun announceTripStart() {
+    /**
+     * Recording has really begun, or the trip has been seen driving off: the moments for the
+     * connect sound and the trip-start sound, each once per trip. One coroutine for both, so
+     * they keep their order when they come together.
+     */
+    private fun announce(sounds: List<TripSound>) {
         val unreadable = { what: String -> controller.note(EventCategory.ERROR, what) }
-        scope.launch { sound.playAsSet(container.settingsStore, mainExecutor, unreadable) }
+        scope.launch { sound.playAsSet(sounds, container.settingsStore, mainExecutor, unreadable) }
     }
 
     // The debt of this timer and of the check timer, which can both fire late while the phone

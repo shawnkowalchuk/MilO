@@ -18,7 +18,7 @@
 
     What is never taken, in either case:
       - no_backup/                 Android never takes this folder. It holds the crash files,
-                                   MilO's copy of a chosen trip-start sound, the notes of the
+                                   MilO's copies of the chosen sounds, the notes of the
                                    backup agent, the safety copies before an import and a file
                                    that is being imported. Each is about this phone, or too
                                    large for the cloud's 25 MB.

@@ -1,5 +1,7 @@
 package com.shawnkowalchuk.milo.core.trip
 
+private const val MILLIS_PER_SECOND = 1000.0
+
 /**
  * One GPS fix as the trip rules see it: the stored raw point without its database ids.
  *
@@ -29,3 +31,13 @@ data class TrackPoint(
 /** The straight-line distance in metres from this fix to [other]. */
 fun TrackPoint.metresTo(other: TrackPoint): Double =
     haversineMetres(latitude, longitude, other.latitude, other.longitude)
+
+/**
+ * The speed from [from] to this fix, worked out from their positions and their times since boot,
+ * or 0 if there is no fix before or no time between them. For a fix without a speed reading of
+ * its own.
+ */
+fun TrackPoint.metresPerSecondFrom(from: TrackPoint?): Double {
+    val seconds = (elapsedRealtimeMs - (from ?: return 0.0).elapsedRealtimeMs) / MILLIS_PER_SECOND
+    return if (seconds > 0.0) from.metresTo(this) / seconds else 0.0
+}

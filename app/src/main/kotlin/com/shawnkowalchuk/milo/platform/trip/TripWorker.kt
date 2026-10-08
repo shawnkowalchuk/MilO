@@ -76,6 +76,13 @@ internal class TripWorker(
      */
     private var vehicleEnteredAtMs: Long? = null
 
+    /**
+     * The open trip whose driving off the service has been told of, so that the trip-start
+     * sound plays once per trip. A trip picked up from storage that had driven off already is
+     * entered here as it is picked up, without being told: its sound was played before.
+     */
+    private var drivingOffToldFor: Long? = null
+
     suspend fun handle(work: TripWork) {
         try {
             carryOut(work)
@@ -102,7 +109,23 @@ internal class TripWorker(
             is TripWork.Note -> eventLog.add(work.atMs, work.category, work.message, work.detail)
             is TripWork.CaughtUp -> work.done()
         }
+        noticeDrivingOff()
         service.sync(known, rules, parkedGpsNow() ?: ParkedGps())
+    }
+
+    /**
+     * The open trip has been seen driving for the first time (`TripProgress.drivenAtMs`): the
+     * moment for the trip-start sound. Looked at after every piece of work, because the fix
+     * that shows it often changes nothing else, and a trip that a parked truck's moving starts
+     * shows it from its first points. A trip opened by the companion callback alone waits
+     * until the truck is confirmed, like its connect sound, and a false start has none.
+     */
+    private fun noticeDrivingOff() {
+        val open = ledger.open ?: return
+        val unconfirmed = known?.trip?.confirmByMs != null
+        if (open.id == drivingOffToldFor || unconfirmed || open.progress.drivenAtMs == null) return
+        drivingOffToldFor = open.id
+        service.drivingOff = true
     }
 
     /**
@@ -182,6 +205,8 @@ internal class TripWorker(
      */
     private suspend fun restore(request: StartRequest, settingsNow: MiloSettings): Boolean {
         val stored = pickUpStored(ledger, evidence, rules, settingsNow, request.atMs)
+        // A stored trip that had driven off before the restart has had its trip-start sound.
+        ledger.open?.takeIf { it.progress.drivenAtMs != null }?.let { drivingOffToldFor = it.id }
         val what = "${request.source}: picked up the stored state; ${stored.readingText}"
         val done = commit(what, stored.found.describe(), stored.transition, request)
         if (!done) ledger.forget()

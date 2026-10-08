@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.trip.ParkedGps
+import com.shawnkowalchuk.milo.data.settings.TripSound
 
 /**
  * Everything that can prompt the trip controller, apart from GPS fixes and Android Auto changes
@@ -83,10 +84,13 @@ interface TripRecorder {
      *
      * @param checkAtMs wall-clock time at which the service must send [TripTrigger.CHECK_DUE],
      * or null if no timer is needed.
-     * @param tripJustStarted true exactly once per trip, when its recording has really begun
-     * (`TripTransition.tripReallyBegan`). This is the moment for the trip-start sound.
+     * @param sounds the sounds to play now, in this order, usually none. [TripSound.CONNECT]
+     * exactly once per trip, when its recording has really begun
+     * (`TripTransition.tripReallyBegan`); [TripSound.DRIVING_OFF] exactly once per trip, when it
+     * is first seen driving (`TripProgress.drivenAtMs`). Both in one order when the two moments
+     * fall together, the connect sound first.
      */
-    fun record(checkAtMs: Long?, tripJustStarted: Boolean)
+    fun record(checkAtMs: Long?, sounds: List<TripSound>)
 
     /**
      * No trip is open, and the truck is connected and parked: stay in the foreground, stop

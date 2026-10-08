@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.trip.ParkedGps
 import com.shawnkowalchuk.milo.core.trip.TripRules
 import com.shawnkowalchuk.milo.core.trip.TripState
 import com.shawnkowalchuk.milo.core.trip.TripStateMachine
+import com.shawnkowalchuk.milo.data.settings.TripSound
 
 /**
  * The controller's hold on the trip service: whether it is in the foreground, and what it was
@@ -27,8 +28,17 @@ internal class TripServiceLink {
      */
     private var owedTriggers = 0
 
-    /** Set by the worker when a trip has really begun. The next [sync] passes it on. */
+    /**
+     * Set by the worker when a trip has really begun: the moment for the connect sound. The
+     * next [sync] passes it on.
+     */
     var tripJustStarted = false
+
+    /**
+     * Set by the worker when the open trip is first seen driving: the moment for the
+     * trip-start sound. The next [sync] passes it on.
+     */
+    var drivingOff = false
 
     private var lastOrders: Orders? = null
 
@@ -69,12 +79,17 @@ internal class TripServiceLink {
             val watching = state.trip == null
             val checkAtMs = TripStateMachine.nextCheckAtMs(state, rules)
             val orders = Orders(service, watching, checkAtMs, parkedGps)
+            val sounds =
+                listOfNotNull(
+                    TripSound.CONNECT.takeIf { tripJustStarted },
+                    TripSound.DRIVING_OFF.takeIf { drivingOff },
+                )
             // Told again only when something changed: this runs after every GPS fix.
-            if (tripJustStarted || orders != lastOrders) {
+            if (sounds.isNotEmpty() || orders != lastOrders) {
                 if (watching) {
                     service.watchParked(orders.checkAtMs, orders.gps)
                 } else {
-                    service.record(orders.checkAtMs, tripJustStarted)
+                    service.record(orders.checkAtMs, sounds)
                 }
             }
             lastOrders = orders
@@ -84,6 +99,7 @@ internal class TripServiceLink {
             service.stop()
         }
         tripJustStarted = false
+        drivingOff = false
     }
 
     @Synchronized

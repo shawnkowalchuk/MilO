@@ -14,6 +14,8 @@ import com.shawnkowalchuk.milo.core.schedule.withHoursOnEveryDay
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.LastExport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.settings.OwnSound
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.platform.transfer.PointsTaken
 import com.shawnkowalchuk.milo.platform.transfer.TransferWork
 import java.time.DayOfWeek
@@ -45,7 +47,8 @@ private fun ready(
     problemDay: DayOfWeek? = null,
     copyingSound: Boolean = false,
     refusedEmail: String? = null,
-) = settingsUiState(settings, copyingSound, problem, problemDay, refusedEmail)
+    pickedFor: TripSound? = null,
+) = settingsUiState(settings, copyingSound, problem, problemDay, refusedEmail, pickedFor)
 
 /** The states, in the order an emulator is asked for them by number. */
 internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
@@ -61,8 +64,9 @@ internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
                 ),
                 data = DataCardState(),
             ),
-            // 1: in use. A truck, the report's details, a sound of his own, a Friday that
-            // ends early, an export and an import behind him.
+            // 1: in use. A truck, the report's details, two sounds of his own on the list, one
+            // of them for both sounds, a Friday that ends early, an export and an import behind
+            // him.
             SettingsSample(
                 screen =
                     ready(
@@ -71,6 +75,13 @@ internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
                             truckName = "Work truck",
                             customSoundUri = "file:///sound",
                             customSoundName = "r2d2.mp3",
+                            drivingOffSoundUri = "file:///sound",
+                            drivingOffSoundName = "r2d2.mp3",
+                            ownSounds =
+                                listOf(
+                                    OwnSound("file:///sound", "r2d2.mp3"),
+                                    OwnSound("file:///sound_2", "mk64_racestart.mp3"),
+                                ),
                             schedule =
                                 DEFAULT_WORK_SCHEDULE.withEnd(DayOfWeek.FRIDAY, LocalTime.of(13, 0))
                                     ?: DEFAULT_WORK_SCHEDULE,
@@ -121,7 +132,7 @@ internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
                 data = DataCardState(working = TransferWork.EXPORTING),
             ),
             // 3: switched off. No work day, no reminder, no check, no sound, and a file that
-            // is being copied.
+            // is being copied for the trip-start sound.
             SettingsSample(
                 screen =
                     ready(
@@ -131,11 +142,13 @@ internal class SettingsSamples : PreviewParameterProvider<SettingsSample> {
                                     schedule.withTracked(day, false)
                                 },
                             soundEnabled = false,
+                            drivingOffSoundEnabled = false,
                             drivingAlertEnabled = false,
                             reminderEnabled = false,
                         ),
                         problem = SettingsProblem.SOUND_TOO_LARGE,
                         copyingSound = true,
+                        pickedFor = TripSound.DRIVING_OFF,
                     ),
                 check = NothingRecordedCardState(
                     enabled = false,
@@ -185,10 +198,10 @@ private fun SettingsPreview(@PreviewParameter(SettingsSamples::class) sample: Se
                         {},
                         {},
                         {},
+                        { _, _ -> },
                         {},
                         {},
-                        {},
-                        {},
+                        { _, _ -> },
                         {},
                         {},
                         schedule,

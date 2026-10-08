@@ -112,8 +112,12 @@ class SettingsStoreTest {
         store.setTruck("AA:BB:CC:DD:EE:FF", name = "Work truck", associationId = 12)
         store.setGracePeriodSeconds(300)
         store.setMinimumTripDistanceMetres(500)
-        store.setSoundEnabled(false)
-        store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
+        store.setSoundEnabled(TripSound.CONNECT, false)
+        store.setCustomSound(
+            TripSound.CONNECT,
+            "file:/data/sounds/own_trip_start_sound_1",
+            name = "r2d2.mp3",
+        )
         store.setAutoStartHeldOffSinceMs(1_791_028_700_000)
         store.setLastProcessExitImportedAtMs(1_791_028_800_000)
 
@@ -185,20 +189,50 @@ class SettingsStoreTest {
     @Test
     fun `going back to the bundled sound forgets the custom sound and its name`() =
         withStore { store ->
-            store.setSoundEnabled(false)
-            store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
+            store.setSoundEnabled(TripSound.CONNECT, false)
+            store.setCustomSound(
+                TripSound.CONNECT,
+                "file:/data/sounds/own_trip_start_sound_1",
+                name = "r2d2.mp3",
+            )
 
-            store.clearCustomSound()
+            store.clearCustomSound(TripSound.CONNECT)
 
             // Whether the sound plays at all is another setting, and stays as it was.
             assertEquals(MiloSettings(soundEnabled = false), store.current())
         }
 
     @Test
-    fun `a custom sound whose file had no name is stored without one`() = withStore { store ->
-        store.setCustomSound("file:/data/sounds/own_trip_start_sound_1", name = "r2d2.mp3")
+    fun `the trip-start sound is stored under keys of its own`() = withStore { store ->
+        store.setSoundEnabled(TripSound.DRIVING_OFF, false)
+        store.setCustomSound(TripSound.DRIVING_OFF, "file:/data/sounds/own_2", name = "1-up.mp3")
 
-        store.setCustomSound("file:/data/sounds/own_trip_start_sound_2", name = null)
+        val settings = store.current()
+        assertEquals(false, settings.drivingOffSoundEnabled)
+        assertEquals("file:/data/sounds/own_2", settings.drivingOffSoundUri)
+        assertEquals("1-up.mp3", settings.drivingOffSoundName)
+        // The connect sound is untouched.
+        assertEquals(true, settings.soundEnabled)
+        assertEquals(null, settings.customSoundUri)
+
+        store.clearCustomSound(TripSound.DRIVING_OFF)
+        assertEquals(null, store.current().drivingOffSoundUri)
+        assertEquals(null, store.current().drivingOffSoundName)
+    }
+
+    @Test
+    fun `a custom sound whose file had no name is stored without one`() = withStore { store ->
+        store.setCustomSound(
+            TripSound.CONNECT,
+            "file:/data/sounds/own_trip_start_sound_1",
+            name = "r2d2.mp3",
+        )
+
+        store.setCustomSound(
+            TripSound.CONNECT,
+            "file:/data/sounds/own_trip_start_sound_2",
+            name = null,
+        )
 
         val settings = store.current()
         assertEquals("file:/data/sounds/own_trip_start_sound_2", settings.customSoundUri)
@@ -228,8 +262,10 @@ class SettingsStoreTest {
         assertRefused { store.setMinimumTripDistanceMetres(-1) }
         assertRefused { store.setTruck(" ", name = null, associationId = null) }
         assertRefused { store.setTruck("AA:BB:CC:DD:EE:FF", name = " ", associationId = null) }
-        assertRefused { store.setCustomSound("", name = "r2d2.mp3") }
-        assertRefused { store.setCustomSound("file:/data/sounds/own", name = " ") }
+        assertRefused { store.setCustomSound(TripSound.CONNECT, "", name = "r2d2.mp3") }
+        assertRefused {
+            store.setCustomSound(TripSound.CONNECT, "file:/data/sounds/own", name = " ")
+        }
         assertRefused { store.setAutoStartHeldOffSinceMs(-1) }
         assertRefused { store.setLastProcessExitImportedAtMs(-1) }
         assertRefused { store.setLastDrivingAlertAtMs(-1) }

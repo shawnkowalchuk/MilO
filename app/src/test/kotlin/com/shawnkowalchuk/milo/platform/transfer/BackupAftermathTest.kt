@@ -6,6 +6,8 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.ConfirmedStep
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.TripSound
+import com.shawnkowalchuk.milo.data.settings.sound
 import com.shawnkowalchuk.milo.data.transfer.BackupNote
 import com.shawnkowalchuk.milo.data.transfer.BackupNoteKind
 import com.shawnkowalchuk.milo.data.transfer.BackupNoteStore
@@ -60,7 +62,11 @@ class BackupAftermathTest {
         settings.setTruck("AA:BB:CC:DD:EE:FF", "Work truck", 7)
         settings.setReportName("Sam Driver")
         settings.setGracePeriodSeconds(150)
-        settings.setCustomSound("file:/data/user/0/milo/no_backup/trip_sound/own_1", "r2d2.mp3")
+        settings.setCustomSound(
+            TripSound.CONNECT,
+            "file:/data/user/0/milo/no_backup/trip_sound/own_1",
+            "r2d2.mp3",
+        )
         for (step in ConfirmedStep.entries) settings.setConfirmedAtMs(step, 1_000)
         notes.leave(BackupNote(BackupNoteKind.RESTORED, 5_000))
     }
@@ -113,7 +119,7 @@ class BackupAftermathTest {
 
             assertNull(settings.current().customSoundUri)
             assertNull(settings.current().customSoundName)
-            assertTrue(lines(EventCategory.PROCESS).single().contains("chosen trip-start sound"))
+            assertTrue(lines(EventCategory.PROCESS).single().contains("chosen sounds"))
         }
 
     @Test
@@ -124,8 +130,22 @@ class BackupAftermathTest {
         aftermath().settle()
 
         assertEquals("r2d2.mp3", settings.current().customSoundName)
-        assertFalse(lines(EventCategory.PROCESS).single().contains("trip-start sound"))
+        assertFalse(lines(EventCategory.PROCESS).single().contains("chosen sounds"))
     }
+
+    @Test
+    fun `after a restore the trip-start sound's file is not here either, and both are forgotten`() =
+        runTest {
+            restoredFromAnotherPhone()
+            settings.setCustomSound(TripSound.DRIVING_OFF, "file:/data/own_2", "mario-1-up.mp3")
+
+            aftermath().settle()
+
+            assertNull(settings.current().sound(TripSound.CONNECT).ownUri)
+            assertNull(settings.current().sound(TripSound.DRIVING_OFF).ownUri)
+            assertNull(settings.current().drivingOffSoundName)
+            assertTrue(settings.current().ownSounds.isEmpty())
+        }
 
     @Test
     fun `after a restore every other setting is as it was restored`() = runTest {

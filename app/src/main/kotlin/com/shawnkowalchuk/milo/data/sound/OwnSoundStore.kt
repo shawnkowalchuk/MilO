@@ -15,8 +15,8 @@ private const val SOUND_FILE_PREFIX = "own_trip_start_sound_"
 private const val COPY_BUFFER_BYTES = 64 * 1024
 
 /**
- * The largest audio file that is copied. A trip-start sound is a few seconds long; this is far
- * more than that needs, and it stops a wrong pick (an hour of music) from filling the phone.
+ * The largest audio file that is copied. A sound is a few seconds long; this is far more than
+ * that needs, and it stops a wrong pick (an hour of music) from filling the phone.
  */
 const val MAX_OWN_SOUND_BYTES = 10L * 1024 * 1024
 
@@ -25,7 +25,8 @@ class SoundTooLargeException(val limitBytes: Long) :
     IOException("The audio file is larger than $limitBytes bytes")
 
 /**
- * MilO's own copies of the audio files Shawn added as trip-start sounds, one of which plays.
+ * MilO's own copies of the audio files Shawn added, for the connect sound and the trip-start
+ * sound to choose from (since 2026-10-08; before, for the one sound there was).
  *
  * The file he picks belongs to another app, and Android's permission to read it ends when it is
  * moved or deleted, so it is copied here once and played from here from then on.
@@ -48,7 +49,7 @@ class OwnSoundStore(private val folder: File) {
      */
     fun writeCopy(source: InputStream, stamp: Long, maxBytes: Long = MAX_OWN_SOUND_BYTES): File {
         if (!folder.isDirectory && !folder.mkdirs()) {
-            throw IOException("The folder for the trip-start sound could not be created")
+            throw IOException("The folder for the sounds could not be created")
         }
         var number = stamp
         while (File(folder, SOUND_FILE_PREFIX + number).exists()) number++

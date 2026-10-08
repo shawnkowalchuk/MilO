@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
+import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
@@ -43,6 +44,9 @@ import com.shawnkowalchuk.milo.platform.system.SystemScreen
  *
  * @param onOpenPairing the truck row's button. Navigation belongs to the app, not the feature.
  * @param onBack leaves the screen.
+ * @param onDone the button at the end, "Done, go to Settings", while the first start is being
+ * gone through (2026-10-08); null otherwise, and then there is no such button. It can be pressed
+ * with rows still to fix: Home's warning goes on saying so.
  */
 @Composable
 fun SetupScreen(
@@ -50,6 +54,7 @@ fun SetupScreen(
     onOpenPairing: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onDone: (() -> Unit)? = null,
 ) {
     val rows by viewModel.rows.collectAsState()
     val activity = LocalActivity.current
@@ -90,7 +95,13 @@ fun SetupScreen(
             onConfirm = viewModel::onConfirm,
             onTakeBack = viewModel::onTakeBack,
         )
-    SetupContent(rows = rows, actions = actions, onBack = onBack, modifier = modifier)
+    SetupContent(
+        rows = rows,
+        actions = actions,
+        onBack = onBack,
+        modifier = modifier,
+        onDone = onDone,
+    )
 }
 
 /**
@@ -126,6 +137,7 @@ private fun SetupContent(
     actions: SetupActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onDone: (() -> Unit)? = null,
 ) {
     val spacing = MiloTheme.spacing
     TileColumn(
@@ -158,6 +170,13 @@ private fun SetupContent(
             Note(
                 R.string.setup_section_xiaomi_note,
                 Modifier.padding(horizontal = spacing.extraSmall),
+            )
+        }
+        if (onDone != null) {
+            PrimaryButton(
+                text = stringResource(R.string.setup_done),
+                onClick = onDone,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

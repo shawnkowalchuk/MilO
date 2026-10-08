@@ -3,7 +3,9 @@ package com.shawnkowalchuk.milo.platform.transfer
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.data.settings.forgetOtherInstallation
+import com.shawnkowalchuk.milo.data.settings.sound
 import com.shawnkowalchuk.milo.data.settings.transferred
 import com.shawnkowalchuk.milo.data.transfer.BackupNote
 import com.shawnkowalchuk.milo.data.transfer.BackupNoteKind
@@ -26,9 +28,9 @@ private const val AFTER_RESTORE = "after a restore"
  * screen and in Home's warning.
  *
  * Also taken out: Shawn's confirmations of the setup checklist, which were his word about
- * switches of the other installation, and the chosen trip-start sound if its file is not here
- * (it is kept out of every backup). The trips, the sent reports, the event log and every other
- * setting are left as they were restored.
+ * switches of the other installation, and the sounds of his own if the file of one in use is not
+ * here (they are kept out of every backup). The trips, the sent reports, the event log and every
+ * other setting are left as they were restored.
  *
  * Each note is written to the log first and removed only then, one at a time, so a process
  * that dies half-way reads that one note again: a line twice, never a restore unnoticed. What
@@ -38,7 +40,7 @@ private const val AFTER_RESTORE = "after a restore"
  * trip service, at its start, where a trip trigger may be waiting.
  *
  * @param pairingHere asks Android which companion associations MilO holds on this phone.
- * @param ownSoundIsHere whether MilO's copy of a chosen trip-start sound, named as the settings
+ * @param ownSoundIsHere whether MilO's copy of a sound of Shawn's own, named as the settings
  * name it, is on this phone.
  * @param checkPairing has the truck's pairing checked, and so shown, with a word on why.
  */
@@ -81,7 +83,8 @@ class BackupAftermath internal constructor(
         val restored = settings.current()
         // Nothing was stored on this phone "before": the settings file itself was replaced.
         val truck = truckOnArrival(restored.transferred().truck, here = null, pairingHere())
-        val soundGone = restored.customSoundUri?.let { !ownSoundIsHere(it) } == true
+        val soundGone =
+            TripSound.entries.mapNotNull { restored.sound(it).ownUri }.any { !ownSoundIsHere(it) }
         settings.forgetOtherInstallation(
             dropAssociation = truck !is TruckArrival.Paired,
             dropOwnSound = soundGone,
@@ -113,5 +116,5 @@ internal fun restoredLine(soundGone: Boolean): String =
         "points come with a transfer from another phone and not with a cloud backup. Taken " +
         "out of the settings, because it was only true of the installation they came from: " +
         "the confirmations of the setup checklist" +
-        (if (soundGone) ", and the chosen trip-start sound, whose file is in no backup" else "") +
+        (if (soundGone) ", and the chosen sounds, whose files are in no backup" else "") +
         ". Go through Setup again on this phone"

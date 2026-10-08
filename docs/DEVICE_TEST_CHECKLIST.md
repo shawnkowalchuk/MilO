@@ -1254,6 +1254,50 @@ Shawn's request of 2026-10-07: "also add the ability in settings to change the u
 | UN-11 | **A sent report keeps its unit.** After UN-10, look at "Sent reports" and at the Trips screen's month tile. Switch to Kilometres and look again. | The report sent in miles is listed in mi in both units; earlier reports sent in km are listed in km in both. **Trips shows no "Changed since the report was sent" after either switch.** The month is "Submitted" in both. | not run |
 | UN-12 | **Back to kilometres.** Tap "Kilometres". Go through Home, Trips, the edit screen, the Report screen and Settings again, and make a PDF and a CSV. | Everything is in km exactly as in UN-2: the same figures, to the tenth, and the PDF and CSV read as they did before the update (apart from a report sent since). The odometer shows km again; a reading typed in miles is named in mi in the line under it. Set the accountant's address back. | not run |
 
+## The first start (2026-10-08)
+
+Shawn's request of 2026-10-08: a page that says what MilO does, then OK, then Setup, then Settings once Setup is done. It shows once on a phone that already has MilO, after the update that brings it. Built and unit tested only; never drawn anywhere. Make an export first: the build that brings it also brings the database's version 6.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| OB-1 | **The page.** Install the build over the one on the phone and open MilO. | "Welcome" in the top line, no bottom bar, the lime tile "MilO logs your business driving by itself", five tiles under it, and OK at the end once scrolled. The page is in the app's dark colours; the top line is clear of the status bar and OK of the gesture bar. Your trips are still there afterwards (OB-6). | not run |
+| OB-2 | **Back on the page.** Press Back, then open MilO again. | MilO closes; the page shows again. | not run |
+| OB-3 | **OK.** Press OK. | Setup, with "Setup" and its arrowhead in the top line, the rows as before, and at the end the lime button "Done, go to Settings". | not run |
+| OB-4 | **Leave Setup before Done.** Press Setup's arrowhead, then Settings in the bar, then the Setup tile. | Home with the bottom bar; then Setup again, still with "Done, go to Settings" at its end. | not run |
+| OB-5 | **Done.** Press "Done, go to Settings". | Settings, marked in the bottom bar; Back leads to Home. | not run |
+| OB-6 | **Never again.** Swipe MilO out of the recent apps and open it again; open Setup. | Home, with today's figures and your trips; Setup without the Done button. | not run |
+| OB-7 | **A large font.** Do this between OB-2 and OB-3, while the page still shows: set the phone's font size to its largest, open MilO, look, then set the size back. | The page scrolls; no words are cut off, and OK can be reached. | not run |
+
+## Two sounds: the connect sound and the trip-start sound (2026-10-08)
+
+Shawn's request of 2026-10-08: the sound MilO had stays for the connect, and a second one plays when a trip starts; he chose "When the truck drives off" (15 km/h). The clips he sent are added on the phone, not built in. Built and unit tested only; nothing of it has run on an emulator or on the phone. Put the five clips (mario-1-up, mariostart, mk64_racestart, the mushroom sound, giggity-allright) in Downloads on the phone first.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| TS-1 | **Two tiles.** Install the build and open Settings, scroll to the sounds. | "Connect sound" with your sound or "Built-in chirp" as before, then "Trip-start sound" with "Built-in chime", both switched on, each with a grey line on when it plays. "Both sounds play like an alarm…" stands once, under the second. | not run |
+| TS-2 | **The chime.** On "Trip-start sound", tap Play. | A short rising chime, four notes, clearly not the chirp. | not run |
+| TS-3 | **Add a clip for the trip-start sound.** On "Trip-start sound", tap "Add a sound" and pick mk64_racestart. | It joins the list on both tiles, marked only on "Trip-start sound"; the connect sound is unchanged. Play on each tile plays its own. | not run |
+| TS-4 | **One clip for both.** Add mariostart on "Connect sound", then on "Trip-start sound" tap the row mariostart. | Both tiles mark mariostart; it plays from each tile's Play. | not run |
+| TS-5 | **Remove a clip both use.** On either tile, with mariostart marked, tap "Remove this sound". | It is gone from both lists; the connect tile marks "Built-in chirp" and the trip-start tile "Built-in chime". | not run |
+| TS-6 | **In the truck, a connect.** Choose two different clips, get in, start the truck and drive off. | The connect sound when the trip starts; then, once rolling at 15 km/h or more, the trip-start sound. If the truck drives off before the first has ended, the second waits for it, uncut. The Log has "Connect sound: playing …" and then "Trip-start sound: playing …". | not run |
+| TS-7 | **No second time.** Keep driving, stop at lights, drive on. | No more sounds during that trip. | not run |
+| TS-8 | **A parked truck drives off.** After a stop of ten minutes or more with the truck still connected (the trip ends, "Truck connected and parked"), drive off. | No connect sound; the trip-start sound as the new trip starts. | not run |
+| TS-9 | **Start by hand.** With the truck off, press Start on Home, then walk about with the phone. | The connect sound at the press; no trip-start sound while walking. (End the trip afterwards.) | not run |
+| TS-10 | **Switched off.** Switch "Trip-start sound" off and drive a trip. | The connect sound only. Switch it on again after. | not run |
+
+## The website (2026-10-08)
+
+Not on the phone: in any browser, once Hosting is switched on, the deploy key is in GitHub and the domain is connected (README, "The website"). Built and drawn in Chromium only; never deployed.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| WEB-1 | **The first deploy.** Merge the pull request that brings the site (or run "Website" from the Actions tab). | The "Website" run is green; `https://milotriplog.web.app` shows the page. | not run |
+| WEB-2 | **The domain.** Open `https://milotriplog.top` and `https://www.milotriplog.top`. | The same page, with the padlock; the www address ends on `milotriplog.top`. | not run |
+| WEB-3 | **On the phone.** Open the site in the phone's browser. | The lime tile with "Download the latest APK", the screenshots two across, nothing cut off or wider than the screen. | not run |
+| WEB-4 | **The download.** Tap "Download the latest APK". | The newest GitHub Release (empty until the first release is published). | not run |
+| WEB-5 | **The privacy page.** Tap Privacy; then open `https://milotriplog.top/privacy` directly. | The policy, both ways. | not run |
+| WEB-6 | **A wrong address.** Open `https://milotriplog.top/nothing`. | "That page is not here", with a link home. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

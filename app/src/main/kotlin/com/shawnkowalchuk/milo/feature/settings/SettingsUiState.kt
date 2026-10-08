@@ -9,6 +9,9 @@ import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.OwnSound
 import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
+import com.shawnkowalchuk.milo.data.settings.SoundChoice
+import com.shawnkowalchuk.milo.data.settings.TripSound
+import com.shawnkowalchuk.milo.data.settings.sound
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -112,13 +115,15 @@ sealed interface SettingsUiState {
      * @param parkedLimitSeconds how long a trip may stand still before it is ended.
      * @param distanceUnit the unit every distance is shown in: kilometres or miles. The
      * shortest trip that counts is stored in metres and only written in it.
-     * @param usesOwnSound true if a trip start plays the file Shawn chose, false for the
-     * built-in sound.
-     * @param ownSoundName what that file was called, or null if the phone gave no name.
-     * @param ownSounds every sound of his own on the list, to choose from (since 2026-10-07).
-     * @param soundInUseUri which of [ownSounds] plays, or null for the built-in sound.
-     * @param copyingSound true while a picked file is being copied and checked. The sound
-     * buttons wait.
+     * @param sounds the connect sound and the trip-start sound (since 2026-10-08): each one's
+     * switch, and which of [ownSounds] it plays, or null for its built-in sound. Read one
+     * through [sound].
+     * @param ownSounds every sound of his own on the list, for both sounds to choose from
+     * (since 2026-10-07).
+     * @param copyingSound true while a picked file is being copied and checked. The buttons of
+     * both sound tiles wait: the answer changes the list they choose from.
+     * @param pickedFor the sound tile the last file was picked from, or null: that tile says
+     * that the file is being copied, or why it was refused.
      * @param schedule the seven days, Monday first.
      * @param week the same schedule read as one week.
      * @param ignoreOutsideSchedule true if "Ignore them" is chosen for the trips that start
@@ -144,12 +149,10 @@ sealed interface SettingsUiState {
         val canLowerMinimum: Boolean,
         val canRaiseMinimum: Boolean,
         val distanceUnit: DistanceUnit,
-        val soundEnabled: Boolean,
-        val usesOwnSound: Boolean,
-        val ownSoundName: String?,
+        val sounds: Map<TripSound, SoundChoice>,
         val ownSounds: List<OwnSound>,
-        val soundInUseUri: String?,
         val copyingSound: Boolean,
+        val pickedFor: TripSound?,
         val schedule: List<ScheduleDay>,
         val week: ScheduleWeek,
         val ignoreOutsideSchedule: Boolean,
@@ -160,7 +163,10 @@ sealed interface SettingsUiState {
         val canRemindEarlier: Boolean,
         val canRemindLater: Boolean,
         val problem: SettingsProblem?,
-    ) : SettingsUiState
+    ) : SettingsUiState {
+        /** One of the two sounds as the settings have it. */
+        fun sound(which: TripSound): SoundChoice = sounds.getValue(which)
+    }
 }
 
 /**
@@ -172,6 +178,7 @@ sealed interface SettingsUiState {
  * under the week's.
  * @param refusedEmail what stands in the address field while that is not an email address and
  * so was not stored, or null while the field holds what is stored.
+ * @param pickedFor the sound tile the last file was picked from, if one was.
  */
 fun settingsUiState(
     settings: MiloSettings,
@@ -179,6 +186,7 @@ fun settingsUiState(
     problem: SettingsProblem?,
     problemDay: DayOfWeek?,
     refusedEmail: String? = null,
+    pickedFor: TripSound? = null,
 ): SettingsUiState.Ready = SettingsUiState.Ready(
     truckPaired = settings.truckAddress != null,
     truckName = settings.truckName,
@@ -192,12 +200,10 @@ fun settingsUiState(
     canLowerMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepDown(settings.minimumTripDistanceMetres),
     canRaiseMinimum = MINIMUM_TRIP_DISTANCE_CHOICE.canStepUp(settings.minimumTripDistanceMetres),
     distanceUnit = settings.distanceUnit,
-    soundEnabled = settings.soundEnabled,
-    usesOwnSound = settings.customSoundUri != null,
-    ownSoundName = settings.customSoundName,
+    sounds = TripSound.entries.associateWith { settings.sound(it) },
     ownSounds = settings.ownSounds,
-    soundInUseUri = settings.customSoundUri,
     copyingSound = copyingSound,
+    pickedFor = pickedFor,
     schedule =
         DayOfWeek.entries.map { day ->
             val hours = settings.schedule.on(day)

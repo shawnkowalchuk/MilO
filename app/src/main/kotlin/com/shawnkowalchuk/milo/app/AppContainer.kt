@@ -40,7 +40,7 @@ import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import com.shawnkowalchuk.milo.platform.trip.TripController
 import com.shawnkowalchuk.milo.platform.trip.TripNotifications
 import com.shawnkowalchuk.milo.platform.trip.TripServiceStarter
-import com.shawnkowalchuk.milo.platform.trip.TripStartSound
+import com.shawnkowalchuk.milo.platform.trip.TripSoundPlayer
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import com.shawnkowalchuk.milo.platform.trip.playbackProblem
 import java.time.ZoneId
@@ -279,9 +279,9 @@ class AppContainer(context: Context) {
     val widgets: WidgetObjects by lazy { WidgetObjects(appContext, this) }
 
     /**
-     * Makes an audio file Shawn picked the trip-start sound, by copying it into MilO's own
-     * storage, and goes back to the bundled one. The trip service reads the result from the
-     * settings at the next trip start.
+     * Makes an audio file Shawn picked the connect sound or the trip-start sound, by copying it
+     * into MilO's own storage, and goes back to the bundled one. The trip service reads the
+     * result from the settings each time it plays a sound.
      */
     val ownTripSound: OwnTripSound by lazy {
         OwnTripSound(
@@ -295,12 +295,13 @@ class AppContainer(context: Context) {
     }
 
     /**
-     * Plays the trip-start sound for the Settings screen's Play button, with the same player a
-     * trip start uses, so what is heard there is what a trip start plays. The trip service has
-     * a player of its own; this one marks its log lines as coming from Settings.
+     * Plays a sound for the Settings screen's Play buttons, with the same player a trip uses,
+     * so what is heard there is what a trip plays. The trip service has a player of its own;
+     * this one cuts off a sound that is still playing, rather than waiting for it to end, and
+     * marks its log lines as coming from Settings.
      */
-    val soundPreview: TripStartSound by lazy {
-        TripStartSound(appContext) { note ->
+    val soundPreview: TripSoundPlayer by lazy {
+        TripSoundPlayer(appContext, waitTurn = false) { note ->
             applicationScope.launch {
                 eventLogRepository.add(
                     System.currentTimeMillis(),

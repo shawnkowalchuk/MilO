@@ -6,18 +6,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloNavigationBar
 import com.shawnkowalchuk.milo.core.designsystem.component.NavigationBarEntry
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.data.settings.FirstRunStage
+import com.shawnkowalchuk.milo.feature.onboarding.OnboardingScreen
+import com.shawnkowalchuk.milo.feature.onboarding.OnboardingViewModel
 import java.time.YearMonth
 
 /**
@@ -85,43 +90,75 @@ fun MiloApp(
             }
         }
 
-        // The app draws behind the status and navigation bars (see MainActivity). Scaffold
-        // reports how much room those bars and the bottom bar take, so the content starts and
-        // ends clear of them.
-        Scaffold(
-            bottomBar = {
-                MiloNavigationBar(
-                    entries =
-                        TopLevelDestination.entries.map { destination ->
-                            NavigationBarEntry(
-                                label = stringResource(destination.labelRes),
-                                icon = destination.icon,
-                                selected = destination == showing,
-                                onClick = {
-                                    leave(destination) {
-                                        backStack.showTopLevel(destination.key, HomeKey)
-                                    }
-                                },
-                            )
-                        },
+        // The first start (2026-10-08): the page that says what MilO does comes before every
+        // other screen, without the bottom bar, until OK is pressed; Setup then has its Done
+        // button, which leads to Settings. Nothing is drawn for the moment the settings take to
+        // be read.
+        val onboarding: OnboardingViewModel =
+            viewModel(factory = onboardingViewModelFactory(container))
+        val firstRun by onboarding.stage.collectAsState()
+        when (firstRun) {
+            null -> Unit
+
+            FirstRunStage.INTRO ->
+                OnboardingScreen(
+                    onOk = {
+                        onboarding.onOk()
+                        backStack.openOnTop(SetupKey)
+                    },
                 )
-            },
-        ) { innerPadding ->
-            MiloNavigation(
-                container = container,
-                backStack = backStack,
-                leaveBack = { atOnce -> leave(to = null, atOnce) },
-                onUnsavedWork = { held -> unsavedWork = unsavedWork.reported(held) },
-                // The keyboard takes room from the screens and never slides them away: the
-                // activity is not panned (adjustResize in the manifest), and the content ends
-                // where the keyboard begins. The bars' room is marked as used first, so that
-                // the keyboard's height is not added on top of the bottom bar it covers.
-                modifier =
-                    Modifier
-                        .padding(innerPadding)
-                        .consumeWindowInsets(innerPadding)
-                        .imePadding(),
-            )
+
+            else -> {
+                val setupDone: (() -> Unit)? =
+                    if (firstRun == FirstRunStage.SETUP) {
+                        {
+                            onboarding.onSetupDone()
+                            backStack.showTopLevel(SettingsKey, HomeKey)
+                        }
+                    } else {
+                        null
+                    }
+                // The app draws behind the status and navigation bars (see MainActivity).
+                // Scaffold reports how much room those bars and the bottom bar take, so the
+                // content starts and ends clear of them.
+                Scaffold(
+                    bottomBar = {
+                        MiloNavigationBar(
+                            entries =
+                                TopLevelDestination.entries.map { destination ->
+                                    NavigationBarEntry(
+                                        label = stringResource(destination.labelRes),
+                                        icon = destination.icon,
+                                        selected = destination == showing,
+                                        onClick = {
+                                            leave(destination) {
+                                                backStack.showTopLevel(destination.key, HomeKey)
+                                            }
+                                        },
+                                    )
+                                },
+                        )
+                    },
+                ) { innerPadding ->
+                    MiloNavigation(
+                        container = container,
+                        backStack = backStack,
+                        leaveBack = { atOnce -> leave(to = null, atOnce) },
+                        onUnsavedWork = { held -> unsavedWork = unsavedWork.reported(held) },
+                        // The keyboard takes room from the screens and never slides them away:
+                        // the activity is not panned (adjustResize in the manifest), and the
+                        // content ends where the keyboard begins. The bars' room is marked as
+                        // used first, so that the keyboard's height is not added on top of the
+                        // bottom bar it covers.
+                        modifier =
+                            Modifier
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding)
+                                .imePadding(),
+                        onSetupDone = setupDone,
+                    )
+                }
+            }
         }
 
         if (unsavedWork.asking) {

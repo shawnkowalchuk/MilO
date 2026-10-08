@@ -52,6 +52,8 @@ import java.time.ZoneId
  * @param leaveBack Back was pressed, Android's or a screen's own arrow. It is handed what Back
  * does and decides when: at once, or after a question if something typed would be lost.
  * @param onUnsavedWork a screen says whether it holds something typed and not saved.
+ * @param onSetupDone Setup's "Done, go to Settings", while the first start is being gone
+ * through (2026-10-08); null otherwise.
  */
 @Composable
 fun MiloNavigation(
@@ -60,6 +62,7 @@ fun MiloNavigation(
     leaveBack: (atOnce: () -> Unit) -> Unit,
     onUnsavedWork: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onSetupDone: (() -> Unit)? = null,
 ) {
     // When the trip that was just saved on the edit screen starts, until Trips has shown the
     // month it is in. The two screens are different features, so the app carries it across.
@@ -179,6 +182,7 @@ fun MiloNavigation(
                         viewModel = viewModel(factory = setupViewModelFactory(container)),
                         onOpenPairing = { backStack.openOnTop(PairingKey) },
                         onBack = { backStack.closeIfOnTop(SetupKey) },
+                        onDone = onSetupDone,
                     )
                 }
                 entry<PairingKey> {

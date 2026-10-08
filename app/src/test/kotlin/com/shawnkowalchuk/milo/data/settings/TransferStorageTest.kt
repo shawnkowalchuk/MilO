@@ -49,7 +49,7 @@ class TransferStorageTest {
         store.setTruck("AA:BB:CC:DD:EE:FF", "Work truck", 7)
         store.setReportName("Old Name")
         store.setReportCompany("Old Company")
-        store.setCustomSound("file:/data/sound", "r2d2.mp3")
+        store.setCustomSound(TripSound.CONNECT, "file:/data/sound", "r2d2.mp3")
         store.setConfirmedAtMs(ConfirmedStep.XIAOMI_AUTOSTART, 111)
         store.setConfirmedAtMs(ConfirmedStep.XIAOMI_RECENTS_LOCK, 222)
         store.setAutoStartHeldOffSinceMs(333)

@@ -76,31 +76,33 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[MINIMUM_TRIP_DISTANCE_METRES] = metres }
     }
 
-    suspend fun setSoundEnabled(enabled: Boolean) {
-        dataStore.edit { it[SOUND_ENABLED] = enabled }
+    /** Switches one of the two sounds on or off. Which sound it plays does not change. */
+    suspend fun setSoundEnabled(which: TripSound, enabled: Boolean) {
+        dataStore.edit { it[which.enabledKey] = enabled }
     }
 
     /**
-     * Stores the sound Shawn chose. The two values always change together.
+     * Stores the sound Shawn chose for [which]. The two values always change together. The list
+     * of his own sounds is not touched: `addOwnSound` adds to it.
      *
      * @param uri where MilO's own copy of the audio file is.
      * @param name what the file he picked was called, or null if the phone gave none. A blank
      * name is refused: pass null.
      */
-    suspend fun setCustomSound(uri: String, name: String?) {
+    suspend fun setCustomSound(which: TripSound, uri: String, name: String?) {
         require(uri.isNotBlank()) { "A custom sound needs a URI" }
         require(name == null || name.isNotBlank()) { "A sound's name is text, or null for none" }
         dataStore.edit { preferences ->
-            preferences[CUSTOM_SOUND_URI] = uri
-            preferences.setOrRemove(CUSTOM_SOUND_NAME, name)
+            preferences[which.uriKey] = uri
+            preferences.setOrRemove(which.nameKey, name)
         }
     }
 
-    /** Goes back to the bundled chirp. */
-    suspend fun clearCustomSound() {
+    /** Has [which] play its built-in sound again. */
+    suspend fun clearCustomSound(which: TripSound) {
         dataStore.edit { preferences ->
-            preferences.remove(CUSTOM_SOUND_URI)
-            preferences.remove(CUSTOM_SOUND_NAME)
+            preferences.remove(which.uriKey)
+            preferences.remove(which.nameKey)
         }
     }
 
@@ -227,9 +229,14 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             soundEnabled = preferences[SOUND_ENABLED] ?: defaults.soundEnabled,
             customSoundUri = preferences[CUSTOM_SOUND_URI],
             customSoundName = preferences[CUSTOM_SOUND_NAME],
+            drivingOffSoundEnabled =
+                preferences[DRIVING_OFF_SOUND_ENABLED] ?: defaults.drivingOffSoundEnabled,
+            drivingOffSoundUri = preferences[DRIVING_OFF_SOUND_URI],
+            drivingOffSoundName = preferences[DRIVING_OFF_SOUND_NAME],
             ownSounds = preferences.readOwnSounds(),
             homeWidgetEnabled = preferences.readHomeWidgetEnabled(),
             homeWidgetCentsPerKm = preferences.readHomeWidgetCentsPerKm(),
+            firstRunStage = preferences.readFirstRunStage(),
             distanceUnit = preferences.readDistanceUnit(),
             schedule = preferences.readSchedule(),
             ignoreTripsOutsideSchedule =
@@ -274,6 +281,12 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
         val CUSTOM_SOUND_NAME = stringPreferencesKey("custom_sound_name")
+
+        // The trip-start sound's (since 2026-10-08). The three above are the connect sound's:
+        // they kept the names they had when it was the only sound.
+        val DRIVING_OFF_SOUND_ENABLED = booleanPreferencesKey("driving_off_sound_enabled")
+        val DRIVING_OFF_SOUND_URI = stringPreferencesKey("driving_off_sound_uri")
+        val DRIVING_OFF_SOUND_NAME = stringPreferencesKey("driving_off_sound_name")
         val IGNORE_TRIPS_OUTSIDE_SCHEDULE =
             booleanPreferencesKey("ignore_trips_outside_schedule")
         val DRIVING_ALERT_ENABLED = booleanPreferencesKey("driving_alert_enabled")

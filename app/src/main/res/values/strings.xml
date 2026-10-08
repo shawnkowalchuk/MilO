@@ -735,17 +735,28 @@
     <!-- Settings: spoken by the screen reader for the minus and the plus beside the day. -->
     <string name="settings_reminder_day_earlier">An earlier day</string>
     <string name="settings_reminder_day_later">A later day</string>
-    <string name="settings_sound_title">Trip-start sound</string>
+    <!--
+        Settings: the two sounds (since 2026-10-08, the owner's request: "i want to use the
+        current one for connecting to a vehicle and another custom one when a trip starts").
+        The first is the sound MilO always had, under its first string names.
+    -->
+    <string name="settings_sound_title">Connect sound</string>
+    <string name="settings_sound_when">Plays when MilO connects to the truck and a trip begins, or when Start is pressed.</string>
+    <string name="settings_trip_sound_title">Trip-start sound</string>
+    <string name="settings_trip_sound_when">Plays once a trip is under way: the first time MilO sees the truck moving at driving speed. Also when a parked truck drives off.</string>
     <string name="settings_sound_copying">Copying the sound…</string>
     <string name="settings_sound_play">Play</string>
     <!-- Adds an audio file from the phone to the sounds to choose from, and uses it. -->
     <string name="settings_sound_add">Add a sound</string>
-    <!-- Takes the sound of one's own that is in use off the list; the built-in chirp plays then. -->
+    <!--
+        Takes the sound of one's own that is in use off the list, for both sounds; each that
+        played it plays its built-in sound then.
+    -->
     <string name="settings_sound_remove">Remove this sound</string>
     <!-- Settings: why a picked file did not become the sound. -->
     <string name="settings_sound_refused_copy">MilO could not copy that file. The sound was not changed.</string>
     <!-- The argument is the limit in megabytes. -->
-    <string name="settings_sound_refused_large">That file is too large for a trip-start sound (more than %1$d MB). The sound was not changed.</string>
+    <string name="settings_sound_refused_large">That file is too large for a sound (more than %1$d MB). The sound was not changed.</string>
     <string name="settings_sound_refused_playable">That file cannot be played as a sound. The sound was not changed.</string>
     <string name="settings_sound_no_picker">This phone has no app to pick a file with. The sound was not changed.</string>
 

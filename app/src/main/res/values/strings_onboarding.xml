@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The first start (Shawn's request of 2026-10-08): one page that says what MilO does and
+        how it works, with OK at its end; then Setup, with its Done button; then Settings.
+    -->
+    <string name="onboarding_title">Welcome</string>
+    <string name="onboarding_hero">MilO logs your business driving by itself</string>
+    <string name="onboarding_hero_line">Every drive in your truck, saved as Business or Personal, and the monthly report for your accountant.</string>
+
+    <string name="onboarding_trips_title">How a trip starts and ends</string>
+    <string name="onboarding_trips_text">When your phone connects to the truck\'s Bluetooth, a trip starts by itself and MilO records the drive with GPS. It ends when the truck disconnects, or once the truck has stood still for a while. You can also press Start trip and End trip yourself.</string>
+
+    <string name="onboarding_sorting_title">Business or Personal</string>
+    <string name="onboarding_sorting_text">Trips in your work hours are saved as Business, the others as Personal. You set the hours in Settings, and you can change any trip on the Trips screen.</string>
+
+    <string name="onboarding_report_title">Each month</string>
+    <string name="onboarding_report_text">From the 1st, MilO reminds you to send last month\'s report. It opens your email app with the PDF attached, and you press send.</string>
+
+    <string name="onboarding_privacy_title">Your trips stay on this phone</string>
+    <string name="onboarding_privacy_text">MilO has no account and no server. Your trips leave the phone only in files you send or save yourself, and in your own Android backup.</string>
+
+    <string name="onboarding_next_title">Next</string>
+    <string name="onboarding_next_text">Setup asks for the permissions MilO needs and pairs your truck. Then Settings, for your work hours, your name and the accountant\'s email address.</string>
+
+    <!-- The button at the end of Setup while the first start is being gone through. -->
+    <string name="setup_done">Done, go to Settings</string>
+</resources>

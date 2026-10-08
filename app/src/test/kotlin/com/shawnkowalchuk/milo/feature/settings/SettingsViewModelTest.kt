@@ -79,7 +79,7 @@ class SettingsViewModelTest {
                     eventLog = eventLog,
                     clock = { 0L },
                 ),
-            playSound = {},
+            playSound = { _, _ -> },
             // The alert reads the stored switch when it is told, so what is stored at that
             // moment is what matters.
             armDrivingAlert = { source ->

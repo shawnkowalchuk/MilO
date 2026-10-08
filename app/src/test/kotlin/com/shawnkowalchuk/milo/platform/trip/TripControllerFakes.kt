@@ -16,6 +16,7 @@ import com.shawnkowalchuk.milo.data.point.RawPointDao
 import com.shawnkowalchuk.milo.data.point.RawPointRepository
 import com.shawnkowalchuk.milo.data.settings.DEFAULT_PARKED_LIMIT_SECONDS
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckConnectionSource
 import com.shawnkowalchuk.milo.platform.bluetooth.TruckReading
@@ -143,6 +144,12 @@ class FakeService :
     var watchingParked = false
     var stops = 0
     var tripStartsAnnounced = 0
+
+    /** How often the trip-start sound was asked for: a trip seen driving off. */
+    var drivingOffsAnnounced = 0
+
+    /** Every sound asked for, in order. */
+    val sounds = mutableListOf<TripSound>()
     var checkAtMs: Long? = null
 
     /** Beside the parked truck: when the controller last said GPS goes off, or null for never. */
@@ -169,11 +176,13 @@ class FakeService :
     }
 
     @Synchronized
-    override fun record(checkAtMs: Long?, tripJustStarted: Boolean) {
+    override fun record(checkAtMs: Long?, sounds: List<TripSound>) {
         recording = true
         watchingParked = false
         this.checkAtMs = checkAtMs
-        if (tripJustStarted) tripStartsAnnounced++
+        this.sounds += sounds
+        if (TripSound.CONNECT in sounds) tripStartsAnnounced++
+        if (TripSound.DRIVING_OFF in sounds) drivingOffsAnnounced++
     }
 
     @Synchronized
@@ -201,7 +210,7 @@ fun TrackPoint.asFix(): RawPoint = RawPoint(
     latitude = latitude,
     longitude = longitude,
     accuracyMetres = accuracyMetres,
-    speedMetresPerSecond = null,
+    speedMetresPerSecond = speedMetresPerSecond,
 )
 
 class FakeRawPointDao : RawPointDao {

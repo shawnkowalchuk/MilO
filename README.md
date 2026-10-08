@@ -3,16 +3,16 @@
 <p align="center">
   <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download%20latest%20APK-C6F432?style=for-the-badge&logo=android&logoColor=121316" height="48" alt="Download latest APK"></a>
   <br>
-  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a>
+  <a href="https://github.com/shawnkowalchuk/MilO/releases/latest"><b>⬇️ Download Latest APK</b></a> · Android 14 or newer · <a href="#installing-the-apk">How to install</a> · <a href="https://milotriplog.top">milotriplog.top</a>
 </p>
 
 **An Android app that logs business kilometres by itself.** When the phone connects to the work truck's Bluetooth, MilO starts a trip, records the drive with GPS, sorts it into Business or Personal by the work hours, and at the end of the month makes the mileage report for the accountant, as a PDF and a CSV file.
 
 <p align="center">
-  <img src="docs/screenshots/home.jpg" width="200" alt="Home: Start trip, today's and the month's kilometres, the truck connected and parked, and the last trip">
-  <img src="docs/screenshots/trips.jpg" width="200" alt="Trips: October 2026, 96.4 km of Business, and one tile for each day">
-  <img src="docs/screenshots/settings.jpg" width="200" alt="Settings: Setup 14 of 14 ready, the truck, the driving alert and the odometer">
-  <img src="docs/screenshots/log.jpg" width="200" alt="Log: what MilO did and when, one kind of line at a time">
+  <img src="website/screenshots/home.jpg" width="200" alt="Home: Start trip, today's and the month's kilometres, the truck connected and parked, and the last trip">
+  <img src="website/screenshots/trips.jpg" width="200" alt="Trips: October 2026, 96.4 km of Business, and one tile for each day">
+  <img src="website/screenshots/settings.jpg" width="200" alt="Settings: Setup 14 of 14 ready, the truck, the driving alert and the odometer">
+  <img src="website/screenshots/log.jpg" width="200" alt="Log: what MilO did and when, one kind of line at a time">
 </p>
 
 > **A personal project, public to read.** MilO was built by Shawn Kowalchuk for one phone (a Xiaomi POCO X5 Pro 5G on Android 14 and HyperOS 2.0) and one truck. It runs on Android 14 and newer. It is not on the Play Store, there is no support, and the code has no license: it is public to read, and all rights are reserved (see [License](#license)). Everything after [License](#license) is the owner's own guide to running it on that phone.
@@ -23,6 +23,7 @@
 
 - Starts a trip when the phone connects to the truck's Bluetooth, through Android's companion-device service, so it works with MilO closed. It records the drive with GPS and ends the trip two minutes after the truck disconnects.
 - Ends a trip when the truck has stood still for ten minutes even though it is still connected (a parked truck can stay connected for hours), then watches beside it and starts the next trip when the truck drives off.
+- Plays two sounds you can hear even on silent: one when it connects to the truck, one when the truck drives off. Each can be a built-in sound or an audio file of your own.
 - Looks up each trip's start and end address.
 - Saves each trip as Business or Personal by the work hours set in Settings.
 - Keeps the truck's odometer from one reading typed in, plus every truck trip since.
@@ -38,7 +39,7 @@
 - Export and import all data as one file. Android's own backup carries the rest.
 
 <p align="center">
-  <img src="docs/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
+  <img src="website/screenshots/report-sample.png" width="520" alt="A sample report: the Business and Personal kilometres at the top, then each day's trips with their times, addresses and kilometres, the total, and lines to sign"><br>
   <sub>A sample report page, drawn from the app's own layout code with made-up trips.</sub>
 </p>
 
@@ -47,7 +48,7 @@
 1. On the phone, open the [latest release](https://github.com/shawnkowalchuk/MilO/releases/latest) and download the `.apk` file under "Assets".
 2. Open the downloaded file. The first time, Android asks you to allow the app you opened it with (your browser or Files) to **install unknown apps**: allow it, go back, and press Install. Developer options are not needed.
 3. Google Play Protect may warn that the app is from an unknown developer, or offer to scan it. That is because MilO is not on the Play Store; choose to install anyway if you trust it.
-4. Open MilO, go to **Settings**, then the **Setup** tile at the top, and work through it: the permissions, then pairing your truck.
+4. Open MilO. A first page says what it does; **OK** leads to Setup: work through it (the permissions, then pairing your truck) and press **Done, go to Settings** at its end.
 
 **To update,** install the newer APK over the old one: your trips and settings stay. Never uninstall MilO to update it, because that deletes every trip.
 
@@ -127,6 +128,8 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 ---
 
 ## First-time setup in the app
+
+**The first time MilO opens** (and once on a phone that already had it, after the update that brings this; built on 2026-10-08, not yet seen on the phone), a page says what MilO does and how it works. **OK** opens Setup, which then has **Done, go to Settings** at its end: press it when you are happy with Setup, even with a row still to fix, and Settings opens for your work hours, name and the accountant's address. After that MilO opens on Home as usual, and Setup is where it always is:
 
 Open MilO, press **Settings** in the bottom bar (its third button, three sliders; the bar shows icons and no words), and press the **Setup** tile at the top. Home's warning "Setup needs attention" opens it too. The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
@@ -253,7 +256,7 @@ What you confirmed is your word, with its date. HyperOS is reported to put some 
 - **Do not swipe MilO away** in the recent apps. While it waits for the truck, a swipe ends it even when it is locked, and only Background autostart brings it back.
 - **Avoid the clear-all button** (the X in the recent apps) and the Security app's Cleaner and Boost speed on work days. Clear-all is reported to end apps that are not locked, a recording included.
 - **Keep Battery saver mode off on work days.** Settings, Battery, Current mode: Balanced or Performance, not Battery saver or Ultra battery saver. *(From the research notes for HyperOS, check on your phone.)*
-- **Keep the alarm volume up: the trip-start sound follows it.** Since 2026-10-07 the sound is played like an alarm, so that it is heard when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode. (On 2026-10-05 Bedtime mode silenced it on your phone; the trip was recorded all the same.) A Do Not Disturb that is set to silence alarms too still silences it. *(Not yet tried on your phone: device checks NL-70 to NL-74.)*
+- **Keep the alarm volume up: both sounds follow it.** Since 2026-10-07 the sound (since 2026-10-08 both sounds, the connect sound and the trip-start sound) is played like an alarm, so that it is heard when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode. (On 2026-10-05 Bedtime mode silenced it on your phone; the trip was recorded all the same.) A Do Not Disturb that is set to silence alarms too still silences it. *(Not yet tried on your phone: device checks NL-70 to NL-74.)*
 - **After the phone restarts, unlock it once.** Android holds Bluetooth events back until the first unlock.
 - **Do not press "Back up now" in the phone's Google settings during a trip.** On an emulator a backup that was asked for from the Mac ended MilO in the middle of a recording. Whether the phone's own button does the same is not known.
 
@@ -267,9 +270,11 @@ This is what is built. A start by the truck and an end by its disconnect were se
 
 **When a trip starts.** The truck's Bluetooth connects, and within seconds:
 
-- the trip-start sound plays once from the phone, at the alarm volume;
+- the connect sound plays once from the phone, at the alarm volume;
 - a notification "Trip in progress" appears and stays, with the kilometres so far;
 - Home turns its lime tile into the trip: "Recording", the kilometres so far, the minutes it has run and "since (time)", and the button End trip. Its small Truck tile says "Connected".
+
+**When the truck drives off** (since 2026-10-08), the trip-start sound plays once: the first time MilO sees the truck moving at 15 km/h or more. After the connect sound when the truck connected, and on its own when a parked truck drives off and the next trip starts. *Not yet tried anywhere but in unit tests: device checks TS-1 to TS-10.*
 
 If Home is open at that moment, its truck tile first says "Connecting…" and then "Connected", for about four seconds, and only then does the lime tile change. The trip is being recorded all that time. Built on 2026-10-07 and seen on an emulator only.
 
@@ -297,7 +302,7 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
 | Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
-| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the trip-start sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
+| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the connect and trip-start sounds and the list of your own sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
 | The permissions and phone settings, and the truck's pairing | **Setup**, the tile at the top of Settings |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
@@ -374,7 +379,7 @@ Install on the connected phone (USB debugging on, the HyperOS switches as above)
 
 Never install that build on the phone: it cannot update the real one.
 
-**Your own trip-start sound.** The repo ships an original synthesized chirp. A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. (Settings in the app can also choose any audio file on the phone, without a rebuild.)
+**Your own connect sound, in builds from this Mac.** The repo ships two original synthesized sounds, a chirp for the connect sound and a chime for the trip-start sound (`tools/make_trip_start_chirp.py`). A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. There is no such file for the chime. (Settings in the app can also choose any audio file on the phone for either sound, without a rebuild: that is how the Mario, Mario Kart and "Giggity" clips go in, since they are someone else's recordings and the repository is public. Put them on the phone, then "Add a sound" on either sound's tile; once added, a clip can be chosen for both.)
 
 **The typeface.** The screens are set in Sora, which the app carries as `app/src/main/res/font/sora.ttf`. Its licence, the SIL Open Font License 1.1, is `licenses/Sora-OFL.txt`, and stays in the repository for as long as the font does.
 
@@ -400,6 +405,28 @@ Each update that others can download is a GitHub Release with the APK attached. 
 5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
+
+### The website
+
+`https://milotriplog.top` is a landing page and a privacy policy (ADR-003): plain HTML and CSS in `website/`, served by Firebase Hosting from the Firebase project `milotriplog`. **A merge to `main` that changes `website/` puts it live by itself** (`.github/workflows/website.yml`); the Actions tab's "Website", **Run workflow**, does the same by hand. The app has nothing to do with it and gets no Firebase.
+
+To look at a change before merging, open `website/index.html` in a browser, or run `firebase serve --only hosting` in the repository and open the address it prints.
+
+**The privacy page makes promises about the app.** A change to what the app keeps or sends changes `website/privacy.html` in the same pull request.
+
+**Setting it up, once** (as for reactimate.top):
+
+1. **The project ID is `milotriplog`** (Firebase console, the cog, **Project settings**; checked on 2026-10-08). `.firebaserc` and the secret's name in `.github/workflows/website.yml` depend on it. The free Spark plan is enough: it includes Hosting and a custom domain.
+2. **Switch Hosting on:** Firebase console, **Build**, **Hosting**, **Get started**. Click through; the command-line steps it shows are already done in this repository.
+3. **Make the deploy key and give it to GitHub,** once, on any computer, in an empty folder of its own (the files it writes there are not wanted, and the folder is deleted afterwards):
+   - **On a Windows PC** (how it was done on 2026-10-08): download the Firebase tool as one program, [firebase-tools-instant-win.exe](https://firebase.tools/bin/win/instant/latest), and open it: it opens a window where `firebase` works. There, `mkdir %USERPROFILE%\milo-setup`, then `cd %USERPROFILE%\milo-setup`.
+   - **On the Mac:** `npm install -g firebase-tools`, then `mkdir ~/milo-setup && cd ~/milo-setup`.
+
+   Then `firebase login`, and `firebase init hosting`, answering: proceed **Y**; **Use an existing project**, `milotriplog`; public directory: press Enter; single-page app **N**; **set up automatic builds and deploys with GitHub: Y**; the repository `shawnkowalchuk/MilO` (it signs in to GitHub in the browser); run a build script **N**; automatic deployment when a pull request is merged **N** (MilO has its own workflow). It makes a service account that may deploy to Hosting and nothing more, and stores its key in GitHub as the secret `FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG` (GitHub, the repository's **Settings**, **Secrets and variables**, **Actions**, where it can be checked). Then delete the `milo-setup` folder. (`firebase init hosting:github` alone refuses to run in a folder without this repository's `firebase.json`: "Didn't find a Hosting config in firebase.json".) The key is never saved in the repository; do not download one from the Firebase console.
+4. **Deploy:** merge a change to `website/`, or run "Website" from the Actions tab. The site is then at `https://milotriplog.web.app`.
+5. **Connect the domain:** Firebase console, **Hosting**, **Add custom domain**, `milotriplog.top`. Firebase shows the DNS records to enter at the registrar `milotriplog.top` was bought from (a TXT record that proves it is yours, then the A record): enter them there, and press **Verify**. Then add `www.milotriplog.top` the same way, set to redirect to `milotriplog.top`. Firebase makes the HTTPS certificate itself, within minutes or up to a day.
+
+**If the key ever leaks,** delete it in the Google Cloud console (IAM, **Service accounts**, the `github-action-…` account, **Keys**) and run step 3 again. It can replace the website and nothing else.
 
 ### The pre-commit hook
 
