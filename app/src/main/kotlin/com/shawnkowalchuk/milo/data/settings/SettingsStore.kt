@@ -230,6 +230,7 @@ class SettingsStore(internal val dataStore: DataStore<Preferences>) {
             ownSounds = preferences.readOwnSounds(),
             homeWidgetEnabled = preferences.readHomeWidgetEnabled(),
             homeWidgetCentsPerKm = preferences.readHomeWidgetCentsPerKm(),
+            firstRunStage = preferences.readFirstRunStage(),
             distanceUnit = preferences.readDistanceUnit(),
             schedule = preferences.readSchedule(),
             ignoreTripsOutsideSchedule =

@@ -59,6 +59,8 @@ enum class ConfirmedStep(val key: String) {
  * custom sound, and when the phone gave no name for the file.
  * @param homeWidgetEnabled whether MilO's home-screen widget is offered (since 2026-10-07; kept
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
+ * @param firstRunStage how far the first start has got: the page that says what MilO does, then
+ * Setup with its Done button, then nothing (since 2026-10-08; kept in `OnboardingStorage.kt`).
  * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
  * Business kilometres for reference (since 2026-10-07; kept in `WidgetStorage.kt`). 70¢ until
  * Shawn sets another in Settings.
@@ -124,6 +126,7 @@ data class MiloSettings(
     val ownSounds: List<OwnSound> = emptyList(),
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
+    val firstRunStage: FirstRunStage = FirstRunStage.INTRO,
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,

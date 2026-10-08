@@ -32,8 +32,8 @@ data class TransferredTruck(val address: String, val name: String?)
  * Left out, because each is about one phone or one moment: the companion association, MilO's
  * copy of a chosen trip-start sound, the confirmations of the setup checklist, the hold-off
  * after a manual end, the wait beside a parked truck, the times of the last driving alert and
- * the last reminder, the report that waits for "Did you send it?", and how far the process-exit
- * records were imported.
+ * the last reminder, the report that waits for "Did you send it?", how far the process-exit
+ * records were imported, and how far the first start has got (the onboarding).
  *
  * Three settings are missing that do mean the same anywhere: the switch and the time of the
  * daily "nothing recorded" check, and the parked limit. That is a gap, not a rule

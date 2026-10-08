@@ -1254,6 +1254,20 @@ Shawn's request of 2026-10-07: "also add the ability in settings to change the u
 | UN-11 | **A sent report keeps its unit.** After UN-10, look at "Sent reports" and at the Trips screen's month tile. Switch to Kilometres and look again. | The report sent in miles is listed in mi in both units; earlier reports sent in km are listed in km in both. **Trips shows no "Changed since the report was sent" after either switch.** The month is "Submitted" in both. | not run |
 | UN-12 | **Back to kilometres.** Tap "Kilometres". Go through Home, Trips, the edit screen, the Report screen and Settings again, and make a PDF and a CSV. | Everything is in km exactly as in UN-2: the same figures, to the tenth, and the PDF and CSV read as they did before the update (apart from a report sent since). The odometer shows km again; a reading typed in miles is named in mi in the line under it. Set the accountant's address back. | not run |
 
+## The first start (2026-10-08)
+
+Shawn's request of 2026-10-08: a page that says what MilO does, then OK, then Setup, then Settings once Setup is done. It shows once on a phone that already has MilO, after the update that brings it. Built and unit tested only; never drawn anywhere. Make an export first: the build that brings it also brings the database's version 6.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| OB-1 | **The page.** Install the build over the one on the phone and open MilO. | "Welcome" in the top line, no bottom bar, the lime tile "MilO logs your business driving by itself", five tiles under it, and OK at the end once scrolled. The page is in the app's dark colours; the top line is clear of the status bar and OK of the gesture bar. Your trips are still there afterwards (OB-6). | not run |
+| OB-2 | **Back on the page.** Press Back, then open MilO again. | MilO closes; the page shows again. | not run |
+| OB-3 | **OK.** Press OK. | Setup, with "Setup" and its arrowhead in the top line, the rows as before, and at the end the lime button "Done, go to Settings". | not run |
+| OB-4 | **Leave Setup before Done.** Press Setup's arrowhead, then Settings in the bar, then the Setup tile. | Home with the bottom bar; then Setup again, still with "Done, go to Settings" at its end. | not run |
+| OB-5 | **Done.** Press "Done, go to Settings". | Settings, marked in the bottom bar; Back leads to Home. | not run |
+| OB-6 | **Never again.** Swipe MilO out of the recent apps and open it again; open Setup. | Home, with today's figures and your trips; Setup without the Done button. | not run |
+| OB-7 | **A large font.** Do this between OB-2 and OB-3, while the page still shows: set the phone's font size to its largest, open MilO, look, then set the size back. | The page scrolls; no words are cut off, and OK can be reached. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

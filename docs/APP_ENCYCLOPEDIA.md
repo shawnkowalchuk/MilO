@@ -4,7 +4,7 @@
 >
 > **How to maintain it.** One entry per feature/capability, using the template below. **Update the entry in the same change that alters the feature** — a stale encyclopedia is worse than none, because it lies confidently. If behaviour changed and this didn't, the Definition of Done (STANDARDS §10) wasn't met.
 >
-> **Status:** Living document · **Last updated:** 2026-10-07 · **See also:** ARCHITECTURE.md (the map), FINDINGS_LOG.md (history of changes)
+> **Status:** Living document · **Last updated:** 2026-10-08 · **See also:** ARCHITECTURE.md (the map), FINDINGS_LOG.md (history of changes)
 
 ---
 
@@ -86,6 +86,7 @@ Each line gives the phase the brief put the capability in, and the states of its
 - [Safety net: manual button and driving alert](#safety-net-manual-button-and-driving-alert) — phases 1 and 2. Built, proven on the phone (the Start trip button). Built, not yet proven on the phone (the driving alert)
 - [Android Auto screen](#android-auto-screen) — phase 1. Built, not yet proven on the phone (it has run nowhere)
 - [Home-screen widget](#home-screen-widget) — not in the brief; Shawn's request of 2026-10-07. Built, not yet proven on the phone (it has run nowhere)
+- [First-start onboarding](#first-start-onboarding) — not in the brief; Shawn's request of 2026-10-08. Built, not yet proven on the phone (it has run nowhere)
 - [Permission checklist](#permission-checklist) — phase 1 (the Setup screen). Built, proven on the phone (the permission rows; the Autostart reading). Built, not yet proven on the phone (the HyperOS buttons; the truck's row; Physical activity)
 - [Schedule and Business/Personal](#schedule-and-businesspersonal) — phase 2. Built, proven on the phone (the sorting of earlier trips at a start). Built, not yet proven on the phone (everything else)
 - [Trip log: home, day and month views](#trip-log-home-day-and-month-views) — phases 1 and 2. Built, not yet proven on the phone
@@ -593,7 +594,7 @@ Unofficial tools that pretend an app came from Play exist. They are untrusted so
 **What it does**
 A widget for the phone's home screen. Shawn's requests of 2026-10-07: "add the ability to add a widget to the home screen with the dollar amount for business activity. this is just for reference. please use the cra value for this number. add the ability to turn it on and off in app", and "add the ability to view the current trip in this widget and start stop a trip". And the same evening: "lets just use .70 for a blended rate", then "or let the person set it under the settings screen".
 
-**Required behaviour** (his answers the same day)
+**Required behaviour** (Shawn's answers the same day)
 - The dollars are **this month's and this year's** Business kilometres ("This month and this year").
 - **One rate for every kilometre, set in Settings, $0.70 out of the box** ("Settings, starts at 0.70", the evening of 2026-10-07). It replaced the CRA's two tiers by year, built in ("Built in, updated each year", the same afternoon), which were never on the phone.
 - **The switch in Settings is for the whole widget** ("The whole widget"): switched off, it cannot be added, and one already on the home screen says it is switched off.
@@ -638,12 +639,52 @@ Android's `AppWidgetManager` and the home screen app, which draws the widget. No
 
 ---
 
+## First-start onboarding
+
+**Status:** Built, not yet proven on the phone, and **never run anywhere**: built and unit tested in CI only. Its checks are OB-1 to OB-7 · **Platforms:** Android (the phone; the Android Auto screen is not touched) · **Last updated:** 2026-10-08
+
+**What it does**
+The first time MilO opens, a page says what MilO does and how it works, with OK at its end; OK opens Setup, which then has a button **"Done, go to Settings"** at its end; Done opens Settings. After that the app opens as it always has. Shawn's request of 2026-10-08: "when the app starts for the first time i want a onboarding. What the app does and how it works. than a ok. than go to the setup screen so the user can set up all settings for vehicle. once finished please send them to the settings screen."
+
+**Required behaviour** (Shawn's answers the same day)
+- **Phone only** ("Phone only"): the Android Auto screen is not changed.
+- **One page, then OK** ("One page, then OK", over a few pages with Next).
+- **Setup is finished when Done is pressed** ("A 'Done' button", over moving on by itself once every required row is ready): Done can be pressed with rows still to fix, and Home's warning goes on saying so. Moving on by itself would have kept anyone on Setup whose HyperOS rows MilO cannot read.
+- **A phone that already has MilO sees it once,** after the update that brings it ("Yes, once"), not only a fresh install.
+
+**How it works today**
+1. **The stage** is stored in the settings file as `first_run_stage` (`data/settings/OnboardingStorage.kt`): nothing until OK (`INTRO`), `setup` after OK, `done` after Done. A value a build does not know is read as done.
+2. **The page** (`feature/onboarding/OnboardingScreen.kt`) is drawn by `MiloApp` in place of every other screen, without the bottom bar, while the stage is `INTRO`. It scrolls: the top line with the app's mark and "Welcome"; the one accent tile, "MilO logs your business driving by itself" over what MilO keeps; then a plain tile for each thing to know, a title over a few sentences: "How a trip starts and ends", "Business or Personal", "Each month", "Your trips stay on this phone", "Next"; and the main button **OK**. Made of the design system's parts (`AppHeader`, `Tile`, `TileColumn`, `PrimaryButton`); nothing was added to it.
+3. **OK** stores `setup` and opens Setup on top of Home, so Back from Setup leads to Home.
+4. **While the stage is `setup`**, Setup has the main button "Done, go to Settings" at its end (after the rows, and after the HyperOS note on a Xiaomi phone), however Setup was opened: from OK, from Home's warning, or from the tile at the top of Settings. **Done** stores `done` and opens Settings as the bar's Settings button does (Home under it).
+5. **Back on the page leaves MilO,** as Back from Home does; the page shows again at the next start. Back from Setup keeps the stage at `setup`: Setup keeps its Done button until Done is pressed.
+6. **Nothing keeps anyone on the page.** A stage reached counts at once, whether or not it could be stored; one that could not be is an `ERROR` line in the Log ("MilO could not store how far the first start has got (SETUP)"), and the page then shows again at the next process start. A settings file that cannot be read counts as done: the app opens as it always did, with an `ERROR` line.
+7. **Not in an export file:** it is this phone's. Android's backup carries it with the settings file, so a phone restored from a backup that was past it does not show it again.
+
+**Where the code lives**
+- `feature/onboarding/OnboardingScreen.kt` (the page) and `OnboardingViewModel.kt` (the stage, OK and Done). Words in `res/values/strings_onboarding.xml`, with Setup's `setup_done`.
+- `data/settings/OnboardingStorage.kt` (`FirstRunStage`, `readFirstRunStage`, `setFirstRunStage`); `MiloSettings.firstRunStage`.
+- `app/MiloApp.kt` (the page before every screen, and what OK and Done open), `app/OnboardingEntry.kt` (the ViewModel's factory), `app/MiloNavigation.kt` and `feature/setup/SetupScreen.kt` (the Done button, passed in only during the first start).
+- Tests: `app/src/test/.../data/settings/OnboardingStorageTest.kt` (out of the box, each stage stored and read back, the first stage removes, an unknown value), `feature/onboarding/OnboardingViewModelTest.kt` (out of the box, OK then Done, a write that fails, a file that cannot be read, a stage not given back).
+
+**Depends on**
+The settings store, the Setup screen ([Permission checklist](#permission-checklist)) and Settings ([Settings](#settings)).
+
+**Edge cases & gotchas**
+- **Nothing here has run.** Whether the page is drawn in the app's colours outside the bottom bar's frame, clears the status bar and the gesture bar, and what OK and Done open: device checks OB-1 to OB-7.
+- **A notification tapped while the page shows** (the monthly reminder, the daily check) acts on the screens behind it as before; the page stays until OK, and the screen it asked for is under Setup.
+- **The page says "a while"** for how long the truck may stand still, not ten minutes: the time is a setting.
+
+---
+
 ## Permission checklist
 
 **Status:** Built, proven on the phone: Shawn went through the Setup screen on 2026-10-05, everything except pairing the truck, and what was read back from the phone afterwards showed the four runtime permissions granted, MilO exempt from battery optimisation, and the Autostart reading following the switch. Built, not yet proven on the phone: whether each HyperOS button opens the right screen (he reported no problem, and nothing was written down), the truck's row with a truck, the Physical activity row, which was added afterwards and has been drawn on an emulator only, and the screen's layout as the owner's design draws it (2026-10-07), which has been drawn on an emulator only; its HyperOS group only in a throwaway copy of the build, because an emulator is not a Xiaomi phone. Device checks 54 to 66 have not been run as written; the layout's are NL-50 to NL-52 · **Platforms:** Android · **Last updated:** 2026-10-07
 
 **What it does**
 One screen, Setup, showing every requirement with its state, each with a button that takes Shawn to the place to fix it, and at its top how many of them are ready. The home screen warns while a required one is not in order.
+
+**During the first start (since 2026-10-08):** after the page that says what MilO does, Setup has the main button "Done, go to Settings" at its end until it is pressed ([First-start onboarding](#first-start-onboarding)).
 
 **Where it is (since 2026-10-07):** no longer in the bottom bar. Settings took its place there, and Setup is opened from the tile at the top of [Settings](#settings), which shows the same count, or from Home's warning "Open Setup". Its top line ends in an arrowhead and "Setup", which leads back to where it was opened from, as Back does. Opened from Settings the bar keeps Settings marked; opened from Home's warning, Home. Until that day it was the bar's third button.
 

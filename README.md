@@ -47,7 +47,7 @@
 1. On the phone, open the [latest release](https://github.com/shawnkowalchuk/MilO/releases/latest) and download the `.apk` file under "Assets".
 2. Open the downloaded file. The first time, Android asks you to allow the app you opened it with (your browser or Files) to **install unknown apps**: allow it, go back, and press Install. Developer options are not needed.
 3. Google Play Protect may warn that the app is from an unknown developer, or offer to scan it. That is because MilO is not on the Play Store; choose to install anyway if you trust it.
-4. Open MilO, go to **Settings**, then the **Setup** tile at the top, and work through it: the permissions, then pairing your truck.
+4. Open MilO. A first page says what it does; **OK** leads to Setup: work through it (the permissions, then pairing your truck) and press **Done, go to Settings** at its end.
 
 **To update,** install the newer APK over the old one: your trips and settings stay. Never uninstall MilO to update it, because that deletes every trip.
 
@@ -127,6 +127,8 @@ Android only lets a new build replace the MilO on the phone if both are signed w
 ---
 
 ## First-time setup in the app
+
+**The first time MilO opens** (and once on a phone that already had it, after the update that brings this; built on 2026-10-08, not yet seen on the phone), a page says what MilO does and how it works. **OK** opens Setup, which then has **Done, go to Settings** at its end: press it when you are happy with Setup, even with a row still to fix, and Settings opens for your work hours, name and the accountant's address. After that MilO opens on Home as usual, and Setup is where it always is:
 
 Open MilO, press **Settings** in the bottom bar (its third button, three sliders; the bar shows icons and no words), and press the **Setup** tile at the top. Home's warning "Setup needs attention" opens it too. The screen lists everything MilO needs, each row with its state and a button that leads to the place to set it. The tile at its top says how many of the rows are ready. Until every required row is in order, the Home screen shows "Setup needs attention" and a trip may not start by itself.
 
