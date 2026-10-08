@@ -14,12 +14,17 @@ package com.shawnkowalchuk.milo.core.trip
  * @param lastFixAtMs wall-clock time of the newest fix of any quality, or null before the first.
  * After a restart this is how old the trip's last sign of life is.
  * @param fixCount every fix received, used or not.
+ * @param drivenAtMs wall-clock time of the first fix that showed the truck driving ([plus]), or
+ * null while none has: the moment for the trip-start sound (Shawn's choice of 2026-10-08, "When
+ * the truck drives off"). Read from the stored points like the rest, so a trip picked up after a
+ * restart that had driven off already does not play the sound again.
  */
 data class TripProgress(
     val distance: DistanceState = DistanceState(),
     val lastMovementAtMs: Long? = null,
     val lastFixAtMs: Long? = null,
     val fixCount: Int = 0,
+    val drivenAtMs: Long? = null,
 ) {
     /** The picture after one more fix. */
     fun plus(point: TrackPoint, limits: DistanceLimits = DistanceLimits()): TripProgress {
@@ -31,7 +36,25 @@ data class TripProgress(
             lastMovementAtMs = measured.lastCountedAtMs,
             lastFixAtMs = point.wallClockMs,
             fixCount = fixCount + 1,
+            drivenAtMs = drivenAtMs ?: point.wallClockMs.takeIf { showsDriving(point, measured) },
         )
+    }
+
+    /**
+     * Whether [point] shows the truck driving, by the test the watch on a parked truck uses
+     * ([DRIVING_OFF_KMH], `ParkedWatch`): a usable fix whose speed reading is 15 km/h or more.
+     * A usable fix without a speed reading counts if distance was counted up to it, at that
+     * speed or more from the usable fix before it. [measured] is the calculation with [point].
+     *
+     * Unlike beside a parked truck, one fast fix is enough and is not borne out: the answer
+     * only decides when a sound plays, never whether a trip starts or how far it went.
+     */
+    private fun showsDriving(point: TrackPoint, measured: DistanceState): Boolean {
+        if (measured.acceptedCount == distance.acceptedCount) return false
+        val reported = point.speedMetresPerSecond
+        if (reported != null) return reported >= DRIVING_OFF_METRES_PER_SECOND
+        return measured.lastCountedAtMs == point.wallClockMs &&
+            point.metresPerSecondFrom(distance.lastAccepted) >= DRIVING_OFF_METRES_PER_SECOND
     }
 
     companion object {

@@ -15,10 +15,12 @@ import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
 import com.shawnkowalchuk.milo.data.settings.REMINDER_DAY_CHOICE
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.data.settings.isEmailAddress
 import com.shawnkowalchuk.milo.data.settings.reportTextOrNull
 import com.shawnkowalchuk.milo.data.settings.setDistanceUnit
 import com.shawnkowalchuk.milo.data.settings.setParkedLimitSeconds
+import com.shawnkowalchuk.milo.data.settings.sound
 import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import java.io.IOException
 import java.time.DayOfWeek
@@ -50,10 +52,10 @@ private const val REMINDER_CARD = "the reminder was changed in Settings"
  * shows is the settings store's own flow, and every press writes to the store.
  *
  * Nothing here tells the trip engine about a change. The trip controller reads the grace period,
- * the parked limit and the minimum distance at every trigger, and the trip service reads the sound at every trip
- * start, so a stored value is simply the one in force from the next event on. The work schedule
- * is read the same way, at the moment a trip is closed, to sort that trip; no stored trip is
- * sorted again because the schedule changed.
+ * the parked limit and the minimum distance at every trigger, and the trip service reads a sound
+ * each time it plays it, so a stored value is simply the one in force from the next event on.
+ * The work schedule is read the same way, at the moment a trip is closed, to sort that trip; no
+ * stored trip is sorted again because the schedule changed.
  *
  * The exceptions are the driving alert's switch and the reminder's tile. The alert has no
  * trigger of its own to read the setting at: it has to ask the phone to report driving, or to
@@ -62,8 +64,8 @@ private const val REMINDER_CARD = "the reminder was changed in Settings"
  * switched off, and not at tomorrow's look.
  *
  * @param ownSound copies and checks a picked audio file, and goes back to the built-in sound.
- * @param playSound plays the trip-start sound the way a trip start does, given the stored
- * custom sound or null for the built-in one. Called on the main thread.
+ * @param playSound plays one of the two sounds the way a trip does, given the stored file of
+ * Shawn's own or null for its built-in sound. Called on the main thread.
  * @param armDrivingAlert has the driving alert bring its request to the phone in line with the
  * stored switch. Its argument says what prompted it, for the event log.
  * @param lookAtReminder has the monthly reminder decide again, from the stored settings,
@@ -73,7 +75,7 @@ private const val REMINDER_CARD = "the reminder was changed in Settings"
 class SettingsViewModel(
     private val settings: SettingsStore,
     private val ownSound: OwnTripSound,
-    private val playSound: (customSoundUri: String?) -> Unit,
+    private val playSound: (which: TripSound, ownSoundUri: String?) -> Unit,
     private val armDrivingAlert: (source: String) -> Unit,
     private val lookAtReminder: (source: String) -> Unit,
     private val eventLog: EventLogRepository,
@@ -84,6 +86,8 @@ class SettingsViewModel(
      *
      * @param problemDay the day of the schedule the press that did not work was about, if it
      * was about one: the screen says under that day what went wrong.
+     * @param pickedFor the sound tile a file was last picked from, where its copying and its
+     * refusal are said.
      * @param refusedEmail what stands in the address field while that is not an email address
      * and so is not stored, or null. The text is kept with the refusal, and not only that
      * there was one: the field is built again when the phone is turned or the screen comes
@@ -92,6 +96,7 @@ class SettingsViewModel(
      */
     private data class Passing(
         val copyingSound: Boolean = false,
+        val pickedFor: TripSound? = null,
         val problem: SettingsProblem? = null,
         val problemDay: DayOfWeek? = null,
         val refusedEmail: String? = null,
@@ -116,6 +121,7 @@ class SettingsViewModel(
                     problem = now.problem,
                     problemDay = now.problemDay,
                     refusedEmail = now.refusedEmail,
+                    pickedFor = now.pickedFor,
                 )
             }
         }.stateIn(
@@ -140,11 +146,13 @@ class SettingsViewModel(
     /** Kilometres or miles. Every surface follows the settings, so it shows at once. */
     fun onDistanceUnit(unit: DistanceUnit) = change { settings.setDistanceUnit(unit) }
 
-    fun onSoundEnabled(enabled: Boolean) = change { settings.setSoundEnabled(enabled) }
+    fun onSoundEnabled(which: TripSound, enabled: Boolean) = change {
+        settings.setSoundEnabled(which, enabled)
+    }
 
-    /** One sound of the list, by MilO's copy of it, or with null the built-in chirp. */
-    fun onChooseSound(ownSoundUri: String?) = change {
-        if (ownSoundUri == null) ownSound.useBuiltIn() else ownSound.useOwn(ownSoundUri)
+    /** One sound of the list for [which], by MilO's copy of it, or with null its built-in one. */
+    fun onChooseSound(which: TripSound, ownSoundUri: String?) = change {
+        if (ownSoundUri == null) ownSound.useBuiltIn(which) else ownSound.useOwn(which, ownSoundUri)
     }
 
     fun onRemoveSound(ownSoundUri: String) = change { ownSound.remove(ownSoundUri) }
@@ -216,27 +224,35 @@ class SettingsViewModel(
         if (storable) change { settings.setAccountantEmail(address.ifEmpty { null }) }
     }
 
-    /** Plays the sound a trip start would play now, whether or not the sound is switched on. */
-    fun onPlaySound() = change { playSound(it.customSoundUri) }
+    /** Plays the sound [which] would play now, whether or not it is switched on. */
+    fun onPlaySound(which: TripSound) = change { playSound(which, it.sound(which).ownUri) }
 
     /**
-     * Shawn picked a file. It is copied and checked first; if that fails the screen says why,
-     * and the sound that was in use stays.
+     * Shawn picked a file on the tile of [which]. It is copied and checked first; if that fails
+     * the tile says why, and the sound that was in use stays.
      */
-    fun onOwnSoundPicked(uri: String) {
+    fun onOwnSoundPicked(which: TripSound, uri: String) {
         viewModelScope.launch {
             // What the address field says about itself is not about the sound, and stays.
-            passing.update { Passing(copyingSound = true, refusedEmail = it.refusedEmail) }
-            val refusal = ownSound.choose(uri)
             passing.update {
-                Passing(problem = refusal?.asProblem(), refusedEmail = it.refusedEmail)
+                Passing(copyingSound = true, pickedFor = which, refusedEmail = it.refusedEmail)
+            }
+            val refusal = ownSound.choose(which, uri)
+            passing.update {
+                Passing(
+                    problem = refusal?.asProblem(),
+                    pickedFor = which,
+                    refusedEmail = it.refusedEmail,
+                )
             }
         }
     }
 
-    /** The phone could not show a file picker at all. */
-    fun onNoFilePicker() {
-        passing.update { it.copy(problem = SettingsProblem.NO_FILE_PICKER, problemDay = null) }
+    /** The phone could not show a file picker at all, asked for from the tile of [which]. */
+    fun onNoFilePicker(which: TripSound) {
+        passing.update {
+            it.copy(problem = SettingsProblem.NO_FILE_PICKER, problemDay = null, pickedFor = which)
+        }
     }
 
     /**

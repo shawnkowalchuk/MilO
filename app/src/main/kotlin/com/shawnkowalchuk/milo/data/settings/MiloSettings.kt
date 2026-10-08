@@ -52,11 +52,16 @@ enum class ConfirmedStep(val key: String) {
  * trip open. Not a setting: see [ParkedTruck].
  * @param drivenOffTripId the open trip that the parked truck's moving started, if one is open.
  * Not a setting: see `readDrivenOffTripId`.
- * @param soundEnabled whether the trip-start sound plays.
- * @param customSoundUri the audio file Shawn chose, or null for the bundled chirp. It names
- * MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
+ * @param soundEnabled whether the connect sound plays ([TripSound.CONNECT]; until 2026-10-08
+ * the only sound, then called the trip-start sound).
+ * @param customSoundUri the audio file Shawn chose for it, or null for the bundled chirp. It
+ * names MilO's own copy of the file (`data/sound/OwnSoundStore`), never the file he picked.
  * @param customSoundName what the file he picked was called, for display only. Null with no
  * custom sound, and when the phone gave no name for the file.
+ * @param drivingOffSoundEnabled whether the trip-start sound plays, when the truck drives off
+ * ([TripSound.DRIVING_OFF], since 2026-10-08). On out of the box, like the connect sound.
+ * @param drivingOffSoundUri and [drivingOffSoundName] the same as [customSoundUri] and
+ * [customSoundName], for the trip-start sound. Read both sounds through `sound(which)`.
  * @param homeWidgetEnabled whether MilO's home-screen widget is offered (since 2026-10-07; kept
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
  * @param firstRunStage how far the first start has got: the page that says what MilO does, then
@@ -66,8 +71,8 @@ enum class ConfirmedStep(val key: String) {
  * Shawn sets another in Settings.
  * @param distanceUnit the unit every distance is shown in: kilometres until Shawn picks miles
  * (since 2026-10-07; kept in `UnitStorage.kt`). It changes no stored trip.
- * @param ownSounds every sound of his own he has added, the one in use among them, to choose
- * from (since 2026-10-07; kept in `SoundListStorage.kt`).
+ * @param ownSounds every sound of his own he has added, the ones in use among them, for both
+ * sounds to choose from (since 2026-10-07; kept in `SoundListStorage.kt`).
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
  * starts inside it is saved as Business. It sorts a trip when the trip is finalised and never
  * before, and it has no say in whether a trip starts. The driving alert reads it too, to keep
@@ -123,6 +128,9 @@ data class MiloSettings(
     val soundEnabled: Boolean = true,
     val customSoundUri: String? = null,
     val customSoundName: String? = null,
+    val drivingOffSoundEnabled: Boolean = true,
+    val drivingOffSoundUri: String? = null,
+    val drivingOffSoundName: String? = null,
     val ownSounds: List<OwnSound> = emptyList(),
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,

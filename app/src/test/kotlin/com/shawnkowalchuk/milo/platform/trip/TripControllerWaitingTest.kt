@@ -91,16 +91,20 @@ class TripControllerWaitingTest {
     }
 
     @Test
-    fun `no trip-start sound for a trip that movement started`() = runTest {
-        val scene = ParkedScene(this, world)
-        scene.driveAndPark()
-        assertEquals(1, scene.service.tripStartsAnnounced)
+    fun `a trip that movement started has its trip-start sound at once, and no connect sound`() =
+        runTest {
+            val scene = ParkedScene(this, world)
+            scene.driveAndPark()
+            assertEquals(1, scene.service.tripStartsAnnounced)
+            assertEquals(1, scene.service.drivingOffsAnnounced)
 
-        scene.standThenDriveOff()
+            scene.standThenDriveOff()
 
-        assertEquals(2, world.trips.rows.size)
-        assertEquals(1, scene.service.tripStartsAnnounced)
-    }
+            assertEquals(2, world.trips.rows.size)
+            assertEquals(1, scene.service.tripStartsAnnounced)
+            // The fixes that showed the truck leave are its first points: it has driven off.
+            assertEquals(2, scene.service.drivingOffsAnnounced)
+        }
 
     @Test
     fun `the second trip is a trip like any other, and ends where its own drive ends`() = runTest {
@@ -138,7 +142,7 @@ class TripControllerWaitingTest {
         assertEquals("No longer waiting for the truck to move: it moved", lines[0])
         val started =
             "Trip 2 started by TRUCK: it was connected and parked, and it moved. The trip " +
-                "starts where it was parked (3 points carried over), with no trip-start sound"
+                "starts where it was parked (3 points carried over), with no connect sound"
         assertEquals(started, lines[1])
     }
 

@@ -47,7 +47,7 @@ internal fun HomeWidgetTile(viewModel: HomeWidgetViewModel) {
 }
 
 /**
- * The home-screen widget: its switch, drawn like the trip-start sound's (a title, a line that
+ * The home-screen widget: its switch, drawn like the two sounds' (a title, a line that
  * says what it is, and the switch), and while it is on, the rate its dollars are priced at, and
  * a button that asks the home screen to add it, or the sentence that says how. What the dollars
  * are, and that they are for reference only, is behind the line at the end of the tile. Made of

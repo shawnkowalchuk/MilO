@@ -14,14 +14,15 @@ sealed interface TripEffect {
      *
      * @param fromParked true when the truck, connected and parked, moved again. The trip then
      * starts where the truck was parked: the caller gives it that position and the fixes that
-     * showed the movement, so the first stretch is not lost. No trip-start sound is played for
-     * it: the sound means "connected to the truck", and nothing connected.
+     * showed the movement, so the first stretch is not lost. No connect sound is played for
+     * it: that sound means "connected to the truck", and nothing connected. Its trip-start sound
+     * plays at once, because its first points show the truck driving (`TripProgress.drivenAtMs`).
      * @param atParkedPlace true when the trip begins where the truck was parked, with the
      * parked place and the watch's fixes as its first points. Always so with [fromParked]; and
      * for a press of Start while MilO waits beside the parked truck (Shawn's choice of
      * 2026-10-07, "At the parked spot"), so that the stretch driven before the press counts.
-     * Such a press is not [fromParked]: Shawn vouched for the trip, so it plays the sound and is
-     * never taken for a drive in another vehicle.
+     * Such a press is not [fromParked]: Shawn vouched for the trip, so it plays the connect
+     * sound and is never taken for a drive in another vehicle.
      */
     data class StartTrip(
         val startedBy: TripStartCause,
@@ -154,7 +155,7 @@ enum class TripEndReason {
 data class TripTransition(val state: TripState, val effects: List<TripEffect>) {
     /**
      * Whether this step is the moment a trip has really begun, which is the moment for the
-     * trip-start sound. That is when a trip starts, with two exceptions. A trip opened by the
+     * connect sound. That is when a trip starts, with two exceptions. A trip opened by the
      * companion callback alone may yet turn out to be a false start, so its moment comes when
      * the truck is confirmed; a false start never has one. And a trip that starts because a
      * parked truck moved has none at all: the sound is for a connect or a button.

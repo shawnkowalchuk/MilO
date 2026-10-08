@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Synthesises MilO's trip-start sound: res/raw/trip_start_chirp.wav.
+"""Synthesises MilO's two built-in sounds (docs/APP_ENCYCLOPEDIA.md, "Connect and trip-start
+sounds"):
 
-The sound is an original droid-style chirp, built here from nothing but sine waves: sweeps,
-warbles and short beeps. It is not copied from, sampled from or derived from any recording.
-The film sound it is meant to remind Shawn of is copyrighted and is not in this project
-(docs/APP_ENCYCLOPEDIA.md, "Trip-start sound").
+- res/raw/trip_start_chirp.wav, the connect sound: an original droid-style chirp, built from
+  nothing but sine waves: sweeps, warbles and short beeps. The film sound it is meant to remind
+  Shawn of is copyrighted and is not in this project. (Its name is from the days when it was
+  the only sound, and stays: a clip on Shawn's Mac replaces it by that name.)
+- res/raw/trip_go_chime.wav, the trip-start sound (since 2026-10-08): a short rising chime of
+  four plain notes, an arpeggio, the last one held.
 
-The output is committed, so the build does not run this script. Run it again only to change the
+Neither is copied from, sampled from or derived from any recording.
+
+The output is committed, so the build does not run this script. Run it again only to change a
 sound:
 
     python3 tools/make_trip_start_chirp.py
@@ -20,13 +25,13 @@ import struct
 import wave
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / "app/src/main/res/raw/trip_start_chirp.wav"
+RAW = Path(__file__).resolve().parent.parent / "app/src/main/res/raw"
 
 # 22.05 kHz mono is plenty for tones below 4 kHz on a phone speaker, and keeps the file small.
 SAMPLE_RATE = 22_050
 
 # Well below full scale: the phone speaker distorts a full-scale sine, and this plays at the
-# notification volume Shawn has set.
+# alarm volume Shawn has set.
 PEAK = 0.55
 
 # Fade each note in and out over this long, or its edges click.
@@ -89,16 +94,38 @@ def chirp():
     )
 
 
-def main():
-    samples = chirp()
+def chime():
+    """The trip-start sound: up a major chord, C, E, G and the C above, the last note held with
+    a slight vibrato, so it reads as "off we go" and is not mistaken for the chirp."""
+    return (
+        silence(0.03)
+        + note(0.09, 1047, 1047)
+        + silence(0.015)
+        + note(0.09, 1319, 1319)
+        + silence(0.015)
+        + note(0.09, 1568, 1568)
+        + silence(0.015)
+        + note(0.34, 2093, 2093, warble_hz=6, warble_depth_hz=14)
+        + silence(0.05)
+    )
+
+
+def write(name, samples):
+    output_path = RAW / name
     frames = b"".join(struct.pack("<h", round(PEAK * 32767 * value)) for value in samples)
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(OUTPUT), "wb") as output:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(output_path), "wb") as output:
         output.setnchannels(1)
         output.setsampwidth(2)
         output.setframerate(SAMPLE_RATE)
         output.writeframes(frames)
-    print(f"{OUTPUT.name}: {len(samples) / SAMPLE_RATE:.2f} s, {OUTPUT.stat().st_size} bytes")
+    seconds = len(samples) / SAMPLE_RATE
+    print(f"{output_path.name}: {seconds:.2f} s, {output_path.stat().st_size} bytes")
+
+
+def main():
+    write("trip_start_chirp.wav", chirp())
+    write("trip_go_chime.wav", chime())
 
 
 if __name__ == "__main__":

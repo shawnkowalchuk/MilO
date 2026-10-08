@@ -30,10 +30,11 @@ data class TransferredTruck(val address: String, val name: String?)
  * The settings that mean the same on another phone, which is what an export holds of them.
  *
  * Left out, because each is about one phone or one moment: the companion association, MilO's
- * copy of a chosen trip-start sound, the confirmations of the setup checklist, the hold-off
- * after a manual end, the wait beside a parked truck, the times of the last driving alert and
- * the last reminder, the report that waits for "Did you send it?", how far the process-exit
- * records were imported, and how far the first start has got (the onboarding).
+ * copies of the sounds of Shawn's own and which of them each sound plays, the confirmations of
+ * the setup checklist, the hold-off after a manual end, the wait beside a parked truck, the
+ * times of the last driving alert and the last reminder, the report that waits for "Did you
+ * send it?", how far the process-exit records were imported, and how far the first start has
+ * got (the onboarding).
  *
  * Three settings are missing that do mean the same anywhere: the switch and the time of the
  * daily "nothing recorded" check, and the parked limit. That is a gap, not a rule
@@ -50,7 +51,10 @@ data class TransferredTruck(val address: String, val name: String?)
  *  the unit distances are shown in ([MiloSettings.distanceUnit], 2026-10-07 (evening)): an
  *  import leaves this phone's choice of kilometres or miles as it is. Format 2 of the export
  *  file was made for one thing only, the unit a sent report was printed in, which is a record
- *  and not a setting; these four settings still wait for the format that takes them all.
+ *  and not a setting; these four settings still wait for the format that takes them all. So
+ *  does the switch of the trip-start sound ([MiloSettings.drivingOffSoundEnabled], 2026-10-08):
+ *  [soundEnabled] is the connect sound's switch, the one MilO always had, and an import leaves
+ *  the trip-start sound's switch as this phone has it.
  */
 data class TransferredSettings(
     val truck: TransferredTruck?,
@@ -168,9 +172,9 @@ suspend fun SettingsStore.replaceTransferred(arrived: TransferredSettings, truck
  *
  * @param dropAssociation true if Android on this phone holds no association for the stored
  * truck. The truck's address and name stay, so that the phone knows which device to pair again.
- * @param dropOwnSound true if MilO's copies of the trip-start sounds of Shawn's own are not on
- * this phone. They never are after a restore: the copies are kept out of every backup. The
- * list of them goes too, and the built-in chirp plays.
+ * @param dropOwnSound true if MilO's copies of the sounds of Shawn's own are not on this phone.
+ * They never are after a restore: the copies are kept out of every backup. The list of them
+ * goes too, and both sounds play their built-in sound.
  */
 suspend fun SettingsStore.forgetOtherInstallation(dropAssociation: Boolean, dropOwnSound: Boolean) {
     dataStore.edit { stored ->

@@ -150,7 +150,7 @@ internal fun startedText(
     return when {
         fromParked ->
             "$started: it was connected and parked, and it moved. The trip starts where it " +
-                "was parked ($carriedOver points carried over), with no trip-start sound"
+                "was parked ($carriedOver points carried over), with no connect sound"
 
         carriedOver != null ->
             "$started while MilO waited beside the parked truck. The trip starts where it " +

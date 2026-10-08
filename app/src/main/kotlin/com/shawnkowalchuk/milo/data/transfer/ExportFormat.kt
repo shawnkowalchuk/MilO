@@ -58,8 +58,8 @@ const val EXPORT_ABOUT =
         "recorded as sent, the settings that mean the same on another phone, and the raw GPS " +
         "points if \"points\" is not null. Times are milliseconds since 1970-01-01 UTC, " +
         "distances are metres. Not in this file: the event log, the companion device " +
-        "association with the truck, a chosen trip-start sound, and the confirmations of the " +
-        "setup checklist."
+        "association with the truck, the sounds chosen from the phone, and the confirmations " +
+        "of the setup checklist."
 
 /**
  * The JSON this file is written and read with: strict. An unknown key, a missing one, a text

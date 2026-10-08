@@ -23,6 +23,7 @@
 
 - Starts a trip when the phone connects to the truck's Bluetooth, through Android's companion-device service, so it works with MilO closed. It records the drive with GPS and ends the trip two minutes after the truck disconnects.
 - Ends a trip when the truck has stood still for ten minutes even though it is still connected (a parked truck can stay connected for hours), then watches beside it and starts the next trip when the truck drives off.
+- Plays two sounds you can hear even on silent: one when it connects to the truck, one when the truck drives off. Each can be a built-in sound or an audio file of your own.
 - Looks up each trip's start and end address.
 - Saves each trip as Business or Personal by the work hours set in Settings.
 - Keeps the truck's odometer from one reading typed in, plus every truck trip since.
@@ -255,7 +256,7 @@ What you confirmed is your word, with its date. HyperOS is reported to put some 
 - **Do not swipe MilO away** in the recent apps. While it waits for the truck, a swipe ends it even when it is locked, and only Background autostart brings it back.
 - **Avoid the clear-all button** (the X in the recent apps) and the Security app's Cleaner and Boost speed on work days. Clear-all is reported to end apps that are not locked, a recording included.
 - **Keep Battery saver mode off on work days.** Settings, Battery, Current mode: Balanced or Performance, not Battery saver or Ultra battery saver. *(From the research notes for HyperOS, check on your phone.)*
-- **Keep the alarm volume up: the trip-start sound follows it.** Since 2026-10-07 the sound is played like an alarm, so that it is heard when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode. (On 2026-10-05 Bedtime mode silenced it on your phone; the trip was recorded all the same.) A Do Not Disturb that is set to silence alarms too still silences it. *(Not yet tried on your phone: device checks NL-70 to NL-74.)*
+- **Keep the alarm volume up: both sounds follow it.** Since 2026-10-07 the sound (since 2026-10-08 both sounds, the connect sound and the trip-start sound) is played like an alarm, so that it is heard when the phone is on silent, on vibrate, in Do Not Disturb or in Bedtime mode. (On 2026-10-05 Bedtime mode silenced it on your phone; the trip was recorded all the same.) A Do Not Disturb that is set to silence alarms too still silences it. *(Not yet tried on your phone: device checks NL-70 to NL-74.)*
 - **After the phone restarts, unlock it once.** Android holds Bluetooth events back until the first unlock.
 - **Do not press "Back up now" in the phone's Google settings during a trip.** On an emulator a backup that was asked for from the Mac ended MilO in the middle of a recording. Whether the phone's own button does the same is not known.
 
@@ -269,9 +270,11 @@ This is what is built. A start by the truck and an end by its disconnect were se
 
 **When a trip starts.** The truck's Bluetooth connects, and within seconds:
 
-- the trip-start sound plays once from the phone, at the alarm volume;
+- the connect sound plays once from the phone, at the alarm volume;
 - a notification "Trip in progress" appears and stays, with the kilometres so far;
 - Home turns its lime tile into the trip: "Recording", the kilometres so far, the minutes it has run and "since (time)", and the button End trip. Its small Truck tile says "Connected".
+
+**When the truck drives off** (since 2026-10-08), the trip-start sound plays once: the first time MilO sees the truck moving at 15 km/h or more. After the connect sound when the truck connected, and on its own when a parked truck drives off and the next trip starts. *Not yet tried anywhere but in unit tests: device checks TS-1 to TS-10.*
 
 If Home is open at that moment, its truck tile first says "Connecting…" and then "Connected", for about four seconds, and only then does the lime tile change. The trip is being recorded all that time. Built on 2026-10-07 and seen on an emulator only.
 
@@ -299,7 +302,7 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 | Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
 | Every trip, a month at a time: press a day to see its trips, and a trip to edit it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
-| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the trip-start sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
+| The truck and its odometer, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the connect and trip-start sounds and the list of your own sounds, the home-screen widget and its rate, export and import | **Settings**, the third button (three sliders) |
 | The permissions and phone settings, and the truck's pairing | **Setup**, the tile at the top of Settings |
 | What MilO did and when | **Log**, the last button (a sheet of paper) |
 
@@ -376,7 +379,7 @@ Install on the connected phone (USB debugging on, the HyperOS switches as above)
 
 Never install that build on the phone: it cannot update the real one.
 
-**Your own trip-start sound.** The repo ships an original synthesized chirp. A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. (Settings in the app can also choose any audio file on the phone, without a rebuild.)
+**Your own connect sound, in builds from this Mac.** The repo ships two original synthesized sounds, a chirp for the connect sound and a chime for the trip-start sound (`tools/make_trip_start_chirp.py`). A file saved as `app/src/debug/res/raw/trip_start_chirp.mp3` (or `.wav` / `.ogg`; the name must be `trip_start_chirp`) replaces it in debug builds made on this machine. That folder is git-ignored on purpose: a personal clip may be someone else's copyright and must stay off GitHub. Delete the file to go back to the bundled chirp. There is no such file for the chime. (Settings in the app can also choose any audio file on the phone for either sound, without a rebuild: that is how the Mario, Mario Kart and "Giggity" clips go in, since they are someone else's recordings and the repository is public. Put them on the phone, then "Add a sound" on either sound's tile; once added, a clip can be chosen for both.)
 
 **The typeface.** The screens are set in Sora, which the app carries as `app/src/main/res/font/sora.ttf`. Its licence, the SIL Open Font License 1.1, is `licenses/Sora-OFL.txt`, and stays in the repository for as long as the font does.
 

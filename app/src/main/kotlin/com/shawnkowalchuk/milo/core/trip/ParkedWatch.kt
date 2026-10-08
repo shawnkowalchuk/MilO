@@ -19,7 +19,8 @@ const val MOVEMENT_BORNE_OUT_WITHIN_MS = 2 * 60_000L
  */
 const val DRIVING_OFF_KMH = 15.0
 
-private const val DRIVING_OFF_METRES_PER_SECOND = DRIVING_OFF_KMH / 3.6
+/** [DRIVING_OFF_KMH] in metres a second, the unit of a fix's speed reading. */
+internal const val DRIVING_OFF_METRES_PER_SECOND = DRIVING_OFF_KMH / 3.6
 
 /**
  * The trip that driving off starts is dated at the first fix of the last stretch of this length
@@ -33,8 +34,6 @@ const val DRIVING_OFF_LOOKBACK_MS = 2 * 60_000L
 
 /** A speed reading under this, 3.6 km/h, is a truck standing, or barely creeping. */
 private const val AT_REST_METRES_PER_SECOND = 1.0f
-
-private const val MILLIS_PER_SECOND = 1000.0
 
 /**
  * The watch on a truck that is connected and parked (see [Parked]): has it driven off?
@@ -141,7 +140,7 @@ data class ParkedWatch(
                     // apart is still seen to go fast.
                     null ->
                         next.awayAtMs != null &&
-                            speedBetween(distance.lastAccepted, fix) >=
+                            fix.metresPerSecondFrom(distance.lastAccepted) >=
                             DRIVING_OFF_METRES_PER_SECOND
 
                     else -> reported >= DRIVING_OFF_METRES_PER_SECOND
@@ -170,16 +169,6 @@ data class ParkedWatch(
 
     private fun TrackPoint.isAtRest(): Boolean =
         speedMetresPerSecond?.let { it < AT_REST_METRES_PER_SECOND } ?: false
-
-    /**
-     * The speed from [from] to [to], worked out from their positions and their times since boot,
-     * or 0 if there is no fix before or no time between them.
-     */
-    private fun speedBetween(from: TrackPoint?, to: TrackPoint): Double {
-        val seconds = (to.elapsedRealtimeMs - (from ?: return 0.0).elapsedRealtimeMs) /
-            MILLIS_PER_SECOND
-        return if (seconds > 0.0) from.metresTo(to) / seconds else 0.0
-    }
 
     companion object {
         /**

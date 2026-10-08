@@ -4,6 +4,8 @@ import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.TripSound
+import com.shawnkowalchuk.milo.data.settings.sound
 import com.shawnkowalchuk.milo.data.sound.MAX_OWN_SOUND_BYTES
 import com.shawnkowalchuk.milo.data.sound.OwnSoundStore
 import java.io.ByteArrayInputStream
@@ -21,9 +23,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 /**
- * Choosing an audio file as the trip-start sound, on a real folder and stand-ins for the picked
- * file and for Android's player: a file that cannot be copied or played changes nothing, and a
- * new choice joins the list of his own sounds (since 2026-10-07).
+ * Choosing an audio file for one of the two sounds, on a real folder and stand-ins for the
+ * picked file and for Android's player: a file that cannot be copied or played changes nothing,
+ * a new choice joins the list of his own sounds (since 2026-10-07), and that one list serves
+ * both sounds (since 2026-10-08).
  */
 class OwnTripSoundTest {
     @get:Rule
@@ -85,7 +88,7 @@ class OwnTripSoundTest {
     fun `a picked file is copied into MilO's own storage and played from there`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
 
-        assertNull(sound.choose("content://music/1"))
+        assertNull(sound.choose(TripSound.CONNECT, "content://music/1"))
 
         val now = settings.current()
         assertEquals("r2d2.mp3", now.customSoundName)
@@ -98,7 +101,7 @@ class OwnTripSoundTest {
     @Test
     fun `the copy still plays after the picked file is gone`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
 
         files.clear()
 
@@ -109,10 +112,10 @@ class OwnTripSoundTest {
     fun `a new sound joins the list, and the one before stays to be chosen again`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         onThePhone("content://music/2", "mario-1-up.mp3", "ding")
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
         nowMs += 60_000
 
-        assertNull(sound.choose("content://music/2"))
+        assertNull(sound.choose(TripSound.CONNECT, "content://music/2"))
 
         val now = settings.current()
         assertEquals("mario-1-up.mp3", now.customSoundName)
@@ -126,12 +129,12 @@ class OwnTripSoundTest {
     fun `a sound on the list can be chosen again`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         onThePhone("content://music/2", "mario-1-up.mp3", "ding")
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
         nowMs += 60_000
-        sound.choose("content://music/2")
+        sound.choose(TripSound.CONNECT, "content://music/2")
         val first = settings.current().ownSounds.first()
 
-        sound.useOwn(first.uri)
+        sound.useOwn(TripSound.CONNECT, first.uri)
 
         val now = settings.current()
         assertEquals("r2d2.mp3", now.customSoundName)
@@ -142,9 +145,9 @@ class OwnTripSoundTest {
     fun `removing the sound in use takes its copy away, and the chirp plays`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         onThePhone("content://music/2", "mario-1-up.mp3", "ding")
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
         nowMs += 60_000
-        sound.choose("content://music/2")
+        sound.choose(TripSound.CONNECT, "content://music/2")
         val inUse = soundInUse(settings.current())
 
         sound.remove(settings.current().customSoundUri.orEmpty())
@@ -160,10 +163,10 @@ class OwnTripSoundTest {
     fun `removing another sound leaves the one in use alone`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         onThePhone("content://music/2", "mario-1-up.mp3", "ding")
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
         val other = settings.current().ownSounds.single().uri
         nowMs += 60_000
-        sound.choose("content://music/2")
+        sound.choose(TripSound.CONNECT, "content://music/2")
 
         sound.remove(other)
 
@@ -177,10 +180,10 @@ class OwnTripSoundTest {
         onThePhone("content://music/1", name = null, content = "beep")
         onThePhone("content://music/2", name = "  ", content = "boop")
 
-        assertNull(sound.choose("content://music/1"))
+        assertNull(sound.choose(TripSound.CONNECT, "content://music/1"))
         assertNull(settings.current().customSoundName)
 
-        assertNull(sound.choose("content://music/2"))
+        assertNull(sound.choose(TripSound.CONNECT, "content://music/2"))
         assertNull(settings.current().customSoundName)
     }
 
@@ -188,7 +191,10 @@ class OwnTripSoundTest {
 
     @Test
     fun `a file that cannot be read is refused, and the built-in sound stays`() = runBlocking {
-        assertEquals(OwnSoundRefusal.COULD_NOT_COPY, sound.choose("content://music/gone"))
+        assertEquals(
+            OwnSoundRefusal.COULD_NOT_COPY,
+            sound.choose(TripSound.CONNECT, "content://music/gone"),
+        )
 
         assertEquals(MiloSettings(), settings.current())
         assertTrue(copies().isEmpty())
@@ -199,7 +205,7 @@ class OwnTripSoundTest {
         runBlocking {
             onThePhone("content://music/1", "r2d2.mp3", "beep boop")
             onThePhone("content://files/7", "horn.wav", "honk")
-            sound.choose("content://music/1")
+            sound.choose(TripSound.CONNECT, "content://music/1")
             val before = settings.current()
             // What the app that holds a file can answer an open with. Its code runs the
             // request, and whatever it throws reaches MilO unchanged.
@@ -218,7 +224,7 @@ class OwnTripSoundTest {
                 assertEquals(
                     answer.toString(),
                     OwnSoundRefusal.COULD_NOT_COPY,
-                    sound.choose("content://files/7"),
+                    sound.choose(TripSound.CONNECT, "content://files/7"),
                 )
 
                 assertEquals(before, settings.current())
@@ -235,11 +241,14 @@ class OwnTripSoundTest {
         runBlocking {
             onThePhone("content://music/1", "r2d2.mp3", "beep boop")
             onThePhone("content://docs/9", "invoice.pdf", "not audio at all")
-            sound.choose("content://music/1")
+            sound.choose(TripSound.CONNECT, "content://music/1")
             val before = settings.current()
             playerSays = "java.io.IOException: Prepare failed.: status=0x1"
 
-            assertEquals(OwnSoundRefusal.NOT_PLAYABLE, sound.choose("content://docs/9"))
+            assertEquals(
+                OwnSoundRefusal.NOT_PLAYABLE,
+                sound.choose(TripSound.CONNECT, "content://docs/9"),
+            )
 
             assertEquals(before, settings.current())
             assertEquals("beep boop", soundInUse(before).readText())
@@ -251,10 +260,13 @@ class OwnTripSoundTest {
     fun `a file that is too large is refused, and the sound chosen before stays`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
         files["content://music/album"] = "album.flac" to ByteArray(MAX_OWN_SOUND_BYTES.toInt() + 1)
-        sound.choose("content://music/1")
+        sound.choose(TripSound.CONNECT, "content://music/1")
         val before = settings.current()
 
-        assertEquals(OwnSoundRefusal.TOO_LARGE, sound.choose("content://music/album"))
+        assertEquals(
+            OwnSoundRefusal.TOO_LARGE,
+            sound.choose(TripSound.CONNECT, "content://music/album"),
+        )
 
         assertEquals(before, settings.current())
         assertEquals(listOf(soundInUse(before)), copies())
@@ -265,12 +277,12 @@ class OwnTripSoundTest {
         onThePhone("content://docs/9", "invoice.pdf", "not audio at all")
         playerSays = "java.io.IOException: Prepare failed.: status=0x1"
 
-        sound.choose("content://docs/9")
+        sound.choose(TripSound.CONNECT, "content://docs/9")
 
         val line = log.entries.single()
         assertEquals(EventCategory.ERROR, line.category)
         assertEquals(
-            "Trip-start sound: the chosen file was refused (NOT_PLAYABLE). The sound is unchanged",
+            "Connect sound: the chosen file was refused (NOT_PLAYABLE). The sound is unchanged",
             line.message,
         )
         assertEquals("java.io.IOException: Prepare failed.: status=0x1", line.detail)
@@ -281,10 +293,10 @@ class OwnTripSoundTest {
     @Test
     fun `going back to the built-in sound keeps his own on the list`() = runBlocking {
         onThePhone("content://music/1", "r2d2.mp3", "beep boop")
-        sound.choose("content://music/1")
-        settings.setSoundEnabled(false)
+        sound.choose(TripSound.CONNECT, "content://music/1")
+        settings.setSoundEnabled(TripSound.CONNECT, false)
 
-        sound.useBuiltIn()
+        sound.useBuiltIn(TripSound.CONNECT)
 
         val now = settings.current()
         assertNull(now.customSoundUri)
@@ -296,9 +308,78 @@ class OwnTripSoundTest {
 
     @Test
     fun `going back when the built-in sound is already in use changes nothing`() = runBlocking {
-        sound.useBuiltIn()
+        sound.useBuiltIn(TripSound.CONNECT)
 
         assertEquals(MiloSettings(), settings.current())
         assertTrue(copies().isEmpty())
+    }
+
+    // ---- Two sounds, one list -------------------------------------------------------------------
+
+    @Test
+    fun `a file added for the trip-start sound leaves the connect sound as it was`() = runBlocking {
+        onThePhone("content://music/1", "r2d2.mp3", "beep boop")
+        onThePhone("content://music/2", "mk64_racestart.mp3", "beep beep beep boop")
+        sound.choose(TripSound.CONNECT, "content://music/1")
+        nowMs += 60_000
+
+        assertNull(sound.choose(TripSound.DRIVING_OFF, "content://music/2"))
+
+        val now = settings.current()
+        assertEquals("r2d2.mp3", now.sound(TripSound.CONNECT).ownName)
+        assertEquals("mk64_racestart.mp3", now.sound(TripSound.DRIVING_OFF).ownName)
+        // Both are on the one list, each with its copy.
+        assertEquals(listOf("r2d2.mp3", "mk64_racestart.mp3"), now.ownSounds.map { it.name })
+        assertEquals(2, copies().size)
+        assertTrue(
+            logged(EventCategory.SERVICE).last().startsWith("Trip-start sound: a file added"),
+        )
+    }
+
+    @Test
+    fun `a sound added on one tile can be chosen for the other, and both play the one copy`() =
+        runBlocking {
+            onThePhone("content://music/1", "mario-1-up.mp3", "ding")
+            sound.choose(TripSound.CONNECT, "content://music/1")
+            val added = settings.current().ownSounds.single().uri
+
+            sound.useOwn(TripSound.DRIVING_OFF, added)
+
+            val now = settings.current()
+            assertEquals(added, now.sound(TripSound.CONNECT).ownUri)
+            assertEquals(added, now.sound(TripSound.DRIVING_OFF).ownUri)
+            assertEquals(1, copies().size)
+        }
+
+    @Test
+    fun `removing a sound both play takes it from both, and each plays its built-in one`() =
+        runBlocking {
+            onThePhone("content://music/1", "mario-1-up.mp3", "ding")
+            sound.choose(TripSound.DRIVING_OFF, "content://music/1")
+            val added = settings.current().ownSounds.single().uri
+            sound.useOwn(TripSound.CONNECT, added)
+
+            sound.remove(added)
+
+            val now = settings.current()
+            assertNull(now.sound(TripSound.CONNECT).ownUri)
+            assertNull(now.sound(TripSound.DRIVING_OFF).ownUri)
+            assertTrue(now.ownSounds.isEmpty())
+            assertTrue(copies().isEmpty())
+        }
+
+    @Test
+    fun `going back to the built-in sound on one tile leaves the other alone`() = runBlocking {
+        onThePhone("content://music/1", "mario-1-up.mp3", "ding")
+        sound.choose(TripSound.CONNECT, "content://music/1")
+        val added = settings.current().ownSounds.single().uri
+        sound.useOwn(TripSound.DRIVING_OFF, added)
+
+        sound.useBuiltIn(TripSound.CONNECT)
+
+        val now = settings.current()
+        assertNull(now.sound(TripSound.CONNECT).ownUri)
+        assertEquals(added, now.sound(TripSound.DRIVING_OFF).ownUri)
+        assertEquals(1, copies().size)
     }
 }

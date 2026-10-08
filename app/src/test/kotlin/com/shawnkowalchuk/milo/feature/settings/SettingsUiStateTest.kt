@@ -7,6 +7,7 @@ import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.PARKED_LIMIT_CHOICE
+import com.shawnkowalchuk.milo.data.settings.TripSound
 import com.shawnkowalchuk.milo.platform.trip.OwnSoundRefusal
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -33,9 +34,13 @@ class SettingsUiStateTest {
         assertNull(state.truckName)
         assertEquals(120, state.gracePeriodSeconds)
         assertEquals(300, state.minimumDistanceMetres)
-        assertTrue(state.soundEnabled)
-        assertFalse(state.usesOwnSound)
+        // Both sounds on, each with its built-in sound.
+        for (which in TripSound.entries) {
+            assertTrue(state.sound(which).enabled)
+            assertNull(state.sound(which).ownUri)
+        }
         assertFalse(state.copyingSound)
+        assertNull(state.pickedFor)
         assertNull(state.problem)
     }
 
@@ -159,11 +164,31 @@ class SettingsUiStateTest {
         val ownWithoutName =
             shown(MiloSettings(customSoundUri = "file:/data/trip_sound/own_trip_start_sound_1"))
 
-        assertTrue(own.usesOwnSound)
-        assertEquals("r2d2.mp3", own.ownSoundName)
-        assertTrue(ownWithoutName.usesOwnSound)
-        assertNull(ownWithoutName.ownSoundName)
-        assertFalse(shown().usesOwnSound)
+        val connect = TripSound.CONNECT
+        assertEquals("file:/data/trip_sound/own_trip_start_sound_1", own.sound(connect).ownUri)
+        assertEquals("r2d2.mp3", own.sound(connect).ownName)
+        assertNull(ownWithoutName.sound(connect).ownName)
+        assertNull(shown().sound(connect).ownUri)
+        // The other sound goes by its own settings.
+        assertNull(own.sound(TripSound.DRIVING_OFF).ownUri)
+    }
+
+    @Test
+    fun `the trip-start sound is shown from its own settings`() {
+        val state =
+            shown(
+                MiloSettings(
+                    drivingOffSoundEnabled = false,
+                    drivingOffSoundUri = "file:/data/trip_sound/own_2",
+                    drivingOffSoundName = "mario-1-up.mp3",
+                ),
+            )
+
+        val tripStart = state.sound(TripSound.DRIVING_OFF)
+        assertFalse(tripStart.enabled)
+        assertEquals("mario-1-up.mp3", tripStart.ownName)
+        assertTrue(state.sound(TripSound.CONNECT).enabled)
+        assertNull(state.sound(TripSound.CONNECT).ownUri)
     }
 
     @Test
@@ -176,13 +201,18 @@ class SettingsUiStateTest {
                 ),
             )
 
-        assertFalse(state.soundEnabled)
-        assertTrue(state.usesOwnSound)
+        assertFalse(state.sound(TripSound.CONNECT).enabled)
+        assertEquals(
+            "file:/data/trip_sound/own_trip_start_sound_1",
+            state.sound(TripSound.CONNECT).ownUri,
+        )
     }
 
     @Test
     fun `a copy under way and a problem are passed through as they are`() {
         assertTrue(shown(copyingSound = true).copyingSound)
+        val picked = settingsUiState(MiloSettings(), true, null, null, null, TripSound.DRIVING_OFF)
+        assertEquals(TripSound.DRIVING_OFF, picked.pickedFor)
         assertEquals(
             SettingsProblem.COULD_NOT_SAVE,
             shown(problem = SettingsProblem.COULD_NOT_SAVE).problem,
