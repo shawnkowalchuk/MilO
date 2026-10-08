@@ -24,6 +24,9 @@
 
 ### 2026-10-08
 
+**`[CHANGE]` Google Search Console's verification file on the website**
+Shawn sent `google995357ceb40b715c.html` ("please add to the website for google search console"): Search Console's HTML-file check of ownership, which must be served at `https://milotriplog.top/google995357ceb40b715c.html` with its one line unchanged. It is in `website/` as it came. **`firebase.json` lost `cleanUrls`:** that setting sends every `….html` address to its short form with a 301, and Google's check of the file is not to depend on a redirect. `/privacy` and `/compare` are two rewrites instead, so every link on the site still works; the long forms (`/privacy.html`) now answer too, and each page's canonical address is the short one.
+
 **`[FINDING]` The home-screen widget works on the phone**
 Shawn, asked whether the website should say something about the widget: "i teset it and it works". It is the first time the widget has run anywhere (it was built and unit tested in CI only, on 2026-10-07). Which of W-1 to W-14 he went through was not said, so they stay open one by one (DEVICE_TEST_CHECKLIST). **The website** now gives it a line of its own in "With you" (the trip as it runs, Start and End, this month's and this year's Business kilometres in dollars at a rate you set) and a ninth question, "Is there a home-screen widget?", which says the dollars are for reference and not on the report, and adds it to the questions' structured data. No picture yet: a screenshot of the widget on the home screen is to come from Shawn.
 
