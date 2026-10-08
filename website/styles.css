@@ -102,6 +102,12 @@ main {
   gap: var(--gap);
 }
 
+/* A grid item is as wide as its widest content unless told otherwise; the comparison's table
+   must slide inside its tile, not widen the page. */
+main > * {
+  min-width: 0;
+}
+
 .tile {
   background: var(--tile);
   border-radius: var(--tile-radius);
@@ -269,6 +275,74 @@ footer a {
 .faq details p {
   margin: 8px 0 0;
   color: var(--text-secondary);
+}
+
+/* The comparison: a table that slides sideways inside its tile on a phone, never the page. */
+.page-title {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 5.5vw, 38px);
+  line-height: 1.15;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.compare {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.compare th,
+.compare td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-top: 1px solid var(--outline);
+}
+
+.compare thead th {
+  border-top: 0;
+  font-weight: 700;
+}
+
+.compare tbody th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  width: 150px;
+}
+
+.compare .ours {
+  background: var(--quiet);
+}
+
+/* The row's name stays in view while the apps slide past it. */
+.compare th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--tile);
+}
+
+.compare thead .ours {
+  color: var(--accent);
+  border-radius: 12px 12px 0 0;
+}
+
+.table-note {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+@media (min-width: 900px) {
+  .table-note {
+    display: none;
+  }
 }
 
 /* The privacy policy: one tile of text, read top to bottom. */

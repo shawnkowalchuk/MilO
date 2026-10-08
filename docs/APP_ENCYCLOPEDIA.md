@@ -1686,6 +1686,7 @@ Firebase Hosting in the project `milotriplog`; the deploy key in GitHub's Action
 - **The screenshots are the README's too:** they moved from `docs/screenshots/` to `website/screenshots/`, one copy for both. The home screenshot's street addresses are blurred; the Settings one shows Shawn's name, as the README does.
 - The font is a copy of `app/src/main/res/font/sora.ttf`; the two are changed together, and its licence goes with it (`website/fonts/Sora-OFL.txt`).
 - The Firebase command-line tool the deploy runs is pinned in the workflow (15.33.0), where Dependabot cannot see it (`[DEBT]`).
+- **The comparison goes out of date.** `compare.html` says what TripLog, MileIQ, Driversnote and Everlance offered on 8 October 2026, from search extracts of their own websites (the session's network could not open those sites directly; FINDINGS_LOG, 2026-10-08). On purpose it gives no paid prices (it links to each pricing page: Everlance's own pages disagreed, and MileIQ's may have been old), quotes each tax claim as the vendor's ("says it is CRA-compliant"), says "not found" rather than "no" where a feature was not found, and leaves out what their privacy policies say. MilO's own column must change with the app: one vehicle, no purpose column, not on Google Play.
 
 **Related**
 [Settings](#settings) and [Connect and trip-start sounds](#connect-and-trip-start-sounds) (what the landing page says the app does); [Backup, export and import](#backup-export-and-import) (what the privacy page says leaves the phone).
