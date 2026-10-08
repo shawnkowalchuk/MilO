@@ -451,7 +451,7 @@ MilO has one platform and two UI surfaces. Both show the same trips and drive th
 | Business or Personal | Shown, and changed by hand, on Trips; shown on Home | Not shown (the car screen was left unchanged on 2026-10-06) | **Yes — the rule is `core/schedule/`, the stored result is on the trip** |
 | Trips added or edited by hand | Typed in and changed on the edit screen; marked on Trips | Neither shown nor changed. Counted in Today like any finished trip | **Yes — the rules are pure functions in `data/trip/`, and `isCounted` knows no difference** |
 | Manual trip control | Start/Stop button, and since 2026-10-07 the home-screen widget's Start trip / End trip | Start Trip / End Trip | **Yes — every one drives the same trip logic** |
-| Home-screen widget (since 2026-10-07) | The status line, the open trip's km and running time, the one button, and this month's and this year's Business km priced at the CRA's per-km rate | None: Android Auto has no widgets | **Yes — the status, the trip's figures and the button are `carScreenContent`'s, the car screen's own; the pricing is `core/allowance/`** |
+| Home-screen widget (since 2026-10-07) | The status line, the open trip's km and running time, the one button, and this month's and this year's Business km priced at the rate set in Settings | None: Android Auto has no widgets | **Yes — the status, the trip's figures and the button are `carScreenContent`'s, the car screen's own; the pricing is `core/allowance/`** |
 | Trip rules, distance, formatting | | | **Yes** |
 | Storage access | | | **Yes — repositories in `data/`** |
 | System services | | | **Yes — `platform/`** |
@@ -544,9 +544,10 @@ core/report/         # the report for the accountant: a period, the report as pl
                      #   every word and figure of the PDF, where each stands and on which
                      #   page, the CSV text, the email's subject and the file's name. Pure
                      #   Kotlin, no Android imports, unit tested
-core/allowance/      # Business kilometres priced at the CRA's per-kilometre rate, for the
-                     #   home-screen widget's reference figure: the rates by year, the two
-                     #   tiers, whole dollars. Pure Kotlin, no Android imports, unit tested
+core/allowance/      # Business kilometres priced at one rate per kilometre, for the
+                     #   home-screen widget's reference figure: the rate out of the box and
+                     #   its limits, reading and writing a rate, whole dollars. Pure Kotlin,
+                     #   no Android imports, unit tested
 core/util/           # pure Kotlin helpers with unit tests: formatting of distances, times
                      #   and lengths of time, a month, a day or a run of days as a span of
                      #   stored time, and the one rule by which trips are added up
@@ -784,6 +785,7 @@ Each is one `UPDATE` that sets the status and matches on the status it starts fr
 | `nothing_recorded_enabled` | boolean | true | Since 2026-10-06 (evening). Whether the daily "nothing recorded" check is switched on |
 | `nothing_recorded_minute_of_day` | integer | 720 | Since 2026-10-06 (evening). The time of day from which a work day is checked, as whole minutes since local midnight (12:00). A day whose work hours start later is checked from their start. A stored number that is no minute of a day, which no setter can write, reads as 720 |
 | `home_widget_enabled` | boolean | true | Since 2026-10-07. Whether the home-screen widget is offered (its switch in Settings). Off: every widget on the home screen is drawn as switched off and the widget's provider component is disabled, at the press and again at every process start (`HomeWidget.applySwitch`). Not in an export file |
+| `home_widget_cents_per_km` | int | 70 (absent) | Since 2026-10-07 (evening). The rate the widget prices the Business kilometres at, in cents a kilometre, set on the widget's tile in Settings; 1 to 500. A stored value outside that is read as 70. The widget follows it and is drawn again at once. Not in an export file: a gap, with the parked limit and the odometer readings (`TransferStorage.kt`, `TODO(debt)`) |
 | `nothing_recorded_shown_on_day` | integer | none | Since 2026-10-06 (evening). The day the check's notification was last shown, as days since 1970-01-01. Written each time it is shown, and read at every look: no second one is shown on that day, also after a restart of the process. The three keys are spelled out in `data/settings/NothingRecordedStorage.kt`, and are read as one value, `MiloSettings.nothingRecorded` |
 | `last_export_at_ms`, `last_export_with_points` | integer, boolean | none | Since 2026-10-06 (phase 4, part B). When "Export all data" last wrote a file, and whether the raw GPS points were in it (`LastExport`). Written together after an export that succeeded; absent before the first. The Settings screen shows it. The keys are spelled out in `data/settings/TransferStorage.kt` |
 | `auto_start_held_off_since_ms` | integer | none | ADR-002's hold-off: the time a trip was ended by hand with the truck still connected. Absent means not held off. The time is kept because two of the three things that release the hold-off are measured from it |

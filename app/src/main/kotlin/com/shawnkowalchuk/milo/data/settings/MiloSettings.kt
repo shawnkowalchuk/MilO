@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.data.settings
 
+import com.shawnkowalchuk.milo.core.allowance.DEFAULT_CENTS_PER_KM
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
@@ -57,6 +58,9 @@ enum class ConfirmedStep(val key: String) {
  * custom sound, and when the phone gave no name for the file.
  * @param homeWidgetEnabled whether MilO's home-screen widget is offered (since 2026-10-07; kept
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
+ * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
+ * Business kilometres for reference (since 2026-10-07; kept in `WidgetStorage.kt`). 70¢ until
+ * Shawn sets another in Settings.
  * @param ownSounds every sound of his own he has added, the one in use among them, to choose
  * from (since 2026-10-07; kept in `SoundListStorage.kt`).
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
@@ -116,6 +120,7 @@ data class MiloSettings(
     val customSoundName: String? = null,
     val ownSounds: List<OwnSound> = emptyList(),
     val homeWidgetEnabled: Boolean = true,
+    val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,
     val drivingAlertEnabled: Boolean = true,

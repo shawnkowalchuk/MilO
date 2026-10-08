@@ -3,7 +3,6 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
-import com.shawnkowalchuk.milo.core.allowance.craRateFor
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -27,7 +26,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** A settings file that can be read, holds nothing, and refuses every write. */
@@ -87,7 +88,7 @@ class HomeWidgetViewModelTest {
     }
 
     @Test
-    fun `out of the box the widget is on, can be added, and names this year's rate`() = runTest {
+    fun `out of the box the widget is on, can be added, and its rate is 70 cents`() = runTest {
         val viewModel = viewModel(FakeSettingsFile())
         assertNull(viewModel.state.value)
 
@@ -97,7 +98,7 @@ class HomeWidgetViewModelTest {
             HomeWidgetCardState(
                 enabled = true,
                 canAskToAdd = true,
-                rate = craRateFor(2026),
+                centsPerKm = 70,
                 couldNotSave = false,
             ),
             viewModel.state.value,
@@ -129,6 +130,50 @@ class HomeWidgetViewModelTest {
             assertEquals(false, viewModel.state.value?.enabled)
             assertEquals(false, viewModel.state.value?.canAskToAdd)
         }
+
+    @Test
+    fun `a typed rate is stored and shown`() = runTest {
+        val file = FakeSettingsFile()
+        val viewModel = viewModel(file)
+        watch(viewModel)
+
+        assertTrue(viewModel.onSaveRate("0.73"))
+        runCurrent()
+
+        assertEquals(73, SettingsStore(file).current().homeWidgetCentsPerKm)
+        assertEquals(73, viewModel.state.value?.centsPerKm)
+        assertEquals(false, viewModel.state.value?.couldNotSave)
+    }
+
+    @Test
+    fun `what is not a rate is refused, and nothing is stored`() = runTest {
+        val file = FakeSettingsFile()
+        val viewModel = viewModel(file)
+        watch(viewModel)
+
+        assertFalse(viewModel.onSaveRate("0.705"))
+        assertFalse(viewModel.onSaveRate("seventy"))
+        runCurrent()
+
+        assertEquals(70, SettingsStore(file).current().homeWidgetCentsPerKm)
+        assertEquals(emptyList<String>(), log.entries.map { it.message })
+    }
+
+    @Test
+    fun `a rate that cannot be stored is said on the tile and in the log`() = runTest {
+        val viewModel = viewModel(WidgetReadOnlySettingsFile)
+        watch(viewModel)
+
+        assertTrue(viewModel.onSaveRate("0.73"))
+        runCurrent()
+
+        assertEquals(70, viewModel.state.value?.centsPerKm)
+        assertEquals(true, viewModel.state.value?.couldNotSave)
+        assertEquals(
+            listOf("The Settings screen could not store the widget's rate"),
+            log.entries.filter { it.category == EventCategory.ERROR }.map { it.message },
+        )
+    }
 
     @Test
     fun `the button asks the home screen`() = runTest {

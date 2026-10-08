@@ -73,22 +73,18 @@ internal fun switchedOffViews(context: Context): RemoteViews =
         setOnClickPendingIntent(R.id.widget_root, openApp(context))
     }
 
-/** "Oct $412 · 2026 $3,980 at the CRA rate", with the rate's year when it is not this one. */
-private fun dollarsLine(context: Context, dollars: WidgetDollars?): String {
-    if (dollars == null) return context.getString(R.string.widget_dollars_unknown)
-    val line =
-        context.getString(
-            R.string.widget_dollars,
-            dollars.monthLabel,
-            dollars.month,
-            dollars.yearLabel,
-            dollars.year,
-        )
-    return if (dollars.rateIsTheYears) {
-        line
-    } else {
-        context.getString(R.string.widget_dollars_older_rate, line, dollars.rateYear.toString())
-    }
+/** "Oct $412 · 2026 $3,980 at $0.70/km". */
+private fun dollarsLine(context: Context, dollars: WidgetDollars?): String = if (dollars == null) {
+    context.getString(R.string.widget_dollars_unknown)
+} else {
+    context.getString(
+        R.string.widget_dollars,
+        dollars.monthLabel,
+        dollars.month,
+        dollars.yearLabel,
+        dollars.year,
+        dollars.rate,
+    )
 }
 
 /**

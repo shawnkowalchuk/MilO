@@ -22,6 +22,23 @@
 
 ## Log
 
+### 2026-10-07 (evening)
+
+**`[DECISION]` The widget's rate: one rate for every kilometre, set in Settings, $0.70 to start**
+Shawn, once the widget was merged: "lets just use .70 for a blended rate", then, before that was built, "or let the person set it under the settings screen". Asked which, Shawn chose "Settings, starts at 0.70" over "Fixed at 0.70 in the app". It replaces the afternoon's decision on the CRA's rates (below): no tiers and no table of years, so nothing is added to MilO each January, and the look at canada.ca that entry asked for no longer matters. Phone only: the widget and its tile are the phone's, and the Android Auto screen shows no dollars.
+- **Decided here, not asked:** the rate is in whole cents, from $0.01 to $5.00 (more is taken for a typo); it is typed in dollars, as Shawn wrote it (".70", "0.70", "$0.70"; a comma counts as the decimal mark); one rate for the whole year, so a change reprices the months already shown; and the widget names the rate it used, "at $0.70/km", where it said "at the CRA rate", because the figure is no longer the CRA's.
+
+**`[CHANGE]` The widget's dollars at the rate set in Settings**
+- **Rules:** `core/allowance/CraAllowance.kt` is now `BusinessAllowance.kt`. The two tiers, the rates by year and the "(2026 rate)" fallback are gone. `allowanceCents` prices tenths of a kilometre at one rate, rounded once; `parseCentsPerKm` reads what was typed and `formatCentsPerKm` writes a rate ("$0.70").
+- **Stored** in the settings file in cents (`home_widget_cents_per_km`, `WidgetStorage.kt`), beside the widget's switch. Nothing is stored until a rate is set, and 70 is read until then. A value outside the range, which MilO cannot write, is read as 70, never used.
+- **The widget** follows the stored rate as it follows the trips (`HomeWidget`), so a new rate redraws every widget at once. A settings file that cannot be read gives "Business dollars: not available" and an `ERROR` line, as trips that cannot be read do.
+- **The tile:** "Rate" over "$0.70/km" on a `ValueButton`, the quiet button the edit screen draws a date with. A press opens a `TextEntry` with "Cancel" and "Save rate" in its place, as the odometer's tile does. Nothing was added to the design system; `ValueButton`'s description now says a press may open a field as well as a picker.
+- **Words:** the widget's line ends "at $0.70/km"; "Business dollars: not available"; the tile's line is "The trip, Start and End, and business kilometres in dollars"; "About the widget" no longer names the 2026 rates. `widget_dollars_older_rate` is gone.
+- **Tests:** `BusinessAllowanceTest` (7; it was `CraAllowanceTest`); `HomeWidgetContentTest` (two rewritten, and the test of a year without its rate replaced by two: another rate, and no rate); `HomeWidgetViewModelTest` (three new: a rate stored, refused, not stored); `WidgetStorageTest` (four new). The seven of `BusinessAllowanceTest` ran here, compiled with the pinned Kotlin 2.4.20 and warnings as errors, and ktlint 1.8.0 is clean on every changed file. The rest needs Android's libraries, which come from `dl.google.com`, blocked in this environment, so CI is the first to compile it. Nothing has been drawn: device checks W-1 and W-4 changed, W-13 and W-14 are new.
+
+**`[DEBT]` The widget's rate is not in "Export all data"**
+Left out on the same terms as the odometer readings and the parked limit (2026-10-07; 2026-10-06 (evening)): adding it changes the export file's form. Android's backup carries it with the settings file; an import from a file leaves this phone's rate as it is. Cost to fix: nothing beyond the one new format version those two need. Tagged in `TransferStorage.kt`.
+
 ### 2026-10-07
 
 **`[CHANGE]` A home-screen widget: the trip, Start and End, and business dollars at the CRA rate** (ADR-002, amendment 35)
@@ -38,6 +55,8 @@ The figure is the "reasonable per-kilometre allowance" the Department of Finance
 - **Why built in:** Shawn chose it over a rate typed in Settings. The cost is one line in `CRA_RATES` each December or January; until it is added, a new year is priced at the newest rate and the widget says which year's.
 - **What the figure is not:** the allowance is what an employer can pay tax-free per kilometre. What a self-employed person deducts rests on actual costs and the business share of the driving. Hence "for reference", and the kickoff's "No money on the report" stands for the report.
 - **How it is worked out:** the tiers count from the 1st of January, so the month is priced where it falls in the year (the kilometres of the months before it decide its tier); each figure is rounded once, to whole dollars.
+
+**Superseded the same evening:** one rate for every kilometre, set in Settings, $0.70 to start (2026-10-07 (evening)). The tiers were never on the phone.
 
 **`[FINDING]` The event log explains trip 12: a hop of under a minute fell between two fixes of the wait**
 Shawn sent the event log (`MilO-log-2026-10-07.txt`, 674 lines). Trip 11 ended at 14820 Yellowhead Trail and the wait began at 12:07:55, one fix every 30 seconds. At 12:16:08 the phone reported getting into a vehicle (the engine running, the truck still standing); at 12:18:34 the first fix that showed the truck away found it already at the shop, 513 m on; "GPS: the truck moved" at 12:19:03; "left a vehicle" at 12:19:16. No "Location has not been available" line: nothing failed, the hop was shorter than the gap between two fixes. The log also confirms the morning's diagnosis from the export: at 11:13:19 the phone reported getting into a vehicle, at 11:13:22 the minute check found the parked limit passed and closed trip 9, at 11:13:50 MilO was opened and at 11:13:53 Start was pressed. And trip 11's walking start: "GPS: the truck moved" at 11:45:27, the report of getting into a vehicle only at 11:53:43.

@@ -8,6 +8,7 @@ import android.os.SystemClock
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
+import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripRepository
@@ -42,7 +43,7 @@ private const val CALENDAR_LOOK_MS = 60 * 60_000L
 /**
  * MilO's home-screen widget (Shawn's request of 2026-10-07): the trip in progress with its
  * kilometres and its running time, a Start or End button, and this month's and this year's
- * business kilometres priced at the CRA's per-kilometre rate, for reference.
+ * business kilometres priced at the rate set in Settings, for reference.
  *
  * It decides nothing about a trip. It draws what the trip controller publishes, and its two
  * buttons send the triggers the app's own buttons send ([WIDGET_START_SOURCE],
@@ -113,7 +114,23 @@ class HomeWidget(
                         failed("reading this year's trips", failure)
                         null
                     }
-                draw(homeWidgetContent(activity.value, yearTrips, clock(), zone(), locale()))
+                val centsPerKm =
+                    try {
+                        settings.current().homeWidgetCentsPerKm
+                    } catch (unreadable: IOException) {
+                        failed("reading the settings", unreadable)
+                        null
+                    }
+                draw(
+                    homeWidgetContent(
+                        activity.value,
+                        yearTrips,
+                        centsPerKm,
+                        clock(),
+                        zone(),
+                        locale(),
+                    ),
+                )
             } finally {
                 done()
             }
@@ -163,8 +180,8 @@ class HomeWidget(
         var drawn: HomeWidgetContent? = null
         var drawnAtMs = 0L
         // The month is followed too, though nothing is read for it: its turn changes the figures.
-        combine(activity, yearTrips(), months()) { now, year, _ ->
-            homeWidgetContent(now, year, clock(), zone(), locale())
+        combine(activity, yearTrips(), centsPerKm(), months()) { now, year, rate, _ ->
+            homeWidgetContent(now, year, rate, clock(), zone(), locale())
         }.distinctUntilChanged()
             .collectLatest { content ->
                 val before = drawn
@@ -202,6 +219,16 @@ class HomeWidget(
                     failed("reading this year's trips", failure)
                     emit(null)
                 }
+        }
+
+    /** The rate set in Settings, or null once the settings file has turned out to be unreadable. */
+    private fun centsPerKm(): Flow<Int?> = settings.settings
+        .map<MiloSettings, Int?> { it.homeWidgetCentsPerKm }
+        .distinctUntilChanged()
+        .catch { unreadable ->
+            if (unreadable !is IOException) throw unreadable
+            failed("reading the settings", unreadable)
+            emit(null)
         }
 
     /** Draws [content] on every widget on the home screen, if there is one and it is on. */

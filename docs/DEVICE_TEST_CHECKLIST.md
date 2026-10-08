@@ -1205,14 +1205,14 @@ Shawn's decisions of 2026-10-07: he types the reading, MilO adds every truck tri
 
 ## The home-screen widget (2026-10-07)
 
-Shawn's request of 2026-10-07: a widget with the trip, Start and End, and this month's and this year's Business kilometres at the CRA rate, and a switch for the whole widget in Settings. Built and unit tested only; never drawn anywhere.
+Shawn's request of 2026-10-07: a widget with the trip, Start and End, and this month's and this year's Business kilometres in dollars, and a switch for the whole widget in Settings. The same evening the CRA's tiers gave way to one rate set in Settings, $0.70 out of the box (W-1, W-4, W-13, W-14). Built and unit tested only; never drawn anywhere.
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| W-1 | **The tile.** Settings, below Trip-start sound. | "Home-screen widget", its line and a switch that is on; "Add to home screen"; the line on adding it by hand; "About the widget" opens the 2026 rate (73¢, 67¢). | not run |
+| W-1 | **The tile.** Settings, below Trip-start sound. | "Home-screen widget", its line and a switch that is on; "Rate" over "$0.70/km"; "Add to home screen"; the line on adding it by hand; "About the widget" says the dollars are the Business kilometres at the rate above. | not run |
 | W-2 | **Add it from the tile.** Tap "Add to home screen". | HyperOS asks whether to add "MilO trip"; after Add it is on the home screen, three cells by two. If nothing happens, add it by hand (W-3) and write down that the button does nothing here. | not run |
 | W-3 | **Add it by hand.** Touch and hold an empty spot, Widgets, MilO. | "MilO trip" is in the list with its preview; it can be placed and resized. | not run |
-| W-4 | **What it shows with no trip.** Look at it. | The M mark, the status line as on Android Auto ("Not recording. Truck not connected", or "Truck parked…"), "Oct $… · 2026 $… at the CRA rate", and a lime "Start trip". Compare the dollars with the Business km of the month and the year on Trips: km × 0.73 up to 5,000 km in the year. | not run |
+| W-4 | **What it shows with no trip.** Look at it. | The M mark, the status line as on Android Auto ("Not recording. Truck not connected", or "Truck parked…"), "Oct $… · 2026 $… at $0.70/km", and a lime "Start trip". Compare the dollars with the Business km of the month and the year on Trips: km × 0.70, to the nearest dollar. | not run |
 | W-5 | **Start from the widget, MilO open in recents.** Tap "Start trip". | The trip starts as from Home (sound, notification); within seconds the widget shows the km, a running clock and "End trip". The Log says "home-screen widget Start button". | not run |
 | W-6 | **Start with MilO stopped.** Swipe MilO out of recents (not force stop), wait a minute, tap "Start trip" on the widget. | The trip starts. If it does not, write down what the Log says at the next opening; HyperOS may refuse a stopped app this start. | not run |
 | W-7 | **The running figures.** Drive with a trip open and look at the widget at a light. | The clock runs every second; the km move on at least every 15 seconds. | not run |
@@ -1221,6 +1221,8 @@ Shawn's request of 2026-10-07: a widget with the trip, Start and End, and this m
 | W-10 | **Switch it on again.** Switch on, then add it again. | MilO is back in the list; added again, it shows the trip and the dollars. | not run |
 | W-11 | **After a reboot.** Restart the phone and look at the widget before opening MilO. | It shows the status and the dollars (drawn from storage), and Start works. | not run |
 | W-12 | **The turn of the month.** On the 1st of next month, look at it in the morning. | The month's label is the new month and its dollars are $0 or the new month's; the year's figure did not drop. | not run |
+| W-13 | **Change the rate.** Settings, the widget's tile: tap "Rate", type 0.73, tap "Save rate"; then go to the home screen. | The tile says "$0.73/km" and the field is gone; the widget's line says "at $0.73/km" and both dollar figures moved to km × 0.73, without opening anything else. The keyboard offered digits and a decimal point. | not run |
+| W-14 | **A rate that is refused.** Tap "Rate", type 0.735, tap "Save rate"; then type 6, "Save rate"; then "Cancel". | Each time the red line "Type the dollars a kilometre, such as 0.70: from $0.01 to $5.00." under the field, and the rate is unchanged; "Cancel" brings back "Rate" and the old value. Set it back to 0.70 afterwards if you like. | not run |
 
 ## Later work packages
 

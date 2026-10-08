@@ -25,7 +25,7 @@ private val LabelledHeight = 56.dp
 /**
  * A value that is chosen with a picker, drawn as the design draws a date or a time on the edit
  * screen: a quiet button on a tile that shows the value, with its words at the start. A press
- * opens the picker.
+ * opens the picker, or the field it is typed in (the widget's rate in Settings).
  *
  * Without a [label] it is 48 dp high and its value is set like the main line of a row: the
  * date. With one it is 56 dp high, with the small grey label over a larger value: "Start" over
