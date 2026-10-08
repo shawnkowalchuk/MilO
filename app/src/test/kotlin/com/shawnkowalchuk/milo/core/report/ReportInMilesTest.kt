@@ -122,7 +122,11 @@ class ReportInMilesTest {
         val end = OdometerFigure(74_587, miles, reading, drivenTenths = 869, estimated = true)
 
         val printed =
-            printedReport(inMiles().copy(odometer = OdometerSpan(start, end)), milesWords, FORMAT)
+            printedReport(
+                inMiles().copy(odometers = listOf(VehicleOdometer(null, OdometerSpan(start, end)))),
+                milesWords,
+                FORMAT,
+            )
 
         assertEquals(listOf("74,500 mi", "74,587 mi est."), printed.odometer.map { it.second })
     }
@@ -130,13 +134,25 @@ class ReportInMilesTest {
     // ---- The CSV ----------------------------------------------------------------------------------
 
     private val csvWords =
-        CsvWords("Date", "Start", "End", "From", "To", "mi", "By hand", "added", "edited")
+        CsvWords(
+            "Date",
+            "Start",
+            "End",
+            "From",
+            "To",
+            "Purpose",
+            "Vehicle",
+            "mi",
+            "By hand",
+            "added",
+            "edited",
+        )
 
     @Test
     fun `the CSV names miles in its column title and writes them with a dot`() {
         val lines = reportCsv(inMiles(), csvWords).split("\r\n")
 
-        assertEquals("Date,Start,End,From,To,mi,By hand", lines.first())
+        assertEquals("Date,Start,End,From,To,Purpose,Vehicle,mi,By hand", lines.first())
         assertEquals(
             listOf("0.2", "7.7", "62.2", "14.6", "0.4", "0.6", "0.6", "0.6"),
             lines.drop(1).dropLast(1).map { it.split(",").dropLast(1).last() },

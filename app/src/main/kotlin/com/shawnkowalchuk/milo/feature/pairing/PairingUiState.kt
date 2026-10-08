@@ -156,7 +156,7 @@ private fun truckWatch(status: PairingStatus?, vehicle: Truck): TruckWatch = whe
     PairingState.ARMED -> TruckWatch.WATCHED
 
     PairingState.ASSOCIATION_MISSING -> {
-        val missing = status?.missing.orEmpty()
+        val missing = status.missing
         if (missing.isNotEmpty() && missing.none { sameAddress(it, vehicle.address) }) {
             TruckWatch.WATCHED
         } else {

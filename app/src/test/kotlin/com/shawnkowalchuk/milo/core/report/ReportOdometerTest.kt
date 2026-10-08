@@ -29,7 +29,8 @@ class ReportOdometerTest {
     )
 
     private fun withOdometer(start: OdometerFigure, end: OdometerFigure): MileageReport =
-        report(listOf(trip(DAY_ONE, "08:14"))).copy(odometer = OdometerSpan(start, end))
+        report(listOf(trip(DAY_ONE, "08:14")))
+            .copy(odometers = listOf(VehicleOdometer(null, OdometerSpan(start, end))))
 
     @Test
     fun `the start and the end are printed with their days, an estimate marked`() {
@@ -64,6 +65,26 @@ class ReportOdometerTest {
             )
 
         assertFalse(WORDS.odometerNote in printed.notes)
+    }
+
+    @Test
+    fun `with several vehicles each one's two figures name it`() {
+        val report =
+            withOdometer(figure(120_000, false), figure(121_234, false)).copy(
+                odometers =
+                    listOf(
+                        VehicleOdometer("Work truck", OdometerSpan(figure(120_000, false), figure(121_234, false))),
+                        VehicleOdometer("Van", OdometerSpan(figure(50_000, false), figure(50_100, true))),
+                    ),
+            )
+
+        val printed = printedReport(report, WORDS, FORMAT)
+
+        val first = formatMediumDay(LocalDate.of(2026, 10, 1), FORMAT.locale)
+        assertEquals(4, printed.odometer.size)
+        assertEquals("Work truck, Odometer, $first" to "120,000 km", printed.odometer[0])
+        assertEquals("Van, Odometer, $first" to "50,000 km", printed.odometer[2])
+        assertTrue(WORDS.odometerNote in printed.notes)
     }
 
     @Test

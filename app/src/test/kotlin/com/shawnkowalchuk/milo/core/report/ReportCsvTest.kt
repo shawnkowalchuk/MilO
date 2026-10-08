@@ -9,8 +9,20 @@ class ReportCsvTest {
     private val monday = LocalDate.of(2026, 10, 5)
     private val tuesday = LocalDate.of(2026, 10, 6)
     private val words =
-        CsvWords("Date", "Start", "End", "From", "To", "km", "By hand", "added", "edited")
-    private val header = "Date,Start,End,From,To,km,By hand"
+        CsvWords(
+            "Date",
+            "Start",
+            "End",
+            "From",
+            "To",
+            "Purpose",
+            "Vehicle",
+            "km",
+            "By hand",
+            "added",
+            "edited",
+        )
+    private val header = "Date,Start,End,From,To,Purpose,Vehicle,km,By hand"
 
     private fun lines(vararg trips: ReportTrip): List<String> =
         reportCsv(report(trips.toList()), words).split("\r\n")
@@ -30,8 +42,8 @@ class ReportCsvTest {
 
         assertEquals(
             "$header\r\n" +
-                "2026-10-05,08:14,08:39,Shop,Yard,12.3,\r\n" +
-                "2026-10-06,13:00,13:20,Shop,Site 7,23.4,\r\n",
+                "2026-10-05,08:14,08:39,Shop,Yard,,,12.3,\r\n" +
+                "2026-10-06,13:00,13:20,Shop,Site 7,,,23.4,\r\n",
             csv,
         )
     }
@@ -41,7 +53,7 @@ class ReportCsvTest {
         val row = lines(trip(monday, "08:14"))[1]
 
         assertEquals(
-            "2026-10-05,08:14,08:34,\"12 Shop Rd, Edmonton\",\"48 Main St, Leduc\",12.3,",
+            "2026-10-05,08:14,08:34,\"12 Shop Rd, Edmonton\",\"48 Main St, Leduc\",,,12.3,",
             row,
         )
     }
@@ -53,7 +65,7 @@ class ReportCsvTest {
         )[1]
 
         assertEquals(
-            "2026-10-05,08:14,08:34,\"The \"\"Old\"\" Yard\",\"Bay 4, \"\"B\"\" side\",12.3,",
+            "2026-10-05,08:14,08:34,\"The \"\"Old\"\" Yard\",\"Bay 4, \"\"B\"\" side\",,,12.3,",
             row,
         )
     }
@@ -93,16 +105,24 @@ class ReportCsvTest {
                 trip(monday, "10:00", from = "A", to = "B", mark = ReportMark.EDITED),
             )
 
-        assertEquals("2026-10-05,08:00,08:20,A,B,12.3,", rows[1])
-        assertEquals("2026-10-05,09:00,09:20,A,B,12.3,added", rows[2])
-        assertEquals("2026-10-05,10:00,10:20,A,B,12.3,edited", rows[3])
+        assertEquals("2026-10-05,08:00,08:20,A,B,,,12.3,", rows[1])
+        assertEquals("2026-10-05,09:00,09:20,A,B,,,12.3,added", rows[2])
+        assertEquals("2026-10-05,10:00,10:20,A,B,,,12.3,edited", rows[3])
+    }
+
+    @Test
+    fun `a trip's label and its vehicle have columns of their own`() {
+        val labelled =
+            trip(monday, "08:00", from = "A", to = "B").copy(label = "Work, site 4", vehicle = "Van")
+
+        assertEquals("2026-10-05,08:00,08:20,A,B,\"Work, site 4\",Van,12.3,", lines(labelled)[1])
     }
 
     @Test
     fun `a missing address is an empty cell, and a missing end an empty time`() {
         val nowhere = trip(monday, "08:00", from = null, to = null).copy(endedAtMs = null)
 
-        assertEquals("2026-10-05,08:00,,,,12.3,", lines(nowhere)[1])
+        assertEquals("2026-10-05,08:00,,,,,,12.3,", lines(nowhere)[1])
     }
 
     @Test
@@ -114,14 +134,14 @@ class ReportCsvTest {
                 trip(monday, "10:00", from = "A", to = "B", metres = 0.0),
             )
 
-        assertEquals(listOf("1.0", "1.3", "0.0"), rows.subList(1, 4).map { it.split(",")[5] })
+        assertEquals(listOf("1.0", "1.3", "0.0"), rows.subList(1, 4).map { it.split(",")[7] })
     }
 
     @Test
     fun `a trip past midnight has its start's date, and the time it ended`() {
         val late = trip(monday, "23:40", minutes = 45, from = "A", to = "B")
 
-        assertEquals("2026-10-05,23:40,00:25,A,B,12.3,", lines(late)[1])
+        assertEquals("2026-10-05,23:40,00:25,A,B,,,12.3,", lines(late)[1])
     }
 
     @Test

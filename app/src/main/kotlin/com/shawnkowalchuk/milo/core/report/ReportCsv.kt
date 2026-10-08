@@ -9,12 +9,14 @@ import java.util.Locale
 // The CSV export: the trips of a report, one row each, for a spreadsheet. Pure Kotlin.
 
 /**
- * The words of the CSV: the titles of its seven columns, and what the last column says for a
+ * The words of the CSV: the titles of its nine columns, and what the last column says for a
  * trip that was added or edited by hand. User-visible text, so the caller reads them from the
  * string resources.
  *
  * @param km the title of the distance column: the short word of the report's unit, "km" or
  * "mi", so the column says which of the two its figures are.
+ * @param label and [vehicle] the titles of the trip's label, its purpose, and of the vehicle it
+ * was in (since 2026-10-08).
  */
 data class CsvWords(
     val date: String,
@@ -22,6 +24,8 @@ data class CsvWords(
     val end: String,
     val from: String,
     val to: String,
+    val label: String,
+    val vehicle: String,
     val km: String,
     val byHand: String,
     val added: String,
@@ -42,8 +46,8 @@ private const val FORMULA_STARTS = "=+-@\t\r"
 
 /**
  * The trips of [report] as CSV text: a row of column titles, then one row for each trip, oldest
- * first, with the facts the PDF prints for it and, in the last column, whether it was added or
- * edited by hand.
+ * first, with the facts the PDF prints for it, its label and its vehicle (empty where it has
+ * none) and, in the last column, whether it was added or edited by hand.
  *
  * It differs from the PDF where a spreadsheet needs it to: each row carries its own date, the
  * formats are fixed (see above), a missing address is an empty cell where the PDF writes it
@@ -53,7 +57,17 @@ private const val FORMULA_STARTS = "=+-@\t\r"
  */
 fun reportCsv(report: MileageReport, words: CsvWords): String {
     val header =
-        listOf(words.date, words.start, words.end, words.from, words.to, words.km, words.byHand)
+        listOf(
+            words.date,
+            words.start,
+            words.end,
+            words.from,
+            words.to,
+            words.label,
+            words.vehicle,
+            words.km,
+            words.byHand,
+        )
     val rows =
         report.days.flatMap { it.trips }.map { trip ->
             listOf(
@@ -62,6 +76,8 @@ fun reportCsv(report: MileageReport, words: CsvWords): String {
                 trip.endedAtMs?.let { CSV_TIME.format(it.at(report.zone)) }.orEmpty(),
                 trip.from.orEmpty(),
                 trip.to.orEmpty(),
+                trip.label.orEmpty(),
+                trip.vehicle.orEmpty(),
                 formatTenths(trip.tenths(report.unit), Locale.ROOT),
                 when (trip.mark) {
                     ReportMark.ADDED -> words.added

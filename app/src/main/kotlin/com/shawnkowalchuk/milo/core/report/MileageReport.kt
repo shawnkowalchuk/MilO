@@ -39,6 +39,10 @@ enum class ReportMark {
  * never as coordinates.
  * @param to the end address, on the same terms.
  * @param mark set for a trip that was added or edited by hand. It carries an asterisk.
+ * @param label what Shawn called the trip, its purpose ("Work", "Supplier"), or null (since
+ * 2026-10-08). Printed under its addresses.
+ * @param vehicle the name of the vehicle it was in, or null. Printed beside the label when the
+ * report's trips were in more than one vehicle ([MileageReport.severalVehicles]).
  */
 data class ReportTrip(
     val startedAtMs: Long,
@@ -47,6 +51,8 @@ data class ReportTrip(
     val to: String?,
     val distanceMetres: Double,
     val mark: ReportMark? = null,
+    val label: String? = null,
+    val vehicle: String? = null,
 ) {
     /** The distance as it is printed in [unit], and as it is added up. */
     fun tenths(unit: DistanceUnit): Long = tenthsOf(distanceMetres, unit)
@@ -64,6 +70,13 @@ data class ReportDay(val date: LocalDate, val trips: List<ReportTrip>) {
  * @param company and [vehicle] are left off the report when they are not set.
  */
 data class ReportSender(val name: String, val company: String?, val vehicle: String?)
+
+/**
+ * One vehicle's odometer at the start and the end of the period.
+ *
+ * @param vehicle its name, or null where there is only one and nothing to tell apart.
+ */
+data class VehicleOdometer(val vehicle: String?, val span: OdometerSpan)
 
 /**
  * That a report for the same period was sent before, so this one replaces it.
@@ -93,11 +106,12 @@ data class PersonalDriving(val tripCount: Int, val tenths: Long)
  * @param zone the time zone its days and times of day are worked out in: the phone's.
  * @param unit the unit every distance of the report is printed in: the one MilO was set to
  * when the report was made (Shawn's answer of 2026-10-07, "Follow the setting"). [personal]
- * and [odometer] are in it too.
+ * and [odometers] are in it too.
  * @param days oldest first, and only days that have a trip.
  * @param personal what the period's Personal trips add up to. They are not listed.
- * @param odometer the truck's odometer at the start and the end of the period, or null while
- * no reading has been typed in (Shawn's decision of 2026-10-07).
+ * @param odometers each vehicle's odometer at the start and the end of the period (Shawn's
+ * decision of 2026-10-07; one for each vehicle since 2026-10-08), the first vehicle first. A
+ * vehicle without a reading has none, and the list is empty while no reading has been typed.
  */
 data class MileageReport(
     val sender: ReportSender,
@@ -108,9 +122,13 @@ data class MileageReport(
     val unit: DistanceUnit,
     val days: List<ReportDay>,
     val personal: PersonalDriving,
-    val odometer: OdometerSpan? = null,
+    val odometers: List<VehicleOdometer> = emptyList(),
 ) {
     val tripCount: Int get() = days.sumOf { it.trips.size }
+
+    /** Whether its trips were in more than one vehicle: each trip then names its own. */
+    val severalVehicles: Boolean
+        get() = days.flatMap { it.trips }.mapNotNull { it.vehicle }.distinct().size > 1
 
     /** The period's total in [unit]: the sum of the days' subtotals. */
     val totalTenths: Long get() = days.sumOf { it.tenths(unit) }

@@ -364,12 +364,16 @@ internal fun columnTitlesBlock(words: ReportWords, columns: Columns): Block = bl
 
 /**
  * One trip, under a fine rule. Its two addresses are wrapped inside their columns, and the row
- * is as high as the longer of them needs: a row is never cut, so it is laid out whole.
+ * is as high as the longer of them needs: a row is never cut, so it is laid out whole. Under
+ * the addresses, in the quiet ink, the trip's label and vehicle when it has them (2026-10-08),
+ * across both address columns.
  */
 internal fun rowBlock(row: PrintedRow, columns: Columns, measure: TextMeasure): Block = block {
     val style = ReportTextStyle.CELL
     val from = wrap(row.from, columns.addressWidth, style, measure)
     val to = wrap(row.to, columns.addressWidth, style, measure)
+    val detailWidth = columns.toX + columns.addressWidth - columns.fromX
+    val detail = row.detail?.let { wrap(it, detailWidth, style, measure) }.orEmpty()
     rule(THIN_RULE, columns.startX, CONTENT_RIGHT - TABLE_INSET, ReportInk.HAIRLINE)
     down(ROW_PADDING)
     text(row.start, columns.startX, style)
@@ -378,7 +382,12 @@ internal fun rowBlock(row: PrintedRow, columns: Columns, measure: TextMeasure): 
     column(to, columns.toX, style, ReportInk.DARK)
     text(row.km, columns.kmRight, style, rightAligned = true)
     if (row.marked) text(REPORT_MARK, columns.markX, style)
-    down(maxOf(from.size, to.size) * style.leading + ROW_PADDING)
+    down(maxOf(from.size, to.size) * style.leading)
+    if (detail.isNotEmpty()) {
+        column(detail, columns.fromX, style, ReportInk.QUIET)
+        down(detail.size * style.leading)
+    }
+    down(ROW_PADDING)
 }
 
 /** A day's subtotal, under a rule, with the kilometres under the column they add up. */
