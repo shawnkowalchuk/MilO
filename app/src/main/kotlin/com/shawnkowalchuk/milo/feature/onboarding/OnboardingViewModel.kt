@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.FirstRunStage
-import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.setFirstRunStage
 import java.io.IOException
@@ -68,7 +67,7 @@ class OnboardingViewModel(
     }
 
     private fun stored(): Flow<FirstRunStage> = settings.settings
-        .map(MiloSettings::firstRunStage)
+        .map { it.firstRunStage }
         .catch { unreadable ->
             if (unreadable !is IOException) throw unreadable
             val what = "MilO could not read how far the first start has got; it is not shown"
