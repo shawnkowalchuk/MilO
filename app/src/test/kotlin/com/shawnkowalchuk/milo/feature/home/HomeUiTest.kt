@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -135,11 +136,12 @@ class HomeUiTest {
             activity = TripActivity(truckConnected = false),
             setupNeedsAttention = false,
             stored = MiloSettings(truckAddress = "AA:BB", truckName = "F-150"),
+            unit = DistanceUnit.KILOMETRES,
         )
 
     private val read =
         HomeRead(
-            figures = homeTrips(october6, edmonton, emptyList()),
+            figures = homeTrips(october6, edmonton, emptyList(), DistanceUnit.KILOMETRES),
             reportWaiting = september,
             openTripStart = null,
             nowMs = at("2026-10-06T14:32"),
@@ -160,10 +162,32 @@ class HomeUiTest {
     @Test
     fun `trips that were read for another day are not shown under today's date`() {
         val yesterdays = read.copy(
-            figures = homeTrips(october6.minusDays(1), edmonton, emptyList()),
+            figures = homeTrips(
+                october6.minusDays(1),
+                edmonton,
+                emptyList(),
+                DistanceUnit.KILOMETRES,
+            ),
         )
 
         assertNull(homeUi(now, yesterdays).figures)
+    }
+
+    @Test
+    fun `figures that were added up in another unit are not shown under this one's name`() {
+        // Right after Miles is chosen in Settings: the figures in hand are still kilometres.
+        val inMiles = now.copy(unit = DistanceUnit.MILES)
+
+        val ui = homeUi(inMiles, read)
+
+        assertEquals(DistanceUnit.MILES, ui.unit)
+        assertNull(ui.figures)
+        // Once they have been added up again, in miles, they are shown.
+        val again = read.copy(
+            figures = homeTrips(october6, edmonton, emptyList(), DistanceUnit.MILES),
+        )
+        assertEquals(again.figures, homeUi(inMiles, again).figures)
+        assertEquals(DistanceUnit.KILOMETRES, homeUi(now, read).unit)
     }
 
     @Test

@@ -3,9 +3,11 @@ package com.shawnkowalchuk.milo.feature.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setHomeWidgetCentsPerKm
 import com.shawnkowalchuk.milo.data.settings.setParkedLimitSeconds
 import com.shawnkowalchuk.milo.data.sound.OwnSoundStore
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
@@ -194,6 +196,37 @@ class SettingsViewModelTest {
         viewModel.onReminderDayStep(later = true)
         runCurrent()
         assertEquals(31, SettingsStore(file).current().reminderDay)
+    }
+
+    @Test
+    fun `the unit is stored at a press, and choosing it changes no other setting`() = runTest {
+        val file = FakeSettingsFile()
+        val viewModel = viewModel(file)
+        SettingsStore(file).setMinimumTripDistanceMetres(300)
+        SettingsStore(file).setHomeWidgetCentsPerKm(73)
+        val before = SettingsStore(file).current()
+
+        viewModel.onDistanceUnit(DistanceUnit.MILES)
+        runCurrent()
+
+        // The shortest trip that counts and the widget's rate keep their stored values: one is
+        // metres and the other cents a kilometre, whatever distances are shown in.
+        assertEquals(
+            before.copy(distanceUnit = DistanceUnit.MILES),
+            SettingsStore(file).current(),
+        )
+
+        // The shortest trip still moves in its steps of 100 m.
+        viewModel.onMinimumDistanceStep(longer = true)
+        runCurrent()
+        assertEquals(400, SettingsStore(file).current().minimumTripDistanceMetres)
+
+        viewModel.onDistanceUnit(DistanceUnit.KILOMETRES)
+        runCurrent()
+        assertEquals(
+            before.copy(minimumTripDistanceMetres = 400),
+            SettingsStore(file).current(),
+        )
     }
 
     @Test

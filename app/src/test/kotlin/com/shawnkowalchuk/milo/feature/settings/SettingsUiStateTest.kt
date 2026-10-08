@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.settings
 
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.DayHours
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MINIMUM_TRIP_DISTANCE_CHOICE
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
@@ -36,6 +37,21 @@ class SettingsUiStateTest {
         assertFalse(state.usesOwnSound)
         assertFalse(state.copyingSound)
         assertNull(state.problem)
+    }
+
+    @Test
+    fun `distances are in kilometres out of the box, and the tile shows the unit that is stored`() {
+        assertEquals(DistanceUnit.KILOMETRES, shown().distanceUnit)
+
+        val inMiles = shown(MiloSettings(distanceUnit = DistanceUnit.MILES))
+
+        assertEquals(DistanceUnit.MILES, inMiles.distanceUnit)
+        // The shortest trip that counts is the same stored distance, with the same two buttons:
+        // the unit changes how it is written and nothing else.
+        assertEquals(shown().minimumDistanceMetres, inMiles.minimumDistanceMetres)
+        assertEquals(shown().canLowerMinimum, inMiles.canLowerMinimum)
+        assertEquals(shown().canRaiseMinimum, inMiles.canRaiseMinimum)
+        assertEquals(shown().copy(distanceUnit = DistanceUnit.MILES), inMiles)
     }
 
     @Test

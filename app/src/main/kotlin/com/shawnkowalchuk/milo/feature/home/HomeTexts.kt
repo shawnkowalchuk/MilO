@@ -15,71 +15,84 @@ import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.text.categoryWordsRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.Tally
-import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import java.util.Locale
 
 // The words and the one tile that both of Home's layouts use.
 
 /**
- * A total in kilometres as a large figure with its small unit, or a dash while the trips are
- * being read: a dash, because a zero would be a figure.
+ * A total as a large figure with its small unit, or a dash while the trips are being read: a
+ * dash, because a zero would be a figure.
  *
- * @param tenths the total in tenths of a kilometre, as the rule for totals gives it
+ * @param tenths the total in tenths of [unit], as the rule for totals gives it
  * (`sumOfTenths`), or null while it is not known.
+ * @param unit the unit the frame is drawn in. It is written after the figure, and said whole
+ * to a screen reader.
  */
 @Composable
-internal fun KilometresFigure(tenths: Long?, size: FigureSize, locale: Locale) {
-    val unit = stringResource(R.string.unit_km)
+internal fun DistanceFigure(tenths: Long?, size: FigureSize, locale: Locale, unit: DistanceUnit) {
+    val short = stringResource(unitShortRes(unit))
     if (tenths == null) {
         val reading = stringResource(R.string.trips_reading)
         FigureText(
             figure = stringResource(R.string.home_figure_reading),
-            unit = unit,
+            unit = short,
             modifier = Modifier.semantics { contentDescription = reading },
             size = size,
         )
     } else {
-        FigureText(figure = formatTenths(tenths, locale), unit = unit, size = size)
+        val figure = formatTenths(tenths, locale)
+        FigureText(
+            figure = figure,
+            unit = short,
+            size = size,
+            spoken = stringResource(distanceSpokenRes(unit), figure),
+        )
     }
 }
 
 /**
- * Today's Business kilometres. Personal kilometres are never added to them: while today has a
- * Personal trip they stand in a quieter line of their own, as they always have on Home.
+ * Today's Business distance. Personal trips are never added to it: while today has a Personal
+ * trip they stand in a quieter line of their own, as they always have on Home.
  *
- * @param today null while the trips are being read.
+ * @param figures null while the trips are being read.
  * @param size the figure is larger when the tile holds nothing else.
  */
 @Composable
 internal fun TodayTile(
-    today: TodayTrips?,
+    figures: HomeTrips?,
     size: FigureSize,
-    locale: Locale,
+    format: HomeFormat,
     modifier: Modifier = Modifier,
 ) {
+    val totals = figures?.todayTotals
     Tile(modifier = modifier, padding = TilePadding.EVEN) {
         TileLabel(stringResource(R.string.home_today_business))
-        KilometresFigure(today?.totals?.business?.tenths, size, locale)
-        val totals = today?.totals ?: return@Tile
+        DistanceFigure(totals?.business?.tenths, size, format.locale, format.unit)
+        if (totals == null) return@Tile
         if (totals.personal.count > 0) {
-            Apart(R.plurals.trips_personal_total, totals.personal, locale)
+            Apart(R.plurals.trips_personal_total, totals.personal, format)
         }
         // Only while there is such a trip, which in ordinary use is never.
         if (totals.unsorted.count > 0) {
-            Apart(R.plurals.trips_unsorted_total, totals.unsorted, locale)
+            Apart(R.plurals.trips_unsorted_total, totals.unsorted, format)
         }
     }
 }
 
 /** A total that is not Business, in a quieter line: "Personal: 5.0 km · 1 trip". */
 @Composable
-private fun Apart(plural: Int, tally: Tally, locale: Locale) {
-    val kilometres = stringResource(R.string.distance_km, formatTenths(tally.tenths, locale))
-    Caption(pluralStringResource(plural, tally.count, tally.count, kilometres))
+private fun Apart(plural: Int, tally: Tally, format: HomeFormat) {
+    val distance =
+        stringResource(distanceRes(format.unit), formatTenths(tally.tenths, format.locale))
+    Caption(pluralStringResource(plural, tally.count, tally.count, distance))
 }
 
 /** The smallest grey line of a tile: "89% business". */

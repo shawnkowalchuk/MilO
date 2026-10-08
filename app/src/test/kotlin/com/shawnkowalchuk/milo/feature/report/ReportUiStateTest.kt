@@ -6,6 +6,9 @@ import com.shawnkowalchuk.milo.core.report.ReportPeriod
 import com.shawnkowalchuk.milo.core.report.ReportRevision
 import com.shawnkowalchuk.milo.core.report.ReportSender
 import com.shawnkowalchuk.milo.core.report.ReportTrip
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
+import com.shawnkowalchuk.milo.core.util.metresOfTenths
 import com.shawnkowalchuk.milo.data.report.ReportSelection
 import com.shawnkowalchuk.milo.data.report.SentEffect
 import com.shawnkowalchuk.milo.data.report.SentReport
@@ -17,6 +20,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,7 +59,7 @@ class ReportUiStateTest {
             unsortedLeftOut = 1,
             withoutAddress = 1,
             tripInProgress = true,
-            personalTenths = 341,
+            personalMetres = listOf(34_100.0),
         )
 
     private fun sent(period: ReportPeriod, revision: Int, sentAt: String, id: Long = 1) =
@@ -80,7 +84,7 @@ class ReportUiStateTest {
 
     @Test
     fun `the summary adds up the figures the report prints`() {
-        val summary = summaryOf(selection)
+        val summary = summaryOf(selection, DistanceUnit.KILOMETRES)
 
         // 1.0 + 1.0 + 23.4, where the metres would round to 25.5.
         assertEquals(254, summary.tenths)
@@ -96,7 +100,7 @@ class ReportUiStateTest {
     fun `the summary is what the report made of the same trips holds`() {
         val report =
             mileageReport(october, selection, "Sam Driver", settings, emptyList(), today, zone)
-        val summary = summaryOf(selection)
+        val summary = summaryOf(selection, DistanceUnit.KILOMETRES)
 
         assertEquals(report.totalTenths, summary.tenths)
         assertEquals(report.tripCount, summary.tripCount)
@@ -118,9 +122,73 @@ class ReportUiStateTest {
         assertNull(report.revision)
         val dates = report.days.map { it.date }
         assertEquals(listOf(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2)), dates)
-        assertEquals(listOf(20L, 234L), report.days.map { it.tenths })
+        assertEquals(listOf(20L, 234L), report.days.map { it.tenths(DistanceUnit.KILOMETRES) })
         // The Personal trips are not listed; their count and kilometres are carried along.
         assertEquals(PersonalDriving(tripCount = 2, tenths = 341), report.personal)
+    }
+
+    // ---- Kilometres or miles (2026-10-07): the report follows the setting ------------------------
+
+    private val inMiles get() = settings.copy(distanceUnit = DistanceUnit.MILES)
+
+    @Test
+    fun `with miles chosen the report, its Personal figure and the summary are in miles`() {
+        val report =
+            mileageReport(october, selection, "Sam Driver", inMiles, emptyList(), today, zone)
+        val summary = checkNotNull(state(settings = inMiles).summary)
+
+        assertEquals(DistanceUnit.MILES, report.unit)
+        // 0.6 + 0.6 mi on the 1st and 14.6 mi on the 2nd: each trip rounded to a tenth of a mile.
+        assertEquals(listOf(12L, 146L), report.days.map { it.tenths(report.unit) })
+        assertEquals(158L, report.totalTenths)
+        // The two Personal trips' 34.1 km are 21.2 mi.
+        assertEquals(PersonalDriving(tripCount = 2, tenths = 212), report.personal)
+        // What the screen says the report would hold is what the report holds.
+        assertEquals(DistanceUnit.MILES, summary.unit)
+        assertEquals(report.totalTenths, summary.tenths)
+        assertEquals(DistanceUnit.MILES, state(settings = inMiles).unit)
+    }
+
+    @Test
+    fun `with kilometres chosen, or nothing chosen, the report is in kilometres as it was`() {
+        val untouched =
+            mileageReport(october, selection, "Sam Driver", settings, emptyList(), today, zone)
+        val chosen =
+            mileageReport(
+                october,
+                selection,
+                "Sam Driver",
+                settings.copy(distanceUnit = DistanceUnit.KILOMETRES),
+                emptyList(),
+                today,
+                zone,
+            )
+
+        assertEquals(untouched, chosen)
+        assertEquals(DistanceUnit.KILOMETRES, untouched.unit)
+        assertEquals(254L, untouched.totalTenths)
+        assertEquals(DistanceUnit.KILOMETRES, checkNotNull(state().summary).unit)
+    }
+
+    @Test
+    fun `a sent report is listed in the unit it was printed in, whatever is chosen now`() {
+        val inKilometres = sent(october, 0, "2026-11-02T10:00", id = 1)
+        val printedInMiles =
+            sent(october, 1, "2026-11-09T10:00", id = 2).copy(
+                distanceMetres = metresOfTenths(2_562, DistanceUnit.MILES),
+                distanceUnit = DistanceUnit.MILES,
+            )
+        val reports = listOf(printedInMiles, inKilometres)
+
+        for (now in listOf(settings, inMiles)) {
+            val lines = state(settings = now, sent = reports).sent
+
+            assertEquals(listOf(DistanceUnit.MILES, DistanceUnit.KILOMETRES), lines.map { it.unit })
+            assertEquals(
+                listOf("256.2", "412.3"),
+                lines.map { formatDistance(it.distanceMetres, it.unit, Locale.ROOT) },
+            )
+        }
     }
 
     @Test
@@ -272,7 +340,14 @@ class ReportUiStateTest {
 
     @Test
     fun `a report handed to the email app is still owed its answer, whatever is chosen`() {
-        val handOver = ReportHandOver(range, tripCount = 4, tenths = 268, at("2026-10-04T17:05"))
+        val handOver =
+            ReportHandOver(
+                range,
+                tripCount = 4,
+                tenths = 268,
+                at("2026-10-04T17:05"),
+                DistanceUnit.KILOMETRES,
+            )
         val waiting = settings.copy(reportHandOver = handOver)
         val august = openingChoice(YearMonth.of(2026, 8), today)
 
@@ -288,7 +363,14 @@ class ReportUiStateTest {
     @Test
     fun `the question says what I sent it would do for the report that was handed over`() {
         val september = ReportPeriod.Month(YearMonth.of(2026, 9))
-        val handOver = ReportHandOver(september, 4, tenths = 268, at("2026-10-06T09:00"))
+        val handOver =
+            ReportHandOver(
+                september,
+                4,
+                tenths = 268,
+                at("2026-10-06T09:00"),
+                DistanceUnit.KILOMETRES,
+            )
         val waiting = settings.copy(reportHandOver = handOver)
         val before = listOf(sent(september, 0, "2026-10-02T10:00"))
 

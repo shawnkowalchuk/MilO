@@ -87,7 +87,7 @@ class MiloMigrationsTest {
     fun `there is one step for every version the database has had`() {
         val current = schemas.listFiles { file -> file.extension == "json" }.orEmpty().size
 
-        assertEquals("One schema file per version, and no gaps", current, 5)
+        assertEquals("One schema file per version, and no gaps", current, 6)
         // In order and without a gap, so a database that is two versions behind is taken
         // through both steps, one after the other.
         assertEquals(
@@ -130,6 +130,7 @@ class MiloMigrationsTest {
             // No UPDATE, no DELETE, no DROP: a step never rewrites or removes a stored value.
             val adds =
                 statement.startsWith("ALTER TABLE trips ADD COLUMN ") ||
+                    statement.startsWith("ALTER TABLE sent_reports ADD COLUMN ") ||
                     statement.startsWith("CREATE INDEX IF NOT EXISTS ") ||
                     statement.startsWith("CREATE TABLE IF NOT EXISTS ")
             assertTrue("Not an addition: $statement", adds)
@@ -140,8 +141,9 @@ class MiloMigrationsTest {
     fun `a new column that may not be empty has a default for the rows already stored`() {
         // How many columns each step adds to a table that has rows: the addresses, Business or
         // Personal, and the marks and kept figures of a trip that was added or edited by hand.
-        // The step to version 5 adds none: it makes a table of its own.
-        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7, 4 to 0)
+        // The step to version 5 adds none: it makes a table of its own. The step to version 6
+        // adds one to that table: the unit a sent report was printed in.
+        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7, 4 to 0, 5 to 1)
         for (step in MILO_MIGRATIONS) {
             val added = statementsOf(step).filter { it.contains(" ADD COLUMN ") }
 
@@ -155,6 +157,19 @@ class MiloMigrationsTest {
                 assertTrue(statement, statement.contains(" DEFAULT "))
             }
         }
+    }
+
+    @Test
+    fun `the step from 5 to 6 makes every report already sent a report in kilometres`() {
+        // Until version 6 MilO printed nothing but kilometres, so that is what every stored row
+        // is: said by the column's default, with no stored figure read or rewritten.
+        assertEquals(
+            listOf(
+                "ALTER TABLE sent_reports ADD COLUMN distanceUnit TEXT NOT NULL " +
+                    "DEFAULT 'KILOMETRES'",
+            ),
+            statementsOf(MIGRATION_5_6),
+        )
     }
 
     @Test

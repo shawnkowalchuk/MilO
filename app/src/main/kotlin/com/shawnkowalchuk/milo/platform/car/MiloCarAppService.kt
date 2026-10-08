@@ -51,6 +51,7 @@ class MiloCarAppService : CarAppService() {
         controller = container.tripController,
         trips = container.tripRepository,
         checklist = container.setupChecklist,
+        shownUnit = container.shownUnit.unit,
         clock = System::currentTimeMillis,
     )
 

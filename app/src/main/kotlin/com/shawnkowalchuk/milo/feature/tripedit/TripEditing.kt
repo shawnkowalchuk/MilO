@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -31,6 +32,17 @@ sealed interface SaveResult {
 }
 
 /**
+ * What the form takes from the settings when it opens.
+ *
+ * @param schedule the work schedule, for sorting a trip whose start is typed or changed.
+ * @param unit the unit chosen in Settings, which the distance field is in. It comes from the
+ * settings file itself and not from the unit the app holds in memory, which is kilometres for
+ * the first moment of a process: a form keeps its unit for as long as it is open, so one
+ * opened in that moment would stay in kilometres with miles chosen.
+ */
+data class FormSettings(val schedule: WorkSchedule, val unit: DistanceUnit)
+
+/**
  * Carries out what the edit screen asks for (save an edit, add a trip, restore the recorded
  * values) and writes each one to the event log. A trip's figures decide what accounts pays, so
  * every change by hand leaves a line that names each value before and after, and an attempt
@@ -56,14 +68,14 @@ class TripEditing(
     }
 
     /**
-     * The work schedule as it is now, for sorting a trip whose start is typed or changed. Null
-     * if the settings cannot be read: the form then lets Shawn choose himself, and a trip he
-     * does not choose for is left unsorted for the catch-up.
+     * What the form takes from the settings as they are now, in one read. Null if the settings
+     * cannot be read: the form then lets Shawn choose Business or Personal himself, and a trip
+     * he does not choose for is left unsorted for the catch-up.
      */
-    suspend fun schedule(): WorkSchedule? = try {
-        settings.current().schedule
+    suspend fun formSettings(): FormSettings? = try {
+        settings.current().let { FormSettings(it.schedule, it.distanceUnit) }
     } catch (unreadable: IOException) {
-        val what = "The edit screen could not read the work schedule"
+        val what = "The edit screen could not read the work schedule and the unit"
         eventLog.add(clock(), EventCategory.ERROR, what, unreadable.stackTraceToString())
         null
     }

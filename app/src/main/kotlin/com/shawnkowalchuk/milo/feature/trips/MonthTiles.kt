@@ -30,8 +30,12 @@ import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileKind
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.submissionWords
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.data.report.ChangedSinceSent
 import com.shawnkowalchuk.milo.data.report.MonthSubmission
@@ -56,6 +60,7 @@ import java.util.Locale
  *
  * @param summary null while the month's trips are being read: the figure is then a dash.
  * @param submission that the month's report was sent, and when; null while it was not.
+ * @param unit the unit chosen in Settings, which the figure is written in.
  */
 @Composable
 internal fun MonthTile(
@@ -63,6 +68,7 @@ internal fun MonthTile(
     summary: MonthSummary?,
     submission: MonthSubmission?,
     zone: ZoneId,
+    unit: DistanceUnit,
     onOpenReport: () -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -91,12 +97,11 @@ internal fun MonthTile(
                     modifier = Modifier.semantics { heading() },
                     style = MaterialTheme.typography.labelLarge,
                 )
+                val figure = business?.let { formatTenths(it.tenths, locale) }
                 FigureText(
                     // A dash while the trips are being read, because a zero would be a figure.
-                    figure =
-                        business?.let { formatTenths(it.tenths, locale) }
-                            ?: stringResource(R.string.home_figure_reading),
-                    unit = stringResource(R.string.unit_km),
+                    figure = figure ?: stringResource(R.string.home_figure_reading),
+                    unit = stringResource(unitShortRes(unit)),
                     modifier =
                         if (business == null) {
                             Modifier.semantics { contentDescription = reading }
@@ -104,6 +109,7 @@ internal fun MonthTile(
                             Modifier
                         },
                     size = FigureSize.TOTAL,
+                    spoken = figure?.let { stringResource(distanceSpokenRes(unit), it) },
                 )
                 Text(
                     text = business?.let { trips(it.count) } ?: reading,
@@ -143,9 +149,15 @@ internal fun MonthTile(
  * which in ordinary use is never.
  *
  * @param totals null while the month's trips are being read: the value is then a dash.
+ * @param unit the unit [totals] are in.
  */
 @Composable
-internal fun PersonalTile(totals: CategoryTotals?, locale: Locale, modifier: Modifier) {
+internal fun PersonalTile(
+    totals: CategoryTotals?,
+    locale: Locale,
+    unit: DistanceUnit,
+    modifier: Modifier,
+) {
     val reading = stringResource(R.string.trips_reading)
     val personal = totals?.personal
     val spoken =
@@ -154,7 +166,7 @@ internal fun PersonalTile(totals: CategoryTotals?, locale: Locale, modifier: Mod
                 R.plurals.trips_personal_total,
                 it.count,
                 it.count,
-                kilometres(it.tenths, locale),
+                distance(it.tenths, locale, unit),
             )
         } ?: reading
     SmallTile(modifier = modifier) {
@@ -168,7 +180,7 @@ internal fun PersonalTile(totals: CategoryTotals?, locale: Locale, modifier: Mod
                     personal?.let {
                         stringResource(
                             R.string.trips_personal_value,
-                            kilometres(it.tenths, locale),
+                            distance(it.tenths, locale, unit),
                             it.count,
                         )
                     } ?: stringResource(R.string.home_figure_reading),
@@ -183,7 +195,7 @@ internal fun PersonalTile(totals: CategoryTotals?, locale: Locale, modifier: Mod
                         R.plurals.trips_unsorted_total,
                         unsorted.count,
                         unsorted.count,
-                        kilometres(unsorted.tenths, locale),
+                        distance(unsorted.tenths, locale, unit),
                     ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -207,6 +219,10 @@ internal fun AddTripTile(onAdd: () -> Unit, modifier: Modifier) {
  * That the month's Business trips are not what the report that was sent held, with both sets
  * of figures, so that Shawn can tell whether a revision is needed, and the button that leads
  * to the Report screen, where one is sent.
+ *
+ * Both figures are written in the unit the report was printed in ([ChangedSinceSent.unit]):
+ * the report's own figure as it stood on it, and the month's now in the same unit, so the two
+ * can be held against each other. That is the unit on screen unless it was changed since.
  */
 @Composable
 internal fun ChangedSinceTile(changed: ChangedSinceSent, locale: Locale, onOpenReport: () -> Unit) {
@@ -216,9 +232,9 @@ internal fun ChangedSinceTile(changed: ChangedSinceSent, locale: Locale, onOpenR
                 stringResource(
                     R.string.trips_changed_since_sent,
                     trips(changed.sentTripCount),
-                    kilometres(changed.sentTenths, locale),
+                    distance(changed.sentTenths, locale, changed.unit),
                     trips(changed.tripCount),
-                    kilometres(changed.tenths, locale),
+                    distance(changed.tenths, locale, changed.unit),
                 ),
             status = RowStatus.PROBLEM,
             supportingText = stringResource(R.string.trips_changed_since_sent_detail),
@@ -234,7 +250,7 @@ internal fun ChangedSinceTile(changed: ChangedSinceSent, locale: Locale, onOpenR
 @Composable
 private fun trips(count: Int): String = pluralStringResource(R.plurals.trips_count, count, count)
 
-/** A total as it is printed, from tenths of a kilometre: "412.3 km". */
+/** A total as it is printed, from tenths of [unit]: "412.3 km". */
 @Composable
-private fun kilometres(tenths: Long, locale: Locale): String =
-    stringResource(R.string.distance_km, formatTenths(tenths, locale))
+private fun distance(tenths: Long, locale: Locale, unit: DistanceUnit): String =
+    stringResource(distanceRes(unit), formatTenths(tenths, locale))

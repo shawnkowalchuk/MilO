@@ -29,7 +29,7 @@ private const val TWELVE_HOUR_PATTERN = "h:mm a"
  * Times are stored as plain milliseconds and only given a time zone here, at the moment of
  * display, so a trip recorded before a clock change still shows the time it happened.
  *
- * @param zone and [locale] have no defaults on purpose, like `formatKilometres`: the screen
+ * @param zone and [locale] have no defaults on purpose, like `formatDistance`: the screen
  * passes the phone's own, and a test passes fixed ones.
  * @param twentyFourHour whether the phone is set to write times with 24 hours ("Use 24-hour
  * format" in Android's date and time settings). The phone's switch decides between "08:14" and

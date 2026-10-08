@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.home
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckLinkLook
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.LocalDate
@@ -39,6 +40,7 @@ class HomeShownTest {
         reportWaiting = null,
         startAddress = null,
         nowMs = 0,
+        unit = DistanceUnit.KILOMETRES,
     )
 
     private fun trip(by: TripStartCause, metres: Double = 0.0) = CurrentTrip(

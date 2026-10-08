@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.allowance.DEFAULT_CENTS_PER_KM
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 
 /** ADR-002: a trip waits 2 minutes for the truck to reconnect before it is closed. */
 const val DEFAULT_GRACE_PERIOD_SECONDS = 120
@@ -61,6 +62,8 @@ enum class ConfirmedStep(val key: String) {
  * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
  * Business kilometres for reference (since 2026-10-07; kept in `WidgetStorage.kt`). 70¢ until
  * Shawn sets another in Settings.
+ * @param distanceUnit the unit every distance is shown in: kilometres until Shawn picks miles
+ * (since 2026-10-07; kept in `UnitStorage.kt`). It changes no stored trip.
  * @param ownSounds every sound of his own he has added, the one in use among them, to choose
  * from (since 2026-10-07; kept in `SoundListStorage.kt`).
  * @param schedule the work schedule: which days are tracked, and each day's hours. A trip that
@@ -121,6 +124,7 @@ data class MiloSettings(
     val ownSounds: List<OwnSound> = emptyList(),
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
+    val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,
     val ignoreTripsOutsideSchedule: Boolean = false,
     val drivingAlertEnabled: Boolean = true,

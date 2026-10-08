@@ -1,6 +1,8 @@
 package com.shawnkowalchuk.milo.core.allowance
 
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Locale
 
 // What the business kilometres would be worth at a rate per kilometre, for reference only
@@ -63,7 +65,28 @@ fun parseCentsPerKm(typed: String): Int? {
     return cents.takeIf { it in MIN_CENTS_PER_KM..MAX_CENTS_PER_KM }?.toInt()
 }
 
-/** A rate as dollars a kilometre, with the decimal mark of [locale]: "$0.70". */
+/**
+ * What a rate per kilometre comes to per mile, in whole cents, half a cent upwards: 70¢ a
+ * kilometre is 113¢ a mile.
+ *
+ * **For reading only.** With miles chosen in Settings, the widget's tile says it in a grey line
+ * under the rate, so that the rate can be held against a figure in miles. Nothing is ever
+ * priced at it: the rate stays a rate per kilometre, as the CRA sets its own, and the dollars
+ * are always [allowanceCents] of kilometres, so choosing miles cannot move them by a cent.
+ */
+fun centsPerMileOf(centsPerKm: Int): Int {
+    val kilometresPerMile =
+        DistanceUnit.MILES.metresPerUnit.divide(DistanceUnit.KILOMETRES.metresPerUnit)
+    return BigDecimal(centsPerKm)
+        .multiply(kilometresPerMile)
+        .setScale(0, RoundingMode.HALF_UP)
+        .intValueExact()
+}
+
+/**
+ * A rate as dollars with two decimals, with the decimal mark of [locale]: "$0.70". The rate per
+ * kilometre, and what it comes to per mile ([centsPerMileOf]), are both written with it.
+ */
 fun formatCentsPerKm(centsPerKm: Int, locale: Locale): String =
     "$" + String.format(locale, "%.2f", BigDecimal.valueOf(centsPerKm.toLong(), CENT_DIGITS))
 

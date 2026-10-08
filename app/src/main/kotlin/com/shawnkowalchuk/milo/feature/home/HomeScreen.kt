@@ -34,6 +34,7 @@ import com.shawnkowalchuk.milo.core.designsystem.component.StatusRow
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import java.time.YearMonth
@@ -59,11 +60,17 @@ internal class HomeActions(
 )
 
 /**
- * How this phone writes a time and a number.
+ * How this phone writes a time and a number, and the unit a distance is written in.
  *
  * @param twentyFourHour whether the phone is set to write times with 24 hours.
+ * @param unit the unit chosen in Settings, which the frame being drawn is in ([HomeUi.unit]).
  */
-internal class HomeFormat(val locale: Locale, val zone: ZoneId, val twentyFourHour: Boolean)
+internal class HomeFormat(
+    val locale: Locale,
+    val zone: ZoneId,
+    val twentyFourHour: Boolean,
+    val unit: DistanceUnit,
+)
 
 /**
  * The home screen, laid out as the owner's design draws it: the top line every screen has
@@ -144,7 +151,8 @@ private fun homeShownState(ui: StateFlow<HomeUi>, startPresses: Flow<Unit>): Sta
 internal fun HomeContent(shown: HomeShown, actions: HomeActions, modifier: Modifier = Modifier) {
     val ui = shown.ui
     val locale = LocalConfiguration.current.locales[0]
-    val format = HomeFormat(locale, ZoneId.systemDefault(), rememberTwentyFourHourClock())
+    val format =
+        HomeFormat(locale, ZoneId.systemDefault(), rememberTwentyFourHourClock(), ui.unit)
     TileColumn(
         modifier =
             modifier

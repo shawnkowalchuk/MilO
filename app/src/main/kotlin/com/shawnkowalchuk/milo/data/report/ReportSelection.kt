@@ -6,6 +6,7 @@ import com.shawnkowalchuk.milo.core.report.ReportTrip
 import com.shawnkowalchuk.milo.core.report.span
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.sumOfTenths
 import com.shawnkowalchuk.milo.data.trip.ByHandMark
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -28,9 +29,9 @@ import java.time.ZoneId
  * in words where the address would stand.
  * @param tripInProgress true if a trip that started in the period is still being recorded. It
  * is not on the report until it has ended.
- * @param personalTenths what the [personalLeftOut] trips add up to, in tenths of a kilometre,
- * added up as the report adds up its own. The PDF shows it at its top, beside the Business
- * total; it lists none of those trips.
+ * @param personalMetres the distance of each of the [personalLeftOut] trips, in metres. The PDF
+ * shows what they add up to at its top, beside the Business total ([personalTenths]); it lists
+ * none of those trips.
  */
 data class ReportSelection(
     val trips: List<ReportTrip>,
@@ -38,8 +39,17 @@ data class ReportSelection(
     val unsortedLeftOut: Int,
     val withoutAddress: Int,
     val tripInProgress: Boolean,
-    val personalTenths: Long,
-)
+    val personalMetres: List<Double>,
+) {
+    /**
+     * What the Personal trips add up to in tenths of [unit], added up as the report adds up
+     * its own: each trip rounded to a tenth first.
+     */
+    fun personalTenths(unit: DistanceUnit): Long = sumOfTenths(personalMetres, unit)
+
+    /** What the listed trips add up to in tenths of [unit]: the total a report would print. */
+    fun totalTenths(unit: DistanceUnit): Long = trips.sumOf { it.tenths(unit) }
+}
 
 /**
  * Picks the trips of [period] that go on a report.
@@ -69,7 +79,7 @@ fun selectForReport(trips: List<Trip>, period: ReportPeriod, zone: ZoneId): Repo
         unsortedLeftOut = counted.count { it.category == null },
         withoutAddress = listed.count { it.startAddress == null || it.endAddress == null },
         tripInProgress = inPeriod.any { it.status == TripStatus.OPEN },
-        personalTenths = sumOfTenths(personal.map { it.distanceMetres }),
+        personalMetres = personal.map { it.distanceMetres },
     )
 }
 

@@ -149,7 +149,8 @@ class ReportViewModel(
         // Checked by make(): sending needs the address.
         val address = sources.value?.settings?.accountantEmail ?: return null
         val pdf = files.freshPdf(report).also { created.value = it }
-        val handOver = ReportHandOver(report.period, report.tripCount, report.totalTenths, clock())
+        val total = report.totalTenths
+        val handOver = ReportHandOver(report.period, report.tripCount, total, clock(), report.unit)
         records.awaitAnswerFor(handOver)
         return ReportLaunch(
             ++launches,
@@ -187,7 +188,8 @@ class ReportViewModel(
         // Still reading the trips: there is nothing true to record yet.
         val report = from.reportFor(ReportNeed.NOTHING) ?: return
         record(ReportProblem.COULD_NOT_RECORD) {
-            val stored = records.markedSent(report.period, report.tripCount, report.totalTenths)
+            val total = report.totalTenths
+            val stored = records.markedSent(report.period, report.tripCount, total, report.unit)
             (stored != null).also { if (it) onRecordedAsSent() }
         }
     }

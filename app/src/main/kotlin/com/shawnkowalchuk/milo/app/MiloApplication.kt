@@ -38,6 +38,11 @@ class MiloApplication : Application() {
         // a crash anywhere later in start-up is still captured.
         CrashHandler.install(container.crashFileStore)
 
+        // The unit distances are shown in (Settings, since 2026-10-07) is read now and held in
+        // memory, so that it is there by the time a notification, the car's screen or a phone
+        // screen first writes a distance. It only reads the settings file.
+        container.shownUnit.start()
+
         // Reading files and the database must not hold up the main thread, least of all when
         // the process was started by a trip trigger with seconds to begin recording.
         container.applicationScope.launch(Dispatchers.IO) {

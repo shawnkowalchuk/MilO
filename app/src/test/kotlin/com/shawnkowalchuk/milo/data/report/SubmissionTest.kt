@@ -1,6 +1,10 @@
 package com.shawnkowalchuk.milo.data.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.metresOfTenths
+import com.shawnkowalchuk.milo.core.util.sumOfTenths
+import com.shawnkowalchuk.milo.core.util.tenthsOf
 import java.time.LocalDate
 import java.time.YearMonth
 import org.junit.Assert.assertEquals
@@ -221,7 +225,7 @@ class SubmissionTest {
         // The rows of this test hold 31 trips and 412.3 km.
         val submission = monthSubmission(october, listOf(sent(month(october))))
 
-        assertNull(changedSinceSent(submission, tripCount = 31, tenths = 4_123))
+        assertNull(changedSinceSent(submission, tripCount = 31) { 4_123 })
     }
 
     @Test
@@ -234,14 +238,15 @@ class SubmissionTest {
                 sentTenths = 4_123,
                 tripCount = 32,
                 tenths = 4_201,
+                unit = DistanceUnit.KILOMETRES,
             ),
-            changedSinceSent(submission, tripCount = 32, tenths = 4_201),
+            changedSinceSent(submission, tripCount = 32) { 4_201 },
         )
         // One trip marked Personal and another, as long, marked Business: the count is the
         // same and the total too, and nothing is noticed. A tenth of a kilometre is.
-        assertNull(changedSinceSent(submission, tripCount = 31, tenths = 4_123))
-        assertEquals(4_124L, changedSinceSent(submission, 31, 4_124)?.tenths)
-        assertEquals(30, changedSinceSent(submission, 30, 4_123)?.tripCount)
+        assertNull(changedSinceSent(submission, tripCount = 31) { 4_123 })
+        assertEquals(4_124L, changedSinceSent(submission, 31) { 4_124 }?.tenths)
+        assertEquals(30, changedSinceSent(submission, 30) { 4_123 }?.tripCount)
     }
 
     @Test
@@ -252,14 +257,123 @@ class SubmissionTest {
         val submission = monthSubmission(october, listOf(revised, first))
 
         // What the revision listed is what the month has: nothing to say.
-        assertNull(changedSinceSent(submission, tripCount = 32, tenths = 4_201))
+        assertNull(changedSinceSent(submission, tripCount = 32) { 4_201 })
         // The figures of the first report are no longer the measure.
-        assertEquals(32, changedSinceSent(submission, 31, 4_123)?.sentTripCount)
+        assertEquals(32, changedSinceSent(submission, 31) { 4_123 }?.sentTripCount)
     }
 
     @Test
     fun `a month that is not submitted has nothing to have changed from`() {
-        assertNull(changedSinceSent(submission = null, tripCount = 12, tenths = 3_456))
+        assertNull(changedSinceSent(submission = null, tripCount = 12) { 3_456 })
+    }
+
+    // ---- Kilometres or miles (2026-10-07) ---------------------------------------------------------
+
+    /** A month of trips that round awkwardly, and differently in the two units. */
+    private val awkward =
+        listOf(300.0, 12_350.0, 100_050.0, 23_449.0, 563.2704) + List(26) { 11_504.0 }
+
+    /** The row "I sent it" stores for a report of [trips] printed in [unit]. */
+    private fun sentIn(unit: DistanceUnit, trips: List<Double> = awkward) =
+        sent(month(october)).copy(
+            tripCount = trips.size,
+            distanceMetres = metresOfTenths(sumOfTenths(trips, unit), unit),
+            distanceUnit = unit,
+        )
+
+    @Test
+    fun `a sent report reads back as the total it printed, in the unit it was printed in`() {
+        for (unit in DistanceUnit.entries) {
+            for (printed in (0L..120_000L) + listOf(999_999L, 9_999_999L)) {
+                val row =
+                    sent(month(october)).copy(
+                        distanceMetres = metresOfTenths(printed, unit),
+                        distanceUnit = unit,
+                    )
+
+                assertEquals("$printed tenths, $unit", printed, row.printedTenths)
+            }
+        }
+        // A row from before there was a choice of unit says nothing, and is in kilometres.
+        assertEquals(DistanceUnit.KILOMETRES, sent(month(october)).distanceUnit)
+        assertEquals(4_123L, sent(month(october)).printedTenths)
+    }
+
+    @Test
+    fun `a change of the unit alone can never say that the month has changed`() {
+        for (printedIn in DistanceUnit.entries) {
+            val submission = monthSubmission(october, listOf(sentIn(printedIn)))
+
+            // Nothing about the unit MilO is set to now is asked for or passed in: the month is
+            // added up in the unit the report was printed in, whichever one is on screen.
+            assertNull(
+                "printed in $printedIn",
+                changedSinceSent(submission, awkward.size) { unit -> sumOfTenths(awkward, unit) },
+            )
+        }
+    }
+
+    @Test
+    fun `the month is held against its report in the report's unit, not in the other one`() {
+        val asked = mutableListOf<DistanceUnit>()
+        val inMiles = monthSubmission(october, listOf(sentIn(DistanceUnit.MILES)))
+
+        changedSinceSent(inMiles, awkward.size) { unit ->
+            asked += unit
+            sumOfTenths(awkward, unit)
+        }
+
+        assertEquals(listOf(DistanceUnit.MILES), asked)
+        // Which is what keeps it quiet: these trips are 435.8 km and 269.7 mi as printed, and
+        // 435.8 km turned into miles is 270.8. Held against the wrong one, it would speak.
+        assertEquals(4_358L, sumOfTenths(awkward, DistanceUnit.KILOMETRES))
+        assertEquals(2_697L, sumOfTenths(awkward, DistanceUnit.MILES))
+        assertEquals(2_708L, tenthsOf(435_800.0, DistanceUnit.MILES))
+    }
+
+    @Test
+    fun `a trip made longer after a report in miles is noticed, with both figures in miles`() {
+        val submission = monthSubmission(october, listOf(sentIn(DistanceUnit.MILES)))
+        val longer = awkward.drop(1) + 5_300.0
+
+        val changed =
+            changedSinceSent(submission, longer.size) { unit -> sumOfTenths(longer, unit) }
+
+        // 0.3 km became 5.3 km: 0.2 mi became 3.3 mi.
+        assertEquals(
+            ChangedSinceSent(
+                sentTripCount = 31,
+                sentTenths = 2_697,
+                tripCount = 31,
+                tenths = 2_728,
+                unit = DistanceUnit.MILES,
+            ),
+            changed,
+        )
+    }
+
+    @Test
+    fun `a report sent in kilometres is still held in kilometres after miles are chosen`() {
+        val submission = monthSubmission(october, listOf(sentIn(DistanceUnit.KILOMETRES)))
+        val longer = awkward.drop(1) + 5_300.0
+
+        val changed =
+            changedSinceSent(submission, longer.size) { unit -> sumOfTenths(longer, unit) }
+
+        assertEquals(DistanceUnit.KILOMETRES, changed?.unit)
+        assertEquals(4_358L, changed?.sentTenths)
+        assertEquals(4_408L, changed?.tenths)
+    }
+
+    @Test
+    fun `whether a month is submitted does not depend on the unit its report was printed in`() {
+        for (unit in DistanceUnit.entries) {
+            val report = sentIn(unit)
+
+            assertEquals(report, monthSubmission(october, listOf(report))?.first)
+            assertEquals(listOf(report), sentFor(month(october), listOf(report)))
+            assertEquals(1, nextRevision(listOf(report)))
+        }
     }
 
     @Test

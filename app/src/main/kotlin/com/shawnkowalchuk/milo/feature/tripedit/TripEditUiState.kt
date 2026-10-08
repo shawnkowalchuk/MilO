@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.NOT_FILED
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.schedule.refileTrip
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.RecordedValues
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.editedTrip
@@ -44,16 +45,19 @@ enum class KindSource {
  * @param zone the phone's time zone. The form reads and writes every time in it.
  * @param openedAtMs when the form was opened: the day no date may lie after, and where the
  * clock dial starts for a time that has not been chosen.
+ * @param unit the unit chosen in Settings when the form was opened: the distance is shown and
+ * typed in it for as long as the screen is open.
  */
 data class EditSession(
     val stored: Trip?,
     val schedule: WorkSchedule?,
     val zone: ZoneId,
     val openedAtMs: Long,
+    val unit: DistanceUnit,
 ) {
     /** The form as it is when the screen opens: the stored trip's, or the empty one. */
     fun openedForm(): TripForm =
-        if (stored == null) blankForm(openedAtMs, zone) else formFor(stored, zone)
+        if (stored == null) blankForm(openedAtMs, zone, unit) else formFor(stored, zone, unit)
 }
 
 /** What the edit screen shows. */
@@ -77,7 +81,8 @@ sealed interface TripEditUiState {
      * @param laterEndDate the day the trip ends on, if that is not the day it starts on.
      * @param from and [to] are what the address fields start with.
      * @param kilometres what the distance field starts with if it was typed in already, or null
-     * if the field is untouched: it then shows [storedMetres], written by the screen.
+     * if the field is untouched: it then shows [storedMetres], written by the screen in [unit].
+     * @param unit the unit the distance field is in, which its label names: the form's own.
      * @param category the Business or Personal a save would store, and [kindSource] who chose.
      * @param problems what the last press on Save found wrong, kept up to date as the form is
      * put right. Empty before the first press. Each is said in the tile it is about
@@ -109,6 +114,7 @@ sealed interface TripEditUiState {
         val to: String,
         val kilometres: String?,
         val storedMetres: Double?,
+        val unit: DistanceUnit,
         val category: TripCategory?,
         val kindSource: KindSource,
         val problems: List<FormProblem>,
@@ -212,6 +218,7 @@ internal fun tripEditUiState(
         to = form.to ?: stored?.endAddress.orEmpty(),
         kilometres = form.kilometres,
         storedMetres = stored?.distanceMetres,
+        unit = form.unit,
         category = category,
         kindSource = source,
         problems = check?.let { formProblems(form, stored, it, session.zone) }.orEmpty(),

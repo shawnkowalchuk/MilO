@@ -26,7 +26,8 @@
     <string name="report_status_sent">Sent</string>
     <string name="report_status_reminding">Reminding daily</string>
     <!-- The PDF's tile: what the file holds, and the link that opens it. -->
-    <string name="report_pdf_contents">Every Business trip with date, times, from, to and km. A CSV copy can be saved with it.</string>
+    <!-- The argument is the unit's short word, km or mi. -->
+    <string name="report_pdf_contents">Every Business trip with date, times, from, to and %1$s. A CSV copy can be saved with it.</string>
     <string name="report_preview_pdf">Preview PDF</string>
     <!--
         "Sent to": the tile's label, the link to Settings and what a screen reader says a press
@@ -63,7 +64,8 @@
     <string name="trip_edit_start_label">Start</string>
     <string name="trip_edit_end_label">End</string>
     <string name="trip_edit_time_not_set">Choose</string>
-    <string name="trip_edit_distance_label">Distance, km</string>
+    <!-- The argument is the unit's short word, km or mi. -->
+    <string name="trip_edit_distance_label">Distance, %1$s</string>
     <string name="trip_edit_saved_as">Saved as</string>
     <!--
         "What MilO recorded": the line under the title. The arguments are the two times as the

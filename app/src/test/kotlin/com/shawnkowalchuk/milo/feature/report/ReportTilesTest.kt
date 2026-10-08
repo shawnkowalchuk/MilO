@@ -150,7 +150,7 @@ class ReportTilesTest {
             unsortedLeftOut = 0,
             withoutAddress = 0,
             tripInProgress = false,
-            personalTenths = 0,
+            personalMetres = emptyList(),
         )
 
     private fun state(

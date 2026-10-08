@@ -90,9 +90,15 @@ suspend fun readExport(
     open: () -> Reader,
     onPoints: (suspend (List<RawPoint>) -> Unit)? = null,
 ): ExportReading {
-    saidToBe(open)?.let { return ExportReading.Refused(it) }
+    val formatVersion =
+        when (val said = saidToBe(open)) {
+            is Said.Refused -> return ExportReading.Refused(said.problem)
+            is Said.Version -> said.number
+        }
     return try {
-        ExportReading.Good(open().use { ExportParts(JsonScanner(it), onPoints).read() })
+        ExportReading.Good(
+            open().use { ExportParts(JsonScanner(it), onPoints, formatVersion).read() },
+        )
     } catch (cutShort: BrokenJsonException) {
         ExportReading.Refused(ExportProblem.Damaged(cutShort.message.orEmpty()))
     } catch (wrong: DamagedExportException) {
@@ -103,11 +109,15 @@ suspend fun readExport(
 /** Something in the file is not what MilO writes. The message says what and where. */
 private class DamagedExportException(message: String) : Exception(message)
 
-/**
- * The first pass: what the file says it is. Null if it says it is an export in a form this
- * MilO reads.
- */
-private fun saidToBe(open: () -> Reader): ExportProblem? {
+/** What the first pass found: why the file is not read, or which version of the form it is. */
+private sealed interface Said {
+    data class Refused(val problem: ExportProblem) : Said
+
+    data class Version(val number: Int) : Said
+}
+
+/** The first pass: what the file says it is. A version if this MilO reads that form. */
+private fun saidToBe(open: () -> Reader): Said {
     var format: String? = null
     var version: String? = null
     try {
@@ -126,27 +136,34 @@ private fun saidToBe(open: () -> Reader): ExportProblem? {
     } catch (notJson: BrokenJsonException) {
         // A file that names itself an export and then breaks off is an export that was cut
         // short, which the second pass says. Anything else was never one.
-        if (format != "\"$EXPORT_FORMAT\"") return ExportProblem.NotAnExport
+        if (format != "\"$EXPORT_FORMAT\"") return Said.Refused(ExportProblem.NotAnExport)
     }
     val number = version?.toIntOrNull()
-    return when {
-        format != "\"$EXPORT_FORMAT\"" -> ExportProblem.NotAnExport
+    val problem =
+        when {
+            format != "\"$EXPORT_FORMAT\"" -> ExportProblem.NotAnExport
 
-        version == null -> ExportProblem.Damaged("It does not say which format version it is")
+            version == null ->
+                ExportProblem.Damaged("It does not say which format version it is")
 
-        number == null || number < 1 ->
-            ExportProblem.Damaged("Its format version is $version, which is no version")
+            number == null || number < 1 ->
+                ExportProblem.Damaged("Its format version is $version, which is no version")
 
-        number > EXPORT_FORMAT_VERSION -> ExportProblem.NewerVersion(number)
+            number > EXPORT_FORMAT_VERSION -> ExportProblem.NewerVersion(number)
 
-        else -> null
-    }
+            else -> return Said.Version(number)
+        }
+    return Said.Refused(problem)
 }
 
-/** The second pass: the parts of one document, read in whatever order they stand. */
+/**
+ * The second pass: the parts of one document, read in whatever order they stand. What a sent
+ * report must hold depends on [formatVersion], the version of the form the first pass read.
+ */
 private class ExportParts(
     private val scanner: JsonScanner,
     private val onPoints: (suspend (List<RawPoint>) -> Unit)?,
+    private val formatVersion: Int,
 ) {
     private val seen = mutableSetOf<String>()
     private var exportedAtMs = 0L
@@ -214,7 +231,7 @@ private class ExportParts(
 
     private fun sentReport(text: String, number: Int): SentReport {
         val read = decodeText<ExportedSentReport>(text, "Sent report number $number")
-        read.problem()?.let { throw damaged("Sent report ${read.id}: $it") }
+        read.problem(formatVersion)?.let { throw damaged("Sent report ${read.id}: $it") }
         return read.toSentReport()
     }
 

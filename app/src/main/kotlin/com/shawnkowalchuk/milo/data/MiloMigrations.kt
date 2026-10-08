@@ -128,8 +128,27 @@ internal val MIGRATION_4_5: Migration =
     }
 
 /**
+ * Version 5 to 6: the unit a sent report was printed in.
+ *
+ * One column is added to `sent_reports`. On every existing row it is `KILOMETRES`, which is
+ * true of every one of them: until this version MilO printed nothing else. No stored figure is
+ * read or rewritten, and the `trips` table is not named by this step.
+ *
+ * The exported `app/schemas/.../6.json` is the reference.
+ */
+internal val MIGRATION_5_6: Migration =
+    object : Migration(5, 6) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "ALTER TABLE sent_reports ADD COLUMN distanceUnit TEXT NOT NULL " +
+                    "DEFAULT 'KILOMETRES'",
+            )
+        }
+    }
+
+/**
  * Every step, in order. `buildMiloDatabase` hands them to Room, which runs them one after the
  * other for a database that is more than one version behind.
  */
 internal val MILO_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)

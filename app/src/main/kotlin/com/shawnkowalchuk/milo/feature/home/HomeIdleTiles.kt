@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
@@ -24,9 +26,12 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTile
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTileWords
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
 import com.shawnkowalchuk.milo.core.designsystem.text.placesWords
+import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatMonthName
 import java.time.YearMonth
 import java.util.Locale
@@ -48,10 +53,10 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
     )
     TilePair(
         first = { half ->
-            TodayTile(ui.figures?.today, FigureSize.LARGE, format.locale, half)
+            TodayTile(ui.figures, FigureSize.LARGE, format, half)
         },
         second = { half ->
-            MonthTile(YearMonth.from(ui.date), ui.figures?.month, format.locale, half)
+            MonthTile(YearMonth.from(ui.date), ui.figures?.month, format, half)
         },
     )
     HomeTruckTile(shown.truckTile, ui.truck, actions.onOpenPairing)
@@ -77,12 +82,12 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
 private fun MonthTile(
     month: YearMonth,
     figures: MonthFigures?,
-    locale: Locale,
+    format: HomeFormat,
     modifier: Modifier,
 ) {
     Tile(modifier = modifier, padding = TilePadding.EVEN) {
-        TileLabel(formatMonthName(month, locale))
-        KilometresFigure(figures?.businessTenths, FigureSize.MEDIUM, locale)
+        TileLabel(formatMonthName(month, format.locale))
+        DistanceFigure(figures?.businessTenths, FigureSize.MEDIUM, format.locale, format.unit)
         val percent = figures?.businessPercent
         ProgressLine(fraction = (percent ?: 0) / WHOLE)
         Caption(
@@ -90,7 +95,11 @@ private fun MonthTile(
                 figures == null -> stringResource(R.string.trips_reading)
 
                 // A share of no kilometres is not a number, so it is said in words.
-                percent == null -> stringResource(R.string.home_month_none)
+                percent == null ->
+                    stringResource(
+                        R.string.home_month_none,
+                        stringResource(unitNameRes(format.unit)),
+                    )
 
                 else -> stringResource(R.string.home_month_share, percent)
             },
@@ -187,12 +196,12 @@ private fun LastTripRow(trip: HomeTrip, format: HomeFormat) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        val distance = formatDistance(trip.distanceMetres, format.unit, format.locale)
+        val spoken = stringResource(distanceSpokenRes(format.unit), distance)
         Text(
-            text =
-                stringResource(
-                    R.string.distance_km,
-                    formatKilometres(trip.distanceMetres, format.locale),
-                ),
+            text = stringResource(distanceRes(format.unit), distance),
+            // A screen reader is read the unit's whole word, as for every figure of a trip.
+            modifier = Modifier.semantics { contentDescription = spoken },
             style = MiloTheme.textStyles.rowFigure,
         )
     }

@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.platform.car
 
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
@@ -32,6 +33,25 @@ class CarScreenRefreshTest {
 
         assertTrue(before.differsOnlyInTripFigures(further))
         assertTrue(before.differsOnlyInTripFigures(aMinuteOn))
+    }
+
+    @Test
+    fun `a change of the unit in Settings is drawn at once, with or without a trip`() {
+        val inKilometres = carContent(recording)
+        val inMiles = carContent(recording, unit = DistanceUnit.MILES)
+
+        // 12.4 km is 7.7 mi: other figures, and another unit to write after them.
+        assertEquals("12.4", inKilometres.trip?.kilometres)
+        assertEquals("7.7", inMiles.trip?.kilometres)
+        assertEquals(DistanceUnit.MILES, inMiles.unit)
+        assertFalse(inKilometres.differsOnlyInTripFigures(inMiles))
+        // Without a trip and with no trips today nothing printed changes, but the content does,
+        // so that the unit a later figure is written with is the new one.
+        val idle = TripActivity(truckConnected = true)
+        assertFalse(carContent(idle) == carContent(idle, unit = DistanceUnit.MILES))
+        // A figure that moves on in miles still waits for the gap, as it does in kilometres.
+        val further = TripActivity(trip = carTrip(12_900.0), truckConnected = true)
+        assertTrue(inMiles.differsOnlyInTripFigures(carContent(further, unit = DistanceUnit.MILES)))
     }
 
     @Test

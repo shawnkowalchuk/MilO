@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.report
 
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.FakeSentReportDao
@@ -42,7 +43,12 @@ class ReportMarkingTest {
     @Test
     fun `a month marked by hand is submitted from that moment, with the figures on screen`() =
         runTest {
-            val stored = records.markedSent(month, tripCount = 21, tenths = 2314)
+            val stored = records.markedSent(
+                month,
+                tripCount = 21,
+                tenths = 2314,
+                unit = DistanceUnit.KILOMETRES,
+            )
 
             val row = dao.rows.single()
             assertEquals(row, stored)
@@ -66,9 +72,16 @@ class ReportMarkingTest {
     fun `marking a month that was sent before records a revision, and its first day stays`() =
         runTest {
             val handedOverAtMs = nowMs - 3 * 24 * 60 * 60_000L
-            val first = records.answeredSent(ReportHandOver(month, 20, 2200, handedOverAtMs))
+            val first = records.answeredSent(
+                ReportHandOver(month, 20, 2200, handedOverAtMs, DistanceUnit.KILOMETRES),
+            )
 
-            val second = records.markedSent(month, tripCount = 21, tenths = 2314)
+            val second = records.markedSent(
+                month,
+                tripCount = 21,
+                tenths = 2314,
+                unit = DistanceUnit.KILOMETRES,
+            )
 
             assertEquals(1, second?.revision)
             val submission = monthSubmission(september, dao.rows)
@@ -85,7 +98,12 @@ class ReportMarkingTest {
 
     @Test
     fun `a date range marked by hand is listed and marks no month`() = runTest {
-        val stored = records.markedSent(range, tripCount = 6, tenths = 713)
+        val stored = records.markedSent(
+            range,
+            tripCount = 6,
+            tenths = 713,
+            unit = DistanceUnit.KILOMETRES,
+        )
 
         assertEquals(SentReportKind.RANGE, stored?.kind)
         assertNull(monthSubmission(september, dao.rows))
@@ -101,10 +119,17 @@ class ReportMarkingTest {
 
     @Test
     fun `marking leaves a report that waits for its answer where it is`() = runTest {
-        val waiting = ReportHandOver(range, tripCount = 6, tenths = 713, atMs = nowMs - 60_000)
+        val waiting =
+            ReportHandOver(
+                range,
+                tripCount = 6,
+                tenths = 713,
+                atMs = nowMs - 60_000,
+                unit = DistanceUnit.KILOMETRES,
+            )
         records.awaitAnswerFor(waiting)
 
-        records.markedSent(month, tripCount = 21, tenths = 2314)
+        records.markedSent(month, tripCount = 21, tenths = 2314, unit = DistanceUnit.KILOMETRES)
 
         // The question about the email is still owed: marking is not an answer to it.
         assertEquals(waiting, settings.current().reportHandOver)
@@ -114,7 +139,12 @@ class ReportMarkingTest {
     fun `a failure of storage marks nothing, says so, and does not end the process`() = runTest {
         dao.failNextInsert = IOException("disk full")
 
-        val stored = records.markedSent(month, tripCount = 21, tenths = 2314)
+        val stored = records.markedSent(
+            month,
+            tripCount = 21,
+            tenths = 2314,
+            unit = DistanceUnit.KILOMETRES,
+        )
 
         assertNull(stored)
         assertEquals(emptyList<SentReport>(), dao.rows)
@@ -124,6 +154,14 @@ class ReportMarkingTest {
             logged(EventCategory.ERROR),
         )
         // The next press records the first report: the failed one left no number behind.
-        assertEquals(0, records.markedSent(month, tripCount = 21, tenths = 2314)?.revision)
+        assertEquals(
+            0,
+            records.markedSent(
+                month,
+                tripCount = 21,
+                tenths = 2314,
+                unit = DistanceUnit.KILOMETRES,
+            )?.revision,
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.data.settings
 
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatMinutes
 import java.util.Locale
 import org.junit.Assert.assertEquals
@@ -47,7 +48,7 @@ class SettingChoicesTest {
     fun `the minimum distance runs from 100 m to 2 km in tenths of a kilometre`() {
         val shown =
             MINIMUM_TRIP_DISTANCE_CHOICE.allValues().map {
-                formatKilometres(it.toDouble(), Locale.CANADA)
+                formatDistance(it.toDouble(), DistanceUnit.KILOMETRES, Locale.CANADA)
             }
 
         assertEquals(20, shown.size)
@@ -60,7 +61,10 @@ class SettingChoicesTest {
         val metres = DEFAULT_MINIMUM_TRIP_DISTANCE_METRES
 
         assertTrue(metres in MINIMUM_TRIP_DISTANCE_CHOICE.allValues())
-        assertEquals("0.3", formatKilometres(metres.toDouble(), Locale.CANADA))
+        assertEquals(
+            "0.3",
+            formatDistance(metres.toDouble(), DistanceUnit.KILOMETRES, Locale.CANADA),
+        )
     }
 
     // ---- Stepping ---------------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.Trip
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -42,8 +43,8 @@ class TripFormUnsavedTest {
             category = TripCategory.BUSINESS,
         )
 
-    private val opened = formFor(stored, edmonton)
-    private val blank = blankForm(openedAtMs, edmonton)
+    private val opened = formFor(stored, edmonton, DistanceUnit.KILOMETRES)
+    private val blank = blankForm(openedAtMs, edmonton, DistanceUnit.KILOMETRES)
 
     private fun unsaved(form: TripForm): Boolean = form.holdsUnsavedWork(opened, stored)
 
@@ -119,7 +120,14 @@ class TripFormUnsavedTest {
 
     private fun shown(form: TripForm, closing: Boolean = false, savedStartMs: Long? = null) =
         tripEditUiState(
-            session = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs),
+            session =
+                EditSession(
+                    stored,
+                    DEFAULT_WORK_SCHEDULE,
+                    edmonton,
+                    openedAtMs,
+                    DistanceUnit.KILOMETRES,
+                ),
             form = form,
             check = null,
             saveFailed = false,
@@ -151,10 +159,15 @@ class TripFormUnsavedTest {
 
     @Test
     fun `the session's opening form is the stored trip's, or the empty one on that day`() {
-        val editing = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs)
-        val adding = EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs)
+        val kilometres = DistanceUnit.KILOMETRES
+        val editing = EditSession(stored, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs, kilometres)
+        val adding =
+            EditSession(stored = null, DEFAULT_WORK_SCHEDULE, edmonton, openedAtMs, kilometres)
 
         assertEquals(opened, editing.openedForm())
-        assertEquals(TripForm(date = LocalDate.of(2026, 10, 6)), adding.openedForm())
+        assertEquals(
+            TripForm(date = LocalDate.of(2026, 10, 6), unit = kilometres),
+            adding.openedForm(),
+        )
     }
 }

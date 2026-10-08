@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -24,7 +25,10 @@ import com.shawnkowalchuk.milo.core.designsystem.component.StatusRowAction
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.data.settings.MissingDetail
 
 // The two tiles in the middle of the Report screen, as the owner's drawing has them: the PDF,
@@ -70,7 +74,12 @@ internal fun PdfTile(state: ReportUiState.Ready, actions: ReportActions) {
                         },
                     style = MaterialTheme.typography.titleSmall,
                 )
-                Quiet(stringResource(R.string.report_pdf_contents))
+                Quiet(
+                    stringResource(
+                        R.string.report_pdf_contents,
+                        stringResource(unitShortRes(state.unit)),
+                    ),
+                )
                 state.pdfPages?.let { pages ->
                     Quiet(pluralStringResource(R.plurals.report_pdf_created, pages, pages))
                 }
@@ -120,7 +129,11 @@ private const val ZERO_WIDTH_SPACE = "\u200B"
 /** What a reader should know about this report, a line for each thing that applies. */
 @Composable
 private fun ReportNotes(summary: ReportSummary) {
-    if (summary.tripCount == 0) Quiet(stringResource(R.string.report_summary_none))
+    if (summary.tripCount == 0) {
+        val locale = LocalConfiguration.current.locales[0]
+        val nothing = stringResource(distanceRes(summary.unit), formatTenths(0, locale))
+        Quiet(stringResource(R.string.report_summary_none, nothing))
+    }
     if (summary.markedCount > 0) {
         Quiet(plural(R.plurals.report_summary_marked, summary.markedCount))
     }

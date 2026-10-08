@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.point.RawPoint
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
@@ -38,6 +39,9 @@ internal val CATEGORY_WORDS: Map<TripCategory, String> =
 
 internal val REPORT_KIND_WORDS: Map<SentReportKind, String> =
     mapOf(SentReportKind.MONTH to "MONTH", SentReportKind.RANGE to "RANGE")
+
+internal val REPORT_UNIT_WORDS: Map<DistanceUnit, String> =
+    mapOf(DistanceUnit.KILOMETRES to "KILOMETRES", DistanceUnit.MILES to "MILES")
 
 internal val DAY_WORDS: Map<DayOfWeek, String> =
     mapOf(
@@ -130,9 +134,13 @@ fun SentReport.toExported(): ExportedSentReport = ExportedSentReport(
     tripCount = tripCount,
     distanceMetres = distanceMetres,
     revision = revision,
+    distanceUnit = REPORT_UNIT_WORDS.getValue(distanceUnit),
 )
 
-/** The row to store for a sent report of the file that [problem] found nothing wrong with. */
+/**
+ * The row to store for a sent report of the file that [problem] found nothing wrong with. A
+ * report of a file of format 1 names no unit and was printed in kilometres.
+ */
 internal fun ExportedSentReport.toSentReport(): SentReport = SentReport(
     id = id,
     kind = checkNotNull(REPORT_KIND_WORDS.constantFor(kind)),
@@ -142,6 +150,12 @@ internal fun ExportedSentReport.toSentReport(): SentReport = SentReport(
     tripCount = tripCount,
     distanceMetres = distanceMetres,
     revision = revision,
+    distanceUnit =
+        if (distanceUnit == null) {
+            DistanceUnit.KILOMETRES
+        } else {
+            checkNotNull(REPORT_UNIT_WORDS.constantFor(distanceUnit))
+        },
 )
 
 fun TransferredSettings.toExported(): ExportedSettings = ExportedSettings(

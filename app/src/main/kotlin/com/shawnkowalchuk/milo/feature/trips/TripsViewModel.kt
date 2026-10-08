@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.feature.trips
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.monthOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
@@ -14,6 +15,7 @@ import com.shawnkowalchuk.milo.data.report.monthSubmission
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripCorrection
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.LocalDate
@@ -57,6 +59,8 @@ private const val TRIP_COUNTED_AGAIN = "a trip was restored or counted on the Tr
  * while it has not been.
  * @param changedSinceSent that the month's Business trips are no longer what its newest report
  * held, or null while they are (`changedSinceSent`): a revision may be needed.
+ * @param unit the unit chosen in Settings, which every distance on the screen is written in.
+ * [summary] is added up in it.
  */
 data class TripsUiState(
     val month: YearMonth,
@@ -69,6 +73,7 @@ data class TripsUiState(
     val submission: MonthSubmission? = null,
     val changedSinceSent: ChangedSinceSent? = null,
     val openDays: Set<LocalDate> = emptySet(),
+    val unit: DistanceUnit,
 )
 
 /**
@@ -86,6 +91,8 @@ data class TripsUiState(
  * @param openTripStart where the trip in progress started, from the address lookup.
  * @param sentReports every report sent to the accountant. Whether the month on screen is
  * submitted is worked out from it (`monthSubmission`), the rule the Report screen goes by.
+ * @param unit the unit chosen in Settings, as the whole app holds it: the month is added up
+ * and written in it, and follows a change at once.
  * @param lookUpAddresses asks for the addresses that finished trips still lack, with the reason
  * in words for the event log. Called each time the screen comes to the front, and when a trip
  * becomes a finished one again; a plain function, like the ones for navigation.
@@ -98,6 +105,7 @@ class TripsViewModel(
     tripActivity: StateFlow<TripActivity>,
     openTripStart: StateFlow<OpenTripStart?>,
     sentReports: Flow<List<SentReport>>,
+    unit: StateFlow<DistanceUnit>,
     private val lookUpAddresses: (reason: String) -> Unit,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -117,8 +125,13 @@ class TripsViewModel(
             copy(shown = month, openDays = openDaysIn(month, was = shown, open = openDays))
     }
 
-    /** The trips of one month, labelled with the month and zone they were read for. */
-    private data class MonthTrips(val month: YearMonth, val zone: ZoneId, val trips: List<Trip>)
+    /** One month's trips, with the month and zone they were read for and the unit to show. */
+    private data class MonthTrips(
+        val month: YearMonth,
+        val zone: ZoneId,
+        val trips: List<Trip>,
+        val unit: DistanceUnit,
+    )
 
     private val choice = MutableStateFlow(openingChoice())
 
@@ -131,9 +144,11 @@ class TripsViewModel(
             .distinctUntilChanged()
             .flatMapLatest { (month, zone) ->
                 val span = monthSpan(month, zone)
-                trips
-                    .observeTripsStartedBetween(span.fromMs, span.untilMs)
-                    .map { MonthTrips(month, zone, it) }
+                // Choosing another unit adds the same trips up again, and reads nothing.
+                combine(
+                    trips.observeTripsStartedBetween(span.fromMs, span.untilMs),
+                    unit,
+                ) { read, shownIn -> MonthTrips(month, zone, read, shownIn) }
             }
 
     val state: StateFlow<TripsUiState> =
@@ -155,15 +170,25 @@ class TripsViewModel(
                         liveTripId = activity.trip?.tripId,
                         liveDistanceMetres = activity.trip?.distanceMetres,
                         liveStart = start,
+                        unit = read.unit,
                     )
                 } else {
                     null
                 }
-            chosen.toUiState(summary, monthSubmission(chosen.shown, sent))
+            val submission = monthSubmission(chosen.shown, sent)
+            // The month's Business trips are the report's own, so they can be held against
+            // what the newest report listed, in the unit that report was printed in.
+            val changed =
+                summary?.totals?.business?.let { now ->
+                    changedSinceSent(submission, now.count) { sentIn ->
+                        categoryTotals(read.trips, sentIn).business.tenths
+                    }
+                }
+            chosen.toUiState(summary, submission, changed, read.unit)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(KEEP_WATCHING_MS),
-            choice.value.toUiState(summary = null, submission = null),
+            choice.value.toUiState(summary = null, submission = null, null, unit.value),
         )
 
     fun onPreviousMonth() {
@@ -250,22 +275,22 @@ class TripsViewModel(
         )
     }
 
-    private fun Choice.toUiState(summary: MonthSummary?, submission: MonthSubmission?) =
-        TripsUiState(
-            month = shown,
-            today = today,
-            zone = zone,
-            canStepForward = canStepForward(shown, current),
-            showLeftOut = showLeftOut,
-            changeFailed = changeFailed,
-            summary = summary,
-            submission = submission,
-            openDays = openDays,
-            // The month's Business figures are the report's own (the same trips, added up the
-            // same way), so they can be held against what the newest report listed.
-            changedSinceSent =
-                summary?.totals?.business?.let { now ->
-                    changedSinceSent(submission, now.count, now.tenths)
-                },
-        )
+    private fun Choice.toUiState(
+        summary: MonthSummary?,
+        submission: MonthSubmission?,
+        changed: ChangedSinceSent?,
+        unit: DistanceUnit,
+    ) = TripsUiState(
+        month = shown,
+        today = today,
+        zone = zone,
+        canStepForward = canStepForward(shown, current),
+        showLeftOut = showLeftOut,
+        changeFailed = changeFailed,
+        summary = summary,
+        submission = submission,
+        openDays = openDays,
+        changedSinceSent = changed,
+        unit = unit,
+    )
 }

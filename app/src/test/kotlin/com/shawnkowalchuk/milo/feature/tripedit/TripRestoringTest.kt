@@ -1,9 +1,11 @@
 package com.shawnkowalchuk.milo.feature.tripedit
 
 import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.setDistanceUnit
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.trip.UnreadableSettingsFile
 import java.io.IOException
@@ -86,6 +88,7 @@ class TripRestoringTest : TripEditingFixture() {
 
     @Test
     fun `the schedule is read from the settings, and an unreadable one is logged`() = runTest {
+        SettingsStore(settingsFile).setDistanceUnit(DistanceUnit.MILES)
         val unreadable =
             TripEditing(
                 trips = TripRepository(trips),
@@ -94,10 +97,14 @@ class TripRestoringTest : TripEditingFixture() {
                 clock = { nowMs },
             )
 
-        assertEquals(DEFAULT_WORK_SCHEDULE, editing.schedule())
-        assertNull(unreadable.schedule())
+        // One read gives the form its schedule and its unit, as they are stored.
         assertEquals(
-            listOf("The edit screen could not read the work schedule"),
+            FormSettings(DEFAULT_WORK_SCHEDULE, DistanceUnit.MILES),
+            editing.formSettings(),
+        )
+        assertNull(unreadable.formSettings())
+        assertEquals(
+            listOf("The edit screen could not read the work schedule and the unit"),
             logged(EventCategory.ERROR),
         )
     }
@@ -108,7 +115,7 @@ class TripRestoringTest : TripEditingFixture() {
 
         editing.save(
             trip,
-            formFor(trip, edmonton).copy(start = LocalTime.of(7, 0)),
+            formFor(trip, edmonton, DistanceUnit.KILOMETRES).copy(start = LocalTime.of(7, 0)),
             schedule = null,
             edmonton,
         )

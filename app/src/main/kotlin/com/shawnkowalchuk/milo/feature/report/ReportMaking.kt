@@ -38,6 +38,9 @@ import java.time.ZoneId
  * @param today the day the report is generated on, in [zone].
  * @param truckTrips every trip that moved the truck's odometer, for its figures at the start
  * and the end of the period (`odometerOver`).
+ *
+ * **The report is in the unit [settings] hold at this moment** (Shawn's answer of 2026-10-07,
+ * "Follow the setting"): its trips, its totals, the Personal figure and the odometer.
  */
 fun mileageReport(
     period: ReportPeriod,
@@ -50,6 +53,7 @@ fun mileageReport(
     truckTrips: List<DrivenTrip> = emptyList(),
 ): MileageReport {
     val sentBefore = sentFor(period, sent)
+    val unit = settings.distanceUnit
     return MileageReport(
         sender = ReportSender(name, settings.reportCompany, settings.reportVehicle),
         period = period,
@@ -59,8 +63,9 @@ fun mileageReport(
                 ReportRevision(nextRevision(sentBefore), localDateOf(last.sentAtMs, zone))
             },
         zone = zone,
+        unit = unit,
         days = reportDays(selection.trips, zone),
-        personal = PersonalDriving(selection.personalLeftOut, selection.personalTenths),
+        personal = PersonalDriving(selection.personalLeftOut, selection.personalTenths(unit)),
         odometer =
             odometerOver(
                 period.firstDay,
@@ -68,6 +73,7 @@ fun mileageReport(
                 zone,
                 settings.odometerReadings,
                 truckTrips,
+                unit,
             ),
     )
 }
@@ -105,6 +111,7 @@ internal fun SentReport.asLine(sent: List<SentReport>): SentLine = SentLine(
     sentAtMs = sentAtMs,
     tripCount = tripCount,
     distanceMetres = distanceMetres,
+    unit = distanceUnit,
     revision = revision,
     removal = removalEffect(this, sent),
 )

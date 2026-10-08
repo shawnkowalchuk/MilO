@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.shawnkowalchuk.milo.core.report.ReportPeriod
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
@@ -192,8 +193,16 @@ class ReportSettingsStoreTest {
 
     @Test
     fun `a report that waits for its answer survives the process, month or range`() {
-        val month = ReportHandOver(september, 193, 22_191, 1_791_300_000_000)
-        val range = ReportHandOver(twoWeeks, tripCount = 0, tenths = 0, atMs = 1_791_300_000_000)
+        val month =
+            ReportHandOver(september, 193, 22_191, 1_791_300_000_000, DistanceUnit.KILOMETRES)
+        val range =
+            ReportHandOver(
+                twoWeeks,
+                tripCount = 0,
+                tenths = 0,
+                atMs = 1_791_300_000_000,
+                unit = DistanceUnit.KILOMETRES,
+            )
         for (handOver in listOf(month, range)) {
             withStore { it.setReportHandOver(handOver) }
 
@@ -202,9 +211,38 @@ class ReportSettingsStoreTest {
     }
 
     @Test
+    fun `a report in miles that waits for its answer is still a report in miles afterwards`() {
+        val inMiles = ReportHandOver(september, 193, 13_703, 1_791_300_000_000, DistanceUnit.MILES)
+        withStore { it.setReportHandOver(inMiles) }
+
+        withStore { reopened -> assertEquals(inMiles, reopened.current().reportHandOver) }
+
+        // And a report in kilometres after it does not inherit the unit of the one before.
+        val inKilometres = inMiles.copy(tenths = 22_191, unit = DistanceUnit.KILOMETRES)
+        withStore { it.setReportHandOver(inKilometres) }
+
+        withStore { reopened -> assertEquals(inKilometres, reopened.current().reportHandOver) }
+    }
+
+    @Test
+    fun `a waiting report from before there was a choice of unit is read as kilometres`() {
+        val unit = stringPreferencesKey("report_handed_over_unit")
+        val waiting = ReportHandOver(twoWeeks, 4, 268, 5, DistanceUnit.KILOMETRES)
+        withStore { it.setReportHandOver(waiting) }
+
+        // Kilometres are written as they always were: with no unit beside the six values.
+        withFile { raw -> assertNull(raw.data.first()[unit]) }
+        withStore { reopened -> assertEquals(waiting, reopened.current().reportHandOver) }
+
+        // A unit MilO does not write makes it no report at all, never one in kilometres.
+        withFile { raw -> raw.edit { it[unit] = "yd" } }
+        withStore { reopened -> assertNull(reopened.current().reportHandOver) }
+    }
+
+    @Test
     fun `answering forgets the report that waited, and nothing else`() = withStore { store ->
         store.setReportName("Sam Driver")
-        store.setReportHandOver(ReportHandOver(september, 193, 22_191, 5))
+        store.setReportHandOver(ReportHandOver(september, 193, 22_191, 5, DistanceUnit.KILOMETRES))
 
         store.setReportHandOver(null)
 
@@ -215,9 +253,27 @@ class ReportSettingsStoreTest {
     fun `a hand-over with figures that cannot be a report's is refused`() = withStore { store ->
         val wrong =
             listOf(
-                ReportHandOver(september, tripCount = -1, tenths = 1, atMs = 1),
-                ReportHandOver(september, tripCount = 1, tenths = -1, atMs = 1),
-                ReportHandOver(september, tripCount = 1, tenths = 1, atMs = -1),
+                ReportHandOver(
+                    september,
+                    tripCount = -1,
+                    tenths = 1,
+                    atMs = 1,
+                    unit = DistanceUnit.KILOMETRES,
+                ),
+                ReportHandOver(
+                    september,
+                    tripCount = 1,
+                    tenths = -1,
+                    atMs = 1,
+                    unit = DistanceUnit.KILOMETRES,
+                ),
+                ReportHandOver(
+                    september,
+                    tripCount = 1,
+                    tenths = 1,
+                    atMs = -1,
+                    unit = DistanceUnit.KILOMETRES,
+                ),
             )
         for (handOver in wrong) {
             try {
@@ -246,7 +302,9 @@ class ReportSettingsStoreTest {
                 { it[longPreferencesKey("report_handed_over_tenths")] = -5 },
             )
         for (damaged in damage) {
-            withStore { it.setReportHandOver(ReportHandOver(twoWeeks, 4, 268, 5)) }
+            withStore {
+                it.setReportHandOver(ReportHandOver(twoWeeks, 4, 268, 5, DistanceUnit.KILOMETRES))
+            }
             withFile { raw -> raw.edit { damaged(it) } }
 
             // Nothing is asked about, so nothing can be recorded as sent that was not.
@@ -256,7 +314,14 @@ class ReportSettingsStoreTest {
 
     @Test
     fun `the names a waiting report is stored under never change`() {
-        val handOver = ReportHandOver(twoWeeks, tripCount = 4, tenths = 268, atMs = 1_791_300_000)
+        val handOver =
+            ReportHandOver(
+                twoWeeks,
+                tripCount = 4,
+                tenths = 268,
+                atMs = 1_791_300_000,
+                unit = DistanceUnit.KILOMETRES,
+            )
         withStore { it.setReportHandOver(handOver) }
 
         withFile { raw ->

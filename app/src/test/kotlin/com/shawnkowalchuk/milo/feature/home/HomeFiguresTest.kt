@@ -6,6 +6,7 @@ import com.shawnkowalchuk.milo.core.designsystem.text.PlacesText
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.CategoryTotals
 import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.Trip
@@ -85,7 +86,9 @@ class HomeFiguresTest {
     @Test
     fun `a month without a kilometre has no share, and nothing is divided by zero`() {
         assertNull(businessPercent(totals(business = 0)))
-        assertNull(homeTrips(today, edmonton, emptyList()).month.businessPercent)
+        assertNull(
+            homeTrips(today, edmonton, emptyList(), DistanceUnit.KILOMETRES).month.businessPercent,
+        )
     }
 
     @Test
@@ -110,6 +113,36 @@ class HomeFiguresTest {
     // ---- Today and the month, from one reading ----------------------------------------------------
 
     @Test
+    fun `with miles chosen today and the month are added up in miles, each trip as printed`() {
+        val month =
+            listOf(
+                // 1.149 km is printed as 0.7 mi, three times: 2.1.
+                trip("2026-10-01T08:00", 1_149.0),
+                trip("2026-10-02T08:00", 1_149.0),
+                trip("2026-10-06T08:00", 1_149.0),
+                trip("2026-10-06T09:00", 12_300.0),
+                trip("2026-10-06T10:00", 5_000.0, TripCategory.PERSONAL),
+                trip("2026-10-03T08:00", 9_000.0, TripCategory.PERSONAL),
+            )
+
+        val figures = homeTrips(today, edmonton, month, DistanceUnit.MILES)
+
+        assertEquals(DistanceUnit.MILES, figures.unit)
+        // The month: 0.7 + 0.7 + 0.7 + 7.6 mi of Business.
+        assertEquals(97L, figures.month.businessTenths)
+        // Today: 0.7 + 7.6 mi of Business, and 3.1 mi Personal kept apart.
+        assertEquals(Tally(2, 83), figures.todayTotals.business)
+        assertEquals(Tally(1, 31), figures.todayTotals.personal)
+        // The rows keep their metres: each is written from them, in the unit of the figures.
+        assertEquals(listOf(5_000.0, 12_300.0, 1_149.0), figures.rows.map { it.distanceMetres })
+        // The same reading in kilometres is what it was.
+        val inKilometres = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
+        assertEquals(156L, inKilometres.month.businessTenths)
+        assertEquals(Tally(2, 134), inKilometres.todayTotals.business)
+        assertEquals(DistanceUnit.KILOMETRES, inKilometres.unit)
+    }
+
+    @Test
     fun `the month's figure is its counted Business trips, each added as it is printed`() {
         val month =
             listOf(
@@ -122,7 +155,7 @@ class HomeFiguresTest {
                 trip("2026-10-05T08:00", 50_000.0, status = TripStatus.DISCARDED),
             )
 
-        val figures = homeTrips(today, edmonton, month).month
+        val figures = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES).month
 
         assertEquals(YearMonth.of(2026, 10), figures.month)
         assertEquals(33L, figures.businessTenths)
@@ -139,10 +172,10 @@ class HomeFiguresTest {
                 trip("2026-10-07T00:00", 8_000.0),
             )
 
-        val figures = homeTrips(today, edmonton, month)
+        val figures = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
 
         assertEquals(2, figures.today.count)
-        assertEquals(130L, figures.today.totals.business.tenths)
+        assertEquals(130L, figures.today.totals(DistanceUnit.KILOMETRES).business.tenths)
         assertEquals(listOf(7_000.0, 6_000.0), figures.rows.map { it.distanceMetres })
     }
 
@@ -156,11 +189,11 @@ class HomeFiguresTest {
                 trip("2026-10-06T11:00", 9_900.0, status = TripStatus.DELETED),
             )
 
-        val figures = homeTrips(today, edmonton, month)
+        val figures = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
 
         assertEquals(2, figures.today.count)
-        assertEquals(Tally(1, 123), figures.today.totals.business)
-        assertEquals(Tally(1, 50), figures.today.totals.personal)
+        assertEquals(Tally(1, 123), figures.today.totals(DistanceUnit.KILOMETRES).business)
+        assertEquals(Tally(1, 50), figures.today.totals(DistanceUnit.KILOMETRES).personal)
         assertEquals(2, figures.rows.size)
     }
 
@@ -176,7 +209,7 @@ class HomeFiguresTest {
                 trip("2026-10-05T17:00", 9_000.0, from = "Shop", to = "Home"),
             )
 
-        val last = homeTrips(today, edmonton, month).lastTrip
+        val last = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES).lastTrip
 
         assertEquals(
             PlacesText.FromTo(PlaceSide.Address("Supplier"), PlaceSide.Address("Shop")),
@@ -193,7 +226,7 @@ class HomeFiguresTest {
 
         assertEquals(
             PlacesText.Sentence(R.string.trips_addresses_left_blank),
-            homeTrips(today, edmonton, listOf(unknown)).lastTrip?.places,
+            homeTrips(today, edmonton, listOf(unknown), DistanceUnit.KILOMETRES).lastTrip?.places,
         )
     }
 
@@ -205,7 +238,7 @@ class HomeFiguresTest {
                 trip("2026-10-06T08:00", 0.0, status = TripStatus.OPEN),
             )
 
-        val figures = homeTrips(today, edmonton, month)
+        val figures = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
 
         assertNull(figures.lastTrip)
         assertEquals(0, figures.today.count)

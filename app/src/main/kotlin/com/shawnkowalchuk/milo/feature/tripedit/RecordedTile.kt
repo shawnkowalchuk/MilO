@@ -11,8 +11,9 @@ import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.DashedTile
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
 import com.shawnkowalchuk.milo.core.util.formatDay
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatShortDay
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.core.util.formatTimeSpan
@@ -39,7 +40,10 @@ internal fun RecordedTile(
     val zone = state.zone
     val day = localDateOf(recorded.startedAtMs, zone)
     val km =
-        stringResource(R.string.distance_km, formatKilometres(recorded.distanceMetres, locale))
+        stringResource(
+            distanceRes(state.unit),
+            formatDistance(recorded.distanceMetres, state.unit, locale),
+        )
     // The two times the short way, as a row of the Trips screen writes them.
     val (from, until) =
         formatTimeSpan(recorded.startedAtMs, recorded.endedAtMs, zone, locale, twentyFourHour)

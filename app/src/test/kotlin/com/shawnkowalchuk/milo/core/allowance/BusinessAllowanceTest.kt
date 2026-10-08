@@ -54,6 +54,16 @@ class BusinessAllowanceTest {
     }
 
     @Test
+    fun `a rate per kilometre says what it comes to per mile, to the cent, for reading only`() {
+        // A mile is 1.609344 km: 70 cents a kilometre is 112.65 cents a mile.
+        assertEquals(113, centsPerMileOf(70))
+        assertEquals(117, centsPerMileOf(73))
+        assertEquals(2, centsPerMileOf(1))
+        assertEquals(805, centsPerMileOf(500))
+        assertEquals("$1.13", formatCentsPerKm(centsPerMileOf(70), Locale.CANADA))
+    }
+
+    @Test
     fun `dollars are whole and grouped`() {
         assertEquals("$1,235", formatWholeDollars(123_450, Locale.CANADA))
         assertEquals("$0", formatWholeDollars(49, Locale.CANADA))

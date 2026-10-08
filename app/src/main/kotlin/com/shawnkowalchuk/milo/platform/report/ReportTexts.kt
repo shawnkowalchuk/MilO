@@ -3,6 +3,9 @@ package com.shawnkowalchuk.milo.platform.report
 import android.content.Context
 import android.text.format.DateFormat
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.report.CsvWords
 import com.shawnkowalchuk.milo.core.report.MileageReport
 import com.shawnkowalchuk.milo.core.report.ReportFormat
@@ -10,6 +13,7 @@ import com.shawnkowalchuk.milo.core.report.ReportWords
 import com.shawnkowalchuk.milo.core.report.SubjectWords
 import com.shawnkowalchuk.milo.core.report.periodInWords
 import com.shawnkowalchuk.milo.core.report.reportSubject
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatTenths
 
 /**
@@ -36,61 +40,81 @@ class ReportTexts(context: Context) {
     /**
      * The words of the PDF, for a report that lists [tripCount] trips and sums
      * [personalTripCount] Personal ones at its top.
+     *
+     * @param unit the unit the report is printed in. Every word that names a unit names this
+     * one: the note under the heading, the column's title, the total and the odometer.
      */
-    fun words(tripCount: Int, personalTripCount: Int): ReportWords = ReportWords(
-        appName = text(R.string.app_name),
-        appMark = text(R.string.app_mark),
-        title = text(R.string.report_pdf_title),
-        name = text(R.string.report_pdf_name),
-        company = text(R.string.report_pdf_company),
-        vehicle = text(R.string.report_pdf_vehicle),
-        generatedOn = text(R.string.report_pdf_generated_on),
-        businessOnly = text(R.string.report_pdf_business_only),
-        revisionNote = text(R.string.report_pdf_revision),
-        periodRange = text(R.string.report_period_range_words),
-        business = text(R.string.report_pdf_business),
-        personal = text(R.string.report_pdf_personal),
-        columnStart = text(R.string.report_pdf_column_start),
-        columnEnd = text(R.string.report_pdf_column_end),
-        columnFrom = text(R.string.report_pdf_column_from),
-        columnTo = text(R.string.report_pdf_column_to),
-        columnKm = text(R.string.report_pdf_column_km),
-        dayContinued = text(R.string.report_pdf_day_continued),
-        subtotal = text(R.string.report_pdf_subtotal),
-        total = text(R.string.report_pdf_total),
-        tripCount =
-            appContext.resources.getQuantityString(
-                R.plurals.report_pdf_trip_count,
-                tripCount,
-                tripCount,
-            ),
-        personalTripCount =
-            appContext.resources.getQuantityString(
-                R.plurals.report_pdf_personal_trip_count,
-                personalTripCount,
-                personalTripCount,
-            ),
-        noTrips = text(R.string.report_pdf_no_trips),
-        noAddress = text(R.string.report_pdf_no_address),
-        legend = text(R.string.report_pdf_legend),
-        signature = text(R.string.report_pdf_signature),
-        signatureDate = text(R.string.report_pdf_signature_date),
-        odometerOn = text(R.string.report_pdf_odometer_on),
-        odometerKm = text(R.string.report_pdf_odometer_km),
-        odometerEstimated = text(R.string.report_pdf_odometer_estimated),
-        odometerNote = text(R.string.report_pdf_odometer_note),
-        footer = text(R.string.report_pdf_footer),
-        page = text(R.string.report_pdf_page),
-    )
+    fun words(tripCount: Int, personalTripCount: Int, unit: DistanceUnit): ReportWords =
+        ReportWords(
+            appName = text(R.string.app_name),
+            appMark = text(R.string.app_mark),
+            title = text(R.string.report_pdf_title),
+            name = text(R.string.report_pdf_name),
+            company = text(R.string.report_pdf_company),
+            vehicle = text(R.string.report_pdf_vehicle),
+            generatedOn = text(R.string.report_pdf_generated_on),
+            businessOnly =
+                appContext.getString(R.string.report_pdf_business_only, text(unitNameRes(unit))),
+            revisionNote = text(R.string.report_pdf_revision),
+            periodRange = text(R.string.report_period_range_words),
+            business = text(R.string.report_pdf_business),
+            personal = text(R.string.report_pdf_personal),
+            columnStart = text(R.string.report_pdf_column_start),
+            columnEnd = text(R.string.report_pdf_column_end),
+            columnFrom = text(R.string.report_pdf_column_from),
+            columnTo = text(R.string.report_pdf_column_to),
+            columnKm = text(unitShortRes(unit)),
+            dayContinued = text(R.string.report_pdf_day_continued),
+            subtotal = text(R.string.report_pdf_subtotal),
+            // The period's place is kept for the layout to fill in; the unit's word is put in here.
+            total =
+                appContext.getString(
+                    R.string.report_pdf_total,
+                    PERIOD_PLACE,
+                    text(unitNameRes(unit)),
+                ),
+            tripCount =
+                appContext.resources.getQuantityString(
+                    R.plurals.report_pdf_trip_count,
+                    tripCount,
+                    tripCount,
+                ),
+            personalTripCount =
+                appContext.resources.getQuantityString(
+                    R.plurals.report_pdf_personal_trip_count,
+                    personalTripCount,
+                    personalTripCount,
+                ),
+            noTrips = text(R.string.report_pdf_no_trips),
+            noAddress = text(R.string.report_pdf_no_address),
+            legend = text(R.string.report_pdf_legend),
+            signature = text(R.string.report_pdf_signature),
+            signatureDate = text(R.string.report_pdf_signature_date),
+            odometerOn = text(R.string.report_pdf_odometer_on),
+            odometerKm = text(distanceRes(unit)),
+            odometerEstimated =
+                text(
+                    when (unit) {
+                        DistanceUnit.KILOMETRES -> R.string.report_pdf_odometer_estimated
+                        DistanceUnit.MILES -> R.string.report_pdf_odometer_estimated_mi
+                    },
+                ),
+            odometerNote = text(R.string.report_pdf_odometer_note),
+            footer = text(R.string.report_pdf_footer),
+            page = text(R.string.report_pdf_page),
+        )
 
-    /** The column titles of the CSV, and its words for a trip added or edited by hand. */
-    fun csvWords(): CsvWords = CsvWords(
+    /**
+     * The column titles of the CSV, and its words for a trip added or edited by hand. The
+     * distance column is titled with the short word of [unit], the unit its figures are in.
+     */
+    fun csvWords(unit: DistanceUnit): CsvWords = CsvWords(
         date = text(R.string.report_csv_date),
         start = text(R.string.report_pdf_column_start),
         end = text(R.string.report_pdf_column_end),
         from = text(R.string.report_pdf_column_from),
         to = text(R.string.report_pdf_column_to),
-        km = text(R.string.report_pdf_column_km),
+        km = text(unitShortRes(unit)),
         byHand = text(R.string.report_csv_by_hand),
         added = text(R.string.report_csv_added),
         edited = text(R.string.report_csv_edited),
@@ -120,11 +144,19 @@ class ReportTexts(context: Context) {
             R.plurals.report_email_body,
             report.tripCount,
             periodInWords(report.period, locale, text(R.string.report_period_range_words)),
-            formatTenths(report.totalTenths, locale),
+            appContext.getString(
+                distanceRes(report.unit),
+                formatTenths(report.totalTenths, locale),
+            ),
             report.tripCount,
             report.sender.name,
         )
     }
 
     private fun text(id: Int): String = appContext.getString(id)
+
+    private companion object {
+        /** The place a format keeps for the period, handed on to the layout as it is. */
+        const val PERIOD_PLACE = "%1\$s"
+    }
 }

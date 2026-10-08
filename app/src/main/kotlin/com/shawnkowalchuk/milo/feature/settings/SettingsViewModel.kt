@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.schedule.withEndOn
 import com.shawnkowalchuk.milo.core.schedule.withStartOn
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.GRACE_PERIOD_CHOICE
@@ -16,6 +17,7 @@ import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.SteppedChoice
 import com.shawnkowalchuk.milo.data.settings.isEmailAddress
 import com.shawnkowalchuk.milo.data.settings.reportTextOrNull
+import com.shawnkowalchuk.milo.data.settings.setDistanceUnit
 import com.shawnkowalchuk.milo.data.settings.setParkedLimitSeconds
 import com.shawnkowalchuk.milo.platform.trip.OwnTripSound
 import java.io.IOException
@@ -134,6 +136,9 @@ class SettingsViewModel(
         val metres = MINIMUM_TRIP_DISTANCE_CHOICE.step(it.minimumTripDistanceMetres, longer)
         settings.setMinimumTripDistanceMetres(metres)
     }
+
+    /** Kilometres or miles. Every surface follows the settings, so it shows at once. */
+    fun onDistanceUnit(unit: DistanceUnit) = change { settings.setDistanceUnit(unit) }
 
     fun onSoundEnabled(enabled: Boolean) = change { settings.setSoundEnabled(enabled) }
 

@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.RemoteViews
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.app.MainActivity
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.platform.car.CarAction
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import com.shawnkowalchuk.milo.platform.trip.tripServiceIntent
@@ -39,6 +40,7 @@ internal fun homeWidgetViews(context: Context, content: HomeWidgetContent): Remo
     } else {
         views.setViewVisibility(R.id.widget_trip, View.VISIBLE)
         views.setTextViewText(R.id.widget_km, trip.kilometres)
+        views.setTextViewText(R.id.widget_unit, context.getString(unitShortRes(screen.unit)))
         // The clock runs by itself on the home screen: it needs no redraw every second. Its
         // base is on the clock that counts from boot, worked out from the trip's start.
         val runningMs = (System.currentTimeMillis() - startedAtMs).coerceAtLeast(0)

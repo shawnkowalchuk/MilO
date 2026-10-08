@@ -1,8 +1,9 @@
 package com.shawnkowalchuk.milo.core.report
 
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.metresOfTenths
-import com.shawnkowalchuk.milo.core.util.tenthsOfAKilometre
+import com.shawnkowalchuk.milo.core.util.tenthsOf
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
@@ -20,18 +21,20 @@ class MileageReportTest {
 
     @Test
     fun `a trip is rounded to the nearest tenth of a kilometre`() {
-        assertEquals(123, tenthsOfAKilometre(12_340.0))
-        assertEquals(123, tenthsOfAKilometre(12_349.9))
-        assertEquals(124, tenthsOfAKilometre(12_350.0))
-        assertEquals(0, tenthsOfAKilometre(49.9))
-        assertEquals(1, tenthsOfAKilometre(50.0))
-        assertEquals(0, tenthsOfAKilometre(0.0))
+        assertEquals(123, tenthsOf(12_340.0, DistanceUnit.KILOMETRES))
+        assertEquals(123, tenthsOf(12_349.9, DistanceUnit.KILOMETRES))
+        assertEquals(124, tenthsOf(12_350.0, DistanceUnit.KILOMETRES))
+        assertEquals(0, tenthsOf(49.9, DistanceUnit.KILOMETRES))
+        assertEquals(1, tenthsOf(50.0, DistanceUnit.KILOMETRES))
+        assertEquals(0, tenthsOf(0.0, DistanceUnit.KILOMETRES))
     }
 
     @Test
     fun `a distance that cannot be a distance is refused, not printed`() {
         for (corrupt in listOf(-1.0, Double.NaN, Double.POSITIVE_INFINITY)) {
-            assertThrows(IllegalArgumentException::class.java) { tenthsOfAKilometre(corrupt) }
+            assertThrows(IllegalArgumentException::class.java) {
+                tenthsOf(corrupt, DistanceUnit.KILOMETRES)
+            }
         }
     }
 
@@ -53,8 +56,8 @@ class MileageReportTest {
         val starts = listOf("08:00", "09:00", "10:00")
         val day = ReportDay(monday, starts.map { trip(monday, it, metres = 1_040.0) })
 
-        assertEquals(listOf(10L, 10L, 10L), day.trips.map { it.tenths })
-        assertEquals(30, day.tenths)
+        assertEquals(listOf(10L, 10L, 10L), day.trips.map { it.tenths(DistanceUnit.KILOMETRES) })
+        assertEquals(30, day.tenths(DistanceUnit.KILOMETRES))
     }
 
     @Test
@@ -69,9 +72,12 @@ class MileageReportTest {
         val report = report(trips)
 
         // 1.3 + 1.3, and 23.4 + 0.2 (150 m rounds up).
-        assertEquals(listOf(26L, 236L), report.days.map { it.tenths })
+        assertEquals(listOf(26L, 236L), report.days.map { it.tenths(DistanceUnit.KILOMETRES) })
         assertEquals(262, report.totalTenths)
-        assertEquals(report.days.sumOf { day -> day.trips.sumOf { it.tenths } }, report.totalTenths)
+        assertEquals(
+            report.days.sumOf { day -> day.trips.sumOf { it.tenths(DistanceUnit.KILOMETRES) } },
+            report.totalTenths,
+        )
         assertEquals(4, report.tripCount)
     }
 
@@ -86,8 +92,11 @@ class MileageReportTest {
 
     @Test
     fun `tenths go back to metres as a whole number of hundred metres`() {
-        assertEquals(412_300.0, metresOfTenths(4123), 0.0)
-        assertEquals(4123, tenthsOfAKilometre(metresOfTenths(4123)))
+        assertEquals(412_300.0, metresOfTenths(4123, DistanceUnit.KILOMETRES), 0.0)
+        assertEquals(
+            4123,
+            tenthsOf(metresOfTenths(4123, DistanceUnit.KILOMETRES), DistanceUnit.KILOMETRES),
+        )
     }
 
     @Test

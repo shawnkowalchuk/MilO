@@ -84,8 +84,14 @@ internal fun ExportedTrip.problem(): String? = when {
     else -> null
 }
 
-/** The same for a sent report: in words that finish "Sent report 3: …", or null. */
-internal fun ExportedSentReport.problem(): String? {
+/**
+ * The same for a sent report: in words that finish "Sent report 3: …", or null.
+ *
+ * @param formatVersion the version of the form the file says it is in; the version this MilO
+ * writes unless the reader says otherwise. From format 2 on a report must say which unit it
+ * was printed in; in a file of format 1 none does, and one that does was not written by MilO.
+ */
+internal fun ExportedSentReport.problem(formatVersion: Int = EXPORT_FORMAT_VERSION): String? {
     val reportKind = REPORT_KIND_WORDS.constantFor(kind)
     val first = dayOrNull(firstDay)
     val last = dayOrNull(lastDay)
@@ -106,6 +112,15 @@ internal fun ExportedSentReport.problem(): String? {
         tripCount < 0 || revision < 0 -> "its number of trips or its revision is negative"
 
         !isDistance(distanceMetres) -> "its total is not a distance"
+
+        formatVersion < FORMAT_WITH_REPORT_UNIT && distanceUnit != null ->
+            "it names a unit, which a file of format $formatVersion does not hold"
+
+        formatVersion >= FORMAT_WITH_REPORT_UNIT && distanceUnit == null ->
+            "it does not say which unit its total was printed in"
+
+        distanceUnit != null && REPORT_UNIT_WORDS.constantFor(distanceUnit) == null ->
+            "its unit is \"$distanceUnit\""
 
         else -> null
     }

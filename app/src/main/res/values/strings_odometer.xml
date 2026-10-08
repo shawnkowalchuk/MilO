@@ -9,30 +9,45 @@
     <string name="settings_odometer_title">Odometer</string>
     <!-- Before the first reading has been typed in. -->
     <string name="settings_odometer_none">Type the number on the truck\'s dashboard once. MilO adds every truck trip to it from then on.</string>
-    <!-- Under the figure when it is the reading itself. The argument is the reading, such as 123,456. -->
-    <string name="settings_odometer_typed_today">Your reading of %1$s km, typed today</string>
+    <!--
+        The same with miles chosen. It names the unit, because the number is taken as miles
+        whatever the dashboard shows; in kilometres the words stay as they were.
+    -->
+    <string name="settings_odometer_none_miles">Type the miles on the truck\'s dashboard once. MilO adds every truck trip to it from then on.</string>
+    <!--
+        Under the figure when it is the reading itself. The argument is the reading in the
+        unit it was typed in, such as 123,456 km.
+    -->
+    <string name="settings_odometer_typed_today">Your reading of %1$s, typed today</string>
     <!-- Under the figure: the reading, the day it was typed, such as Oct 3, 2026. -->
-    <string name="settings_odometer_no_trips_since">Your reading of %1$s km on %2$s. No truck trip since.</string>
-    <!-- The same, and the kilometres of truck trips since, with one decimal, such as 345.6. -->
-    <string name="settings_odometer_trips_since">Your reading of %1$s km on %2$s, plus %3$s km of truck trips since</string>
+    <string name="settings_odometer_no_trips_since">Your reading of %1$s on %2$s. No truck trip since.</string>
+    <!-- The same, and the truck trips since in the unit on screen, such as 345.6 km. -->
+    <string name="settings_odometer_trips_since">Your reading of %1$s on %2$s, plus %3$s of truck trips since</string>
     <string name="settings_odometer_enter">Enter reading</string>
     <string name="settings_odometer_adjust">Adjust</string>
     <string name="settings_odometer_field">Reading on the dashboard now</string>
+    <!-- The field's label with miles chosen: what is typed is stored as miles. -->
+    <string name="settings_odometer_field_miles">Reading on the dashboard now, in miles</string>
     <!-- The grey example inside the empty field. -->
     <string name="settings_odometer_example">123456</string>
-    <string name="settings_odometer_refused">Type the kilometres the dashboard shows, such as 123456.</string>
+    <!-- The argument is the unit's whole word, kilometres or miles. -->
+    <string name="settings_odometer_refused">Type the %1$s the dashboard shows, such as 123456.</string>
     <string name="settings_odometer_save">Save reading</string>
     <string name="settings_about_odometer">About the odometer</string>
-    <string name="settings_odometer_detail">MilO adds the kilometres of every trip in the truck to your last reading: Business, Personal, and trips you added by hand. A trip started with the button that the truck never joined is left out. Adjust it whenever the dashboard shows something else; each reading is kept with its date. The report for the accountant shows the odometer at the start and the end of its period, marked est. where MilO worked it out.</string>
+    <!-- The argument is the unit's whole word, kilometres or miles. -->
+    <string name="settings_odometer_detail">MilO adds the %1$s of every trip in the truck to your last reading: Business, Personal, and trips you added by hand. A trip started with the button that the truck never joined is left out. Adjust it whenever the dashboard shows something else; each reading is kept with its date. The report for the accountant shows the odometer at the start and the end of its period, marked est. where MilO worked it out.</string>
 
     <!--
         The report for the accountant: the odometer at the start and the end of the period, on a
         tile under the sender's. The label's argument is the day, such as Oct 1, 2026.
     -->
     <string name="report_pdf_odometer_on">Odometer, %1$s</string>
-    <!-- The argument is the odometer in whole kilometres, such as 123,456. -->
-    <string name="report_pdf_odometer_km">%1$s km</string>
-    <!-- The same, for a figure MilO worked out rather than one typed in that day. -->
+    <!--
+        A figure MilO worked out rather than one typed in that day. The argument is the
+        odometer in whole kilometres or miles, such as 123,456; a figure that was typed is
+        written with distance_km or distance_mi.
+    -->
     <string name="report_pdf_odometer_estimated">%1$s km est.</string>
+    <string name="report_pdf_odometer_estimated_mi">%1$s mi est.</string>
     <string name="report_pdf_odometer_note">est.: worked out by MilO from a reading of the dashboard and the truck trips recorded since, not read off the dashboard on that day.</string>
 </resources>

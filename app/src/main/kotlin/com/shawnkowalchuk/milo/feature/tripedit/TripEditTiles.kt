@@ -29,11 +29,13 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TimeDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.ValueButton
 import com.shawnkowalchuk.milo.core.designsystem.component.rememberTwentyFourHourClock
+import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.formatClockTime
 import com.shawnkowalchuk.milo.core.util.formatDay
-import com.shawnkowalchuk.milo.core.util.formatKilometres
+import com.shawnkowalchuk.milo.core.util.formatDistance
 
 // The tiles of the edit form, as the owner's drawing has them and in the order a trip is read
 // on the Trips screen: when, where, and side by side how far and what it is saved as. (Under
@@ -113,7 +115,7 @@ internal fun WhenTile(
             Quiet(stringResource(R.string.trip_edit_ends_on, formatDay(endDate, locale)))
         }
         for (problem in state.timeProblems) {
-            StatusRow(label = problem.words(), status = RowStatus.PROBLEM)
+            StatusRow(label = problem.words(state.unit), status = RowStatus.PROBLEM)
         }
     }
 
@@ -186,8 +188,9 @@ internal fun WhereTile(state: TripEditUiState.Ready, actions: TripEditActions) {
 }
 
 /**
- * "Distance, km": the kilometres, typed, in the drawing's larger figure. The field's label is
- * the tile's own. What Save found wrong with the distance is said under the field.
+ * "Distance, km" or "Distance, mi": the distance, typed in the unit chosen in Settings, in the
+ * drawing's larger figure. The field's label is the tile's own, and names the unit. What Save
+ * found wrong with the distance is said under the field.
  */
 @Composable
 internal fun DistanceTile(
@@ -198,20 +201,24 @@ internal fun DistanceTile(
     val locale = LocalConfiguration.current.locales[0]
     Tile(modifier = modifier, padding = TilePadding.EVEN) {
         TextEntry(
-            label = stringResource(R.string.trip_edit_distance_label),
+            label =
+                stringResource(
+                    R.string.trip_edit_distance_label,
+                    stringResource(unitShortRes(state.unit)),
+                ),
             // What was typed, or the stored distance as every screen writes it. A stored
             // distance that cannot be written (it should never be negative) starts empty.
             initialText =
                 state.kilometres
                     ?: state.storedMetres
                         ?.takeIf { it.isFinite() && it >= 0.0 }
-                        ?.let { formatKilometres(it, locale) }
+                        ?.let { formatDistance(it, state.unit, locale) }
                         .orEmpty(),
             onTextChange = actions.onKilometres,
             maxLength = MAX_DISTANCE_LENGTH,
             decimalNumber = true,
             lastField = true,
-            error = state.distanceProblem?.words(),
+            error = state.distanceProblem?.words(state.unit),
             figure = true,
         )
     }
@@ -219,11 +226,19 @@ internal fun DistanceTile(
 
 /** The words for one thing that is wrong with the form, with what its sentence quotes. */
 @Composable
-private fun FormProblem.words(): String {
-    val sentence = sentence()
+private fun FormProblem.words(unit: DistanceUnit): String {
+    val sentence = sentence(unit)
     return when {
+        sentence.number != null && sentence.numberWith != null ->
+            stringResource(
+                sentence.text,
+                stringResource(sentence.numberWith, sentence.number.toString()),
+            )
+
         sentence.number != null -> stringResource(sentence.text, sentence.number)
+
         sentence.names != null -> stringResource(sentence.text, stringResource(sentence.names))
+
         else -> stringResource(sentence.text)
     }
 }

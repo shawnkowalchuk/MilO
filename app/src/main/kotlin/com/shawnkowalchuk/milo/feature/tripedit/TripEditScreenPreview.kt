@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.RecordedValues
 import java.time.LocalDate
 import java.time.LocalTime
@@ -39,6 +40,7 @@ private val drawn =
         to = "Windermere site",
         kilometres = null,
         storedMetres = 18_600.0,
+        unit = DistanceUnit.KILOMETRES,
         category = TripCategory.BUSINESS,
         kindSource = KindSource.AS_SAVED,
         problems = emptyList(),

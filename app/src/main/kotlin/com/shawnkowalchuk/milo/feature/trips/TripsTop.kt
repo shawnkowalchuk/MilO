@@ -76,13 +76,14 @@ internal fun LazyListScope.monthItems(state: TripsUiState, actions: TripsActions
             summary = summary,
             submission = state.submission,
             zone = state.zone,
+            unit = state.unit,
             onOpenReport = { actions.onReport(state.month) },
         )
     }
     item(key = "personal and add") {
         val locale = LocalConfiguration.current.locales[0]
         TilePair(
-            first = { half -> PersonalTile(summary?.totals, locale, half) },
+            first = { half -> PersonalTile(summary?.totals, locale, state.unit, half) },
             second = { half -> AddTripTile(actions.onAdd, half) },
         )
     }

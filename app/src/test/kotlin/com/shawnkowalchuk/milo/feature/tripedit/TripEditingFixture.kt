@@ -4,6 +4,7 @@ import com.shawnkowalchuk.milo.core.schedule.DEFAULT_WORK_SCHEDULE
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
+import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
@@ -32,10 +33,13 @@ abstract class TripEditingFixture {
         LocalDateTime.parse(dateTime).atZone(edmonton).toInstant().toEpochMilli()
 
     protected val nowMs = local("2026-10-05T14:00:00")
+
+    /** The settings file the edit screen reads: empty, so everything is as out of the box. */
+    protected val settingsFile = FakeSettingsFile()
     protected val editing =
         TripEditing(
             trips = TripRepository(trips),
-            settings = SettingsStore(FakeSettingsFile()),
+            settings = SettingsStore(settingsFile),
             eventLog = EventLogRepository(log),
             clock = { nowMs },
         )
@@ -71,7 +75,12 @@ abstract class TripEditingFixture {
 
     /** Opens the form for [stored], makes [change] in it, and saves. */
     protected suspend fun save(stored: Trip, change: (TripForm) -> TripForm): SaveResult =
-        editing.save(stored, change(formFor(stored, edmonton)), schedule, edmonton)
+        editing.save(
+            stored,
+            change(formFor(stored, edmonton, DistanceUnit.KILOMETRES)),
+            schedule,
+            edmonton,
+        )
 
     /** A missed trip, filled in properly. */
     protected val missed =
@@ -82,5 +91,6 @@ abstract class TripEditingFixture {
             from = "Shop",
             to = "Site 7",
             kilometres = "23.4",
+            unit = DistanceUnit.KILOMETRES,
         )
 }
