@@ -51,6 +51,7 @@ import java.util.Locale
  * other two are made at once.
  * @param onMark "Personal" or "Business" was pressed. Made at once: the other button undoes it.
  * @param onEdit "Edit" was pressed: the edit screen is opened for the trip.
+ * @param onLabel "Label" was pressed: the trip's label is chosen in a dialog.
  */
 internal class TripRowContext(
     val zone: ZoneId,
@@ -61,15 +62,16 @@ internal class TripRowContext(
     val onAsk: (TripLine, TripCorrection) -> Unit,
     val onMark: (TripLine, TripCategory) -> Unit,
     val onEdit: (TripLine) -> Unit,
+    val onLabel: (TripLine) -> Unit,
 )
 
 /**
  * One trip of an open day, as drawn: where it went, under that its times and what it is saved
  * as, and its kilometres at the end as a bare figure.
  *
- * The grey line carries every note the trip has, each after a middle dot: "edited" or "added
- * by hand" for figures that are Shawn's own, and for a trip that is listed on request, why it
- * is not counted.
+ * The grey line carries the trip's label and every note the trip has, each after a middle
+ * dot: "edited" or "added by hand" for figures that are Shawn's own, and for a trip that is
+ * listed on request, why it is not counted.
  *
  * The figure is white only for a trip that is in the day's Business figure, which is the one
  * its heading shows. A Personal trip, and one that is not counted at all, has it greyed.
@@ -124,10 +126,10 @@ internal fun TripRow(trip: TripLine, context: TripRowContext, last: Boolean) {
             if (places == null) {
                 // A discarded trip is never looked up, so its times are what names it.
                 Text(text = times, style = MaterialTheme.typography.bodyLarge)
-                GreyLine(joined(trip.notesRes().map { stringResource(it) }))
+                GreyLine(joined(listOfNotNull(trip.label) + trip.notes()))
             } else {
                 PlacesLine(placesLine(places))
-                GreyLine(joined(listOf(times) + trip.notesRes().map { stringResource(it) }))
+                GreyLine(joined(listOfNotNull(times, trip.label) + trip.notes()))
             }
         }
         if (buttons.isNotEmpty()) {
@@ -170,7 +172,7 @@ private fun TripAction.asButton(trip: TripLine, context: TripRowContext): Action
             when (this) {
                 TripAction.Edit -> ActionKind.ACCENT
 
-                is TripAction.Mark -> ActionKind.PLAIN
+                TripAction.Label, is TripAction.Mark -> ActionKind.PLAIN
 
                 is TripAction.Correct ->
                     if (correction == TripCorrection.DELETE) {
@@ -182,6 +184,7 @@ private fun TripAction.asButton(trip: TripLine, context: TripRowContext): Action
         onClick =
             when (this) {
                 TripAction.Edit -> ({ context.onEdit(trip) })
+                TripAction.Label -> ({ context.onLabel(trip) })
                 is TripAction.Mark -> ({ context.onMark(trip, category) })
                 is TripAction.Correct -> ({ context.onAsk(trip, correction) })
             },
@@ -206,6 +209,10 @@ internal fun TripLine.timesText(zone: ZoneId, locale: Locale, twentyFourHour: Bo
 @Composable
 internal fun TripLine.distanceText(locale: Locale, unit: DistanceUnit): String? =
     distanceMetres?.let { stringResource(distanceRes(unit), formatDistance(it, unit, locale)) }
+
+/** A trip's notes, in the order [notesRes] gives them. */
+@Composable
+private fun TripLine.notes(): List<String> = notesRes().map { stringResource(it) }
 
 /** The parts of a grey line, each after a middle dot: "5:30 – 5:41 PM · Personal". */
 @Composable

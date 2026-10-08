@@ -61,6 +61,9 @@ internal sealed interface TripAction {
     /** Opens the edit screen for the trip. */
     data object Edit : TripAction
 
+    /** Opens the choice of the trip's label (since 2026-10-08). */
+    data object Label : TripAction
+
     /** Marks the trip as [category], whatever the work schedule made of it. */
     data class Mark(val category: TripCategory) : TripAction
 
@@ -72,8 +75,9 @@ internal sealed interface TripAction {
  * The buttons under a trip's row, in the order they are drawn. What changes least comes
  * first, and Delete is the last.
  *
- * A finished trip has none until it is pressed. Then: Edit, the category it does not have
- * (both, for a trip that is not sorted yet), and Delete. A deleted or a discarded trip shows
+ * A finished trip has none until it is pressed. Then: Edit, Label, the category it does not
+ * have (both, for a trip that is not sorted yet), and Delete: more than three, so they take two
+ * lines. A deleted or a discarded trip shows
  * its one button, Restore or Count this trip, straight away: those rows are only listed on
  * request, and the button is what they are looked at for. The trip in progress has none: it
  * is ended first.
@@ -87,6 +91,7 @@ internal fun TripLine.actions(pressed: Boolean): List<TripAction> {
     return buildList {
         if (shown) {
             if (editable) add(TripAction.Edit)
+            add(TripAction.Label)
             markableAs.forEach { add(TripAction.Mark(it)) }
         }
         if (change != null) add(TripAction.Correct(change))
@@ -96,6 +101,8 @@ internal fun TripLine.actions(pressed: Boolean): List<TripAction> {
 /** The word on a button, as short as the design has it: "Edit", "Personal", "Delete". */
 internal fun TripAction.wordsRes(): Int = when (this) {
     TripAction.Edit -> R.string.trips_button_edit
+
+    TripAction.Label -> R.string.trips_button_label
 
     is TripAction.Mark -> categoryWordsRes(category, ranPastSchedule = false)
 
@@ -113,6 +120,7 @@ internal fun TripAction.wordsRes(): Int = when (this) {
  */
 internal fun TripAction.spokenRes(): Int = when (this) {
     TripAction.Edit -> R.string.trips_action_edit
+    TripAction.Label -> R.string.trips_action_label
     is TripAction.Mark -> category.markLabelRes()
     is TripAction.Correct -> correction.labelRes()
 }

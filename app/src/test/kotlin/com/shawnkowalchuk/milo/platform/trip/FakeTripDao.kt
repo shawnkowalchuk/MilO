@@ -249,6 +249,11 @@ class FakeTripDao : TripDao {
             it.copy(vehicleAddress = address)
         }
 
+    override suspend fun setLabel(tripId: Long, label: String?, open: TripStatus): Int =
+        changeIf(tripId, { it.status != open }) { it.copy(label = label) }
+
+    override suspend fun findLabelled(): List<Trip> = rows.filter { it.label != null }
+
     override suspend fun fillVehicle(address: String): Int {
         var filled = 0
         rows.replaceAll { trip ->

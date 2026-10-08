@@ -142,8 +142,9 @@ class MiloMigrationsTest {
         // How many columns each step adds to a table that has rows: the addresses, Business or
         // Personal, and the marks and kept figures of a trip that was added or edited by hand.
         // The step to version 5 adds none: it makes a table of its own. The step to version 6
-        // adds one to that table: the unit a sent report was printed in.
-        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7, 4 to 0, 5 to 1)
+        // adds one to that table: the unit a sent report was printed in. The step to version 7
+        // adds two to the trips: the vehicle and the label, both of which may be empty.
+        val columnsAdded = mapOf(1 to 4, 2 to 4, 3 to 7, 4 to 0, 5 to 1, 6 to 2)
         for (step in MILO_MIGRATIONS) {
             val added = statementsOf(step).filter { it.contains(" ADD COLUMN ") }
 
@@ -169,6 +170,20 @@ class MiloMigrationsTest {
                     "DEFAULT 'KILOMETRES'",
             ),
             statementsOf(MIGRATION_5_6),
+        )
+    }
+
+    @Test
+    fun `the step from 6 to 7 adds the trip's vehicle and label, empty on every stored trip`() {
+        // The vehicle of the trips already stored is filled in once, at the next start
+        // (TripVehicleCatchUp), from the settings file a migration cannot read. A label is
+        // Shawn's to give.
+        assertEquals(
+            listOf(
+                "ALTER TABLE trips ADD COLUMN vehicleAddress TEXT",
+                "ALTER TABLE trips ADD COLUMN label TEXT",
+            ),
+            statementsOf(MIGRATION_6_7),
         )
     }
 

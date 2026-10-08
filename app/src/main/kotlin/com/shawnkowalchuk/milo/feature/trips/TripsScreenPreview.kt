@@ -38,6 +38,7 @@ private fun TripsPreview() {
                 category = TripCategory.BUSINESS,
                 ranPastSchedule = true,
                 markableAs = listOf(TripCategory.PERSONAL),
+                label = "Site visit",
             ),
             TripLine(
                 id = 2,
@@ -92,7 +93,7 @@ private fun TripsPreview() {
         Surface {
             TripsContent(
                 state = state,
-                actions = TripsActions({}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}),
+                actions = TripsActions({}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}, {}),
             )
         }
     }

@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.schedule.TripClassification
 import com.shawnkowalchuk.milo.core.schedule.TripFiling
 import com.shawnkowalchuk.milo.core.schedule.WorkSchedule
 import com.shawnkowalchuk.milo.core.trip.ClosedTrip
+import com.shawnkowalchuk.milo.core.trip.LabelledTrip
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import java.time.ZoneId
@@ -74,6 +75,19 @@ class TripRepository(private val dao: TripDao) {
     /** Records which paired vehicle the open trip is in, unless it already has one. */
     suspend fun setVehicle(tripId: Long, address: String): Boolean =
         dao.setVehicle(tripId, address, TripStatus.OPEN) == 1
+
+    /**
+     * Gives a closed trip its label, cleaned as `cleanLabel` cleans it, or takes it away with
+     * null (since 2026-10-08). The label is not a recorded figure: the trip does not count as
+     * edited by hand for it.
+     */
+    suspend fun setLabel(tripId: Long, label: String?): Boolean =
+        dao.setLabel(tripId, label, TripStatus.OPEN) == 1
+
+    /** Every labelled trip, as the choice of labels needs it (`labelChoices`). */
+    suspend fun labelledTrips(): List<LabelledTrip> = dao.findLabelled().mapNotNull { trip ->
+        trip.label?.let { LabelledTrip(it, trip.endLatitude, trip.endLongitude, trip.startedAtMs) }
+    }
 
     /** See [TripDao.fillVehicle]. Returns how many trips it gave the vehicle. */
     suspend fun fillVehicle(address: String): Int = dao.fillVehicle(address)

@@ -34,9 +34,6 @@ import com.shawnkowalchuk.milo.feature.setup.SetupViewModel
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditScreen
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditViewModel
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditing
-import com.shawnkowalchuk.milo.feature.trips.TripCorrections
-import com.shawnkowalchuk.milo.feature.trips.TripsScreen
-import com.shawnkowalchuk.milo.feature.trips.TripsViewModel
 import java.time.ZoneId
 
 /**
@@ -108,38 +105,11 @@ fun MiloNavigation(
                     )
                 }
                 entry<TripsKey> {
-                    TripsScreen(
-                        viewModel =
-                            viewModel(
-                                factory = viewModelFactory {
-                                    initializer {
-                                        TripsViewModel(
-                                            trips = container.tripRepository,
-                                            corrections =
-                                                TripCorrections(
-                                                    trips = container.tripRepository,
-                                                    eventLog = container.eventLogRepository,
-                                                    clock = System::currentTimeMillis,
-                                                ),
-                                            tripActivity = container.tripController.activity,
-                                            openTripStart = container.tripAddresses.openTripStart,
-                                            unit = container.shownUnit.unit,
-                                            sentReports =
-                                                container.sentReportRepository.observeSent(),
-                                            lookUpAddresses = container.tripAddresses::catchUp,
-                                            clock = System::currentTimeMillis,
-                                            zone = ZoneId::systemDefault,
-                                        )
-                                    }
-                                },
-                            ),
+                    TripsEntry(
+                        container = container,
+                        backStack = backStack,
                         savedTripStartMs = savedTripStartMs,
                         onSavedTripShown = { savedTripStartMs = null },
-                        onEditTrip = { tripId -> backStack.openOnTop(TripEditKey(tripId)) },
-                        onAddTrip = { backStack.openOnTop(TripEditKey(tripId = null)) },
-                        onOpenReport = { month ->
-                            backStack.openOnTop(ReportKey(month.year, month.monthValue))
-                        },
                     )
                 }
                 entry<ReportKey> { key -> ReportEntry(container, backStack, key) }
