@@ -154,6 +154,9 @@ android {
     }
 
     packaging {
+        // TODO(debt): the APK the website offers carries Filament for x86 and x86_64 as well,
+        // about 13 MB that no phone uses. An abiFilters line for release builds would take
+        // them out; the emulator needs them in debug builds (FINDINGS_LOG, 2026-10-09).
         jniLibs {
             // The app has no native code of its own. The .so files in the APK arrive prebuilt
             // inside libraries: AndroidX's, and since ADR-005 Filament's. Stripping them needs the NDK version AGP 9.4
