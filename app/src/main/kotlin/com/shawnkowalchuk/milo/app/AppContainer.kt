@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.app
 
 import android.content.Context
+import com.shawnkowalchuk.milo.core.clock.TrustedClock
 import com.shawnkowalchuk.milo.data.buildMiloDatabase
 import com.shawnkowalchuk.milo.data.buildPointsDatabase
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
@@ -63,10 +64,18 @@ import kotlinx.coroutines.launch
  * The databases and the settings store are created lazily, on first use, so building the
  * container opens no file on the main thread at process start. The process will soon be started
  * by trip triggers that have only seconds to begin recording.
+ *
+ * @param trustedClock MilO's clock, which [MiloApplication] makes before the container.
  */
-class AppContainer(context: Context) {
+class AppContainer(context: Context, private val trustedClock: TrustedClock) {
     // The application context, never an activity: these objects outlive every screen.
     private val appContext: Context = context.applicationContext
+
+    /**
+     * The time of day, for everything in MilO: MilO's own clock, not the phone's (ADR-005).
+     * **Nothing in MilO reads the phone's clock itself;** whatever needs the time is handed this.
+     */
+    val clock: () -> Long = trustedClock::now
 
     /**
      * For work that must outlive any screen. SupervisorJob, so one failed job does not cancel
@@ -97,7 +106,7 @@ class AppContainer(context: Context) {
 
     /** The unit distances are shown in, held in memory: every surface reads it from here. */
     val shownUnit: ShownUnit by lazy {
-        buildShownUnit(settingsStore, { eventLogRepository }, applicationScope)
+        buildShownUnit(settingsStore, { eventLogRepository }, applicationScope, clock)
     }
 
     /** Shared with the crash handler, which [MiloApplication] installs before anything else. */
@@ -109,7 +118,7 @@ class AppContainer(context: Context) {
             processExitsAfter = ProcessExitReader(appContext)::exitsAfter,
             eventLog = eventLogRepository,
             settings = settingsStore,
-            clock = System::currentTimeMillis,
+            clock = clock,
         )
     }
 
@@ -134,7 +143,7 @@ class AppContainer(context: Context) {
             onTruckChanged = {
                 tripController.onTrigger(TripTrigger.RECONCILE, "the truck was paired")
             },
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
@@ -161,7 +170,7 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             pairing = truckPairing.status,
             eventLog = eventLogRepository,
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
@@ -171,7 +180,7 @@ class AppContainer(context: Context) {
         SystemScreens(
             context = appContext,
             eventLog = eventLogRepository,
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
@@ -199,7 +208,7 @@ class AppContainer(context: Context) {
             starter = TripServiceStarter(appContext, tripPreflight, tripNotifications),
             // Asked only once the controller is at work, so the two can be built in any order.
             motionSensorWatching = { drivingAlert.reportsComing() },
-            clock = System::currentTimeMillis,
+            clock = clock,
             zone = ZoneId::systemDefault,
             scope = applicationScope,
         )
@@ -225,7 +234,7 @@ class AppContainer(context: Context) {
             whenTripsCaughtUp = tripController::whenCaughtUp,
             eventLog = eventLogRepository,
             crashFileStore = crashFileStore,
-            clock = System::currentTimeMillis,
+            clock = clock,
             zone = ZoneId::systemDefault,
             scope = applicationScope,
         )
@@ -238,7 +247,7 @@ class AppContainer(context: Context) {
             settings = settingsStore,
             eventLog = eventLogRepository,
             crashFileStore = crashFileStore,
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
@@ -255,7 +264,7 @@ class AppContainer(context: Context) {
             eventLog = eventLogRepository,
             crashFileStore = crashFileStore,
             zone = ZoneId::systemDefault,
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
@@ -272,17 +281,17 @@ class AppContainer(context: Context) {
             lookup = GeocoderAddressLookup(appContext),
             isOnline = NetworkStatus(appContext)::isOnline,
             tripActivity = tripController.activity,
-            clock = System::currentTimeMillis,
+            clock = clock,
             scope = applicationScope,
         )
     }
 
-    // Six parts of this container, each in a class of its own because this file is at its
+    // Seven parts of this container, each in a class of its own because this file is at its
     // size limit: the report for the accountant with the monthly reminder to send it; Android's
     // backup with the export and import of all data; the watch on Android Auto outside trips;
-    // the daily check that a work day has a trip; the home-screen widget; and the version with
-    // its list of changes. None of the last four can touch a trip; the widget's buttons reach
-    // the trip controller as any button does.
+    // the daily check that a work day has a trip; the home-screen widget; the version with its
+    // list of changes; and what MilO's clock does beside telling the time. None of the last
+    // five can touch a trip; the widget's buttons reach the trip controller as any button does.
     val reports: ReportObjects by lazy { ReportObjects(appContext, this) }
     val transfer: TransferObjects by lazy {
         val main = miloDatabase.mainTransferDao()
@@ -292,6 +301,7 @@ class AppContainer(context: Context) {
     val checks: CheckObjects by lazy { CheckObjects(appContext, this) }
     val widgets: WidgetObjects by lazy { WidgetObjects(appContext, this) }
     val whatsNew: WhatsNewObjects by lazy { WhatsNewObjects(appContext) }
+    val clocks: ClockObjects by lazy { ClockObjects(this, trustedClock) }
 
     /**
      * Makes an audio file Shawn picked the connect sound or the trip-start sound, by copying it
@@ -305,7 +315,7 @@ class AppContainer(context: Context) {
             store = buildOwnSoundStore(appContext),
             settings = settingsStore,
             eventLog = eventLogRepository,
-            clock = System::currentTimeMillis,
+            clock = clock,
         )
     }
 
@@ -319,7 +329,7 @@ class AppContainer(context: Context) {
         TripSoundPlayer(appContext, waitTurn = false) { note ->
             applicationScope.launch {
                 eventLogRepository.add(
-                    System.currentTimeMillis(),
+                    clock(),
                     EventCategory.SERVICE,
                     "Settings screen, Play pressed. $note",
                 )

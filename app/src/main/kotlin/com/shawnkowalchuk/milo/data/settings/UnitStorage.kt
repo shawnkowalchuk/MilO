@@ -98,13 +98,13 @@ class ShownUnit(
  *
  * @param eventLog asked for only if the file cannot be read, so that building this opens no
  * database.
- * @param clock wall-clock milliseconds, for that line.
+ * @param clock MilO's clock, for that line.
  */
 fun buildShownUnit(
     settings: SettingsStore,
     eventLog: () -> EventLogRepository,
     scope: CoroutineScope,
-    clock: () -> Long = System::currentTimeMillis,
+    clock: () -> Long,
 ): ShownUnit = ShownUnit(settings.settings, scope) { unreadable ->
     val what = "The unit distances are shown in could not be read. Kilometres are shown"
     eventLog().add(clock(), EventCategory.ERROR, what, unreadable.stackTraceToString())

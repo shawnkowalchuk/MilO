@@ -19,9 +19,10 @@
     What is never taken, in either case:
       - no_backup/                 Android never takes this folder. It holds the crash files,
                                    MilO's copies of the chosen sounds, the notes of the
-                                   backup agent, the safety copies before an import and a file
-                                   that is being imported. Each is about this phone, or too
-                                   large for the cloud's 25 MB.
+                                   backup agent, the safety copies before an import, a file
+                                   that is being imported and the anchor of MilO's clock.
+                                   Each is about this phone, or too large for the cloud's
+                                   25 MB.
       - cache/                     Android never takes it either: the report files, and the
                                    event log as a text file.
       - the -shm and .lck files beside each database, below. Both are working files of one

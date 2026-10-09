@@ -13,6 +13,7 @@ import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.kind
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.clock.AskedAlarm
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
 import java.io.File
@@ -41,8 +42,29 @@ abstract class MonthlyReminderFixture {
 
     protected var nowMs = at("2026-10-06T10:00")
 
-    /** Every time the daily alarm was asked for, and for when. */
+    /** The reminder's clock. A test of a phone whose date is set ahead replaces it. */
+    protected var clock: () -> Long = { nowMs }
+
+    /** Whether MilO's clock is the phone's. The same kind of test replaces it. */
+    protected var phoneClockAgrees: () -> Boolean = { true }
+
+    /** Whether MilO's clock is on probation. A test of a first start of a boot replaces it. */
+    protected var clockOnProbation: () -> Boolean = { false }
+
+    /** Every time the daily alarm was asked for at a time of day, and for when. */
     protected val alarmsAskedFor = mutableListOf<Long>()
+
+    /**
+     * Every time it was asked for on the clock that counts from boot, and how far ahead: what
+     * the reminder does while MilO's clock and the phone's disagree.
+     */
+    protected val alarmsAskedAfter = mutableListOf<Long>()
+
+    /** The request Android holds now: the newest of either kind, or none. */
+    protected var alarmHeld: AskedAlarm? = null
+
+    /** Time since boot, for a request that counts from it. A test with a phone replaces it. */
+    protected var elapsedNow: () -> Long = { 0L }
 
     /** Every month the notification was posted for. */
     protected val shownFor = mutableListOf<YearMonth>()
@@ -102,6 +124,12 @@ abstract class MonthlyReminderFixture {
             object : ReminderAlarm {
                 override fun setFor(atMs: Long) {
                     alarmsAskedFor += atMs
+                    alarmHeld = AskedAlarm.AtTimeOfDay(atMs)
+                }
+
+                override fun setAfter(delayMs: Long) {
+                    alarmsAskedAfter += delayMs
+                    alarmHeld = AskedAlarm.CountedFromBoot(elapsedNow() + delayMs)
                 }
             },
         show = { month ->
@@ -117,7 +145,9 @@ abstract class MonthlyReminderFixture {
         },
         eventLog = EventLogRepository(log),
         crashFileStore = crashFiles,
-        clock = { nowMs },
+        clock = { clock() },
+        phoneClockAgrees = { phoneClockAgrees() },
+        clockOnProbation = { clockOnProbation() },
         zone = { zone },
         scope = backgroundScope,
     )

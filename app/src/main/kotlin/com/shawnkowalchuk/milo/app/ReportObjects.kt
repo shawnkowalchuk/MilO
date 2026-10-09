@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.app
 import android.content.Context
 import com.shawnkowalchuk.milo.platform.reminder.AlarmManagerReminderAlarm
 import com.shawnkowalchuk.milo.platform.reminder.MonthlyReminder
+import com.shawnkowalchuk.milo.platform.reminder.ReminderAlarm
 import com.shawnkowalchuk.milo.platform.reminder.ReminderNotification
 import com.shawnkowalchuk.milo.platform.report.ReportDocuments
 import com.shawnkowalchuk.milo.platform.report.ReportHandOff
@@ -53,7 +54,12 @@ class ReportObjects(private val appContext: Context, private val container: AppC
         }
         val alarm by lazy { AlarmManagerReminderAlarm(appContext) }
         MonthlyReminder(
-            alarm = { atMs -> alarm.setFor(atMs) },
+            alarm =
+                object : ReminderAlarm {
+                    override fun setFor(atMs: Long) = alarm.setFor(atMs)
+
+                    override fun setAfter(delayMs: Long) = alarm.setAfter(delayMs)
+                },
             show = { month -> notification.show(month) },
             withdraw = { notification.cancel() },
             settings = container.settingsStore,
@@ -63,7 +69,9 @@ class ReportObjects(private val appContext: Context, private val container: AppC
             },
             eventLog = container.eventLogRepository,
             crashFileStore = container.crashFileStore,
-            clock = System::currentTimeMillis,
+            clock = container.clock,
+            phoneClockAgrees = container.clocks.agreesWithPhone,
+            clockOnProbation = container.clocks.onProbation,
             zone = ZoneId::systemDefault,
             scope = container.applicationScope,
         )

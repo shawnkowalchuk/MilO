@@ -116,6 +116,8 @@ class MonthlyReminderFailureTest : MonthlyReminderFixture() {
             MonthlyReminder(
                 alarm = object : ReminderAlarm {
                     override fun setFor(atMs: Long) = throw IllegalStateException("too many alarms")
+
+                    override fun setAfter(delayMs: Long) = throw IllegalStateException("no alarms")
                 },
                 show = { true },
                 withdraw = {},
@@ -126,6 +128,8 @@ class MonthlyReminderFailureTest : MonthlyReminderFixture() {
                 crashFileStore = crashes,
                 // It moves on, as a real clock does: a crash file is named by its time.
                 clock = { nowMs++ },
+                phoneClockAgrees = { true },
+                clockOnProbation = { false },
                 zone = { zone },
                 scope = backgroundScope,
             )

@@ -24,17 +24,20 @@ import kotlinx.coroutines.launch
  * Not thread-safe: the service calls [set] on the main thread only.
  *
  * @param scope the service's scope, so the timer ends when the service does.
+ * @param clock the time of day in milliseconds: MilO's clock, the one the deadlines were worked
+ * out on. Read once, when the timer is set; the wait itself is a plain delay.
  * @param onDue called with the deadline once it has passed.
  */
 internal class TripCheckTimer(
     private val scope: CoroutineScope,
+    private val clock: () -> Long,
     private val onDue: (deadlineMs: Long) -> Unit,
 ) {
     private var timer: Job? = null
     private var setFor: Long? = null
 
     /**
-     * Sets the timer for [checkAtMs], a wall-clock time, or takes it away with null. Setting it
+     * Sets the timer for [checkAtMs], a time on MilO's clock, or takes it away with null. Setting it
      * for the time it is already set for changes nothing: the controller says so after every
      * GPS fix.
      */
@@ -45,7 +48,7 @@ internal class TripCheckTimer(
         if (checkAtMs == null) return
         timer =
             scope.launch {
-                delay((checkAtMs - System.currentTimeMillis()).coerceAtLeast(0))
+                delay((checkAtMs - clock()).coerceAtLeast(0))
                 onDue(checkAtMs)
             }
     }

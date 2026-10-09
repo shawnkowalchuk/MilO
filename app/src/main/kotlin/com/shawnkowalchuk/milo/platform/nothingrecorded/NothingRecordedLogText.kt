@@ -1,7 +1,12 @@
 package com.shawnkowalchuk.milo.platform.nothingrecorded
 
 import com.shawnkowalchuk.milo.core.util.formatLogTime
+import com.shawnkowalchuk.milo.platform.clock.DailyAlarmAsked
+import com.shawnkowalchuk.milo.platform.clock.HELD_BACK_WHY
+import com.shawnkowalchuk.milo.platform.clock.askAgainText
+import com.shawnkowalchuk.milo.platform.clock.spanText
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -151,6 +156,29 @@ internal fun shownText(verdict: NothingRecordedVerdict, seen: Boolean, notStored
         "today\". A tap opens MilO on the Home screen.$unseen$again"
 }
 
+/**
+ * The line for a notification that is due by a clock on probation, and so is not shown: the
+ * phone's date may be set ahead, and "today" may be tomorrow.
+ */
+internal fun heldBackText(verdict: NothingRecordedVerdict, source: String): String {
+    val today = verdict.today
+    val day = today.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+    return "Nothing-recorded check ($source): no notification yet: no trip has been started " +
+        "today, $day $today, but $HELD_BACK_WHY"
+}
+
+/** The line for the daily alarm being asked for, in whichever way it was ([DailyAlarmAsked]). */
+internal fun alarmAskedText(
+    asked: DailyAlarmAsked,
+    atMs: Long,
+    zone: ZoneId,
+    source: String,
+): String = when (asked) {
+    DailyAlarmAsked.AtTimeOfDay -> alarmText(atMs, zone, source)
+    is DailyAlarmAsked.Counted -> alarmCountedText(atMs, zone, asked.leftMs, source)
+    is DailyAlarmAsked.ToAskAgain -> "Nothing-recorded check: " + askAgainText(asked.waitMs, source)
+}
+
 /** The line for the daily alarm being asked for. */
 internal fun alarmText(atMs: Long, zone: ZoneId, source: String): String =
     "Nothing-recorded check: the next daily look is asked for at ${formatLogTime(atMs, zone)}, " +
@@ -160,3 +188,23 @@ internal fun alarmText(atMs: Long, zone: ZoneId, source: String): String =
 internal fun noAlarmText(source: String): String =
     "Nothing-recorded check: no daily look is asked for, because the check is switched off " +
         "in Settings ($source)."
+
+/**
+ * The line for the daily alarm being asked for while MilO does not believe the phone's clock:
+ * not for a time of day, which Android would judge by the phone's clock, but after [delayMs].
+ */
+internal fun alarmCountedText(atMs: Long, zone: ZoneId, delayMs: Long, source: String): String =
+    "Nothing-recorded check: the next daily look is asked for at ${formatLogTime(atMs, zone)}, " +
+        "or soon after it ($source). The phone's clock is set differently from MilO's own, so " +
+        "Android was asked to count ${spanText(delayMs)} from now and not to go by the phone's " +
+        "clock. It is asked in the normal way as soon as the two agree."
+
+/**
+ * The line for a stored "shown on" that names a day after today.
+ *
+ * @param notForgotten why it could not be taken out of the settings, or null if it was.
+ */
+internal fun shownAheadText(shownOn: LocalDate, today: LocalDate, notForgotten: String?): String =
+    "Nothing-recorded check: the settings said the notification was shown on $shownOn, a day " +
+        "after today, $today. That was stored while the phone's date was set ahead. It counts " +
+        "as not shown." + notForgotten?.let { " $it" }.orEmpty()

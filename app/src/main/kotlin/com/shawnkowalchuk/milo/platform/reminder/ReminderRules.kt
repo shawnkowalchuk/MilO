@@ -85,7 +85,8 @@ data class ReminderMoment(
  * notification and the home screen's tile for the same report look at the same month, the
  * same trips and the same sent reports, and cannot disagree about whether it is waiting.
  *
- * @param stored the settings: the switch, the reminder day, and what was last shown.
+ * @param stored the settings: the switch, the reminder day, and what was last shown. A record
+ * of a reminder shown on a day after today counts as no record ([shownAhead]).
  * @param sent every report recorded as sent.
  * @param lastMonthTrips the stored trips that started in the month the reminder is about
  * ([monthToRemindOf]), whatever their status. Which of them the month's report would list is
@@ -108,9 +109,17 @@ fun reminderMoment(
         submitted = monthSubmission(month, sent) != null,
         businessTrips =
             selectForReport(lastMonthTrips, ReportPeriod.Month(month), zone).trips.size,
-        shown = stored.reminderShown,
+        shown = stored.reminderShown?.takeUnless { shownAhead(it, localDateOf(nowMs, zone)) },
     )
 }
+
+/**
+ * Whether the stored record says the reminder was shown on a day that has not come yet. Nothing
+ * can have been shown tomorrow: the record was stored while the phone's date was set ahead
+ * (until 2026-10-07 MilO went by the phone's clock, ADR-005). It counts as not shown, or the
+ * real day would lose its reminder when it comes.
+ */
+fun shownAhead(shown: ReminderShown, today: LocalDate): Boolean = shown.onDay.isAfter(today)
 
 /** What is done about the reminder's notification. */
 enum class ReminderStep {

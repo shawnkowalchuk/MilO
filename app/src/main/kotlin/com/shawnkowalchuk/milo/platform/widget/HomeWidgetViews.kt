@@ -27,8 +27,16 @@ private const val START_REQUEST = 7301
 private const val END_REQUEST = 7302
 private const val OPEN_REQUEST = 7303
 
-/** The widget showing [content]. A tap anywhere but on the button opens MilO. */
-internal fun homeWidgetViews(context: Context, content: HomeWidgetContent): RemoteViews {
+/**
+ * The widget showing [content]. A tap anywhere but on the button opens MilO.
+ *
+ * @param nowMs the time by MilO's clock, the one the trip's start was stamped with.
+ */
+internal fun homeWidgetViews(
+    context: Context,
+    content: HomeWidgetContent,
+    nowMs: Long,
+): RemoteViews {
     val views = RemoteViews(context.packageName, R.layout.widget_home)
     val screen = content.screen
     views.setTextViewText(R.id.widget_status, context.getString(screen.status.textRes))
@@ -43,7 +51,7 @@ internal fun homeWidgetViews(context: Context, content: HomeWidgetContent): Remo
         views.setTextViewText(R.id.widget_unit, context.getString(unitShortRes(screen.unit)))
         // The clock runs by itself on the home screen: it needs no redraw every second. Its
         // base is on the clock that counts from boot, worked out from the trip's start.
-        val runningMs = (System.currentTimeMillis() - startedAtMs).coerceAtLeast(0)
+        val runningMs = (nowMs - startedAtMs).coerceAtLeast(0)
         val base = SystemClock.elapsedRealtime() - runningMs
         views.setChronometer(R.id.widget_elapsed, base, null, true)
     }

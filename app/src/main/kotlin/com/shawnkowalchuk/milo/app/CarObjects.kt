@@ -28,6 +28,7 @@ class CarObjects(private val appContext: Context, private val container: AppCont
             tripBeingRecorded = { container.tripController.activity.value.trip != null },
             eventLog = container.eventLogRepository,
             crashFileStore = container.crashFileStore,
+            clock = container.clock,
             scope = container.applicationScope,
         )
     }

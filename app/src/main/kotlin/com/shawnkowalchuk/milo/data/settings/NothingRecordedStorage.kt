@@ -95,3 +95,12 @@ suspend fun SettingsStore.setNothingRecordedTime(time: LocalTime) {
 suspend fun SettingsStore.setNothingRecordedShownOn(day: LocalDate) {
     dataStore.edit { it[SHOWN_ON_DAY] = day.toEpochDay() }
 }
+
+/**
+ * Takes the day of the last notification out of the settings: it then reads as "never shown".
+ * For a day that lies after today, which only a phone whose date was set ahead can have stored
+ * (`NothingRecordedLook`).
+ */
+suspend fun SettingsStore.forgetNothingRecordedShownOn() {
+    dataStore.edit { it.remove(SHOWN_ON_DAY) }
+}

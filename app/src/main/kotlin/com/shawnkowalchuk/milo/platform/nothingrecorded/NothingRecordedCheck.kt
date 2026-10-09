@@ -6,6 +6,7 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.clock.askForDailyAlarm
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.io.IOException
 import java.time.ZoneId
@@ -64,7 +65,16 @@ import kotlinx.coroutines.launch
  * first look at storage; asked before that, the stale row would count as a trip being recorded.
  * It does not say that a trip which is being started is stored ([TRIP_START_WAIT_MS]).
  * @param crashFileStore where a failure goes if the event log itself cannot be written.
- * @param clock wall-clock milliseconds.
+ * @param clock the time of day in milliseconds: MilO's clock (`AppContainer.clock`).
+ * @param phoneClockAgrees whether MilO's time is the phone's right now. Android's alarm service
+ * goes by the phone's clock: asked for the real next noon while the phone's date is a day
+ * ahead, the alarm would be delivered at once, and again each time it was asked for. So while
+ * the two disagree it is asked for on the clock that counts from boot, due after the time that
+ * is left until then (ADR-005). `ClockWatch` has it asked for in the normal way once they agree.
+ * @param clockOnProbation whether MilO's time was taken from the phone's clock with nothing to
+ * check it against, and has not been confirmed since (`TrustedClock.onProbation`). The phone's
+ * date may then be set ahead: no notification is shown, and the alarm is asked for two minutes
+ * ahead, so that MilO asks and looks again by a confirmed clock (`askForDailyAlarm`).
  * @param scope the application scope: a look outlives the broadcast or the screen that asked.
  */
 class NothingRecordedCheck(
@@ -79,6 +89,8 @@ class NothingRecordedCheck(
     private val eventLog: EventLogRepository,
     crashFileStore: CrashFileStore,
     private val clock: () -> Long,
+    private val phoneClockAgrees: () -> Boolean,
+    private val clockOnProbation: () -> Boolean,
     private val zone: () -> ZoneId,
     private val scope: CoroutineScope,
 ) {
@@ -95,6 +107,7 @@ class NothingRecordedCheck(
             whenTripsCaughtUp = whenTripsCaughtUp,
             eventLog = eventLog,
             clock = clock,
+            clockOnProbation = clockOnProbation,
             zone = zone,
         )
 
@@ -114,11 +127,16 @@ class NothingRecordedCheck(
      * (or takes it back, if the check is switched off) and looks.
      *
      * @param source what prompted the call, in words, for the event log.
+     * @param done called when both are finished, whatever happened.
      */
-    fun arm(source: String) {
+    fun arm(source: String, done: () -> Unit = {}) {
         scope.launch {
-            failures.keptApart("asking for the daily alarm ($source)") { askForAlarm(source) }
-            lookKeptApart(source)
+            try {
+                failures.keptApart("asking for the daily alarm ($source)") { askForAlarm(source) }
+                lookKeptApart(source)
+            } finally {
+                done()
+            }
         }
     }
 
@@ -176,8 +194,17 @@ class NothingRecordedCheck(
                 stored.nothingRecorded.checkAt,
                 stored.schedule,
             )
-        alarm.setFor(atMs)
-        eventLog.add(nowMs, EventCategory.TRIP, alarmText(atMs, zoneNow, source))
+        // In one of three ways, by how MilO's clock stands to the phone's: see there.
+        val asked =
+            askForDailyAlarm(
+                atMs = atMs,
+                nowMs = nowMs,
+                phoneClockAgrees = phoneClockAgrees,
+                clockOnProbation = clockOnProbation,
+                setFor = alarm::setFor,
+                setAfter = alarm::setAfter,
+            )
+        eventLog.add(nowMs, EventCategory.TRIP, alarmAskedText(asked, atMs, zoneNow, source))
     }
 
     /**

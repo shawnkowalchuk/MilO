@@ -35,7 +35,7 @@ internal fun ReportEntry(container: AppContainer, backStack: NavBackStack<NavKey
                                 sent = container.sentReportRepository,
                                 settings = container.settingsStore,
                                 eventLog = container.eventLogRepository,
-                                clock = System::currentTimeMillis,
+                                clock = container.clock,
                             )
                         ReportViewModel(
                             openedFor = YearMonth.of(key.year, key.month),
@@ -51,7 +51,7 @@ internal fun ReportEntry(container: AppContainer, backStack: NavBackStack<NavKey
                             texts = container.reports.texts,
                             records = records,
                             onRecordedAsSent = { container.reports.reminder.look(REPORT_SENT) },
-                            clock = System::currentTimeMillis,
+                            clock = container.clock,
                             zone = ZoneId::systemDefault,
                         )
                     }

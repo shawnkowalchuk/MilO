@@ -11,6 +11,7 @@ import com.shawnkowalchuk.milo.data.transfer.BackupNote
 import com.shawnkowalchuk.milo.data.transfer.BackupNoteKind
 import com.shawnkowalchuk.milo.data.transfer.buildBackupNoteStore
 import com.shawnkowalchuk.milo.data.transfer.settleDatabasesForBackup
+import com.shawnkowalchuk.milo.platform.clock.miloClock
 import java.io.IOException
 import java.util.Locale
 
@@ -96,7 +97,9 @@ class MiloBackupAgent : BackupAgent() {
      * not vanish.
      */
     private fun note(kind: BackupNoteKind, detail: String = "") {
-        val atMs = System.currentTimeMillis()
+        // MilO's clock, like every other time in the event log. This process has no
+        // container to be handed it by, so it asks for the process's clock itself.
+        val atMs = miloClock(this).now()
         try {
             buildBackupNoteStore(this).leave(BackupNote(kind, atMs, detail))
         } catch (unwritten: IOException) {

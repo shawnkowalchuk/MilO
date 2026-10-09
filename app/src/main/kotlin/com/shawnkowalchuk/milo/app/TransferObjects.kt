@@ -69,7 +69,7 @@ internal fun transferParts(
         container.reports.reminder.look(occasion)
         container.checks.nothingRecorded.arm(occasion)
     },
-    clock = System::currentTimeMillis,
+    clock = container.clock,
     zone = ZoneId::systemDefault,
     scope = container.applicationScope,
 )
@@ -85,7 +85,7 @@ internal fun dataViewModelFactory(container: AppContainer): ViewModelProvider.Fa
                 transfer = container.transfer.dataTransfer,
                 settings = container.settingsStore.settings,
                 tripInProgress = container.tripController.activity.map { it.trip != null },
-                clock = System::currentTimeMillis,
+                clock = container.clock,
                 zone = ZoneId::systemDefault,
             )
         }

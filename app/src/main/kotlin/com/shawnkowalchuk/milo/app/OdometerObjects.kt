@@ -19,7 +19,7 @@ internal fun odometerViewModelFactory(container: AppContainer): ViewModelProvide
                 trips = container.tripRepository,
                 activity = container.tripController.activity,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
                 zone = ZoneId::systemDefault,
             )
         }

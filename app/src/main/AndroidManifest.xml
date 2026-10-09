@@ -343,6 +343,22 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Hears that the phone's clock was set, by hand or by the network (ADR-005). MilO
+            keeps a clock of its own and does not follow a large change until it has held for
+            ten minutes; this is how it looks at once, writes the one line for a change it did
+            not follow, and asks for its two daily alarms again when the clocks agree. It
+            touches no trip. TIME_SET is one of the few broadcasts Android delivers to an app
+            that is not running. Not exported: only Android's core may send it. No permission.
+        -->
+        <receiver
+            android:name=".platform.clock.ClockChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

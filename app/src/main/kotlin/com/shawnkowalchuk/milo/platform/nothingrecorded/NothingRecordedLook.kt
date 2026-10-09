@@ -5,6 +5,7 @@ import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.forgetNothingRecordedShownOn
 import com.shawnkowalchuk.milo.data.settings.setNothingRecordedShownOn
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
@@ -51,6 +52,13 @@ internal const val TRIP_START_WAIT_MS = 2_500L
  * **A notification is posted only after two looks that both found no trip,**
  * [TRIP_START_WAIT_MS] apart: see there. Every other answer is acted on at once.
  *
+ * **No notification by a clock that is on probation** (ADR-005). A MilO that started with
+ * nothing to check the phone's clock against may have started in the seconds the date is set
+ * ahead, and "today" is then tomorrow, a day with no trip. Such a look says so in the log,
+ * shows nothing and stores nothing. The check asks for its alarm two minutes ahead while the
+ * probation lasts (`askForDailyAlarm`), and the look that follows it decides by a clock that
+ * has been confirmed.
+ *
  * The parameters are the ones [NothingRecordedCheck] is handed, and are described there.
  */
 internal class NothingRecordedLook(
@@ -63,6 +71,7 @@ internal class NothingRecordedLook(
     private val whenTripsCaughtUp: (done: () -> Unit) -> Unit,
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
+    private val clockOnProbation: () -> Boolean,
     private val zone: () -> ZoneId,
 ) {
     /**
@@ -136,7 +145,11 @@ internal class NothingRecordedLook(
             }
         val nowMs = clock()
         val zoneNow = zone()
-        val today = daySpan(localDateOf(nowMs, zoneNow), zoneNow)
+        val day = localDateOf(nowMs, zoneNow)
+        val shownOn = stored.nothingRecorded.shownOn?.takeUnless {
+            forgottenIfAhead(it, day, nowMs)
+        }
+        val today = daySpan(day, zoneNow)
         val trips = tripsStartedBetween(today.fromMs, today.untilMs) + listOfNotNull(openTrip())
         val moment =
             NothingRecordedMoment(
@@ -146,9 +159,35 @@ internal class NothingRecordedLook(
                 checkAt = stored.nothingRecorded.checkAt,
                 schedule = stored.schedule,
                 trips = trips.distinctBy { it.id },
-                shownOn = stored.nothingRecorded.shownOn,
+                shownOn = shownOn,
             )
         return Asked(moment, judgeNothingRecorded(moment))
+    }
+
+    /**
+     * A stored "shown on" that names a day after today is taken out of the settings, with one
+     * line. Nothing can have been shown tomorrow: it was stored while the phone's date was set
+     * ahead (until 2026-10-07 MilO went by the phone's clock, ADR-005). It counts as not shown,
+     * and left in the file it would count again on the day it names: the one notification of
+     * that day, used up before the day began.
+     *
+     * @return true if [shownOn] lies after [today], and so does not count.
+     */
+    private suspend fun forgottenIfAhead(
+        shownOn: LocalDate,
+        today: LocalDate,
+        nowMs: Long,
+    ): Boolean {
+        if (!shownOn.isAfter(today)) return false
+        val notForgotten =
+            try {
+                settings.forgetNothingRecordedShownOn()
+                null
+            } catch (notStored: IOException) {
+                "It could not be taken out of the settings ($notStored)."
+            }
+        eventLog.add(nowMs, EventCategory.TRIP, shownAheadText(shownOn, today, notForgotten))
+        return true
     }
 
     /** Writes the line for what was decided, and does it. */
@@ -160,6 +199,12 @@ internal class NothingRecordedLook(
     ) {
         val moment = asked.moment
         val verdict = asked.verdict
+        if (verdict.step == NothingRecordedStep.SHOW && clockOnProbation()) {
+            // Due by a clock that nothing has confirmed: see the class comment.
+            val held = heldBackText(verdict, source)
+            eventLog.add(moment.nowMs, EventCategory.TRIP, held, factsText(moment, verdict))
+            return
+        }
         val line = judgedText(verdict, moment, source, unanswered, afterWaitingForATrip)
         eventLog.add(moment.nowMs, EventCategory.TRIP, line, factsText(moment, verdict))
         when (verdict.step) {

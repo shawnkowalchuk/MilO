@@ -12,7 +12,7 @@ import com.shawnkowalchuk.milo.data.crash.CrashRecord
  *
  * @param previous the handler to pass the exception on to. Handing it on is not optional:
  * without it the process would be left half alive after a crash.
- * @param clock wall-clock milliseconds, passed in so a test can fix the time.
+ * @param clock the time of day in milliseconds: MilO's clock (`AppContainer.clock`).
  */
 class CrashHandler(
     private val store: CrashFileStore,
@@ -38,7 +38,7 @@ class CrashHandler(
 
     companion object {
         /** Puts a [CrashHandler] in front of whatever handler is installed now. */
-        fun install(store: CrashFileStore, clock: () -> Long = System::currentTimeMillis) {
+        fun install(store: CrashFileStore, clock: () -> Long) {
             val previous = Thread.getDefaultUncaughtExceptionHandler()
             Thread.setDefaultUncaughtExceptionHandler(CrashHandler(store, previous, clock))
         }

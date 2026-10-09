@@ -16,7 +16,7 @@ internal fun onboardingViewModelFactory(container: AppContainer): ViewModelProvi
             OnboardingViewModel(
                 settings = container.settingsStore,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
             )
         }
     }

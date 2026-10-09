@@ -1,5 +1,6 @@
 package com.shawnkowalchuk.milo.platform.reminder
 
+import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.crash.CrashFileStore
 import com.shawnkowalchuk.milo.data.crash.CrashRecord
@@ -8,8 +9,11 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.settings.ReminderShown
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
+import com.shawnkowalchuk.milo.data.settings.forgetReminderShown
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.clock.askForDailyAlarm
 import java.io.IOException
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlin.coroutines.cancellation.CancellationException
@@ -51,7 +55,16 @@ import kotlinx.coroutines.sync.withLock
  * @param tripsStartedBetween the stored trips that started in a span of time, whatever their
  * status: last month's, from which the Business trips are picked by the report's own rule.
  * @param crashFileStore where a failure goes if the event log itself cannot be written.
- * @param clock wall-clock milliseconds.
+ * @param clock the time of day in milliseconds: MilO's clock (`AppContainer.clock`).
+ * @param phoneClockAgrees whether MilO's time is the phone's right now. Android's alarm service
+ * goes by the phone's clock: asked for the real next morning while the phone's date is a day
+ * ahead, the alarm would be delivered at once, and again each time it was asked for. So while
+ * the two disagree it is asked for on the clock that counts from boot, due after the time that
+ * is left until then (ADR-005). `ClockWatch` has it asked for in the normal way once they agree.
+ * @param clockOnProbation whether MilO's time was taken from the phone's clock with nothing to
+ * check it against, and has not been confirmed since (`TrustedClock.onProbation`). The phone's
+ * date may then be set ahead: no reminder is shown, and the alarm is asked for two minutes
+ * ahead, so that MilO asks and looks again by a confirmed clock (`askForDailyAlarm`).
  * @param scope the application scope: a look outlives the broadcast or the screen that asked.
  */
 class MonthlyReminder(
@@ -64,6 +77,8 @@ class MonthlyReminder(
     private val eventLog: EventLogRepository,
     private val crashFileStore: CrashFileStore,
     private val clock: () -> Long,
+    private val phoneClockAgrees: () -> Boolean,
+    private val clockOnProbation: () -> Boolean,
     private val zone: () -> ZoneId,
     private val scope: CoroutineScope,
 ) {
@@ -81,11 +96,16 @@ class MonthlyReminder(
      * looks at the reminder.
      *
      * @param source what prompted the call, in words, for the event log.
+     * @param done called when both are finished, whatever happened.
      */
-    fun arm(source: String) {
+    fun arm(source: String, done: () -> Unit = {}) {
         scope.launch {
-            keptApart("asking for the daily alarm ($source)") { askForAlarm(source) }
-            lookKeptApart(source)
+            try {
+                keptApart("asking for the daily alarm ($source)") { askForAlarm(source) }
+                lookKeptApart(source)
+            } finally {
+                done()
+            }
         }
     }
 
@@ -120,8 +140,17 @@ class MonthlyReminder(
         val nowMs = clock()
         val zoneNow = zone()
         val atMs = nextDailyLookMs(nowMs, zoneNow)
-        alarm.setFor(atMs)
-        eventLog.add(nowMs, EventCategory.REPORT, alarmText(atMs, zoneNow, source))
+        // In one of three ways, by how MilO's clock stands to the phone's: see there.
+        val asked =
+            askForDailyAlarm(
+                atMs = atMs,
+                nowMs = nowMs,
+                phoneClockAgrees = phoneClockAgrees,
+                clockOnProbation = clockOnProbation,
+                setFor = alarm::setFor,
+                setAfter = alarm::setAfter,
+            )
+        eventLog.add(nowMs, EventCategory.REPORT, alarmAskedText(asked, atMs, zoneNow, source))
     }
 
     private suspend fun lookKeptApart(source: String) {
@@ -147,6 +176,7 @@ class MonthlyReminder(
             }
         val nowMs = clock()
         val zoneNow = zone()
+        forgetShownAhead(stored.reminderShown, localDateOf(nowMs, zoneNow), nowMs)
         val span = monthSpan(monthToRemindOf(nowMs, zoneNow), zoneNow)
         // Gathered by the function the home screen's tile uses too (`reminderMoment`), so the
         // notification and the tile cannot disagree.
@@ -159,6 +189,16 @@ class MonthlyReminder(
                 lastMonthTrips = tripsStartedBetween(span.fromMs, span.untilMs),
             )
         val verdict = judgeReminder(moment)
+        if (verdict.step == ReminderStep.SHOW && clockOnProbation()) {
+            // Due by a clock that nothing has confirmed: the phone's date may be set ahead, and
+            // the month may not have ended. Not shown and not stored. The alarm that is asked
+            // for during a probation has MilO look again by a confirmed clock.
+            if (verdict.said(heldBack = true) != logged) {
+                eventLog.add(nowMs, EventCategory.REPORT, heldBackText(verdict, source))
+                logged = verdict.said(heldBack = true)
+            }
+            return
+        }
         when (verdict.step) {
             ReminderStep.SHOW -> {
                 val seen = show(verdict.month)
@@ -183,13 +223,21 @@ class MonthlyReminder(
     }
 
     /**
-     * What a line about this decision says: the reason, the month, the day, and the day the
-     * reminder starts on where that is the reason. Two decisions that say the same are written
-     * once: stepping the day in Settings through days that have already come writes nothing
-     * new, and each day beyond today is said once, with the day it then starts on.
+     * Takes a record of a reminder "shown" on a day after today out of the settings, and says
+     * so once. `reminderMoment` already counts it as not shown; left in the file it would count
+     * again on the day it names, and that day would get no reminder.
      */
-    private fun ReminderVerdict.said(): List<Any?> =
-        listOf(reason, month, today, startsOn.takeIf { reason == ReminderReason.DAY_NOT_REACHED })
+    private suspend fun forgetShownAhead(shown: ReminderShown?, today: LocalDate, nowMs: Long) {
+        if (shown == null || !shownAhead(shown, today)) return
+        val notForgotten =
+            try {
+                settings.forgetReminderShown()
+                null
+            } catch (notStored: IOException) {
+                "It could not be taken out of the settings ($notStored)."
+            }
+        eventLog.add(nowMs, EventCategory.REPORT, shownAheadText(shown, today, notForgotten))
+    }
 
     /**
      * Stores that the reminder was shown, which is what keeps it to once a day. The

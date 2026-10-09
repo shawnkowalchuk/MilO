@@ -221,6 +221,7 @@ fun buildAndroidAutoLog(
     tripBeingRecorded: () -> Boolean,
     eventLog: EventLogRepository,
     crashFileStore: CrashFileStore,
+    clock: () -> Long,
     scope: CoroutineScope,
 ): AndroidAutoLog {
     val appContext = context.applicationContext
@@ -230,7 +231,7 @@ fun buildAndroidAutoLog(
         tripBeingRecorded = tripBeingRecorded,
         eventLog = eventLog,
         crashFileStore = crashFileStore,
-        clock = System::currentTimeMillis,
+        clock = clock,
         scope = scope,
     )
 }

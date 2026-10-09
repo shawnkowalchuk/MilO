@@ -52,7 +52,7 @@ class MiloCarAppService : CarAppService() {
         trips = container.tripRepository,
         checklist = container.setupChecklist,
         shownUnit = container.shownUnit.unit,
-        clock = System::currentTimeMillis,
+        clock = container.clock,
     )
 
     override fun onDestroy() {

@@ -94,7 +94,7 @@ fun MiloNavigation(
                                             checklist = container.setupChecklist,
                                             trips = container.tripRepository,
                                             sources = homeSources(container),
-                                            clock = System::currentTimeMillis,
+                                            clock = container.clock,
                                             zone = ZoneId::systemDefault,
                                         )
                                     }
@@ -131,11 +131,11 @@ fun MiloNavigation(
                                                     trips = container.tripRepository,
                                                     settings = container.settingsStore,
                                                     eventLog = container.eventLogRepository,
-                                                    clock = System::currentTimeMillis,
+                                                    clock = container.clock,
                                                 ),
                                             unit = container.shownUnit.unit,
                                             lookUpAddresses = container.tripAddresses::catchUp,
-                                            clock = System::currentTimeMillis,
+                                            clock = container.clock,
                                             zone = ZoneId::systemDefault,
                                         )
                                     }
@@ -201,7 +201,7 @@ fun MiloNavigation(
                                             armDrivingAlert = container.drivingAlert::arm,
                                             lookAtReminder = container.reports.reminder::look,
                                             eventLog = container.eventLogRepository,
-                                            clock = System::currentTimeMillis,
+                                            clock = container.clock,
                                         )
                                     }
                                 },
@@ -241,7 +241,7 @@ fun MiloNavigation(
                                             eventLog = container.eventLogRepository,
                                             files = container.eventLogFiles,
                                             shareRequest = container.reports.handOff::toShareText,
-                                            clock = System::currentTimeMillis,
+                                            clock = container.clock,
                                             zone = ZoneId::systemDefault,
                                         )
                                     }

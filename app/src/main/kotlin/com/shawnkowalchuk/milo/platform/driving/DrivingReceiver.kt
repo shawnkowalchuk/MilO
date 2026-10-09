@@ -34,7 +34,7 @@ class DrivingReceiver : BroadcastReceiver() {
             }
         val container = (context.applicationContext as MiloApplication).container
         // First, so that the controller has it before the alert waits for it to catch up.
-        enteredVehicleAtMs(reports, System.currentTimeMillis())?.let { atMs ->
+        enteredVehicleAtMs(reports, container.clock())?.let { atMs ->
             container.tripController.onVehicleEntered(atMs)
         }
         // Held open until the alert has been decided: the decision reads the truck's

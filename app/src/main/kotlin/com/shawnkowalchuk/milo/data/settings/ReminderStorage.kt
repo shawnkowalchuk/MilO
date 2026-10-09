@@ -3,6 +3,7 @@ package com.shawnkowalchuk.milo.data.settings
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import java.time.LocalDate
@@ -71,6 +72,18 @@ internal fun MutablePreferences.writeReminderDay(day: Int) {
 internal fun MutablePreferences.writeReminderShown(shown: ReminderShown) {
     this[SHOWN_FOR_MONTH] = shown.month.atDay(1).toEpochDay()
     this[SHOWN_ON_DAY] = shown.onDay.toEpochDay()
+}
+
+/**
+ * Takes the record of the last reminder out of the settings: it then reads as "none was shown".
+ * For a record whose day lies after today, which only a phone whose date was set ahead can have
+ * stored (`MonthlyReminder`).
+ */
+suspend fun SettingsStore.forgetReminderShown() {
+    dataStore.edit {
+        it.remove(SHOWN_FOR_MONTH)
+        it.remove(SHOWN_ON_DAY)
+    }
 }
 
 /** The calendar day [epochDay] days after 1970-01-01, or null for a number that is no day. */

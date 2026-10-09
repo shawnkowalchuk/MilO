@@ -103,6 +103,9 @@ class TripNotifications(private val context: Context, private val unit: () -> Di
                 .setContentText(context.getString(distanceRes(shownIn), distance))
                 // The system counts the elapsed time up by itself from the trip's start, so the
                 // notification does not have to be posted again every second to show it.
+                // TODO(debt): Android works that time out from the PHONE's clock, and the start
+                //  is on MilO's (ADR-005). A notification posted while the phone's date is set
+                //  ahead reads a day long until it is next posted. See docs/FINDINGS_LOG.md.
                 .setWhen(trip.startedAtMs)
                 .setShowWhen(true)
                 .setUsesChronometer(true)

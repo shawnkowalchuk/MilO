@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.app
 
 import android.app.Application
+import com.shawnkowalchuk.milo.platform.clock.miloClock
 import com.shawnkowalchuk.milo.platform.diagnostics.CrashHandler
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,9 @@ import kotlinx.coroutines.launch
  * it runs however the process was started: from the launcher, or from a Bluetooth event or a
  * reboot with no screen at all.
  *
- * It does thirteen things only: it owns the [AppContainer], it has what Android's backup left
+ * It does fifteen things only: it makes MilO's clock, before anything can ask the time, and
+ * starts the watch that writes down a change of the phone's clock and has the daily alarms
+ * asked for again; it owns the [AppContainer], it has what Android's backup left
  * behind dealt with (a restore above all), it starts the crash and kill capture (which also
  * trims the event log), it has an import finished that the last process was ended in the
  * middle of, it has the trip controller look at what the last process left behind,
@@ -33,11 +36,20 @@ class MiloApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        // First of all: MilO's own clock (ADR-005). It reads its anchor from a small file here,
+        // before anything in this process asks the time, so that a process Android starts
+        // while the phone's date is set ahead (the daily alarm does exactly that) still has
+        // the right time from its first reading on.
+        container = AppContainer(this, miloClock(this))
 
         // Before any real work begins (building the container only wires objects together), so
         // a crash anywhere later in start-up is still captured.
-        CrashHandler.install(container.crashFileStore)
+        CrashHandler.install(container.crashFileStore, container.clock)
+
+        // From here on a change of the phone's clock that MilO does not follow is written
+        // down when it is over, and the two daily alarms are asked for again once the clocks
+        // agree. It can touch no trip.
+        container.clocks.watch.start()
 
         // The unit distances are shown in (Settings, since 2026-10-07) is read now and held in
         // memory, so that it is there by the time a notification, the car's screen or a phone
