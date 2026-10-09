@@ -24,6 +24,9 @@
 
 ### 2026-10-09
 
+**`[FINDING]` Google Play made its own signing key for MilO when the app was created**
+Shawn downloaded three certificates from the Play Console: `deployment_cert.der`, `hybrid_classical_cert.der` and `hybrid_pqc_cert.der`. Read here with `openssl`: all three are Google's ("CN=Android, OU=Android, O=Google Inc., Mountain View"), made at 04:22:11 UTC on 2026-10-09, about when the app was created, and valid for 30 years. The deployment and the hybrid classical ones are RSA 4096 (SHA-256 `0d856597…7bb1d4fc` and `72118254…a822534c`); the third is post-quantum, ML-DSA-65 (OID 2.16.840.1.101.3.4.3.18). **None of them is MilO's key** (`95a95107…6e9414b4`, ADR-004). A copy from Google Play signed with them could never update the phone's MilO. They are public certificates and hold no secret. Nothing has been uploaded, so the key is to be changed to `milo.jks` before the first upload; whether the Console still allows it is to be seen on its page.
+
 **`[CHANGE]` Home: each vehicle's odometer, every trip of today, and no "Home" in the top line**
 Shawn: "i want the milage on the home screen. and i also want to remove the home top right corner. also can we make the last trip on the home screen to show all trips that day one after each other ... just have todays trips sorted latest at the top". Asked which mileage, he chose "Odometer reading"; for the corner, "Just the word Home"; phone only.
 - **The odometer tile** stands under the truck's tile with no trip open, and under the truck and today pair while one is recorded. **The figure is computed once for both screens:** the per-vehicle work moved from Settings' `OdometerViewModel` to `data/trip/VehicleOdometers.kt` (`odometerNow`, `vehicleOdometers`, `VehicleOdometer.shownName`), because Home may not import Settings (STANDARDS §3). Settings' tiles call it unchanged in behaviour; `OdometerCardStateTest` still checks them. Home reads every finished trip for it.
