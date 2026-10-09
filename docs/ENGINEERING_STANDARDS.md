@@ -6,7 +6,7 @@
 >
 > **This is one of four documents** that work together — see §17 for how they fit.
 >
-> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-08
+> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-09
 
 ---
 
@@ -253,7 +253,8 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 - **CI on every PR** (GitHub Actions, one job): gitleaks scan, the check of the list of changes (`python3 tools/changes_page.py --check`, since 2026-10-08), then `./gradlew spotlessCheck lintDebug testDebugUnitTest assembleDebug` on JDK 17. Red build = no merge.
 - **A second workflow runs on push to `main` only.** It submits the dependency graph for Dependabot alerts (§12). It checks nothing and blocks nothing.
 - **A third workflow, `website.yml`, deploys the website** (since 2026-10-08, ADR-003): on push to `main` when `website/`, `firebase.json`, `.firebaserc` or the workflow changed, and by hand from the Actions tab. It uploads `website/` to Firebase Hosting's live site with the deploy key (§12). Plain files, no build; it checks nothing. The Firebase command-line tool it runs is pinned in the workflow, where Dependabot cannot see it, and is raised by hand.
-- **That rule is kept by hand.** GitHub Free could not block merges while the repo was private. Since it is public (2026-10-08), branch protection can require the CI check before a merge; it is not switched on yet, so for now only Shawn stops a red build from merging.
+- **GitHub keeps that rule** (since 2026-10-09; until then it was kept by hand, because GitHub Free could not block merges while the repo was private). A branch protection rule on `main` requires the CI check, "Check, test and build" from GitHub Actions, before a merge. It holds for administrators too, so for Shawn; it also refuses a direct push, a force push and a deletion of `main`. A branch need not be up to date with `main` first. **The rule names the CI job:** if that job is ever renamed in `.github/workflows/ci.yml`, change the name in the rule in the same breath (Settings, Branches), or nothing can merge.
+- **Auto-merge is allowed** (since 2026-10-09): a pull request can be told to merge by itself once CI is green. It is switched on per pull request, never by default.
 - **CI cannot test a Bluetooth-triggered start.** The device checklist (§11) does.
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.
 - **Google Play is the second channel** (since 2026-10-09, ADR-004): the same version as the GitHub release, as an app bundle (`./gradlew bundleRelease`) signed with the same key, uploaded in the Play Console by hand. One build for both: what differs between the two copies is decided in the app from the installer (`platform/system/InstallSource.kt`), never by a build flavour. The steps are in README, "Publishing on Google Play".
