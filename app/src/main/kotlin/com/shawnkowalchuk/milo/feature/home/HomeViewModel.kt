@@ -8,6 +8,8 @@ import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
+import com.shawnkowalchuk.milo.data.trip.vehicleOdometers
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.reminder.monthToRemindOf
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
@@ -132,6 +134,16 @@ class HomeViewModel(
                 ) { stored, unit -> homeTrips(now.date, now.zone, stored, unit) }
             }.whileWatched(null)
 
+    /**
+     * Each paired vehicle's odometer now (Shawn's request of 2026-10-09), worked out as Settings
+     * works it out ([vehicleOdometers]), or null until the settings and the trips have been read.
+     * It follows a trip that ends and a reading typed in Settings.
+     */
+    private val odometers: StateFlow<List<VehicleOdometer>?> =
+        combine(stored, trips.observeFinishedTrips()) { settings, finished ->
+            settings?.let { vehicleOdometers(it, finished, clock(), zone()) }
+        }.whileWatched(null)
+
     /** The month whose report is waiting to be sent, or null: see [reportWaiting]. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val report: StateFlow<YearMonth?> =
@@ -180,7 +192,7 @@ class HomeViewModel(
                 sources.unit,
                 ::HomeNow,
             ),
-            combine(figures, report, sources.openTripStart, nowMs, ::HomeRead),
+            combine(figures, report, sources.openTripStart, nowMs, odometers, ::HomeRead),
             ::homeUi,
         ).whileWatched(
             homeUi(

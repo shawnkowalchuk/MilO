@@ -5,18 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.DotWord
-import com.shawnkowalchuk.milo.core.designsystem.component.FigureRow
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureText
 import com.shawnkowalchuk.milo.core.designsystem.component.HeroButton
@@ -27,13 +23,10 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TileKind
 import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
-import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckLinkLook
 import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
-import com.shawnkowalchuk.milo.core.designsystem.text.placesWords
 import com.shawnkowalchuk.milo.core.designsystem.text.unitShortRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatTimeOfDay
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
@@ -54,7 +47,8 @@ internal fun RecordingTiles(
             TodayTile(ui.figures, FigureSize.MEDIUM, format, half)
         },
     )
-    TodayListTile(ui.figures, format, actions.onOpenTrips)
+    ui.odometers?.let { OdometerTile(it, format) }
+    TodayListTile(ui.figures, format, actions.onOpenTrips, recording = true)
 }
 
 /**
@@ -134,86 +128,5 @@ private fun SmallTruckTile(state: TruckState, modifier: Modifier) {
     Tile(modifier = modifier, padding = TilePadding.EVEN, gap = MiloTheme.spacing.small) {
         TileLabel(stringResource(R.string.home_truck_corner), icon = MiloIcons.Bluetooth)
         DotWord(text = stringResource(state.title), on = state.look == TruckLinkLook.CONNECTED)
-    }
-}
-
-/**
- * Today's finished trips, newest first: where each went, its times, what it is saved as and
- * its kilometres. The trip being recorded is not among them, and the tile says so. The whole
- * tile leads to the Trips screen.
- */
-@Composable
-private fun TodayListTile(figures: HomeTrips?, format: HomeFormat, onOpenTrips: () -> Unit) {
-    val rows = figures?.rows.orEmpty()
-    Tile(
-        modifier = Modifier.fillMaxWidth(),
-        press = TilePress(stringResource(R.string.home_open_trips), onOpenTrips),
-        gap = MiloTheme.spacing.extraSmall,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = MiloTheme.spacing.buttonGap),
-            horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.rowGap),
-        ) {
-            TileLabel(
-                text = todayListLabel(figures),
-                modifier = Modifier.weight(1f).alignByBaseline(),
-            )
-            Text(
-                text = stringResource(R.string.nav_trips),
-                modifier = Modifier.alignByBaseline(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        when {
-            figures == null -> Sentence(stringResource(R.string.trips_reading))
-            rows.isEmpty() -> Sentence(stringResource(R.string.home_today_none))
-        }
-        rows.forEachIndexed { index, row ->
-            TodayRow(row, format)
-            if (index < rows.lastIndex) HorizontalDivider()
-        }
-        Text(
-            text = stringResource(R.string.home_today_in_progress_note),
-            modifier = Modifier.padding(top = MiloTheme.spacing.small),
-            style = MiloTheme.textStyles.tileLabel,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-/** "Today · 3 trips · 1 h 5 min driving", or "Today" before the first finished trip. */
-@Composable
-private fun todayListLabel(figures: HomeTrips?): String {
-    val today = figures?.today
-    if (today == null || today.count == 0) return stringResource(R.string.home_today_title)
-    return pluralStringResource(
-        R.plurals.home_today_list,
-        today.count,
-        today.count,
-        durationText(today.driveTimeMs),
-    )
-}
-
-/**
- * One finished trip. Its figure is the number alone, as drawn, and a screen reader is read the
- * unit too. A trip that is not Business has its figure greyed: it is not in the Business
- * figure of the tile above, and the white figures are the ones that add up to it.
- */
-@Composable
-private fun TodayRow(trip: HomeTrip, format: HomeFormat) {
-    val distance = formatDistance(trip.distanceMetres, format.unit, format.locale)
-    FigureRow(
-        figure = distance,
-        modifier = Modifier.padding(vertical = MiloTheme.spacing.tileGap),
-        counted = trip.category == TripCategory.BUSINESS,
-        figureSpoken = stringResource(distanceSpokenRes(format.unit), distance),
-    ) {
-        Text(text = placesWords(trip.places), style = MaterialTheme.typography.bodyLarge)
-        Text(
-            text = trip.timeAndCategory(trip.timesText(format)),
-            style = MiloTheme.textStyles.tileLabel,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }

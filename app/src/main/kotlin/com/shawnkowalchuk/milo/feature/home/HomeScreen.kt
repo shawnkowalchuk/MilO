@@ -74,11 +74,12 @@ internal class HomeFormat(
 
 /**
  * The home screen, laid out as the owner's design draws it: the top line every screen has
- * (the app's mark and today's date), then tiles. With no trip open: the accent tile that
- * starts one, today's and the month's Business kilometres side by side, the truck's
- * connection, last month's report while it has not been sent, and the last trip of today. While a trip is being recorded: the accent tile
- * with its kilometres and the button that ends it, the truck and today side by side, and
- * today's finished trips. A warning while the setup checklist needs attention, and why the
+ * (the app's mark and today's date, and since 2026-10-09 no screen name at its end), then
+ * tiles. With no trip open: the accent tile that starts one, today's and the month's Business
+ * kilometres side by side, the truck's connection, each vehicle's odometer, last month's
+ * report while it has not been sent, and today's finished trips. While a trip is being
+ * recorded: the accent tile with its kilometres and the button that ends it, the truck and
+ * today side by side, the odometers, and today's finished trips. A warning while the setup checklist needs attention, and why the
  * last start failed if it did, stand directly under the top line in both.
  *
  * When the truck arrives while the screen is open, the truck's tile plays the design's
@@ -88,7 +89,7 @@ internal class HomeFormat(
  *
  * @param onOpenSetup the setup warning's button.
  * @param onOpenPairing the truck's tile, while no truck is paired.
- * @param onOpenTrips the tile of the last trip, and the list of today's trips.
+ * @param onOpenTrips the list of today's trips.
  * @param onOpenReport the report tile's button, with the month the report is for.
  */
 @Composable
@@ -166,6 +167,8 @@ internal fun HomeContent(shown: HomeShown, actions: HomeActions, modifier: Modif
             // With the gap between two tiles, and the room the top line keeps free for a
             // finger, the design's 16 under the top line.
             modifier = Modifier.padding(bottom = MiloTheme.spacing.extraSmall),
+            // Nothing at the end of Home's top line (2026-10-09): the bar says it is Home.
+            titleShown = false,
         )
 
         // The two things that can stop a trip from being recorded come before everything else.

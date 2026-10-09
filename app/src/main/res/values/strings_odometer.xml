@@ -54,4 +54,14 @@
     <!-- With more than one vehicle's odometer: the vehicle's name, then "Odometer, 1 Oct 2026". -->
     <string name="report_pdf_odometer_of_vehicle">%1$s · %2$s</string>
     <string name="report_pdf_odometer_note">est.: worked out by MilO from a reading of the dashboard and the truck trips recorded since, not read off the dashboard on that day.</string>
+    <!--
+        Home's odometer tile (Shawn's request of 2026-10-09: "i want the milage on the home
+        screen"; he chose the odometer reading). The figures are the ones Settings shows; a
+        reading is typed there.
+    -->
+    <string name="home_odometer_title">Odometer</string>
+    <string name="home_odometer_from_reading">Your last reading in Settings, plus every trip since</string>
+    <string name="home_odometer_none">Type the number on the dashboard in Settings once. MilO adds every trip to it from then on.</string>
+    <!-- A vehicle, among several, that has no reading yet. -->
+    <string name="home_odometer_no_reading">No reading yet</string>
 </resources>

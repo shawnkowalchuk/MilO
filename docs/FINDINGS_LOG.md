@@ -24,6 +24,13 @@
 
 ### 2026-10-09
 
+**`[CHANGE]` Home: each vehicle's odometer, every trip of today, and no "Home" in the top line**
+Shawn: "i want the milage on the home screen. and i also want to remove the home top right corner. also can we make the last trip on the home screen to show all trips that day one after each other ... just have todays trips sorted latest at the top". Asked which mileage, he chose "Odometer reading"; for the corner, "Just the word Home"; phone only.
+- **The odometer tile** stands under the truck's tile with no trip open, and under the truck and today pair while one is recorded. **The figure is computed once for both screens:** the per-vehicle work moved from Settings' `OdometerViewModel` to `data/trip/VehicleOdometers.kt` (`odometerNow`, `vehicleOdometers`, `VehicleOdometer.shownName`), because Home may not import Settings (STANDARDS §3). Settings' tiles call it unchanged in behaviour; `OdometerCardStateTest` still checks them. Home reads every finished trip for it.
+- **Today's trips** replace "Last trip": the recording layout's list (`TodayListTile`, now in `HomeTodayTile.kt`) stands in both layouts, without its note about the trip in progress when none is. `HomeTrips.lastTrip` and the words "Last trip" and "All 4 today" are gone; the tests that read the newest trip read the first row.
+- **`AppHeader` takes `titleShown`;** Home passes false. The bottom bar's lit Home button says which screen it is.
+- Two lines in version 0.2.0. Checked by the existing unit tests, run in CI. **Not drawn anywhere:** device checks HM-1 to HM-7.
+
 **`[DECISION]` Google Play as a second channel, with the phone's own key (ADR-004)**
 Shawn: "i may want to add this app to the play store eventually please walk me through the steps". He created the app in his organisation's Play Console (2795748 Alberta Ltd.) as "MilO Trip Log", `com.shawnkowalchuk.milo`, English (Canada), free, and was told to turn automatic protection off: it sends anyone with a copy from elsewhere to Google Play, which the GitHub APK would trip over. Then: "yes start working on the changes and i want the android auto screen". **Play App Signing is to use `milo.jks` itself,** uploaded at the first upload, so that Google Play's copy, the GitHub APK and the phone's MilO update each other; a key made by Google would cut the phone off. One build for both channels, no flavours. The Android Auto screen stays, declared as IoT. Asked whether to answer "Yes" to ads now and add AdMob later: "No" now, changed before an update with ads; ads would bring the internet permission and end the "nothing leaves the phone" promise, so they get their own ADR.
 

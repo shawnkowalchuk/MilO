@@ -1,18 +1,10 @@
 package com.shawnkowalchuk.milo.feature.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
@@ -26,12 +18,8 @@ import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTile
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTileWords
-import com.shawnkowalchuk.milo.core.designsystem.text.distanceRes
-import com.shawnkowalchuk.milo.core.designsystem.text.distanceSpokenRes
-import com.shawnkowalchuk.milo.core.designsystem.text.placesWords
 import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
-import com.shawnkowalchuk.milo.core.util.formatDistance
 import com.shawnkowalchuk.milo.core.util.formatMonthName
 import java.time.YearMonth
 import java.util.Locale
@@ -60,6 +48,8 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
         },
     )
     HomeTruckTile(shown.truckTile, ui.truck, actions.onOpenPairing)
+    // Under the truck: it is the truck's (since 2026-10-09).
+    ui.odometers?.let { OdometerTile(it, format) }
     ui.reportWaiting?.let { month ->
         AttentionTile(
             title =
@@ -69,7 +59,9 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
             onAction = { actions.onOpenReport(month) },
         )
     }
-    LastTripTile(ui.figures, format, actions.onOpenTrips)
+    // Every finished trip of today, the newest first (since 2026-10-09; the last one alone
+    // before), as the layout of a trip in progress has always listed them.
+    TodayListTile(ui.figures, format, actions.onOpenTrips, recording = false)
 }
 
 /**
@@ -134,77 +126,6 @@ private fun HomeTruckTile(tile: TruckTileShown, truck: TruckTileState, onOpenPai
                 null
             },
     )
-}
-
-/**
- * The most recent finished trip of today: where it went, when it started, what it is saved as
- * and its kilometres. With a trip to show, the whole tile leads to the Trips screen, where
- * every trip of today is listed; "All 4 today" says so.
- */
-@Composable
-private fun LastTripTile(figures: HomeTrips?, format: HomeFormat, onOpenTrips: () -> Unit) {
-    val last = figures?.lastTrip
-    Tile(
-        modifier = Modifier.fillMaxWidth(),
-        press =
-            if (last == null) {
-                null
-            } else {
-                TilePress(stringResource(R.string.home_open_trips), onOpenTrips)
-            },
-        gap = MiloTheme.spacing.rowGap,
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TileLabel(stringResource(R.string.home_last_trip), Modifier.alignByBaseline())
-            if (last != null) {
-                Text(
-                    text =
-                        pluralStringResource(
-                            R.plurals.home_all_today,
-                            figures.today.count,
-                            figures.today.count,
-                        ),
-                    modifier = Modifier.alignByBaseline(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        when {
-            figures == null -> Sentence(stringResource(R.string.trips_reading))
-            last == null -> Sentence(stringResource(R.string.home_today_none))
-            else -> LastTripRow(last, format)
-        }
-    }
-}
-
-@Composable
-private fun LastTripRow(trip: HomeTrip, format: HomeFormat) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MiloTheme.spacing.rowGap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MiloTheme.spacing.textGap),
-        ) {
-            Text(text = placesWords(trip.places), style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = trip.timeAndCategory(trip.startText(format)),
-                style = MiloTheme.textStyles.tileLabel,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        val distance = formatDistance(trip.distanceMetres, format.unit, format.locale)
-        val spoken = stringResource(distanceSpokenRes(format.unit), distance)
-        Text(
-            text = stringResource(distanceRes(format.unit), distance),
-            // A screen reader is read the unit's whole word, as for every figure of a trip.
-            modifier = Modifier.semantics { contentDescription = spoken },
-            style = MiloTheme.textStyles.rowFigure,
-        )
-    }
 }
 
 /** A sentence that stands in a tile in place of what the tile would otherwise show. */

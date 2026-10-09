@@ -1375,6 +1375,20 @@ ADR-004: the location question, the battery list, the coffee tile from Google Pl
 | GP-7 | **The coffee tile in the GitHub copy.** In the APK from GitHub (or a build from the Mac), open Settings and scroll to the end. | Buy me a coffee is above Version, as in BC-1. | not run |
 | GP-8 | **No coffee tile from Google Play.** Once MilO is on Google Play (Internal testing is enough), install or update it from the Play Store and open Settings. | No Buy me a coffee tile: Version is the last tile under the data tile. | not run |
 
+## Home: the odometer and all of today's trips (2026-10-09)
+
+Shawn's requests of 2026-10-09: the odometer on Home, every trip of today in place of the last one, and no "Home" at the end of the top line. Phone only. Built and unit tested only; never drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| HM-1 | **The top line.** Open Home. | The M, "MilO" and today's date on the left; nothing on the right. Other screens still have their name there. | not run |
+| HM-2 | **The odometer, one vehicle.** With one vehicle paired and a reading typed in Settings, open Home. | Under the truck's tile: "Odometer", the same figure as Settings' odometer tile, and "Your last reading in Settings, plus every trip since". | not run |
+| HM-3 | **It follows a trip.** End a trip of a few kilometres, then look at Home. | The odometer has gone up by that trip, as on Settings. | not run |
+| HM-4 | **Several vehicles.** With two vehicles paired, one of them without a reading, open Home. | One tile with a row for each vehicle: its name and figure, and "No reading yet" for the one without. | not run |
+| HM-5 | **No reading yet.** On a phone with no reading typed (or a test copy), open Home. | "Type the number on the dashboard in Settings once. MilO adds every trip to it from then on." | not run |
+| HM-6 | **Today's trips.** After two or more trips today, with none in progress, open Home. | "Today · 2 trips · … driving", every trip of today with the newest at the top, no "Last trip" and no note about a trip in progress. Tapping the tile opens Trips. | not run |
+| HM-7 | **While recording.** Start a trip. | The odometer tile under the truck and today pair, then the same list of today's trips, with "The trip in progress is added when it ends." under it. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.
