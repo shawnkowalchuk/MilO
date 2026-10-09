@@ -72,6 +72,8 @@ enum class ConfirmedStep(val key: String) {
  * in `WidgetStorage.kt`). Switched off, it cannot be added, and one on the home screen says so.
  * @param firstRunStage how far the first start has got: the page that says what MilO does, then
  * Setup with its Done button, then nothing (since 2026-10-08; kept in `OnboardingStorage.kt`).
+ * @param greetingsUnfinished how many greetings in a row began and never showed the mascot
+ * (since 2026-10-09; kept in `GreetingStorage.kt`). Not a setting: the greeting's safety catch.
  * @param whatsNewSeenVersion the versionName whose list of changes this phone was last shown,
  * or null if none ever was (since 2026-10-08; kept in `WhatsNewStorage.kt`). Not a setting.
  * @param homeWidgetCentsPerKm the rate, in cents a kilometre, at which the widget prices the
@@ -145,6 +147,7 @@ data class MiloSettings(
     val homeWidgetEnabled: Boolean = true,
     val homeWidgetCentsPerKm: Int = DEFAULT_CENTS_PER_KM,
     val firstRunStage: FirstRunStage = FirstRunStage.INTRO,
+    val greetingsUnfinished: Int = 0,
     val whatsNewSeenVersion: String? = null,
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETRES,
     val schedule: WorkSchedule = DEFAULT_WORK_SCHEDULE,

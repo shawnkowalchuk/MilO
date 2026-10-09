@@ -89,6 +89,7 @@ Each line gives the phase the brief put the capability in, and the states of its
 - [Android Auto screen](#android-auto-screen) — phase 1. Built, not yet proven on the phone (it has run nowhere)
 - [Home-screen widget](#home-screen-widget) — not in the brief; Shawn's request of 2026-10-07. Built, seen working on the phone (2026-10-08, by Shawn's word; the checks one by one are open)
 - [First-start onboarding](#first-start-onboarding) — not in the brief; Shawn's request of 2026-10-08. Built, not yet proven on the phone (it has run nowhere)
+- [The greeting](#the-greeting) — not in the brief; Shawn's request of 2026-10-09. Built, seen on an emulator, not yet proven on the phone
 - [Version and What's new](#version-and-whats-new) — not in the brief; Shawn's request of 2026-10-08. Built, not yet proven on the phone (it has run nowhere); the website's page is built, live after the merge
 - [Permission checklist](#permission-checklist) — phase 1 (the Setup screen). Built, proven on the phone (the permission rows; the Autostart reading). Built, not yet proven on the phone (the HyperOS buttons; the truck's row; Physical activity)
 - [Schedule and Business/Personal](#schedule-and-businesspersonal) — phase 2. Built, proven on the phone (the sorting of earlier trips at a start). Built, not yet proven on the phone (everything else)
@@ -712,6 +713,55 @@ The settings store, the Setup screen ([Permission checklist](#permission-checkli
 - **Nothing here has run.** Whether the page is drawn in the app's colours outside the bottom bar's frame, clears the status bar and the gesture bar, and what OK and Done open: device checks OB-1 to OB-7.
 - **A notification tapped while the page shows** (the monthly reminder, the daily check) acts on the screens behind it as before; the page stays until OK, and the screen it asked for is under Setup.
 - **The page says "a while"** for how long the truck may stand still, not ten minutes: the time is a setting.
+
+---
+
+## The greeting
+
+**Status:** Built. Seen working on an emulator on 2026-10-09 (Android 16, drawn by the PC's graphics card): the wave over Home, nothing with the phone's animations off, and the safety catch's count cleared after a greeting. **Not yet proven on the phone:** no phone's graphics chip has drawn the mascot. Its checks are MG-1 to MG-9 · **Platforms:** Android (the phone; the Android Auto screen is not touched) · **Last updated:** 2026-10-09
+
+**What it does**
+When MilO is opened, its mascot waves hello: he fades in, large, in the middle of the screen, over Home dimmed, waves once with his right hand for two seconds while his two gauge needles rev, and fades away. Shawn's request of 2026-10-09, of the mascot he had built in Blender that day: "For now for the app i am only sure on using one of the animations. the wave one when the app starts up."
+
+**Required behaviour** (Shawn's answers the same day)
+- **Phone only** ("Phone only"): Android Auto shows Google's templates and can draw neither a 3D model nor an animation.
+- **Over Home, not in it** ("Greeting over Home", over a tile of his own on Home, or a small corner of it): Home's layout does not change.
+- **Drawn live from the 3D model** ("Filament 3D", over a picture rendered beforehand): ADR-005, with what it costs.
+
+**How it works**
+1. **A fresh start asks for one greeting.** `MainActivity` sets `greetingAsked` when the activity is built for the first time, not when Android builds it again (the phone was turned, or MilO was put away and brought back). So MilO greets when it is opened from nothing, and also when it was left with Back and is opened again; it does not greet on coming back from another app.
+2. **The rule** (`greeting()` in `feature/greeting/Greeting.kt`, pure, with unit tests) answers one of four things. *Waiting* while the settings are being read. *Showing* when the first start is over, Home is the screen on top, no tapped notification is waiting, and the mascot's drawing is trusted on this phone (5). *Dropped* otherwise. *None* once the greeting has been shown or dropped.
+3. **A greeting that is dropped does not come later,** over a screen Shawn has gone to since: `MiloApp` tells the activity at once. So these go without a greeting: the first start (the page that says what MilO does, and Setup), a start with What's new on top after an update, and a start by a tap on a notification, also the daily check's, which leads to Home.
+4. **A greeting that is showing is dropped when the rule stops being true under it.** That is how What's new, which opens a moment after the settings are read, ends a greeting that had begun. It is cut, not faded.
+5. **The safety catch** (`GreetingViewModel`, ADR-005). The mascot is drawn by native code, and a failure there ends the app with nothing to catch; a greeting at every start would then lose MilO at every start. So each greeting is counted in the settings (`greetings_unfinished`) before the drawing begins, and the count is removed when the mascot has been seen. A start that finds two counted greets no more, and neither does any after it. **Nothing switches it back on** short of clearing MilO's storage. The Log gets an `ERROR` line at every such start: "The greeting is off: 2 in a row began and never showed the mascot".
+6. **What is seen** (`MascotGreeting`): nothing at first, and Home works as ever, while the model is read and the phone's graphics chip gets ready. When the mascot can be seen, he and the dimming fade in together (180 ms), the wave plays, and both fade out (260 ms). The mascot's square is 86% of the screen's width; the screen behind is dimmed to 72% black.
+7. **A tap anywhere, or Android's Back, ends it early** with the same fade. While the greeting is seen, nothing behind it can be pressed. A screen reader is told "MilO waves hello", and that a tap will "skip the greeting".
+8. **The clip's clock starts when the mascot is seen,** not when he was asked for, so the wave is whole on a slow phone too (`Mascot`). Filament draws up to two pictures behind and takes no new one while it is that far behind; once it has taken three, the first is on the screen. Until then every picture is the clip's first.
+9. **The drawing** (`MascotStage`): Filament's engine, the model from `assets/mascot/milo_wave.glb` (1.16 MB, the Wave clip only), two lights and a camera, into a see-through `TextureView`. The engine is built for the greeting and given back when it ends, also when it is ended early.
+
+**Where the code lives**
+- `feature/greeting/`: `Greeting.kt` (the rule), `GreetingViewModel.kt` (the safety catch).
+- `core/designsystem/component/`: `MascotGreeting.kt` (the dimming, the fades, the tap), `Mascot.kt` (the view and the clip's clock; `MascotClip` names the clips), `MascotStage.kt` (everything of Filament's).
+- `data/settings/GreetingStorage.kt`: the count.
+- `app/`: `MainActivity` (`greetingAsked`), `MiloApp` (asks the rule, draws the greeting), `GreetingEntry.kt` (the ViewModel's factory).
+- `design/mascot/`, outside the app: the mascot's Blender file and the scripts that write the model (its `README.md`).
+- Tests: `GreetingTest`, `GreetingViewModelTest`, `MascotModelTest` (the committed model carries exactly the clips `MascotClip` names, the wave is two seconds long, and the file is under 2 MB).
+
+**Depends on**
+Filament and gltfio 1.77.3 (ADR-005), the app's only native libraries that are not AndroidX's. The first-start stage ([First-start onboarding](#first-start-onboarding)), the back stack, the settings file and the event log.
+
+**Edge cases & gotchas**
+- **With the phone's animations switched off there is no greeting:** nothing is drawn, the engine is not built, Home does not dim. Seen on the emulator.
+- **A phone that cannot draw the mascot goes without,** quietly: no engine to be had, a model that cannot be read, or no picture on the screen four seconds after it was asked for. In the last case the greeting stays counted (5), so a phone that is always that slow stops trying after two.
+- **The catch can go off by accident.** A greeting stays counted when MilO ends for any reason between the count and the first picture: about a second on the emulator, less on a phone. Two such accidents in a row, with no greeting seen between them, switch the greeting off for good. Two and not one for that reason.
+- **The gauges' rims are dark, not chrome.** Nothing is mirrored in the app's drawing: a light map to mirror would be one more file and one more library (ADR-005). In Blender's pictures they are chrome.
+- **The emulator's software graphics cannot draw it,** and die trying: SwiftShader's limit for a shader is too small for a model with a skeleton. Run the emulator with the PC's graphics card (`-gpu host`). FINDINGS_LOG, 2026-10-09.
+- **The needles in the wave are part of the clip,** not the truck's speed. Needles that follow a trip would be a new use of `Mascot`; the model already has a clip for each (`Gauge_Speed`, `Gauge_RPM`, in the full model only).
+- **The app's copy of the model is made by hand** (`design/mascot/scripts/export_milo.py`) and committed. A clip that is renamed there, or left out, is no greeting and no error on the phone; `MascotModelTest` is what catches it.
+- **Turning the phone during the greeting ends it:** the activity is built again, and that is not a fresh start.
+
+**Related**
+[First-start onboarding](#first-start-onboarding) and [Version and What's new](#version-and-whats-new), which come before it; [Design system](#design-system), which holds the mascot's components; ADR-005.
 
 ---
 
@@ -1881,6 +1931,9 @@ The one place colours, spacing, type and shapes are defined, and the shared comp
   - `SquareIconButton` and `RowButton`: the two small buttons the components above are made of, kept in the design system for its own use: the 44 dp square with one icon (the back button, a title's action, a stepper's minus and plus), and the small filled button with words (a status row's buttons, a dialog's). Each is drawn at the design's size and takes up 48 dp, Android's smallest target for a finger. **Added on 2026-10-06** with the new look.
   - `rememberTwentyFourHourClock`: draws nothing. It answers whether the phone is set to write times with 24 hours ("Use 24-hour format" in Android's date and time settings; until that switch has been touched, Android answers by the phone's language), and reads it again each time the screen resumes, because the switch is changed outside MilO and Android tells a screen nothing about it. A screen calls it once and hands the answer to `formatTimeOfDay` or `formatClockTime` (`core/util/TimeFormat.kt`) and to `TimeDialog`. **Added on 2026-10-06** by the review of the work schedule. It is the only place a phone screen reads that setting, and the only setting a Composable reads for itself.
   - `CameToFrontEffect`: draws nothing. It calls the screen's ViewModel when the screen is first shown and every time Shawn is looking at it again, on either of two signs: the screen resumes (it is entered, or MilO returns from a settings screen, another app or one of Android's dialogs), or MilO's window gets the focus back (the quick settings panel or the notification shade closing, which resumes nothing). Returning from a settings screen gives both signs, so what it calls must be safe to call twice. The rule for the second sign is a plain function with a unit test (`focusRegained`); the effect itself cannot be tested off the phone. Added on 2026-10-05, after the review of the screens.
+  - **Added on 2026-10-09, with the greeting. The app's only 3D drawing (ADR-005):**
+    - `Mascot`: the mascot, playing one clip of his model once, on a see-through background, and saying when he can be seen and when the clip is over. `MascotClip` names the clips the app's copy of the model carries (today the wave). It is an Android view inside Compose, the first in the app: Filament draws into a `TextureView`. With the phone's animations switched off it draws nothing and is over at once. A further use of the mascot goes through this component.
+    - `MascotGreeting`: the mascot large in the middle of the screen over everything behind it dimmed: fades in, waves, fades out; a tap or Back ends it early. See [The greeting](#the-greeting).
   - **Added on 2026-10-07, with the Trips screen's layout. Each is for the other screens too:**
     - `ExpandableTile`: a tile whose rows are put away under its heading until the heading is pressed (a day of trips). The heading is one button as wide as the tile: a title, a quieter line, and an arrowhead that points down while it is closed and up while it is open. A screen reader reads it as a heading and a button, and is told "Expanded" or "Collapsed". Whether it is open is the screen's to keep. The opening is animated briefly and happens at once while the phone's animations are off; if the rows would stand below the edge of a list, the list moves.
     - `SteppedTitle`: a large heading with two square buttons at its end, one step back and one step on (the month before, the month after). A step that cannot be taken keeps its square, greyed. Since 2026-10-07 it stands under the top line and names the month ("October 2026"); the screen's own name moved to the top line.

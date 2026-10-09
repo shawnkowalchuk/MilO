@@ -40,6 +40,9 @@ composeBom = "2026.09.00"
 core = "1.19.1"
 coroutines = "1.11.0"
 datastore = "1.2.1"
+# Filament, Google's 3D renderer, and gltfio, its reader of .glb files: they draw the mascot
+# (ADR-005). The two are released together under one version.
+filament = "1.77.3"
 junit = "4.13.2"
 lifecycle = "2.11.0"
 # Navigation 3: the back stack of screens and the display that shows its top entry.
@@ -101,6 +104,11 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-room3-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
 androidx-room3-runtime = { module = "androidx.room3:room3-runtime", version.ref = "room" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+
+# The renderer, and the loader that reads the mascot's .glb and plays the clips in it. Not taken:
+# filament-utils, a layer of conveniences that MilO's one small view does not need.
+filament-android = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
+filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 # Tests only: a clock and a scheduler the test controls, for code that runs in coroutines.

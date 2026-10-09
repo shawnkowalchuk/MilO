@@ -17,10 +17,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
+import com.shawnkowalchuk.milo.core.designsystem.component.MascotGreeting
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloNavigationBar
 import com.shawnkowalchuk.milo.core.designsystem.component.NavigationBarEntry
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.data.settings.FirstRunStage
+import com.shawnkowalchuk.milo.feature.greeting.Greeting
+import com.shawnkowalchuk.milo.feature.greeting.GreetingViewModel
+import com.shawnkowalchuk.milo.feature.greeting.greeting
 import com.shawnkowalchuk.milo.feature.onboarding.OnboardingScreen
 import com.shawnkowalchuk.milo.feature.onboarding.OnboardingViewModel
 import com.shawnkowalchuk.milo.feature.whatsnew.WhatsNewNoticeViewModel
@@ -39,6 +43,8 @@ import java.time.YearMonth
  * or null. The screen is opened once, and [onReportOpened] says that the request is dealt with.
  * @param homeAsked true while a tap on the daily check's notification is waiting for the Home
  * screen. Home is shown once, and [onHomeShown] says that the request is dealt with.
+ * @param greetingAsked true from a fresh start until the greeting has been shown or dropped
+ * (`feature/greeting`); [onGreetingDone] says that it has.
  */
 @Composable
 fun MiloApp(
@@ -47,6 +53,8 @@ fun MiloApp(
     onReportOpened: () -> Unit,
     homeAsked: Boolean,
     onHomeShown: () -> Unit,
+    greetingAsked: Boolean,
+    onGreetingDone: () -> Unit,
 ) {
     MiloTheme {
         // Saved and restored by Navigation 3, so the screen that was showing comes back after
@@ -112,6 +120,24 @@ fun MiloApp(
             }
         }
 
+        // The greeting (2026-10-09): on a fresh start the mascot waves over Home, unless
+        // something else has that moment. One that is dropped is told so at once, so that it
+        // does not show up later, over a screen Shawn has gone to since.
+        val greetings: GreetingViewModel =
+            viewModel(factory = greetingViewModelFactory(container))
+        val mascotTrusted by greetings.trusted.collectAsState()
+        val greeting =
+            greeting(
+                asked = greetingAsked,
+                firstRun = firstRun,
+                onHome = backStack.lastOrNull() == HomeKey,
+                notificationTapped = reportToOpen != null || homeAsked,
+                trusted = mascotTrusted,
+            )
+        LaunchedEffect(greeting) {
+            if (greeting == Greeting.DROPPED) onGreetingDone()
+        }
+
         when (firstRun) {
             null -> Unit
 
@@ -175,6 +201,15 @@ fun MiloApp(
                     )
                 }
             }
+        }
+
+        // Over the screen and the bottom bar alike.
+        if (greeting == Greeting.SHOWING) {
+            MascotGreeting(
+                onDone = onGreetingDone,
+                beforeStart = greetings::starting,
+                onShown = greetings::onShown,
+            )
         }
 
         if (unsavedWork.asking) {

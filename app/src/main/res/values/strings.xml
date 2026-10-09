@@ -89,6 +89,12 @@
     <!-- The top line of every screen: the app's initial, on a square of the accent. -->
     <string name="app_mark">M</string>
     <!--
+        The greeting: on a fresh start the mascot waves over Home (MascotGreeting). The first is
+        what a screen reader says for the whole of it, the second what a tap on it does.
+    -->
+    <string name="mascot_greeting">MilO waves hello</string>
+    <string name="mascot_greeting_skip">skip the greeting</string>
+    <!--
         Home: the accent tile that starts a trip by hand, and the dark button that ends one.
         The first line under "Start trip" is only shown while a paired truck is not connected
         and nothing stands in the way of an automatic start. The third and the fourth are for
