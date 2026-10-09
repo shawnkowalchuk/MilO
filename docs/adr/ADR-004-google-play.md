@@ -1,6 +1,6 @@
 # ADR-004: Google Play as a second channel, with the phone's own key
 Date: 2026-10-09
-Status: Accepted (the app's changes are made; nothing has been uploaded to Google Play yet)
+Status: Accepted (the app's changes are made; Play App Signing uses `milo.jks` since 2026-10-09; nothing has been uploaded to Google Play yet)
 
 ## Context
 
@@ -19,7 +19,7 @@ What Google Play asks of an app like MilO, as found on 2026-10-09 (from Google's
 ## Decision
 
 1. **Google Play becomes a second channel beside GitHub Releases.** The same code, the same version name and `versionCode` sequence, built on the Mac: an APK for GitHub (`assembleRelease`), an app bundle for Google Play (`bundleRelease`). There is one build of the app, not one per store: no build flavours.
-2. **Play App Signing with MilO's own key.** At the first upload the Console asks which key signs the app. Shawn uploads `milo.jks` with the tool the Console offers, rather than letting Google make a new key. Then the copy from Google Play, the APK from GitHub and the phone's MilO are all signed alike, and each installs over the others with the trips kept. A key made by Google would never update the phone's MilO without an export, an uninstall and an import. **This choice cannot be undone** once a build is uploaded. The upload key is the same `milo.jks`, which already signs the release build.
+2. **Play App Signing with MilO's own key.** At the first upload the Console asks which key signs the app. Shawn uploads `milo.jks` with the tool the Console offers, rather than letting Google make a new key. Then the copy from Google Play, the APK from GitHub and the phone's MilO are all signed alike, and each installs over the others with the trips kept. A key made by Google would never update the phone's MilO without an export, an uninstall and an import. **This choice cannot be undone** once a build is uploaded. The upload key is the same `milo.jks`, which already signs the release build. (Done on 2026-10-09: Google had made a key of its own when the app was created, and it was changed to `milo.jks` before anything was uploaded; the Console shows the app signing key with SHA-256 `95:A9:51:07:…:94:14:B4`. FINDINGS_LOG, 2026-10-09.)
 3. **Automatic protection is off** (Shawn was told to press "Turn off" when creating the app). It adds a check to the copy on Google Play that sends people from any other source to Google Play, which would get in the way of the GitHub APK.
 4. **The app's changes,** in the one build for both channels:
    - **A location disclosure before "Allow all the time"** (`feature/setup/LocationDisclosure.kt`): Setup's background-location button first shows what location MilO collects, why, that it does so even when the app is closed or not in use, that it stays on the phone, and that the two ends of a trip go to the phone's address lookup; Android is asked only after "Continue". It is shown at every press, so it always comes before the request.
