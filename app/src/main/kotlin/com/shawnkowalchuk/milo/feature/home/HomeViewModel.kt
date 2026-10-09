@@ -17,6 +17,7 @@ import com.shawnkowalchuk.milo.platform.system.needsAttention
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import com.shawnkowalchuk.milo.platform.trip.TripController
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
+import com.shawnkowalchuk.milo.platform.trip.tripSoFar
 import java.io.IOException
 import java.time.LocalDate
 import java.time.YearMonth
@@ -137,11 +138,17 @@ class HomeViewModel(
     /**
      * Each paired vehicle's odometer now (Shawn's request of 2026-10-09), worked out as Settings
      * works it out ([vehicleOdometers]), or null until the settings and the trips have been read.
-     * It follows a trip that ends and a reading typed in Settings.
+     * It follows the trip being recorded as it is driven (his request of later that day: "can we
+     * have the mileage on the home screen change as we drive"), a trip that ends and a reading
+     * typed in Settings.
      */
     private val odometers: StateFlow<List<VehicleOdometer>?> =
-        combine(stored, trips.observeFinishedTrips()) { settings, finished ->
-            settings?.let { vehicleOdometers(it, finished, clock(), zone()) }
+        combine(
+            stored,
+            trips.observeFinishedTrips(),
+            controller.activity.map { it.tripSoFar() }.distinctUntilChanged(),
+        ) { settings, finished, soFar ->
+            settings?.let { vehicleOdometers(it, finished, clock(), zone(), soFar) }
         }.whileWatched(null)
 
     /** The month whose report is waiting to be sent, or null: see [reportWaiting]. */

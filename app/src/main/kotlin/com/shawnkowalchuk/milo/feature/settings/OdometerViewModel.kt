@@ -15,9 +15,12 @@ import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.settings.addOdometerReading
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripRepository
+import com.shawnkowalchuk.milo.data.trip.TripSoFar
 import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
 import com.shawnkowalchuk.milo.data.trip.odometerNow
 import com.shawnkowalchuk.milo.data.trip.vehicleOdometers
+import com.shawnkowalchuk.milo.platform.trip.TripActivity
+import com.shawnkowalchuk.milo.platform.trip.tripSoFar
 import java.io.IOException
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -105,6 +109,9 @@ fun odometerCardState(
  * One tile for each paired vehicle (since 2026-10-08), the first first, each named where there
  * are several; one unnamed tile of every reading and trip while none is paired. The odometers
  * are the ones Home shows ([vehicleOdometers]).
+ *
+ * @param soFar the trip being recorded, which its vehicle's tile counts while it is driven (since
+ * 2026-10-09), as Home's does.
  */
 fun odometerCardStates(
     settings: MiloSettings,
@@ -112,7 +119,8 @@ fun odometerCardStates(
     nowMs: Long,
     zone: ZoneId,
     couldNotSave: Boolean,
-): List<OdometerCardState> = vehicleOdometers(settings, finished, nowMs, zone).map {
+    soFar: TripSoFar? = null,
+): List<OdometerCardState> = vehicleOdometers(settings, finished, nowMs, zone, soFar).map {
     cardOf(it, zone, couldNotSave, settings.distanceUnit)
 }
 
@@ -142,12 +150,15 @@ private fun cardOf(
  * [state] is null until the settings have been read, and while they cannot be: the screen
  * itself says that, above the tiles.
  *
+ * @param activity the trip controller's state: the trip being recorded is counted while it is
+ * driven (since 2026-10-09), as on Home.
  * @param clock wall-clock milliseconds: the time of a reading, and the moment the figure is for.
  * @param zone the phone's time zone.
  */
 class OdometerViewModel(
     private val settings: SettingsStore,
     trips: TripRepository,
+    activity: Flow<TripActivity>,
     private val eventLog: EventLogRepository,
     private val clock: () -> Long,
     private val zone: () -> ZoneId,
@@ -156,12 +167,13 @@ class OdometerViewModel(
 
     /** One tile for each paired vehicle ([odometerCardStates]), or null until they are read. */
     val state: StateFlow<List<OdometerCardState>?> =
-        combine(stored(), trips.observeFinishedTrips(), couldNotSave) {
-                stored,
-                finished,
-                failed,
-            ->
-            stored?.let { odometerCardStates(it, finished, clock(), zone(), failed) }
+        combine(
+            stored(),
+            trips.observeFinishedTrips(),
+            activity.map { it.tripSoFar() }.distinctUntilChanged(),
+            couldNotSave,
+        ) { stored, finished, soFar, failed ->
+            stored?.let { odometerCardStates(it, finished, clock(), zone(), failed, soFar) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_WATCHING_MS), null)
 
     /**

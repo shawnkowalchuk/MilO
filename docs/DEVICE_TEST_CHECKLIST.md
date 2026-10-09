@@ -1389,6 +1389,16 @@ Shawn's requests of 2026-10-09: the odometer on Home, every trip of today in pla
 | HM-6 | **Today's trips.** After two or more trips today, with none in progress, open Home. | "Today · 2 trips · … driving", every trip of today with the newest at the top, no "Last trip" and no note about a trip in progress. Tapping the tile opens Trips. | not run |
 | HM-7 | **While recording.** Start a trip. | The odometer tile under the truck and today pair, then the same list of today's trips, with "The trip in progress is added when it ends." under it. | not run |
 
+**The odometer counts up as the trip is driven** (Shawn's request of 2026-10-09, later that day: "can we have the mileage on the home screen change as we drive"; the odometer, phone only, Home and Settings together). Built and unit tested only; never drawn anywhere. Look at the phone as a passenger, or when the truck is stopped.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| HM-8 | **It counts up.** With a reading typed in Settings, note the odometer on Home, then drive a trip in the truck with Home open. | The odometer goes up by one for each kilometre driven (each mile, with Miles chosen) while the trip is still recording. After 5.0 km on the lime tile it is 5 higher than at the start, give or take one for rounding. | not run |
+| HM-9 | **Settings counts with it.** During the same trip, open Settings. | The odometer tile shows the figure Home shows, and the line under it has the trip's kilometres in "… plus … km of truck trips since". | not run |
+| HM-10 | **When the trip ends.** Note the odometer just before the trip ends, and again on Home afterwards. | The same figure, or lower by one or so: the final distance leaves out what was recorded after the truck disconnected. It never goes up by the trip a second time. Write down any step back larger than one. | not run |
+| HM-11 | **A trip the truck is not in.** With the truck not connected, press Start trip and move a kilometre or two (another vehicle, or on foot). End the trip. | The odometer does not move, during the trip or after it. | not run |
+| HM-12 | **Several vehicles.** With two vehicles paired and a reading for each, drive one of them with Home open. | Only that vehicle's row counts up; the other stays as it was. | not run |
+
 ## Later work packages
 
 Nothing waiting. A work package that adds behaviour only the phone can prove adds its checks above.

@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.platform.trip
 
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripState
+import com.shawnkowalchuk.milo.data.trip.TripSoFar
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 
 /**
@@ -56,6 +57,8 @@ enum class ParkedTruckWatch {
  * @param startLatitude where the trip started: its first usable GPS fix, with [startLongitude].
  * Null until there is one. The stored row has no position until the trip closes, so this is
  * the only place the start of a trip in progress can be read (the address lookup does).
+ * @param truckSeen whether a paired vehicle has been seen connected in the trip so far, as the
+ * trip rules hold it (`ActiveTrip.truckSeen`). Only then does the trip move an odometer.
  */
 data class CurrentTrip(
     val tripId: Long,
@@ -65,7 +68,16 @@ data class CurrentTrip(
     val waitingForTruck: Boolean,
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
+    val truckSeen: Boolean = false,
 )
+
+/**
+ * The trip being recorded as the odometers take it while it is driven (since 2026-10-09), or
+ * null when idle. Home's and Settings' odometer tiles both ask this, so they count up together.
+ */
+fun TripActivity.tripSoFar(): TripSoFar? = trip?.let {
+    TripSoFar(it.tripId, it.startedAtMs, it.distanceMetres, it.truckSeen, vehicle)
+}
 
 /**
  * Why recording could not start.
@@ -110,6 +122,7 @@ internal fun tripActivityOf(
                 waitingForTruck = trip.grace != null,
                 startLatitude = open.progress.distance.firstAccepted?.latitude,
                 startLongitude = open.progress.distance.firstAccepted?.longitude,
+                truckSeen = trip.truckSeen,
             ),
         startFailure = startFailure,
         truckConnected = truckConnected,
