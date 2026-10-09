@@ -748,7 +748,7 @@ Settings ends with a **Version** tile: the version of MilO on the phone, "0.1.0 
 The settings store and the first start ([First-start onboarding](#first-start-onboarding)); Settings ([Settings](#settings)); the website ([Website](#website)).
 
 **Edge cases & gotchas**
-- **The list's first version is the first release, 0.1.0,** which has not been published yet: it lists what MilO does, all "New", and says "not released yet" until its release dates it.
+- **The list's first version is the first release, 0.1.0,** published on 2026-10-09: it lists what MilO does, all "New".
 - **A build from `main` between releases** carries the next version's number and its lines under "not released yet": the phone's own builds are ahead of the download.
 - **The screen opens by itself only for a new versionName,** not for each new line under the same version: a phone that installs every build from `main` sees it once per version.
 - **Someone who skips versions** sees the whole list, newest first, so nothing in between is lost.
@@ -1795,7 +1795,7 @@ Firebase Hosting in the project `milotriplog`; the deploy key in GitHub's Action
 
 **Edge cases & gotchas**
 - **The privacy page makes promises about the app** (what it keeps, what leaves the phone and how, every permission and why). A change to any of that changes `website/privacy.html` in the same pull request.
-- **Until the first release is published,** the download button opens an empty Releases page (README, "Making a release").
+- **The download button opens the newest GitHub Release** (README, "Making a release"): since 2026-10-09, 0.1.0.
 - **`changes.html` is written, not typed:** edit `app/src/main/assets/changelog.json` and run `python3 tools/changes_page.py`. CI fails a pull request whose page is not the one the list makes.
 - **The project ID is `milotriplog`** (display name "MilOtriplog"), read from the console's Project settings on 2026-10-08. `.firebaserc` and the secret's name in the workflow depend on it; on the free Spark plan.
 - **The screenshots are the README's too:** they moved from `docs/screenshots/` to `website/screenshots/`, one copy for both. The home screenshot's street addresses are blurred; the Settings one shows Shawn's name, as the README does.

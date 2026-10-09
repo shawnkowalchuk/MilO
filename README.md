@@ -393,22 +393,32 @@ Each update that others can download is a GitHub Release with the APK attached. 
 
 1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
 2. **Date the version.** In `app/src/main/assets/changelog.json` the newest version has `"date": null`. Set it to the day (`"2026-10-12"`), run `python3 tools/changes_page.py`, and merge that as its own small pull request. Its number is already the build's `versionName`: CI makes sure of it. (The version itself was raised when its first change was merged: "The list of changes", below.)
-3. **Build the release APK:**
+3. **Build the release APK** and check its key:
 
    ```bash
    ./gradlew assembleRelease
+   mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MilO-0.2.0.apk
+   "$(ls -d "$ANDROID_HOME"/build-tools/*/ | tail -1)apksigner" verify --print-certs app/build/outputs/apk/release/MilO-0.2.0.apk | grep SHA-256
    ```
 
-   It is signed with `~/keys/milo.jks`, like the phone's builds. The file is `app/build/outputs/apk/release/app-release.apk`; rename it `MilO-0.2.0.apk`.
-4. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO Trip Log 0.2.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool:
+   It is signed with `~/keys/milo.jks`, like the phone's builds, whose certificate's SHA-256 is `95a951079ea89ce645392c404cccacc5e42aba781ba52efe7afb27dd6e9414b4`. Any other digest: stop, and publish nothing.
+4. **Install it on the phone first,** and look it over. `"$ANDROID_HOME/platform-tools/adb" devices` names the phone; then:
 
    ```bash
-   gh release create v0.2.0 MilO-0.2.0.apk --title "MilO Trip Log 0.2.0" --notes "What changed"
+   "$ANDROID_HOME/platform-tools/adb" -s PHONE_SERIAL install -r app/build/outputs/apk/release/MilO-0.2.0.apk
    ```
 
-5. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
+   Not `./gradlew installRelease`: it installs on every device adb sees, and an emulator's MilO, signed with the throwaway debug key, refuses it with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, which stops the task. The same error from the phone itself means a different key: stop there, and never uninstall.
+5. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO Trip Log 0.2.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool, with the notes written from the list of changes:
 
-Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **No release build has been made yet:** before publishing the first one, install its APK on the phone and look it over.
+   ```bash
+   python3 -c "import json;r=json.load(open('app/src/main/assets/changelog.json'))['releases'][0];print('\n'.join('- **%s.** %s'%(c['title'],c.get('body','')) for c in r['changes']))" > app/build/release-notes.md
+   gh release create v0.2.0 app/build/outputs/apk/release/MilO-0.2.0.apk --target main --title "MilO Trip Log 0.2.0" --notes-file app/build/release-notes.md
+   ```
+
+6. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
+
+Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **The first release, 0.1.0, was published on 2026-10-09,** after its APK was installed over the phone's MilO this way.
 
 ### The list of changes
 

@@ -24,6 +24,12 @@
 
 ### 2026-10-09
 
+**`[CHANGE]` The first release, 0.1.0, is on GitHub**
+Shawn built it with `assembleRelease` on the Mac, installed it over the phone's MilO (the trips stayed) and published `v0.1.0` on `d7aa4fd`, with `MilO-0.1.0.apk` (38,883,509 bytes, SHA-256 `179425b0…c00c0b`) and the eleven lines of 0.1.0 as its notes. The APK was downloaded from the release afterwards and its signing block read: one v2 signer, certificate SHA-256 `95a951079ea89ce645392c404cccacc5e42aba781ba52efe7afb27dd6e9414b4`, the key of the phone's builds. README "Making a release" now gives that digest to check each release against, and installs on the phone with `adb -s`.
+
+**`[FINDING]` `installRelease` installs on every device adb sees, emulators too**
+The first try, `./gradlew installRelease`, failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.shawnkowalchuk.milo signatures do not match`. It was not the phone: the only MilO attached was on `emulator-5680`, left running by earlier test work, signed with the throwaway debug key (certificate SHA-256 `9254dbbd…d1f9b4`); the phone was not connected. Comparing the certificates of the installed APK (pulled with `adb pull`) and the new one showed it before anything was installed. **Install a release on the phone by its serial, never with `installRelease`, and never uninstall to get past this error:** on the phone it would mean the key changed, and uninstalling deletes every trip.
+
 **`[CHANGE]` Version 0.1.0 dated: the first release**
 Shawn asked for the APK to be built and put on GitHub. Version 0.1.0 is dated 2026-10-09 in `changelog.json`, and the What's new page was written again, as README "Making a release" step 2 says. The APK itself is built with `assembleRelease` on the Mac and uploaded by hand (step 3 and 4): a cloud session has neither the key nor the Keychain, and an APK signed with the debug key could not update the phone's MilO. **The next change Shawn will notice opens version 0.2.0** (`versionName` "0.2.0", `versionCode` 2).
 
