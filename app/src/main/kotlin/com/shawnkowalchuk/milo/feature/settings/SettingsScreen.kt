@@ -180,6 +180,7 @@ fun SettingsScreen(
         widgetTile = { HomeWidgetTile(widgetViewModel) },
         dataTile = { DataTile(dataViewModel) },
         versionTile = versionTile,
+        showCoffee = showCoffee,
     )
 }
 
@@ -202,6 +203,8 @@ fun SettingsScreen(
  * copy of the trips is wanted most.
  * @param versionTile the version on this phone, under everything, as GopherForms has it. Shown
  * whatever the settings file says: the version does not come from it.
+ * @param showCoffee whether the Buy me a coffee tile stands above it: not in the copy from
+ * Google Play ([SettingsScreen]).
  */
 @Composable
 internal fun SettingsContent(
@@ -215,6 +218,7 @@ internal fun SettingsContent(
     widgetTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
     versionTile: @Composable () -> Unit,
+    showCoffee: Boolean = true,
 ) {
     val spacing = MiloTheme.spacing
     TileColumn(
