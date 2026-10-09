@@ -101,8 +101,9 @@ private fun MonthTile(
 
 /**
  * The truck's connection, in the words and the look of the state it is really in, or, for a
- * moment after the truck has arrived, in the design's "Connecting…". While no truck is paired,
- * the tile is the way to the pairing screen, and its sentence says so.
+ * moment after the truck has arrived, in the design's "Connecting…". The vehicle's name stands
+ * at the end of the first line. While no truck is paired, the tile is the way to the pairing
+ * screen, and its sentence says so.
  *
  * @param tile the look and the words to draw.
  * @param truck the state the truck is in, and its name.
@@ -115,9 +116,7 @@ private fun HomeTruckTile(tile: TruckTileShown, truck: TruckTileState, onOpenPai
             TruckTileWords(
                 title = stringResource(tile.title),
                 sentence = tile.sentence?.let { stringResource(it) },
-                corner = stringResource(R.string.home_truck_corner),
-                phoneLabel = stringResource(R.string.home_truck_phone),
-                truckLabel = truck.truckName ?: stringResource(R.string.truck_without_a_name),
+                vehicle = truck.vehicleShown(stringResource(R.string.truck_without_a_name)),
             ),
         press =
             if (truck.state == TruckState.NO_TRUCK) {

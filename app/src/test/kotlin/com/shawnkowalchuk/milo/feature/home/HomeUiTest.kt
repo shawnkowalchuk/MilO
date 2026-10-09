@@ -9,6 +9,7 @@ import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.report.SentReportKind
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.ReminderShown
+import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.address.TripPlace
@@ -208,5 +209,20 @@ class HomeUiTest {
         val ui = homeUi(now.copy(stored = null), read)
 
         assertEquals(TruckTileState(TruckState.CHECKING, truckName = null), ui.truck)
+    }
+
+    @Test
+    fun `with two vehicles paired the tile names the one that is connected, or else the first`() {
+        val van = StoredVehicle("CC:DD", "Van", associationId = null, pairedAtMs = 1)
+        val both = now.copy(stored = now.stored?.copy(moreVehicles = listOf(van)))
+
+        // Neither is connected: the first one paired, as the tile has always named it.
+        assertEquals("F-150", homeUi(both, read).truck.truckName)
+        // The van is connected: the tile is about the van.
+        val vanConnected = TripActivity(truckConnected = true, vehicle = "cc:dd")
+        assertEquals("Van", homeUi(both.copy(activity = vanConnected), read).truck.truckName)
+        // And a trip names the vehicle it is in.
+        val tripInVan = TripActivity(open, truckConnected = true, vehicle = "CC:DD")
+        assertEquals("Van", homeUi(both.copy(activity = tripInVan), read).truck.truckName)
     }
 }

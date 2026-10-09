@@ -26,6 +26,11 @@
         },
         {
           "kind": "improved",
+          "title": "A lower truck tile on Home",
+          "body": "The tile for the truck's connection takes less room. The vehicle's name is on its first line, its sentences are shorter, and the drawing of the phone and the truck is smaller. It moves as before."
+        },
+        {
+          "kind": "improved",
           "title": "Location, explained first",
           "body": "Before Android asks you to allow location all the time, MilO says what it collects, why, and that it stays on this phone."
         },

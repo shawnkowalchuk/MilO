@@ -35,25 +35,30 @@ import com.shawnkowalchuk.milo.core.designsystem.theme.FillAndText
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
 // The drawing in the truck's tile: the phone, the line, the mark in its middle, the truck, in
-// the design's three looks. Every measure is the design's. The line, its light and the
-// spreading ring are drawn in TruckLinkDrawing.kt; what moves, how fast and how far is in
-// TruckLinkMotion.kt.
+// the design's three looks. The line, its light and the spreading ring are drawn in
+// TruckLinkDrawing.kt; what moves, how fast and how far is in TruckLinkMotion.kt.
+//
+// **The measures are the design's, made smaller** (since 2026-10-09, when the owner asked for a
+// tile that is not as tall and chose the low one of three drawn for him). The design draws the
+// two ends 48 dp across and the mark 36; here they are 30 and 24, and each icon is smaller by
+// about the same share. The looks and everything that moves are unchanged: a ring is sized by
+// the round patch it spreads from, so it follows the smaller patch by itself.
 
 /** The round patch at each end, and the icons on the two. */
-private val EndSize = 48.dp
-private val PhoneIconSize = 20.dp
-private val TruckIconSize = 22.dp
+private val EndSize = 30.dp
+private val PhoneIconSize = 13.dp
+private val TruckIconSize = 14.dp
 
 /** The round mark in the middle of the line, and the icon on it. */
-private val MarkSize = 36.dp
-private val MarkIconSize = 16.dp
+private val MarkSize = 24.dp
+private val MarkIconSize = 11.dp
 
 /**
  * The mark's outline while the two are not linked. Linked, the mark has no outline: it stands
  * clear of the line by a rim in the tile's colour instead.
  */
-private val MarkOutline = 2.dp
-private val MarkRim = 3.dp
+private val MarkOutline = 1.5.dp
+private val MarkRim = 2.dp
 
 /**
  * The phone, the line to the truck, and the truck, drawn for [look].

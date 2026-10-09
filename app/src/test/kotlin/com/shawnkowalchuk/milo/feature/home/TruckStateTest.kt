@@ -270,6 +270,35 @@ class TruckStateTest {
         )
     }
 
+    // ---- The vehicle's name, at the end of the tile's first line ----------------------------------
+
+    @Test
+    fun `with no vehicle paired the tile names none, and does not fill the place with a word`() {
+        assertNull(TruckTileState(TruckState.NO_TRUCK, truckName = null).vehicleShown("The truck"))
+    }
+
+    @Test
+    fun `while MilO is still reading, only a name it has read already is shown`() {
+        val unread = TruckTileState(TruckState.CHECKING, truckName = null)
+        val read = TruckTileState(TruckState.CHECKING, truckName = "F-150")
+
+        assertNull(unread.vehicleShown("The truck"))
+        assertEquals("F-150", read.vehicleShown("The truck"))
+    }
+
+    @Test
+    fun `every other state of the large tile names its vehicle, by a stand-in if it has no name`() {
+        val named = TruckState.entries - setOf(TruckState.NO_TRUCK, TruckState.CHECKING)
+
+        for (state in named) {
+            val withName = TruckTileState(state, "F-150").vehicleShown("The truck")
+            val withoutName = TruckTileState(state, null).vehicleShown("The truck")
+
+            assertEquals(state.name, "F-150", withName)
+            assertEquals(state.name, "The truck", withoutName)
+        }
+    }
+
     // ---- The line on the Start tile ---------------------------------------------------------------
 
     @Test

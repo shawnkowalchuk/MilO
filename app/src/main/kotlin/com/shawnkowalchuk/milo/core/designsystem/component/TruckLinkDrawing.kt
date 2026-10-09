@@ -11,21 +11,28 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 
 // What the drawing in the truck's tile draws by hand: the line between the phone and the
-// truck, the light on it, and the ring that spreads from a round patch. Every measure is the
-// design's. Each function is handed how far a movement has come and draws that moment.
+// truck, the light on it, and the ring that spreads from a round patch. Each function is handed
+// how far a movement has come and draws that moment.
+//
+// The measures are the design's, made finer for the smaller patches of the low tile (since
+// 2026-10-09; TruckLink.kt says why). The dashes are as long as the design's, so they run
+// toward the truck at the design's speed.
 
-/** The line stops this far from each end's patch. */
-private val LineInset = 6.dp
+/** The line stops this far from each end's patch. The design has 6. */
+private val LineInset = 4.dp
 
 /** Not linked: a thin line of dashes, each as long as the gap after it. */
 private val DashedLineHeight = 2.dp
 private val DashLength = 6.dp
 
-/** Linked: a thicker solid line with round ends. */
-private val SolidLineHeight = 4.dp
+/** Linked: a thicker solid line with round ends. The design has 4. */
+private val SolidLineHeight = 3.dp
 
-/** A spreading ring's line, while the ring is as large as the patch it spreads from. */
-private val RingWidth = 2.dp
+/**
+ * A spreading ring's line, while the ring is as large as the patch it spreads from. The design
+ * has 2.
+ */
+private val RingWidth = 1.5.dp
 
 /**
  * The line while the two are not linked: dashes, each as long as the gap after it. At [turn]
