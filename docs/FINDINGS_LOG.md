@@ -22,6 +22,11 @@
 
 ## Log
 
+### 2026-10-09
+
+**`[CHANGE]` Version 0.1.0 dated: the first release**
+Shawn asked for the APK to be built and put on GitHub. Version 0.1.0 is dated 2026-10-09 in `changelog.json`, and the What's new page was written again, as README "Making a release" step 2 says. The APK itself is built with `assembleRelease` on the Mac and uploaded by hand (step 3 and 4): a cloud session has neither the key nor the Keychain, and an APK signed with the debug key could not update the phone's MilO. **The next change Shawn will notice opens version 0.2.0** (`versionName` "0.2.0", `versionCode` 2).
+
 ### 2026-10-08
 
 **`[DECISION]` Several vehicles: the truck stays where it was, and the others are a list beside it**
