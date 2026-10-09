@@ -205,7 +205,7 @@ HyperOS stops apps in the background harder than plain Android does. These are t
 
 ### 3. Battery optimisation exemption (Android's own)
 
-- **Where:** MilO's Setup, the row "Battery use: unrestricted", Open settings, then allow. The research found no HyperOS menu path for it, so use the row's button.
+- **Where:** MilO's Setup, the row "Battery use: unrestricted", Open settings. Since 2026-10-09 that opens Android's list of every app's battery optimisation (the dialog for MilO alone needed a permission Google Play restricts): show all apps, choose MilO, then "Don't optimise". The research found no HyperOS menu path for it, so use the row's button.
 - **Why:** it lets Android start a recording while MilO is in the background, and keeps Android's own battery saving off MilO. It is treated as a separate setting from number 2: set both.
 - **MilO's Setup:** reads it.
 - **On your phone so far:** granted, read from the phone on 2026-10-05.
@@ -233,7 +233,7 @@ HyperOS stops apps in the background harder than plain Android does. These are t
 
 ### 7. Location: "Allow all the time"
 
-- **Where:** MilO's Setup, the row "Location: Allow all the time", Allow. By hand: Settings, Apps, Manage apps, MilO, Permissions, Location, "Allow all the time", with "Use precise location" on. *(From the research notes for HyperOS, check on your phone.)* That it is granted was read from the phone; the path was not written down.
+- **Where:** MilO's Setup, the row "Location: Allow all the time", Allow. MilO first says what location it collects and why ("MilO uses your location", since 2026-10-09); Continue, then choose "Allow all the time" on Android's page. By hand: Settings, Apps, Manage apps, MilO, Permissions, Location, "Allow all the time", with "Use precise location" on. *(From the research notes for HyperOS, check on your phone.)* That it is granted was read from the phone; the path was not written down.
 - **Why:** a trip that starts by itself starts while MilO is closed. Android 14 refuses to start a location recording from the background without it, and there is no way round that.
 - **MilO's Setup:** reads it.
 - **On your phone so far:** granted, read from the phone on 2026-10-05.
@@ -287,7 +287,7 @@ If Home is open at that moment, its truck tile first says "Connecting…" and th
 - **The truck disconnects.** Home and the notification say "Trip in progress. Waiting for the truck to reconnect" for two minutes; reconnecting in that time continues the same trip. Then the trip ends and the notification goes.
 - **The truck has not moved for ten minutes,** connected or not. The trip ends where and when the truck stopped, not ten minutes later. A stop of ten minutes or more therefore cuts a drive into two trips; the ten minutes can be set from 5 to 30 in Settings.
 
-Either way there is no sound, and the trip is the "Last trip" on Home and a row on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
+Either way there is no sound, and the trip is the newest of today's trips on Home and a row on the Trips screen, with its times, from and to addresses, Business or Personal, and kilometres. A trip under 0.3 km is discarded and can be counted after all on Trips.
 
 **"Truck connected and parked".** Your truck can stay connected to the phone long after it is switched off. When a trip has ended because the truck stood still and the truck is still connected (by Bluetooth, or by Android Auto on the cable), the notification stays and says "Truck connected and parked", "A trip starts when the truck moves", and the truck's tile on Home says the same. Nothing is being recorded. For the first hour MilO looks at the phone's position every 30 seconds, and every 5 seconds for ten minutes after the phone reports that you got into a vehicle; after the hour it turns GPS off and lets that report from the phone's motion sensor turn it back on. When the truck drives off (at 15 km/h or more), a new trip starts by itself, from where the truck was parked, **without the trip-start sound**. When the truck finally disconnects, the notification goes. You can press Start trip at any time; the trip then starts from where the truck was parked too. While MilO waits there is no End trip button: the lime tile on Home reads Start trip.
 
@@ -303,7 +303,7 @@ After three days of standing MilO stops watching, to spare the battery, and the 
 
 | What | Where |
 |---|---|
-| Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, the last trip | **Home**, the first button of the bottom bar (a house) |
+| Start trip and End trip, the trip in progress, today's and the month's Business kilometres, whether the truck is connected, each vehicle's odometer, today's trips | **Home**, the first button of the bottom bar (a house) |
 | Every trip, a month at a time: press a day to see its trips, and a trip to edit it, label it, mark it Business or Personal, or delete it; add a missed trip | **Trips**, the second button (a list) |
 | The report for the accountant | Trips, the dark pill on the month's lime tile (**Not submitted** or **Submitted**) |
 | The vehicles and an odometer for each, your name, company, vehicle, the accountant's email address, the work hours, the three trip numbers (how long to wait for the truck to reconnect, how long it may stand still, the shortest trip that counts), kilometres or miles (the tile "Units"), the driving alert, the daily check, the reminder, the connect and trip-start sounds and the list of your own sounds, the home-screen widget and its rate, export and import, the version and what changed in it, and Buy me a coffee | **Settings**, the third button (three sliders) |
@@ -419,6 +419,18 @@ Each update that others can download is a GitHub Release with the APK attached. 
 6. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **The first release, 0.1.0, was published on 2026-10-09,** after its APK was installed over the phone's MilO this way.
+
+### Publishing on Google Play
+
+MilO is being prepared for Google Play as a second channel beside GitHub Releases (ADR-004, 2026-10-09). The app exists in the Play Console of 2795748 Alberta Ltd. as "MilO Trip Log" (`com.shawnkowalchuk.milo`, English (Canada), free, automatic protection turned off), and Play App Signing uses MilO's own key. **Nothing has been uploaded yet.** Each version goes to both channels with the same number.
+
+1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release: `./gradlew bundleRelease`. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`.
+2. **The first upload decides the signing key, for good.** In Testing, Internal testing, create a release. When the Console asks how the app is signed, choose to use your own key (exporting and uploading a key from a Java keystore), and run the command it shows with `~/keys/milo.jks` and the alias `milo`. **Never let Google create the key:** a copy signed with another key can never update the phone's MilO without wiping its trips. **Done on 2026-10-09:** Google had made a key of its own when the app was created (its "deployment" certificate starts `0D:85:65`), and it was changed to `milo.jks` under Protected with Play, App signing, Change key, before anything was uploaded. The app signing key certificate there reads `95:A9:51:07:…:94:14:B4`; check it again if the page ever offers to change it.
+3. **App content** (Policy, App content). Privacy policy: `https://milotriplog.top/privacy`. App access: no sign-in; reviewers start a trip with Start on Home, as they have no truck. Ads: No (change it before an update with ads, if one ever comes). Content rating: the questionnaire. Target audience: 18 and over. Data safety: MilO's own code sends nothing anywhere; location stays on the phone, except the two ends of each trip given to the phone's address lookup (Google's on most phones) and Android's backup if it is switched on, which Google's guidance in the form says how to declare.
+4. **The two declarations that need a video.** Location in the background: a recording that shows Setup's "Location: Allow all the time" button, MilO's question "MilO uses your location", Continue, Android's page with "Allow all the time", and a trip that starts with MilO closed. Foreground service (location): a trip being recorded with its notification.
+5. **Android Auto:** in Advanced settings, Form factors, add Android Auto. Google reviews the car screen before it reaches cars.
+6. **Store listing:** a short description (80 characters), the full description, a 512 × 512 icon, a 1024 × 500 feature graphic and at least two phone screenshots (`website/screenshots/`); category Business.
+7. **Roll out** to Internal testing first, read Google's report on it, then promote the same release to Production for Canada (and any other countries).
 
 ### The list of changes
 

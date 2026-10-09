@@ -2,6 +2,7 @@ package com.shawnkowalchuk.milo.feature.home
 
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
+import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
 import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.bluetooth.sameAddress
 import com.shawnkowalchuk.milo.platform.bluetooth.trucks
@@ -23,6 +24,8 @@ import java.time.YearMonth
  * @param nowMs the time, for how long the trip in progress has been running.
  * @param unit the unit chosen in Settings: every distance of the frame is written in it.
  * [figures] are in it too, or they are not shown ([homeUi]).
+ * @param odometers each paired vehicle's odometer now, as Settings shows it (since 2026-10-09),
+ * or null while the settings and the trips are being read, or the settings cannot be.
  */
 internal data class HomeUi(
     val date: LocalDate,
@@ -34,6 +37,7 @@ internal data class HomeUi(
     val startAddress: String?,
     val nowMs: Long,
     val unit: DistanceUnit,
+    val odometers: List<VehicleOdometer>? = null,
 )
 
 /**
@@ -57,12 +61,14 @@ internal data class HomeNow(
  * before for a moment after midnight; [homeUi] does not show them then.
  * @param openTripStart what the address lookup knows about the start of a trip in progress.
  * It keeps the last trip's value after that trip has ended.
+ * @param odometers each paired vehicle's odometer now, or null while they are being read.
  */
 internal data class HomeRead(
     val figures: HomeTrips?,
     val reportWaiting: YearMonth?,
     val openTripStart: OpenTripStart?,
     val nowMs: Long,
+    val odometers: List<VehicleOdometer>? = null,
 )
 
 /**
@@ -95,4 +101,5 @@ internal fun homeUi(now: HomeNow, read: HomeRead): HomeUi = HomeUi(
     startAddress = startAddressOf(now.activity.trip, read.openTripStart),
     nowMs = read.nowMs,
     unit = now.unit,
+    odometers = read.odometers,
 )

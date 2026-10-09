@@ -5,22 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
-import com.shawnkowalchuk.milo.core.odometer.drivenIn
-import com.shawnkowalchuk.milo.core.odometer.odometerAt
-import com.shawnkowalchuk.milo.core.odometer.ofVehicle
 import com.shawnkowalchuk.milo.core.odometer.parseOdometer
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
-import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.settings.addOdometerReading
-import com.shawnkowalchuk.milo.data.settings.pairedVehicles
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.TripRepository
-import com.shawnkowalchuk.milo.data.trip.drivenTrips
+import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
+import com.shawnkowalchuk.milo.data.trip.odometerNow
+import com.shawnkowalchuk.milo.data.trip.vehicleOdometers
 import java.io.IOException
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
@@ -75,8 +72,9 @@ fun odometerFieldRes(unit: DistanceUnit): Int = when (unit) {
 
 /**
  * The tile as the stored readings and trips make it now. Pure, so it is tested without a phone.
+ * The figure is the one Home shows too ([odometerNow], 2026-10-09).
  *
- * @param finished every finished trip; the ones that moved the odometer are picked out here.
+ * @param finished every finished trip; the ones that moved the odometer are picked out there.
  * @param unit the unit chosen in Settings, which the figure is worked out and shown in.
  * @param vehicle the paired vehicle whose odometer it is, or null for every reading and trip
  * (no vehicle paired). [isFirst] says whether it is the first vehicle, whose odometer also
@@ -92,30 +90,21 @@ fun odometerCardState(
     vehicle: StoredVehicle? = null,
     isFirst: Boolean = true,
     named: Boolean = false,
-): OdometerCardState {
-    val driven = drivenTrips(finished)
-    val address = vehicle?.address
-    return OdometerCardState(
-        figure =
-            odometerAt(
-                nowMs,
-                localDateOf(nowMs, zone),
-                zone,
-                if (address == null) readings else readings.ofVehicle(address, isFirst),
-                if (address == null) driven else driven.drivenIn(address, isFirst),
-                unit,
-            ),
-        zone = zone,
-        couldNotSave = couldNotSave,
-        unit = unit,
-        vehicle = address,
-        vehicleName = vehicle?.let { it.name ?: it.address }?.takeIf { named },
-    )
-}
+): OdometerCardState = cardOf(
+    VehicleOdometer(
+        vehicle = vehicle,
+        named = named,
+        figure = odometerNow(readings, finished, nowMs, zone, unit, vehicle?.address, isFirst),
+    ),
+    zone,
+    couldNotSave,
+    unit,
+)
 
 /**
  * One tile for each paired vehicle (since 2026-10-08), the first first, each named where there
- * are several; one unnamed tile of every reading and trip while none is paired.
+ * are several; one unnamed tile of every reading and trip while none is paired. The odometers
+ * are the ones Home shows ([vehicleOdometers]).
  */
 fun odometerCardStates(
     settings: MiloSettings,
@@ -123,28 +112,23 @@ fun odometerCardStates(
     nowMs: Long,
     zone: ZoneId,
     couldNotSave: Boolean,
-): List<OdometerCardState> {
-    val unit = settings.distanceUnit
-    val vehicles = settings.pairedVehicles()
-    if (vehicles.isEmpty()) {
-        return listOf(
-            odometerCardState(settings.odometerReadings, finished, nowMs, zone, couldNotSave, unit),
-        )
-    }
-    return vehicles.mapIndexed { index, vehicle ->
-        odometerCardState(
-            settings.odometerReadings,
-            finished,
-            nowMs,
-            zone,
-            couldNotSave,
-            unit,
-            vehicle = vehicle,
-            isFirst = index == 0,
-            named = vehicles.size > 1,
-        )
-    }
+): List<OdometerCardState> = vehicleOdometers(settings, finished, nowMs, zone).map {
+    cardOf(it, zone, couldNotSave, settings.distanceUnit)
 }
+
+private fun cardOf(
+    odometer: VehicleOdometer,
+    zone: ZoneId,
+    couldNotSave: Boolean,
+    unit: DistanceUnit,
+) = OdometerCardState(
+    figure = odometer.figure,
+    zone = zone,
+    couldNotSave = couldNotSave,
+    unit = unit,
+    vehicle = odometer.vehicle?.address,
+    vehicleName = odometer.shownName,
+)
 
 /**
  * The Settings screen's tile for the truck's odometer (Shawn's decisions of 2026-10-07): the

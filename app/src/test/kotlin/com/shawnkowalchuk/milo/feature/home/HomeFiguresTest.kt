@@ -19,6 +19,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private const val MINUTE_MS = 60_000L
@@ -197,10 +198,10 @@ class HomeFiguresTest {
         assertEquals(2, figures.rows.size)
     }
 
-    // ---- The last trip ----------------------------------------------------------------------------
+    // ---- Today's trips, the newest first ---------------------------------------------------------
 
     @Test
-    fun `the last trip is the newest finished trip of today, written as Trips writes it`() {
+    fun `the first row is the newest finished trip of today, written as Trips writes it`() {
         val month =
             listOf(
                 trip("2026-10-06T07:42", 18_600.0, from = "Shop", to = "Windermere site"),
@@ -209,7 +210,7 @@ class HomeFiguresTest {
                 trip("2026-10-05T17:00", 9_000.0, from = "Shop", to = "Home"),
             )
 
-        val last = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES).lastTrip
+        val last = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES).rows.firstOrNull()
 
         assertEquals(
             PlacesText.FromTo(PlaceSide.Address("Supplier"), PlaceSide.Address("Shop")),
@@ -221,17 +222,19 @@ class HomeFiguresTest {
     }
 
     @Test
-    fun `a last trip without addresses says so in words`() {
+    fun `a trip without addresses says so in words`() {
         val unknown = trip("2026-10-06T12:40", 20_300.0)
+
+        val rows = homeTrips(today, edmonton, listOf(unknown), DistanceUnit.KILOMETRES).rows
 
         assertEquals(
             PlacesText.Sentence(R.string.trips_addresses_left_blank),
-            homeTrips(today, edmonton, listOf(unknown), DistanceUnit.KILOMETRES).lastTrip?.places,
+            rows.single().places,
         )
     }
 
     @Test
-    fun `before the first finished trip of today there is no last trip`() {
+    fun `before the first finished trip of today there is no row`() {
         val month =
             listOf(
                 trip("2026-10-05T17:00", 9_000.0),
@@ -240,7 +243,7 @@ class HomeFiguresTest {
 
         val figures = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
 
-        assertNull(figures.lastTrip)
+        assertTrue(figures.rows.isEmpty())
         assertEquals(0, figures.today.count)
         assertEquals(90L, figures.month.businessTenths)
     }

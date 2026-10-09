@@ -82,15 +82,13 @@ class SystemScreenTest {
     }
 
     @Test
-    fun `the battery exemption is Android's request dialog for MilO, then the list of all apps`() {
+    fun `the battery exemption is Android's list of all apps, never the restricted dialog`() {
         val ways = screenIntents(SystemScreen.BATTERY_EXEMPTION, milo)
 
+        // The dialog that asks for the exemption straight away needs a permission Google Play
+        // restricts (ADR-004), so MilO opens the list, where Shawn picks MilO himself.
         assertEquals(
             listOf(
-                ScreenIntent(
-                    action = "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
-                    data = "package:com.shawnkowalchuk.milo",
-                ),
                 ScreenIntent(action = "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS"),
                 appDetails,
             ),

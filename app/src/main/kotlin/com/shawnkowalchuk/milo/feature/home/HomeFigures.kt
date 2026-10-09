@@ -100,9 +100,6 @@ internal data class HomeTrips(
 ) {
     /** Today's trips added up by what they are saved as, in [unit]. */
     val todayTotals: CategoryTotals get() = today.totals(unit)
-
-    /** The most recent finished trip of today, or null before the first one. */
-    val lastTrip: HomeTrip? get() = rows.firstOrNull()
 }
 
 /**

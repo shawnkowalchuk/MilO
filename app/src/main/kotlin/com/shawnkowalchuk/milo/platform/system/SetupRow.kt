@@ -90,8 +90,15 @@ sealed interface SetupFix {
      *
      * @param ifNotAsked the screen to open when Android no longer shows the dialog, which it
      * stops doing after the permission has been refused twice.
+     * @param locationDisclosure true when MilO must first say what location it collects, when
+     * and why: Google Play wants that said in the app itself before "Allow all the time" is asked
+     * for (ADR-004). The screen shows it, and asks only after "Continue".
      */
-    data class AskPermission(val permissions: List<String>, val ifNotAsked: SystemScreen) : SetupFix
+    data class AskPermission(
+        val permissions: List<String>,
+        val ifNotAsked: SystemScreen,
+        val locationDisclosure: Boolean = false,
+    ) : SetupFix
 
     /** Open a screen of the phone's settings. */
     data class Open(val screen: SystemScreen) : SetupFix

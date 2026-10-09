@@ -96,6 +96,9 @@ internal class ScheduleActions(
  * the Setup feature's: a feature never imports another one.
  * @param versionTile the version on this phone, which opens the What's new screen: the last
  * tile, handed in for the same reason (since 2026-10-08).
+ * @param showCoffee false in the copy installed from Google Play, which shows no Buy me a coffee
+ * tile: Google Play's payments policy does not allow a link that pays the developer outside it
+ * (2026-10-09, ADR-004).
  */
 @Composable
 fun SettingsScreen(
@@ -108,6 +111,7 @@ fun SettingsScreen(
     onBack: (() -> Unit)?,
     setupTile: @Composable () -> Unit,
     versionTile: @Composable () -> Unit,
+    showCoffee: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
@@ -176,6 +180,7 @@ fun SettingsScreen(
         widgetTile = { HomeWidgetTile(widgetViewModel) },
         dataTile = { DataTile(dataViewModel) },
         versionTile = versionTile,
+        showCoffee = showCoffee,
     )
 }
 
@@ -198,6 +203,8 @@ fun SettingsScreen(
  * copy of the trips is wanted most.
  * @param versionTile the version on this phone, under everything, as GopherForms has it. Shown
  * whatever the settings file says: the version does not come from it.
+ * @param showCoffee whether the Buy me a coffee tile stands above it: not in the copy from
+ * Google Play ([SettingsScreen]).
  */
 @Composable
 internal fun SettingsContent(
@@ -211,6 +218,7 @@ internal fun SettingsContent(
     widgetTile: @Composable () -> Unit,
     dataTile: @Composable () -> Unit,
     versionTile: @Composable () -> Unit,
+    showCoffee: Boolean = true,
 ) {
     val spacing = MiloTheme.spacing
     TileColumn(
@@ -274,7 +282,7 @@ internal fun SettingsContent(
         // everything, so it is not among the settings that are changed in passing.
         if (state != SettingsUiState.Reading) dataTile()
         // Beside the version: neither is a setting.
-        CoffeeTile()
+        if (showCoffee) CoffeeTile()
         versionTile()
     }
 }

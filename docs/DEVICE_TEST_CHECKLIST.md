@@ -1262,13 +1262,13 @@ Shawn's request of 2026-10-08: a page that says what MilO does, then OK, then Se
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| OB-1 | **The page.** Install the build over the one on the phone and open MilO. | "Welcome" in the top line, no bottom bar, the lime tile "MilO logs your business driving by itself", five tiles under it, and OK at the end once scrolled. The page is in the app's dark colours; the top line is clear of the status bar and OK of the gesture bar. Your trips are still there afterwards (OB-6). | not run |
+| OB-1 | **The page.** Install the build over the one on the phone and open MilO. | "Welcome" in the top line, no bottom bar, the lime tile "MilO logs your business driving by itself", five tiles under it, and OK at the bottom of the screen, in view while they scroll (since 2026-10-09; GP-5). The page is in the app's dark colours; the top line is clear of the status bar and OK of the gesture bar. Your trips are still there afterwards (OB-6). | not run |
 | OB-2 | **Back on the page.** Press Back, then open MilO again. | MilO closes; the page shows again. | not run |
-| OB-3 | **OK.** Press OK. | Setup, with "Setup" and its arrowhead in the top line, the rows as before, and at the end the lime button "Done, go to Settings". | not run |
-| OB-4 | **Leave Setup before Done.** Press Setup's arrowhead, then Settings in the bar, then the Setup tile. | Home with the bottom bar; then Setup again, still with "Done, go to Settings" at its end. | not run |
+| OB-3 | **OK.** Press OK. | Setup, with "Setup" and its arrowhead in the top line, the rows as before, and the lime button "Done, go to Settings" at the bottom of the screen (since 2026-10-09; GP-6). | not run |
+| OB-4 | **Leave Setup before Done.** Press Setup's arrowhead, then Settings in the bar, then the Setup tile. | Home with the bottom bar; then Setup again, still with "Done, go to Settings" at the bottom. | not run |
 | OB-5 | **Done.** Press "Done, go to Settings". | Settings, marked in the bottom bar; Back leads to Home. | not run |
 | OB-6 | **Never again.** Swipe MilO out of the recent apps and open it again; open Setup. | Home, with today's figures and your trips; Setup without the Done button. | not run |
-| OB-7 | **A large font.** Do this between OB-2 and OB-3, while the page still shows: set the phone's font size to its largest, open MilO, look, then set the size back. | The page scrolls; no words are cut off, and OK can be reached. | not run |
+| OB-7 | **A large font.** Do this between OB-2 and OB-3, while the page still shows: set the phone's font size to its largest, open MilO, look, then set the size back. | The tiles scroll above OK, which stays in view; no words are cut off. | not run |
 
 ## Two sounds: the connect sound and the trip-start sound (2026-10-08)
 
@@ -1359,6 +1359,35 @@ Shawn's request of 2026-10-08: a label for each trip, picked from those used bef
 | BC-1 | **The tile.** Open Settings and scroll to the end. | Above Version: "Buy me a coffee" with its arrowhead, "buymeacoffee.com/SeaWingman" and a grey sentence. | not run |
 | BC-2 | **Open it.** Tap the tile. | The browser opens buymeacoffee.com/SeaWingman; Back returns to MilO's Settings. | not run |
 | BC-3 | **The website.** Open milotriplog.top on the phone after the merge. | A yellow "☕ Buy me a coffee" button in the last tile, a "Buy me a coffee" link in the footer; both open the same page. Nothing is wider than the screen. | not run |
+
+## Ready for Google Play (2026-10-09)
+
+ADR-004: the location question, the battery list, the coffee tile from Google Play, and the first start's buttons that stay in view. Built and unit tested only; never drawn anywhere. On a phone where location is already "Allow all the time", GP-1 and GP-2 need it set back to "Allow only while using the app" first, in Android's settings for MilO.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| GP-1 | **The question first.** On Setup, press the button of "Location: Allow all the time". | Not Android's page but MilO's question "MilO uses your location": the location collected for each trip's route and distance "even when the app is closed or not in use", that it stays on the phone, the address lookup, and "choose Allow all the time". "Not now" and "Continue" at its foot. | not run |
+| GP-2 | **Only after Continue.** Press "Not now", then the row's button again and "Continue". | "Not now" asks nothing and the row keeps its button. "Continue" opens Android's location page for MilO; choose "Allow all the time" and come back: the row is in order. | not run |
+| GP-3 | **The battery list.** With MilO set back to optimised in Android's settings, press the battery row's button. | Android's list of battery optimisation opens (or, if HyperOS has none, MilO's App info, and the Log says the list was missing). Show all apps, choose MilO, "Don't optimise", come back: the row is in order. Write down which screen opened. | not run |
+| GP-4 | **The exemption stays.** After installing this build over the one before, without touching the battery settings, open Setup. | "Battery use: unrestricted" is still in order: removing the permission took nothing away. | not run |
+| GP-5 | **The welcome page's OK stays in view.** On a phone being set up (or with the first start stage cleared on an emulator), open MilO. | OK stands at the bottom of the screen while the tiles scroll under the top; after the last tile, the tiles end above it. Nothing is drawn behind it, and it clears the gesture bar. | not run |
+| GP-6 | **Setup's Done stays in view.** Press OK. | Setup opens with "Done, go to Settings" at the bottom, in view while the rows scroll; pressing it opens Settings. Opened again after the first start, Setup has no such button and scrolls to its end as before. | not run |
+| GP-7 | **The coffee tile in the GitHub copy.** In the APK from GitHub (or a build from the Mac), open Settings and scroll to the end. | Buy me a coffee is above Version, as in BC-1. | not run |
+| GP-8 | **No coffee tile from Google Play.** Once MilO is on Google Play (Internal testing is enough), install or update it from the Play Store and open Settings. | No Buy me a coffee tile: Version is the last tile under the data tile. | not run |
+
+## Home: the odometer and all of today's trips (2026-10-09)
+
+Shawn's requests of 2026-10-09: the odometer on Home, every trip of today in place of the last one, and no "Home" at the end of the top line. Phone only. Built and unit tested only; never drawn anywhere.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| HM-1 | **The top line.** Open Home. | The M, "MilO" and today's date on the left; nothing on the right. Other screens still have their name there. | not run |
+| HM-2 | **The odometer, one vehicle.** With one vehicle paired and a reading typed in Settings, open Home. | Under the truck's tile: "Odometer", the same figure as Settings' odometer tile, and "Your last reading in Settings, plus every trip since". | not run |
+| HM-3 | **It follows a trip.** End a trip of a few kilometres, then look at Home. | The odometer has gone up by that trip, as on Settings. | not run |
+| HM-4 | **Several vehicles.** With two vehicles paired, one of them without a reading, open Home. | One tile with a row for each vehicle: its name and figure, and "No reading yet" for the one without. | not run |
+| HM-5 | **No reading yet.** On a phone with no reading typed (or a test copy), open Home. | "Type the number on the dashboard in Settings once. MilO adds every trip to it from then on." | not run |
+| HM-6 | **Today's trips.** After two or more trips today, with none in progress, open Home. | "Today · 2 trips · … driving", every trip of today with the newest at the top, no "Last trip" and no note about a trip in progress. Tapping the tile opens Trips. | not run |
+| HM-7 | **While recording.** Start a trip. | The odometer tile under the truck and today pair, then the same list of today's trips, with "The trip in progress is added when it ends." under it. | not run |
 
 ## Later work packages
 

@@ -118,6 +118,7 @@ private fun backgroundLocationRow(preflight: PreflightFacts): SetupRow = when {
             SetupFix.AskPermission(
                 listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
                 ifNotAsked = SystemScreen.APP_DETAILS,
+                locationDisclosure = true,
             ),
         )
 }
@@ -168,8 +169,9 @@ private fun truckRow(pairing: PairingState?, truckName: String?): SetupRow {
 
 /**
  * Android's three battery settings in one row. "Restricted" blocks the trip service outright
- * and is changed on the app's own settings page; "Optimised" is lifted with Android's own
- * request dialog.
+ * and is changed on the app's own settings page; "Optimised" is lifted in Android's list of
+ * every app's battery optimisation (since 2026-10-09; before, with its request dialog, which
+ * needs a permission Google Play restricts: ADR-004).
  *
  * On a Xiaomi phone that page is HyperOS's "App info", where the setting has another name, so
  * the row says which words to look for there.

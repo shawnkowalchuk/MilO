@@ -63,6 +63,9 @@ private val ChevronSize = 20.dp
  * @param onBack pass it on a screen opened from another one: the name is then the way back.
  * The four screens of the bottom bar have none, because the bar is how they are left.
  * @param line a quieter line under the screen's name: who or what the screen is for.
+ * @param titleShown false where the end of the line stays empty: on Home since 2026-10-09
+ * (Shawn: "remove the home top right corner"), where the bottom bar's lit Home button already
+ * says which screen it is. The name is then not drawn; [line] and [onBack] are not used.
  */
 @Composable
 fun AppHeader(
@@ -70,6 +73,7 @@ fun AppHeader(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     line: String? = null,
+    titleShown: Boolean = true,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().heightIn(min = TopLineHeight),
@@ -80,10 +84,10 @@ fun AppHeader(
         AppNameAndDay()
         // The rest of the line, with the screen's name at its end.
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-            if (onBack == null) {
-                ScreenName(title, line, MaterialTheme.colorScheme.onSurface)
-            } else {
-                BackToPrevious(title, line, onBack)
+            when {
+                !titleShown -> Unit
+                onBack == null -> ScreenName(title, line, MaterialTheme.colorScheme.onSurface)
+                else -> BackToPrevious(title, line, onBack)
             }
         }
     }

@@ -73,18 +73,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
-        Lets the setup checklist show Android's own dialog that exempts MilO from battery
-        optimisation (ADR-002). Lint flags the permission because Google Play restricts it;
-        MilO is installed from Android Studio on one phone and is never published there.
-    -->
-    <uses-permission
-        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
-        tools:ignore="BatteryLife" />
-
-    <!--
-        MilO is useless without GPS, but saying so here only matters to app stores, and MilO is
-        installed from Android Studio on one phone. Declared as not required so the build never
-        refuses an emulator image.
+        MilO is useless without GPS, but saying so here only decides which devices Google Play
+        offers it to (ADR-004). Declared as not required so the build never refuses an emulator
+        image.
     -->
     <uses-feature
         android:name="android.hardware.location.gps"

@@ -158,16 +158,6 @@
     <string name="home_report_title">%1$s report</string>
     <string name="home_report_text">Not sent to the accountant yet</string>
     <string name="home_report_action">Send</string>
-    <!-- Home: the last finished trip of today, and the way to the Trips screen. -->
-    <string name="home_last_trip">Last trip</string>
-    <!--
-        The argument is the number of today's finished trips. English says it alike for one and
-        for several; it is a plural because another language may not.
-    -->
-    <plurals name="home_all_today">
-        <item quantity="one">All %1$d today</item>
-        <item quantity="other">All %1$d today</item>
-    </plurals>
     <!--
         A trip's time, or its times, and what it is saved as: 12:40 PM · Business. The first
         argument is from formatTimeOfDay() or trips_time_range, the second one of the four
@@ -262,10 +252,21 @@
     <!-- Setup: the line under a row that is not in order: why it matters and what to do. -->
     <string name="setup_fix_precise_location">MilO measures a trip from GPS positions. Allow precise location.</string>
     <string name="setup_fix_background_location">A trip that starts by itself starts while MilO is closed. Android opens its own location screen for this: choose \"Allow all the time\" there.</string>
+    <!--
+        Setup: what is said before Android is asked for "Allow all the time" (ADR-004). Google
+        Play wants it in the app itself, before the request: what is collected, why, that it
+        happens even when the app is closed or not in use, and where it goes. It must agree with
+        the privacy policy (website/privacy.html).
+    -->
+    <string name="setup_disclosure_title">MilO uses your location</string>
+    <string name="setup_disclosure_text">MilO collects your phone\'s location to record the route and distance of each trip, including the trips that start by themselves when the phone connects to your vehicle, even when the app is closed or not in use.\n\nYour location stays on this phone. MilO has no account and no server, and shares it with no one. To show where a trip started and ended, MilO hands those two positions to your phone\'s own address lookup, which on most phones is Google\'s.\n\nOn the next screen, choose \"Allow all the time\".</string>
+    <string name="setup_disclosure_continue">Continue</string>
+    <string name="setup_disclosure_not_now">Not now</string>
     <string name="setup_fix_notifications">The trip notification, and the warning when a trip could not start, need this.</string>
     <string name="setup_fix_nearby_devices">Without it MilO cannot see the truck connect or disconnect.</string>
     <string name="setup_fix_location_services">Location is switched off for the whole phone. No trip can be recorded.</string>
-    <string name="setup_fix_battery_exemption">Android may stop MilO to save battery. Allow it to run without battery optimisation.</string>
+    <!-- Since 2026-10-09 the button opens Android's list of every app, not a dialog for MilO alone (ADR-004). -->
+    <string name="setup_fix_battery_exemption">Android may stop MilO to save battery. In the list that opens, show all apps, choose MilO, then "Don't optimise".</string>
     <string name="setup_fix_unused_app_pause">Recommended. Switch off \"Pause app activity if unused\" for MilO, or Android stops it after months without being opened.</string>
     <string name="setup_fix_battery_saver_off">Battery Saver is on. It limits location and background work, so a trip can be missed or cut short.</string>
     <string name="setup_fix_physical_activity">Recommended. The driving alert needs this: it is how the phone tells MilO that you are driving. MilO only sends a notification then, and never starts a trip by itself.</string>

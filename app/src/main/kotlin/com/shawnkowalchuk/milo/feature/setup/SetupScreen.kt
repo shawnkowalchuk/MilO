@@ -4,6 +4,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,12 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
+import com.shawnkowalchuk.milo.core.designsystem.component.PinnedButtonColumn
 import com.shawnkowalchuk.milo.core.designsystem.component.PrimaryButton
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
 import com.shawnkowalchuk.milo.core.designsystem.component.TileColumn
@@ -44,8 +49,8 @@ import com.shawnkowalchuk.milo.platform.system.SystemScreen
  *
  * @param onOpenPairing the truck row's button. Navigation belongs to the app, not the feature.
  * @param onBack leaves the screen.
- * @param onDone the button at the end, "Done, go to Settings", while the first start is being
- * gone through (2026-10-08); null otherwise, and then there is no such button. It can be pressed
+ * @param onDone the button "Done, go to Settings", at the bottom of the screen, while the first
+ * start is being gone through (2026-10-08); null otherwise, and then there is no such button. It can be pressed
  * with rows still to fix: Home's warning goes on saying so.
  */
 @Composable
@@ -78,14 +83,30 @@ fun SetupScreen(
             )
         }
 
+    fun ask(fix: SetupFix.AskPermission) {
+        viewModel.onAsking(fix, canExplain(fix.permissions))
+        permissionDialog.launch(fix.permissions.toTypedArray())
+    }
+
+    // The request that waits for the location disclosure to be answered (ADR-004). Not kept
+    // across a rotation: the dialog then closes, and the row's button shows it again.
+    var disclosing by remember { mutableStateOf<SetupFix.AskPermission?>(null) }
+    disclosing?.let { fix ->
+        LocationDisclosure(
+            onContinue = {
+                disclosing = null
+                ask(fix)
+            },
+            onNotNow = { disclosing = null },
+        )
+    }
+
     val actions =
         SetupActions(
             onFix = { fix ->
                 when (fix) {
-                    is SetupFix.AskPermission -> {
-                        viewModel.onAsking(fix, canExplain(fix.permissions))
-                        permissionDialog.launch(fix.permissions.toTypedArray())
-                    }
+                    is SetupFix.AskPermission ->
+                        if (fix.locationDisclosure) disclosing = fix else ask(fix)
 
                     is SetupFix.Open -> viewModel.onOpenScreen(fix.screen)
 
@@ -130,6 +151,9 @@ fun SetupLinkTile(viewModel: SetupViewModel, onOpenSetup: () -> Unit) {
  * Setup as the owner's design draws it: the title, the tile with the count, then each group of
  * rows under its small label, the rows that are to be fixed first. While the phone is being
  * read for the first time, one tile says so in place of all of them.
+ *
+ * During the first start, "Done, go to Settings" stays at the bottom of the screen while the
+ * rows scroll (2026-10-09, [PinnedButtonColumn]).
  */
 @Composable
 private fun SetupContent(
@@ -140,14 +164,7 @@ private fun SetupContent(
     onDone: (() -> Unit)? = null,
 ) {
     val spacing = MiloTheme.spacing
-    TileColumn(
-        modifier =
-            modifier
-                .fillMaxSize()
-                // Large font settings or a small window must scroll rather than cut content off.
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = spacing.small),
-    ) {
+    val tiles: @Composable ColumnScope.() -> Unit = {
         AppHeader(
             title = stringResource(R.string.setup_title),
             onBack = onBack,
@@ -156,29 +173,48 @@ private fun SetupContent(
         )
         if (rows == null) {
             Tile(modifier = Modifier.fillMaxWidth()) { Note(R.string.setup_reading) }
-            return@TileColumn
+        } else {
+            ChecklistGroups(rows, actions)
         }
-        SummaryTile(setupSummary(rows))
+    }
+    if (onDone == null) {
+        TileColumn(
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    // Large font settings or a small window must scroll rather than cut off.
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = spacing.small),
+            content = tiles,
+        )
+    } else {
+        PinnedButtonColumn(
+            button = {
+                PrimaryButton(
+                    text = stringResource(R.string.setup_done),
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            modifier = modifier.fillMaxSize(),
+            content = tiles,
+        )
+    }
+}
 
-        val (xiaomi, android) = rows.partition { it.item.xiaomiOnly }
-        val androidLabel = stringResource(R.string.setup_section_android)
-        ChecklistGroup(androidLabel, toFixFirst(android), actions)
-        if (xiaomi.isNotEmpty()) {
-            val xiaomiLabel = stringResource(R.string.setup_section_xiaomi)
-            ChecklistGroup(xiaomiLabel, toFixFirst(xiaomi), actions)
-            // Under the tile it explains, and in from the edge like the label above it.
-            Note(
-                R.string.setup_section_xiaomi_note,
-                Modifier.padding(horizontal = spacing.extraSmall),
-            )
-        }
-        if (onDone != null) {
-            PrimaryButton(
-                text = stringResource(R.string.setup_done),
-                onClick = onDone,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+/** The tile with the count, then the Android rows and, on a Xiaomi phone, the HyperOS rows. */
+@Composable
+private fun ChecklistGroups(rows: List<SetupRow>, actions: SetupActions) {
+    SummaryTile(setupSummary(rows))
+    val (xiaomi, android) = rows.partition { it.item.xiaomiOnly }
+    ChecklistGroup(stringResource(R.string.setup_section_android), toFixFirst(android), actions)
+    if (xiaomi.isNotEmpty()) {
+        ChecklistGroup(stringResource(R.string.setup_section_xiaomi), toFixFirst(xiaomi), actions)
+        // Under the tile it explains, and in from the edge like the label above it.
+        Note(
+            R.string.setup_section_xiaomi_note,
+            Modifier.padding(horizontal = MiloTheme.spacing.extraSmall),
+        )
     }
 }
 

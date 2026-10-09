@@ -1,6 +1,37 @@
 {
   "releases": [
     {
+      "version": "0.2.0",
+      "date": null,
+      "changes": [
+        {
+          "kind": "new",
+          "title": "The odometer on Home",
+          "body": "Home shows each vehicle's odometer: your last reading in Settings, plus every trip since."
+        },
+        {
+          "kind": "improved",
+          "title": "All of today's trips on Home",
+          "body": "Home lists every finished trip of today, the newest at the top, in place of the last trip alone. Its top line no longer says Home."
+        },
+        {
+          "kind": "improved",
+          "title": "Location, explained first",
+          "body": "Before Android asks you to allow location all the time, MilO says what it collects, why, and that it stays on this phone."
+        },
+        {
+          "kind": "improved",
+          "title": "The battery setting",
+          "body": "Setup's battery button opens Android's list of apps. Show all apps, choose MilO, then \"Don't optimise\"."
+        },
+        {
+          "kind": "improved",
+          "title": "Buttons that stay in view",
+          "body": "On the welcome page and on Setup during the first start, the button to go on stays at the bottom of the screen while you scroll."
+        }
+      ]
+    },
+    {
       "version": "0.1.0",
       "date": "2026-10-09",
       "changes": [

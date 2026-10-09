@@ -94,8 +94,8 @@ android {
         // Raised for every release on GitHub (README, "Making a release"): versionCode up by one,
         // versionName to the release's number. Never lowered: Android refuses an older build over
         // a newer one, and the only way past that is to uninstall, which deletes every trip.
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     signingConfigs {
