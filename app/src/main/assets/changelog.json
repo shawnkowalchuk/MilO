@@ -6,6 +6,11 @@
       "changes": [
         {
           "kind": "new",
+          "title": "MilO waves hello",
+          "body": "When you open MilO, its mascot waves over Home for a moment. Tap anywhere to skip him."
+        },
+        {
+          "kind": "new",
           "title": "The odometer on Home",
           "body": "Home shows each vehicle's odometer: your last reading in Settings, plus every trip since."
         },

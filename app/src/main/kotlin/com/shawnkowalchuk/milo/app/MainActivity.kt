@@ -17,7 +17,8 @@ import java.time.YearMonth
 /**
  * The only activity. It hosts the Compose UI, says when MilO has been opened or has come back
  * to the front, and passes on what a tapped notification asked for: which month's report (the
- * monthly reminder), or the Home screen (the daily check).
+ * monthly reminder), or the Home screen (the daily check). It also says that this is a fresh
+ * start, which is when MilO greets.
  * Nothing else: no logic, no system calls. Anything that talks to Android (Bluetooth, location,
  * notifications) belongs in `platform/` and is reached through a ViewModel.
  */
@@ -35,6 +36,12 @@ class MainActivity : ComponentActivity() {
      */
     private var homeAsked by mutableStateOf(false)
 
+    /**
+     * True from a fresh start of the activity until the greeting, the mascot's wave over Home,
+     * has been shown or dropped. Which of the two is the screens' business (`feature/greeting`).
+     */
+    private var greetingAsked by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -50,6 +57,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             reportToOpen = reportMonthToOpen(intent)
             homeAsked = homeAskedFor(intent)
+            greetingAsked = true
         }
 
         val container = (application as MiloApplication).container
@@ -60,6 +68,8 @@ class MainActivity : ComponentActivity() {
                 onReportOpened = { reportToOpen = null },
                 homeAsked = homeAsked,
                 onHomeShown = { homeAsked = false },
+                greetingAsked = greetingAsked,
+                onGreetingDone = { greetingAsked = false },
             )
         }
     }
