@@ -11,6 +11,11 @@
         },
         {
           "kind": "improved",
+          "title": "The odometer counts up as you drive",
+          "body": "During a trip in a paired vehicle, the odometer on Home and in Settings adds the distance as it is driven. Until now the whole trip was added when it ended."
+        },
+        {
+          "kind": "improved",
           "title": "All of today's trips on Home",
           "body": "Home lists every finished trip of today, the newest at the top, in place of the last trip alone. Its top line no longer says Home."
         },

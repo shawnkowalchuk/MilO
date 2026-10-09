@@ -67,4 +67,50 @@ class TruckTripsTest {
             drivenTrips(listOf(kept, left)),
         )
     }
+
+    // The trip being recorded (Shawn's request of 2026-10-09: the odometer changes as he drives).
+
+    private fun recording(tripId: Long, truckSeen: Boolean = true) = TripSoFar(
+        tripId = tripId,
+        startedAtMs = 1_791_031_000_000,
+        metres = 800.0,
+        truckSeen = truckSeen,
+        vehicle = "AA:BB:CC:DD:EE:FF",
+    )
+
+    @Test
+    fun `the trip being recorded is handed over with them, once the truck was seen in it`() {
+        val kept = trip()
+        val ended = DrivenTrip(kept.startedAtMs, kept.distanceMetres)
+        val soFar = recording(tripId = 2)
+
+        assertEquals(
+            listOf(ended, DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle)),
+            drivenTrips(listOf(kept), soFar),
+        )
+        // Started with the button, and no paired vehicle has joined it yet.
+        assertEquals(listOf(ended), drivenTrips(listOf(kept), recording(2, truckSeen = false)))
+    }
+
+    @Test
+    fun `it is not counted a second time once storage holds it as ended`() {
+        // The stored trip has id 1, and so has the one the controller still shows as recording.
+        val soFar = recording(tripId = 1)
+        val asEnded = trip()
+
+        assertEquals(
+            listOf(DrivenTrip(asEnded.startedAtMs, asEnded.distanceMetres)),
+            drivenTrips(listOf(asEnded), soFar),
+        )
+        for (status in listOf(TripStatus.DISCARDED, TripStatus.DELETED)) {
+            val none = drivenTrips(listOf(trip(status)), soFar)
+
+            assertEquals(status.name, emptyList<DrivenTrip>(), none)
+        }
+        // Its own row while it is still open hides nothing.
+        assertEquals(
+            listOf(DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle)),
+            drivenTrips(listOf(trip(TripStatus.OPEN)), soFar),
+        )
+    }
 }

@@ -4,12 +4,14 @@ import com.shawnkowalchuk.milo.core.trip.ActiveTrip
 import com.shawnkowalchuk.milo.core.trip.Parked
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripState
+import com.shawnkowalchuk.milo.data.trip.TripSoFar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 private const val STARTED_AT_MS = 1_791_028_800_000L
+private const val TRUCK = "AA:BB:CC:DD:EE:FF"
 
 /**
  * What the screens are told about the truck's connection. The Android Auto screen's Status row
@@ -80,5 +82,30 @@ class TripActivityTest {
         assertNull(
             tripActivityOf(open, rulesKnow(tripOpen = true, truckConnected = true), null).parked,
         )
+    }
+
+    @Test
+    fun `the odometers are handed the open trip, and whether the truck was seen in it`() {
+        val inTheTruck =
+            OpenTrip(id = 4, startedAtMs = STARTED_AT_MS, TripStartCause.TRUCK, vehicle = TRUCK)
+        val seen =
+            TripState(
+                trip =
+                    ActiveTrip(
+                        TripStartCause.TRUCK,
+                        truckSeen = true,
+                        lastMovementAtMs = STARTED_AT_MS,
+                    ),
+                truckConnected = true,
+            )
+        val byButton = rulesKnow(tripOpen = true, truckConnected = false)
+
+        assertEquals(
+            TripSoFar(4, STARTED_AT_MS, metres = 0.0, truckSeen = true, vehicle = TRUCK),
+            tripActivityOf(inTheTruck, seen, null).tripSoFar(),
+        )
+        // Started with the button, and the truck has not joined it.
+        assertEquals(false, tripActivityOf(open, byButton, null).tripSoFar()?.truckSeen)
+        assertNull(tripActivityOf(null, rulesKnow(false, truckConnected = true), null).tripSoFar())
     }
 }

@@ -38,6 +38,8 @@ data class VehicleOdometer(
  * @param address the vehicle whose odometer it is, or null for every reading and trip (no
  * vehicle paired). [isFirst] says whether it is the first vehicle, whose odometer also takes the
  * readings and trips that name none (`ofVehicle`).
+ * @param soFar the trip being recorded, which its vehicle's odometer counts while it is driven
+ * (since 2026-10-09, `drivenTrips`), or null when there is none.
  */
 fun odometerNow(
     readings: List<OdometerReading>,
@@ -47,8 +49,9 @@ fun odometerNow(
     unit: DistanceUnit,
     address: String? = null,
     isFirst: Boolean = true,
+    soFar: TripSoFar? = null,
 ): OdometerFigure? {
-    val driven = drivenTrips(finished)
+    val driven = drivenTrips(finished, soFar)
     return odometerAt(
         nowMs,
         localDateOf(nowMs, zone),
@@ -63,20 +66,23 @@ fun odometerNow(
  * Every paired vehicle's odometer now, the first first, each named where there are several; one
  * unnamed odometer of every reading and trip while none is paired. In the unit chosen in
  * Settings.
+ *
+ * @param soFar the trip being recorded (since 2026-10-09): the odometer of the vehicle it is in
+ * counts up as it is driven, on Home and in Settings alike.
  */
 fun vehicleOdometers(
     settings: MiloSettings,
     finished: List<Trip>,
     nowMs: Long,
     zone: ZoneId,
+    soFar: TripSoFar? = null,
 ): List<VehicleOdometer> {
     val readings = settings.odometerReadings
     val unit = settings.distanceUnit
     val vehicles = settings.pairedVehicles()
     if (vehicles.isEmpty()) {
-        return listOf(
-            VehicleOdometer(null, false, odometerNow(readings, finished, nowMs, zone, unit)),
-        )
+        val figure = odometerNow(readings, finished, nowMs, zone, unit, soFar = soFar)
+        return listOf(VehicleOdometer(null, false, figure))
     }
     return vehicles.mapIndexed { index, vehicle ->
         VehicleOdometer(
@@ -91,6 +97,7 @@ fun vehicleOdometers(
                     unit,
                     address = vehicle.address,
                     isFirst = index == 0,
+                    soFar = soFar,
                 ),
         )
     }
