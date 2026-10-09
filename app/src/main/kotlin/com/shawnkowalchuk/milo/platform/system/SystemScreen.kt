@@ -1,6 +1,5 @@
 package com.shawnkowalchuk.milo.platform.system
 
-import android.annotation.SuppressLint
 import android.provider.Settings
 
 /** A screen outside MilO that a button of the setup checklist or the pairing screen opens. */
@@ -11,7 +10,11 @@ enum class SystemScreen {
     LOCATION,
     BLUETOOTH,
 
-    /** Android's dialog that asks to let MilO run without battery optimisation. */
+    /**
+     * Android's list of every app's battery optimisation, where MilO is set to "Don't optimise".
+     * Since 2026-10-09 not the dialog that asks for it straight away: that one needs a
+     * permission Google Play restricts (ADR-004).
+     */
     BATTERY_EXEMPTION,
 
     /** The page with the switch "Pause app activity if unused". */
@@ -71,10 +74,6 @@ private const val ACTION_AUTO_REVOKE_PERMISSIONS = "android.intent.action.AUTO_R
  * HyperOS that page is Xiaomi's "App info", which has Autostart, Battery saver and Other
  * permissions one tap away (finding 30).
  */
-// Lint flags the request to be exempt from battery optimisation because Google Play restricts
-// it. MilO is installed from Android Studio on one phone and is never published there, and a
-// trip-detection app is what the exemption exists for (ADR-002).
-@SuppressLint("BatteryLife")
 fun screenIntents(screen: SystemScreen, app: AppIdentity): List<ScreenIntent> {
     val packageAddress = "package:${app.packageName}"
     val appDetails =
@@ -101,14 +100,7 @@ fun screenIntents(screen: SystemScreen, app: AppIdentity): List<ScreenIntent> {
                 listOf(ScreenIntent(action = Settings.ACTION_BLUETOOTH_SETTINGS))
 
             SystemScreen.BATTERY_EXEMPTION ->
-                listOf(
-                    ScreenIntent(
-                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        data = packageAddress,
-                    ),
-                    // The list of every app's setting, should the dialog be missing.
-                    ScreenIntent(action = Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-                )
+                listOf(ScreenIntent(action = Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
 
             SystemScreen.UNUSED_APP_PAUSE ->
                 listOf(ScreenIntent(action = ACTION_AUTO_REVOKE_PERMISSIONS, data = packageAddress))

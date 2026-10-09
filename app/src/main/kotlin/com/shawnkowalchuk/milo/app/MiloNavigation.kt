@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -34,6 +35,7 @@ import com.shawnkowalchuk.milo.feature.setup.SetupViewModel
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditScreen
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditViewModel
 import com.shawnkowalchuk.milo.feature.tripedit.TripEditing
+import com.shawnkowalchuk.milo.platform.system.installedFromGooglePlay
 import java.time.ZoneId
 
 /**
@@ -64,6 +66,9 @@ fun MiloNavigation(
     // When the trip that was just saved on the edit screen starts, until Trips has shown the
     // month it is in. The two screens are different features, so the app carries it across.
     var savedTripStartMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Read once: which app installed MilO does not change while it runs (ADR-004).
+    val context = LocalContext.current
+    val fromGooglePlay = remember { installedFromGooglePlay(context) }
 
     NavDisplay(
         backStack = backStack,
@@ -222,6 +227,7 @@ fun MiloNavigation(
                             )
                         },
                         versionTile = { VersionTileEntry(container, backStack) },
+                        showCoffee = !fromGooglePlay,
                     )
                 }
                 entry<WhatsNewKey> { WhatsNewEntry(container, backStack) }

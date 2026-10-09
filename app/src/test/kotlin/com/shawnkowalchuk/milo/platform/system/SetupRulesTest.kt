@@ -84,9 +84,37 @@ class SetupRulesTest {
             SetupFix.AskPermission(
                 listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
                 ifNotAsked = SystemScreen.APP_DETAILS,
+                locationDisclosure = true,
             ),
             askable.fix,
         )
+    }
+
+    @Test
+    fun `only Allow all the time is preceded by the location disclosure`() {
+        // Every row that asks for a permission, each with its permission missing.
+        val nothingGranted =
+            allGood.copy(
+                preflight =
+                    preflightGood.copy(
+                        fineLocationGranted = false,
+                        bluetoothGranted = false,
+                    ),
+                notificationsEnabled = false,
+                activityRecognitionGranted = false,
+            )
+        val onlyBackgroundMissing =
+            allGood.copy(preflight = preflightGood.copy(backgroundLocationGranted = false))
+
+        val asks =
+            (rows(nothingGranted) + rows(onlyBackgroundMissing))
+                .mapNotNull { it.fix as? SetupFix.AskPermission }
+        val disclosed = asks.filter { it.locationDisclosure }.flatMap { it.permissions }
+
+        // Google Play wants it before the background request (ADR-004); the others are asked
+        // for where their row says why.
+        assertEquals(listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), disclosed)
+        assertTrue(asks.size > 1)
     }
 
     @Test
@@ -133,10 +161,10 @@ class SetupRulesTest {
         val notExempt = rows(optimised).row(SetupItem.BATTERY_EXEMPTION)
         val blocked = rows(restricted).row(SetupItem.BATTERY_EXEMPTION)
 
-        // Not exempt: Android's own request dialog lifts it.
+        // Not exempt: Android's list of battery optimisation lifts it.
         assertEquals(SetupDetail.NOT_SET, notExempt.detail)
         assertEquals(SetupFix.Open(SystemScreen.BATTERY_EXEMPTION), notExempt.fix)
-        // Restricted: that dialog does not change it; the app's own page does.
+        // Restricted: that list does not change it; the app's own page does.
         assertEquals(SetupDetail.BATTERY_RESTRICTED, blocked.detail)
         assertEquals(SetupFix.Open(SystemScreen.APP_DETAILS), blocked.fix)
     }

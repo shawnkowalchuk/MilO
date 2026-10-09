@@ -205,7 +205,7 @@ HyperOS stops apps in the background harder than plain Android does. These are t
 
 ### 3. Battery optimisation exemption (Android's own)
 
-- **Where:** MilO's Setup, the row "Battery use: unrestricted", Open settings, then allow. The research found no HyperOS menu path for it, so use the row's button.
+- **Where:** MilO's Setup, the row "Battery use: unrestricted", Open settings. Since 2026-10-09 that opens Android's list of every app's battery optimisation (the dialog for MilO alone needed a permission Google Play restricts): show all apps, choose MilO, then "Don't optimise". The research found no HyperOS menu path for it, so use the row's button.
 - **Why:** it lets Android start a recording while MilO is in the background, and keeps Android's own battery saving off MilO. It is treated as a separate setting from number 2: set both.
 - **MilO's Setup:** reads it.
 - **On your phone so far:** granted, read from the phone on 2026-10-05.
@@ -233,7 +233,7 @@ HyperOS stops apps in the background harder than plain Android does. These are t
 
 ### 7. Location: "Allow all the time"
 
-- **Where:** MilO's Setup, the row "Location: Allow all the time", Allow. By hand: Settings, Apps, Manage apps, MilO, Permissions, Location, "Allow all the time", with "Use precise location" on. *(From the research notes for HyperOS, check on your phone.)* That it is granted was read from the phone; the path was not written down.
+- **Where:** MilO's Setup, the row "Location: Allow all the time", Allow. MilO first says what location it collects and why ("MilO uses your location", since 2026-10-09); Continue, then choose "Allow all the time" on Android's page. By hand: Settings, Apps, Manage apps, MilO, Permissions, Location, "Allow all the time", with "Use precise location" on. *(From the research notes for HyperOS, check on your phone.)* That it is granted was read from the phone; the path was not written down.
 - **Why:** a trip that starts by itself starts while MilO is closed. Android 14 refuses to start a location recording from the background without it, and there is no way round that.
 - **MilO's Setup:** reads it.
 - **On your phone so far:** granted, read from the phone on 2026-10-05.
@@ -419,6 +419,18 @@ Each update that others can download is a GitHub Release with the APK attached. 
 6. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
 Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **The first release, 0.1.0, was published on 2026-10-09,** after its APK was installed over the phone's MilO this way.
+
+### Publishing on Google Play
+
+MilO is being prepared for Google Play as a second channel beside GitHub Releases (ADR-004, 2026-10-09). The app exists in the Play Console of 2795748 Alberta Ltd. as "MilO Trip Log" (`com.shawnkowalchuk.milo`, English (Canada), free, automatic protection turned off). **Nothing has been uploaded yet.** Each version goes to both channels with the same number.
+
+1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release: `./gradlew bundleRelease`. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`.
+2. **The first upload decides the signing key, for good.** In Testing, Internal testing, create a release. When the Console asks how the app is signed, choose to use your own key (exporting and uploading a key from a Java keystore), and run the command it shows with `~/keys/milo.jks` and the alias `milo`. **Never let Google create the key:** a copy signed with another key can never update the phone's MilO without wiping its trips.
+3. **App content** (Policy, App content). Privacy policy: `https://milotriplog.top/privacy`. App access: no sign-in; reviewers start a trip with Start on Home, as they have no truck. Ads: No (change it before an update with ads, if one ever comes). Content rating: the questionnaire. Target audience: 18 and over. Data safety: MilO's own code sends nothing anywhere; location stays on the phone, except the two ends of each trip given to the phone's address lookup (Google's on most phones) and Android's backup if it is switched on, which Google's guidance in the form says how to declare.
+4. **The two declarations that need a video.** Location in the background: a recording that shows Setup's "Location: Allow all the time" button, MilO's question "MilO uses your location", Continue, Android's page with "Allow all the time", and a trip that starts with MilO closed. Foreground service (location): a trip being recorded with its notification.
+5. **Android Auto:** in Advanced settings, Form factors, add Android Auto. Google reviews the car screen before it reaches cars.
+6. **Store listing:** a short description (80 characters), the full description, a 512 × 512 icon, a 1024 × 500 feature graphic and at least two phone screenshots (`website/screenshots/`); category Business.
+7. **Roll out** to Internal testing first, read Google's report on it, then promote the same release to Production for Canada (and any other countries).
 
 ### The list of changes
 

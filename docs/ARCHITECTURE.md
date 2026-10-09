@@ -10,7 +10,7 @@ Built so far: the Gradle build with its quality gates, the design system in `cor
 
 ## 1. System overview
 
-MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It notices when the phone connects to the work truck over Bluetooth, records the drive with GPS in a foreground service, stores the trip on the phone, and produces a monthly PDF that Shawn sends to accounts through Gmail. There is no backend, no account and no server: every piece of data lives in on-device storage. The app is installed over USB from a Mac mini (from Android Studio by the brief; so far with adb from the terminal) and is never published to the Play Store. It has two UI surfaces, the phone UI and an Android Auto screen, over one shared set of logic.
+MilO is a native Kotlin Android app for one person on one phone: Shawn's Xiaomi POCO X5 Pro 5G (Android 14, HyperOS 2.0). It notices when the phone connects to the work truck over Bluetooth, records the drive with GPS in a foreground service, stores the trip on the phone, and produces a monthly PDF that Shawn sends to accounts through Gmail. There is no backend, no account and no server: every piece of data lives in on-device storage. The app is installed over USB from a Mac mini (from Android Studio by the brief; so far with adb from the terminal). Since 2026-10-08 anyone can download it as an APK from GitHub Releases, and since 2026-10-09 it is being prepared for Google Play as a second channel (ADR-004). It has two UI surfaces, the phone UI and an Android Auto screen, over one shared set of logic.
 
 Reliable automatic trip start is the number one requirement. Most of section 10 exists because of it.
 
@@ -645,7 +645,9 @@ platform/widget/     # the home-screen widget: the provider Android knows it by,
                      #   the trip controller as every other button does
 platform/system/     # what the phone's permissions and settings say: the preflight check
                      #   before the service is started, the setup checklist's facts, rules
-                     #   and shared rows, and the opening of the phone's settings screens
+                     #   and shared rows, the opening of the phone's settings screens, the
+                     #   version installed, and which app installed MilO (InstallSource,
+                     #   2026-10-09: Google Play's copy shows no Buy me a coffee tile)
 platform/diagnostics/  # crash and kill capture into the event log, and its trimming at start
 ```
 
@@ -907,9 +909,10 @@ None of these is a service of our own. Each is a system or Google component alre
 | AppWidgetManager (system) | The home-screen widget: drawing it, asking the home screen to add it, and its provider being disabled while its switch is off | `platform/widget/` | Built (2026-10-07), never run. The home screen app draws the widget; what HyperOS's does with a disabled provider's widget is not known (device check W-9) |
 | Android's backup (Auto Backup, and the transfer to a new phone) | An off-phone copy of the main database and the settings; the raw points too when a phone is moved to another | The `<application>` element of the manifest, `res/xml/data_extraction_rules.xml`, `platform/transfer/MiloBackupAgent` | Switched on (2026-10-06). 25 MB cap for the cloud, all or nothing (section 6). Android decides when, and restores only into a build signed with the same key. Ran on an emulator with Android's test transport (`bmgr`): backed up, removed, installed, restored. **Never on the phone**, and Google's own transports (the cloud, phone to phone) have not been used at all |
 | GitHub | Public repo (since 2026-10-08), CI, Dependabot updates, and Dependabot alerts fed by the dependency graph workflow; the website's deploys | `.github/` | Development only |
+| Google Play (since 2026-10-09, ADR-004) | A second channel for the same app, beside GitHub Releases; Play App Signing with MilO's own key | The Play Console, by hand; `platform/system/InstallSource` tells a copy from Google Play apart | Prepared, nothing uploaded. The app has no Play SDK and talks to no Google Play service |
 | Firebase Hosting (Google) | The website, `milotriplog.top` (since 2026-10-08, ADR-003). Not used by the app | `website/`, `firebase.json`, `.firebaserc`, `.github/workflows/website.yml` | Static files only: no Firebase SDK, functions, database or analytics. Deployed with the deploy key in GitHub's Actions secrets (`FIREBASE_SERVICE_ACCOUNT_MILOTRIPLOG`). The domain is connected in the Firebase console, with the records it gives entered at the registrar; Firebase provides the certificate |
 
-No Sentry, no analytics, no API keys. The website's deploy key is the one secret outside the Mac (STANDARDS §12).
+No Sentry, no analytics, no API keys. The website's deploy key is the one secret outside the Mac (STANDARDS §12); once MilO is uploaded to Google Play, Google holds a copy of the signing key as well (ADR-004).
 
 ---
 
@@ -918,6 +921,8 @@ No Sentry, no analytics, no API keys. The website's deploy key is the one secret
 | Environment | Backend project | Used for | URL / build channel |
 |---|---|---|---|
 | The phone | None | Everything: development, testing and Shawn's real trips | Debug build signed with the dedicated key in `~/keys/milo.jks`, installed from Android Studio or with `./gradlew installDebug` |
+| GitHub Releases | None | The APK anyone can download | `assembleRelease`, signed with the same key, uploaded by hand (README, "Making a release") |
+| Google Play (ADR-004) | None (Play Console app "MilO Trip Log") | The same version for the Play Store; nothing uploaded yet | `bundleRelease`, the same key, Play App Signing with MilO's own key (README, "Publishing on Google Play") |
 | The website | Firebase project `milotriplog` (Hosting only) | The public page and the privacy policy | `https://milotriplog.top`, and Firebase's own `https://milotriplog.web.app`; live on every merge that changes `website/` |
 
 There is one environment because there is no backend to separate (STANDARDS §13). The build on the phone holds real trip data, so an uninstall is data loss.
@@ -948,7 +953,7 @@ Load-bearing facts from the research in `docs/research/`. Those files are dated 
 - Installing from Android Studio needs two Xiaomi-only developer switches ("Install via USB" and "USB debugging (Security settings)") and a confirmation on the phone at each install. (`2026-10-03-miui-dev-bluetooth-audio.md`)
 
 **Android Auto**
-- Distribution risk: Google's documentation says the "Unknown sources" developer option does not apply to Car App Library apps, which must come from a trusted store to show on a real head unit. A sideloaded MilO should appear in the desktop head-unit emulator but is not expected to appear in the truck. The screen was built knowing this. **Unverified on the truck;** community reports conflict. If it does not appear, the choices are a private Google Play install, a media-app style workaround, or dropping the screen (APP_ENCYCLOPEDIA, Android Auto screen). (`2026-10-03-android-auto-screen.md`, `2026-10-03-location-and-car.md`)
+- Distribution risk: Google's documentation says the "Unknown sources" developer option does not apply to Car App Library apps, which must come from a trusted store to show on a real head unit. A sideloaded MilO should appear in the desktop head-unit emulator but is not expected to appear in the truck. The screen was built knowing this. **Unverified on the truck;** community reports conflict. If it does not appear, the choices are a private Google Play install, a media-app style workaround, or dropping the screen (APP_ENCYCLOPEDIA, Android Auto screen). (`2026-10-03-android-auto-screen.md`, `2026-10-03-location-and-car.md`) **Since 2026-10-09 the way out is Google Play (ADR-004):** a copy from there comes from a trusted store, once Google's review of the car screen accepts it under IoT.
 - The car screen's service is exported with no permission, because Android has none for Android Auto's binding on a phone. What protects it is the Car App Library's host check, set to the library's own list of Android Auto's signing certificates in every build type. If Google changes that certificate, MilO's screen is refused until the library is updated. (`2026-10-03-android-auto-screen.md`, findings 15 and 16)
 - That host check is the library's own code, so it is only as sound as the pinned library. **Since 2026-10-06 the pinned library is 1.8.0-rc01, a release candidate,** taken by Shawn's decision as the one exception to the stable-only rule: its release notes say it includes a security fix, without naming it, and tell every lower version to update. Until then MilO was on 1.7.0 and the fix was knowingly missing. Compared with 1.7.0 by taking both apart, the host check differs in one thing: 1.7.0 also lets in any host that holds the permission `android.car.permission.TEMPLATE_RENDERER`, on any device; 1.8.0-rc01 does that only on a car that runs Android itself, so on a phone only the hosts on the list are let in. Google does not say that this is the fix. **The stable 1.8.0 is to be taken the day it is released,** and a rule in `.github/dependabot.yml` keeps Dependabot from offering another pre-release of this library in the meantime. The rule hides pre-releases only, so it hides nothing stable if it is still there afterwards. (ADR-001, "Exception, 2026-10-06"; `2026-10-03-android-auto-screen.md`, finding 3)
 - The screen needs Car API level 7 (the library's current `Header` class). The level is a property of the Android Auto app on the phone, and which level which version speaks is not documented. The session writes the level it was given to the event log.
