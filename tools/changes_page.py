@@ -161,6 +161,7 @@ PAGE_TEMPLATE = """<!doctype html>
         <a href="/compare">Compare</a>
         <a href="/changes" aria-current="page">What's new</a>
         <a href="/privacy">Privacy</a>
+        <a href="mailto:support@milotriplog.top?subject=MilO%20Trip%20Log%20support">Support</a>
         <a href="https://github.com/shawnkowalchuk/MilO">GitHub</a>
       </nav>
     </header>
