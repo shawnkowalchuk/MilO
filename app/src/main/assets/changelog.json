@@ -16,6 +16,16 @@
         },
         {
           "kind": "improved",
+          "title": "Android Auto: everything on one screen",
+          "body": "MilO's screen in the car no longer scrolls. It shows the trip, then today's and the month's business distance, the month's dollars and the odometer, with the button under them."
+        },
+        {
+          "kind": "new",
+          "title": "Dollars on Home's month tile",
+          "body": "Under the month's business distance, Home shows what it comes to at your rate, such as $289. The rate is the one in Settings, which the widget uses too."
+        },
+        {
+          "kind": "improved",
           "title": "A GPS point every 2 seconds",
           "body": "During a trip MilO now reads the truck's position every 2 seconds. It was every 5. The recorded route follows bends more closely."
         },
