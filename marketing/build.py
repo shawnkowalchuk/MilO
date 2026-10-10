@@ -433,7 +433,9 @@ def logo():
     # The mark itself is the website's file, and its twin for a lime ground.
     shutil.copyfile(os.path.join(ROOT, "website", "mark.svg"), os.path.join(folder, "mark.svg"))
     with open(os.path.join(folder, "mark-on-lime.svg"), "w") as f:
-        f.write(mark(72, PAGE, LIME).replace(' width="72" height="72"', "") + "\n")
+        # Without the picture's own size, as the website's file is: the first of the two
+        # "width, height" pairs. The second is the square's, and must stay.
+        f.write(mark(72, PAGE, LIME).replace(' width="72" height="72"', "", 1) + "\n")
     variants = (
         # name, the canvas's kind, see-through, the words' colour, the square, the letter
         ("lockup-on-dark", "", False, "#f2f3f5", LIME, PAGE),
