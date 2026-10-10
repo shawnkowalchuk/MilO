@@ -1,8 +1,8 @@
 # The mascot
 
-MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it shows two pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`). The website shows two more, drawn the same way.
+MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it shows two pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`). The website shows three more, drawn the same way.
 
-Nothing in this folder is part of the app's build. The two pictures the app carries are written from here into `app/src/main/res/drawable-nodpi/`, the website's two into `website/mascot/`, and all four are committed.
+Nothing in this folder is part of the app's build. The two pictures the app carries are written from here into `app/src/main/res/drawable-nodpi/`, the website's three into `website/mascot/`, and all five are committed.
 
 | File | What it is |
 |---|---|
@@ -14,8 +14,9 @@ Nothing in this folder is part of the app's build. The two pictures the app carr
 | `scripts/render_greeting.py` | Draws the frames of the app's greeting: the walk, and the turn and wave |
 | `scripts/pack_greeting.py` | Packs those frames into the app's two pictures |
 | `scripts/render_clips.py` | Draws the frames of any clip, at any size |
-| `scripts/pack_clips.py` | Packs those frames into the pictures in `renders/`, and into the website's two |
-| `export/milo_mascot.glb` | The model with every clip (2.21 MB), for whatever comes later. Nothing uses it today |
+| `scripts/render_dials.py` | Draws the two dials without their needles, and the needles' blades alone, for the website |
+| `scripts/pack_clips.py` | Packs those frames into the pictures in `renders/`, and into the website's three |
+| `export/milo_mascot.glb` | The model with every clip (2.28 MB), for whatever comes later. Nothing uses it today |
 | `renders/milo_thumbs_up.png` | The mascot as Blender draws it, in the pose of the reference picture |
 | `renders/milo_flex.webp`, `milo_peace.webp`, `milo_rock_on.webp` | Three clips as animated pictures with a see-through background, for whatever comes later (below) |
 | `renders/milo_flex.png`, `milo_peace.png`, `milo_rock_on.png` | A still of the pose each of them holds |
@@ -37,9 +38,9 @@ The same command without `-b` and without its last part opens Blender's window a
 
 ## The clips
 
-Each is one action, at 24 frames a second, starting on frame 0. Every clip but the two loops begins and ends in the same standing pose, so one can follow another. The needles move in every clip.
+Each is one action, at 24 frames a second, starting on frame 0. Every clip but the three loops and `WaveUp` begins and ends in the same standing pose, so one can follow another. The needles move in every clip.
 
-`Flex`, `Peace` and `RockOn` were added on 2026-10-09 for pictures to come ("future content ideas or use on the website"); nothing plays them yet.
+`Flex`, `Peace` and `RockOn` were added on 2026-10-09 for pictures to come ("future content ideas or use on the website"); nothing plays them yet. `WaveUp` and `WaveLoop` were added on 2026-10-10 for the website, where he waves for as long as a pointer is on him.
 
 | Clip | Length | What happens |
 |---|---|---|
@@ -51,6 +52,8 @@ Each is one action, at 24 frames a second, starting on frame 0. Every clip but t
 | `Flex` | 4.5 s | Shows off in four poses and squeezes each: both fists up beside the head; the right arm up and the left down; the other way round; both again. The RPM needle jumps with every squeeze |
 | `Peace` | 2.75 s | The left hand goes up beside the head and holds the peace sign for a second and a half: two fingers up and apart, the third curled under the thumb, the palm to the viewer |
 | `RockOn` | 2.75 s | The right hand goes up and holds the horns: the two outer fingers up, the middle one curled under the thumb. Three nods to a beat, the RPM needle at the red line with each |
+| `WaveUp` | 0.5 s | The right arm goes up and stays up: its last frame is `WaveLoop`'s first. The way into the loop, not a clip to play alone; nothing brings the arm down again but `Wave`'s own ending |
+| `WaveLoop` | 0.5 s, loops | The arm held up, one wave of the hand. It is `Wave`'s wave at two a second instead of two and a half, so that one wave is 12 frames and the loop closes on a frame |
 | `Gauge_Speed` | 2 s | The speed needle alone, from 0 to 240 |
 | `Gauge_RPM` | 2 s | The RPM needle alone, from 0 to 8 |
 
@@ -106,22 +109,31 @@ For another size, give another number; for another clip, give its name and add a
 
 ## The website's pictures
 
-The website's front page shows the mascot in its lime tile, and he waves when a pointer is rolled over him (APP_ENCYCLOPEDIA, Website). Two pictures in `website/mascot/`, drawn 560 pixels high so that the page can show him 280 high on a sharp screen:
+The website's front page shows the mascot in its lime tile. His needles keep moving, and he waves for as long as a pointer is on him (APP_ENCYCLOPEDIA, Website). Three pictures in `website/mascot/`, drawn 560 pixels high so that the page can show him 280 high on a sharp screen:
 
 ```
-blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_clips.py -- 560 /tmp/milo-web Wave
+blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_clips.py -- 560 /tmp/milo-web Wave WaveUp WaveLoop
+blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_dials.py -- 560 /tmp/milo-web Wave WaveUp WaveLoop
 python3 design/mascot/scripts/pack_clips.py website /tmp/milo-web
 ```
 
+The second step is given the same height and clips as the first, so that it measures the same picture. `Wave` is named although the page no longer shows it: see "where he stands in the picture" below.
+
 | Picture | What it is | Size |
 |---|---|---|
-| `website/mascot/standing.webp` | The first frame of `Wave`: the mascot standing, on a see-through background. 720 by 608 pixels | 31 KB |
-| `website/mascot/wave.webp` | Every second frame of `Wave`, 24 of them, one under the other in one still picture of 720 by 14,592 pixels. Not see-through where the standing mascot is (below) | 498 KB |
+| `website/mascot/standing.webp` | The first frame of `WaveUp`: the mascot standing, on a see-through background. 720 by 608 pixels | 31 KB |
+| `website/mascot/dials.webp` | Four squares of 128 pixels: the two dials' faces without a needle, cut round, and under them the two needles' blades, pointing straight up | 8 KB |
+| `website/mascot/waving.webp` | 11 frames one under the other in one still picture of 720 by 6,688 pixels: five of `WaveUp`, then six of `WaveLoop`, every second frame of each. Not see-through where the standing mascot is (below) | 228 KB |
 
-- **The wave is not an animated picture.** The website runs no script (ADR-003, and its privacy page says so), and a page without one cannot start an animated picture again from its first frame. So the wave is a strip of frames that the stylesheet lays over the standing picture and steps through, twelve a second (`website/styles.css`, "The mascot"), as the app steps through the sheet of its walk.
-- **Each frame of the strip covers the standing mascot.** A page without a script cannot tell either whether the strip has arrived, so it cannot take the standing picture away for it: with the first version, on a slow line, the mascot was gone for two and a half seconds at the first rollover. So the standing picture stays, and each frame is filled with the lime of the tile wherever the standing mascot is and the waving one is not: his hanging right arm, most of all. `pack_clips.py` reads that lime from `--accent` in `website/styles.css`. **Change that colour, or stand him on another, and `wave.webp` has to be packed again,** or a shape in the old lime waves with him. WebP cannot store this lime exactly: the strip's is one step of 255 off in red and in blue, which cannot be seen.
-- **The page is told the sizes.** `pack_clips.py` prints the frame's size and how many there are. `index.html` holds half the frame's size as the picture's width and height; `styles.css` holds it too, with a quarter of it for a narrower screen, the 24 frames and their 2 seconds. Draw him another size, or pack another number of frames, and those change with it.
-- **The frame's height is a multiple of 8 pixels on purpose,** so that half of it is a whole number of the screen's pixels on a screen scaled by a quarter or a half more, as Windows laptops are. Otherwise he would shiver by a part of a pixel from frame to frame.
+- **Nothing here is an animated picture.** The website runs no script (ADR-003, and its privacy page says so), and a page without one cannot start an animated picture again from its first frame. So the stylesheet does the moving (`website/styles.css`, "The mascot"), as the app steps through the sheet of its walk.
+- **The needles are turned, not drawn frame by frame.** Only the needles move while he stands, and a needle only turns. So `dials.webp` holds each dial's face without a blade, which the page lays over the standing picture's dial, and the blade alone, which the page lays over that and turns about the middle of the dial. It weighs 8 KB; a strip of the two dials drawn frame by frame was reckoned at 150 KB or more and was not made. And the needles move as smoothly as the screen can show. How they move, an engine ticking over and revved now and then, is written in the stylesheet, not here.
+- **How a blade is drawn alone** (`render_dials.py`): the needle is one object, a red blade and a black cap. In memory it is taken apart; the standing mascot is drawn with the caps only, and then the blades alone with everything else hidden and the caps as holes, because a cap lies over its blade. The blade is drawn without the glass over the dial, which would be drawn round it as a haze, and `pack_clips.py` darkens it by what the glass takes (a twentieth). The camera looks at the dials almost squarely, about 6 degrees off, so a blade turned flat on the page lies where a blade drawn at that angle would, to within half a pixel by the arithmetic. Turned to where the standing picture has its own needle, it covers it.
+- **The wave is a raise and a loop in one strip.** The stylesheet steps through the first five frames once and then through the other six again and again, twelve a second. The raise's first frame is left out, because it is the standing pose; its last is the loop's first.
+- **Each frame of the strip covers the standing mascot,** needles and all. A page without a script cannot tell whether the strip has arrived, so it cannot take the standing picture away for it: with the first version, on a slow line, the mascot was gone for two and a half seconds at the first rollover. So the standing picture stays, and each frame is filled with the lime of the tile wherever the standing mascot is and the waving one is not: his hanging right arm, most of all. `pack_clips.py` reads that lime from `--accent` in `website/styles.css`. **Change that colour, or stand him on another, and `waving.webp` has to be packed again,** or a shape in the old lime waves with him. WebP cannot store this lime exactly: the strip's is one step of 255 off in red and in blue, which cannot be seen.
+- **The page is told the sizes and the places.** `pack_clips.py` prints them: the frame's size, how many frames the raise and the loop have, and for each dial where its square lies in the picture and where in the square the needle turns, in hundredths. `index.html` holds half the frame's size as the picture's width and height; `styles.css` holds the rest. Draw him another size, change a clip's length, or change the clips he is drawn from, and those change with it.
+- **The sides are multiples of 8 pixels on purpose, and the dials' squares lie on multiples of 4,** so that half and a quarter of them are whole numbers of the screen's pixels, also on a screen scaled by a quarter or a half more, as Windows laptops are. Otherwise he would shiver by a part of a pixel from frame to frame, and a dial's face would lie a part of a pixel off the dial under it.
+- **A picture that changes gets another name.** A visitor's browser keeps these pictures for a week and the stylesheet for an hour (`firebase.json`). When a picture changes in a way the stylesheet counts on, some visitors would for a week see the new rules step through the old picture. So the strip is `waving.webp` since it has 11 frames; it was `wave.webp` while it had 24.
+- **Where he stands in the picture must not change either,** for the same reason: the dials' faces are laid over `standing.webp`, old or new. The picture's size and the mascot's place in it are measured from the clips named, as far as he reaches in any of them. `Wave`'s hand reaches 2 pixels further than `WaveLoop`'s, and the first `standing.webp` was drawn from `Wave`; so `Wave` is still named, its frames are drawn and not used, and he stands where he stood: his middle 434 pixels from the left of 720, his soles 11 above the lower edge.
 
 ## What to know before changing the skeleton
 

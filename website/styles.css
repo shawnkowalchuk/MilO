@@ -19,7 +19,7 @@
   --outline: #3a3e46;
   --text: #f2f3f5;
   --text-secondary: #9298a3;
-  /* The mascot's wave.webp carries this lime: see "The mascot" below before changing it. */
+  /* The mascot's waving.webp carries this lime: see "The mascot" below before changing it. */
   --accent: #c6f432;
   --accent-pressed: #ddff7a;
   /* Buy Me a Coffee's own yellow, for its button alone (2026-10-08). */
@@ -223,10 +223,10 @@ main > * {
 
 /*
  * The mascot stands in the lime tile: small and under the words on a phone, at their right
- * from a tablet's width up, and twice as large on a wide screen (both further down). Its two
+ * from a tablet's width up, and twice as large on a wide screen (both further down). Its
  * pictures are drawn from the 3D model by design/mascot/scripts/pack_clips.py, 720 by 608
- * pixels, and shown at half of that or at a quarter. The sizes here are those halves and
- * quarters: change them with the pictures.
+ * pixels, and shown at half of that or at a quarter. The sizes and places here are what that
+ * script prints: change them with the pictures.
  */
 .mascot {
   position: relative;
@@ -242,47 +242,244 @@ main > * {
 }
 
 /*
- * Roll the pointer over him and he waves once. The website runs no script, so the stylesheet
- * does it: wave.webp holds the wave's 24 frames one under the other. It is laid over the
- * standing picture for the two seconds of the wave and stepped through, twelve frames a
- * second. It is fetched when the pointer first comes over the lime tile, not with the page.
- * Each time the pointer comes back the wave starts at its first frame; when it leaves, he
- * stands again at once. Not on a touch screen, which has no pointer to roll over him, and not
- * for a visitor whose system asks for less motion.
- *
- * The standing picture is never taken away: a stylesheet cannot know whether the strip has
- * arrived. Each frame of the strip covers it instead, with this tile's lime wherever the
- * standing mascot would show beside the waving one. So wave.webp carries --accent: change the
- * colour and it has to be packed again (design/mascot/README.md, "The website's pictures").
+ * Nothing below moves for a visitor whose system asks for less motion: he stands, his needles
+ * where the standing picture has them, and no other picture of him is fetched.
  */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * His needles keep moving. The website runs no script, so the stylesheet turns them:
+   * dials.webp holds the two dials' faces without a needle, and under them the two needles'
+   * blades pointing straight up. Each face is laid over its dial in the standing picture, and
+   * its blade over it, turned about the middle of the dial. The two turn to their own times,
+   * 7 and 11 seconds, so the pair does not repeat for over a minute. A needle's angle is its
+   * figure less 120 degrees: 1 km/h is one degree, 1,000 RPM is thirty.
+   */
+  .dial {
+    position: absolute;
+    width: 17.7778%;
+    height: 21.0526%;
+    background: url("/mascot/dials.webp") 0 0 / 200% 200% no-repeat;
+  }
+
+  .dial::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("/mascot/dials.webp") 0 100% / 200% 200% no-repeat;
+  }
+
+  .dial-speed {
+    left: 42.7778%;
+    top: 9.8684%;
+  }
+
+  .dial-speed::after {
+    transform-origin: 50.35% 50.86%;
+    animation: mascot-speed 11s ease-in-out infinite;
+  }
+
+  .dial-rpm {
+    left: 64.4444%;
+    top: 15.1316%;
+    background-position: 100% 0;
+  }
+
+  .dial-rpm::after {
+    background-position: 100% 100%;
+    transform-origin: 51.36% 51.34%;
+    animation: mascot-rpm 7s ease-in-out infinite;
+  }
+
+  /*
+   * Roll the pointer over him and he waves for as long as it stays: his arm goes up once, then
+   * his hand waves again and again. waving.webp holds the frames one under the other, five of
+   * the arm going up and six of one wave of the hand, twelve to the second. It is laid over
+   * the standing picture and stepped through. When the pointer leaves, he stands again at
+   * once. On a touch screen a tap on him does the same until the next tap elsewhere, where the
+   * browser treats a tap as a pointer that stays, as phones' browsers do.
+   *
+   * The standing picture is never taken away: a stylesheet cannot know whether the strip has
+   * arrived. Each frame of the strip covers it instead, needles and all, with this tile's
+   * lime wherever the standing mascot would show beside the waving one. So waving.webp
+   * carries --accent: change the colour and it has to be packed again (design/mascot/README.md,
+   * "The website's pictures").
+   *
+   * Browsers keep these pictures for a week and this stylesheet for an hour. A picture that
+   * changes in a way these rules count on, another number of frames most of all, gets another
+   * name: the strip was wave.webp while it had 24 frames.
+   */
   .mascot::after {
     content: "";
     position: absolute;
     inset: 0;
     background-repeat: no-repeat;
-    background-size: 100% 2400%;
+    background-size: 100% 1100%;
     visibility: hidden;
   }
 
-  .hero:hover .mascot::after {
-    background-image: url("/mascot/wave.webp");
-  }
-
   .mascot:hover::after {
-    animation: mascot-wave 2s steps(24);
+    background-image: url("/mascot/waving.webp");
+    animation: mascot-raise 0.4167s steps(5) forwards, mascot-wave 0.5s steps(6) 0.4167s infinite;
   }
 }
 
-/* Seen only while it plays, from the first frame to one past the last: 24 steps of a frame. */
-@keyframes mascot-wave {
+/* With a pointer that can hover, the strip is fetched as soon as it comes over the lime tile,
+   so that it is there when the pointer reaches him. Not with the page. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .hero:hover .mascot::after {
+    background-image: url("/mascot/waving.webp");
+  }
+}
+
+/* The strip is seen only while it plays. Its 11 frames lie a tenth of the way apart: the raise
+   is the first five, and where it ends the wave takes over with the other six, for ever. */
+@keyframes mascot-raise {
   from {
     visibility: visible;
   }
 
   to {
     visibility: visible;
-    background-position-y: calc(2400% / 23);
+    background-position-y: 50%;
+  }
+}
+
+@keyframes mascot-wave {
+  from {
+    visibility: visible;
+    background-position-y: 50%;
+  }
+
+  to {
+    visibility: visible;
+    background-position-y: 110%;
+  }
+}
+
+/* The speed needle wanders between 0 and 36 km/h and comes back to 0, where the standing
+   picture has it. */
+@keyframes mascot-speed {
+  0%,
+  100% {
+    transform: rotate(-120deg);
+  }
+
+  7% {
+    transform: rotate(-117deg);
+  }
+
+  18% {
+    transform: rotate(-98deg);
+  }
+
+  28% {
+    transform: rotate(-106deg);
+  }
+
+  40% {
+    transform: rotate(-84deg);
+  }
+
+  51% {
+    transform: rotate(-102deg);
+  }
+
+  60% {
+    transform: rotate(-94deg);
+  }
+
+  73% {
+    transform: rotate(-114deg);
+  }
+
+  81% {
+    transform: rotate(-108deg);
+  }
+
+  93% {
+    transform: rotate(-118deg);
+  }
+}
+
+/* The RPM needle is an engine ticking over at 900, where the standing picture has it, and
+   revved three times: to 2,600, to 1,700, and twice in a row to 3,400. It goes up fast and
+   comes down slower, and dips under 900 before it settles. */
+@keyframes mascot-rpm {
+  0%,
+  100% {
+    transform: rotate(-93deg);
+  }
+
+  7% {
+    transform: rotate(-90deg);
+  }
+
+  13% {
+    transform: rotate(-94deg);
+  }
+
+  18.5% {
+    transform: rotate(-92deg);
+    animation-timing-function: ease-out;
+  }
+
+  22% {
+    transform: rotate(-42deg);
+  }
+
+  31% {
+    transform: rotate(-88deg);
+  }
+
+  35% {
+    transform: rotate(-96deg);
+  }
+
+  40% {
+    transform: rotate(-91deg);
+  }
+
+  48.5% {
+    transform: rotate(-94deg);
+    animation-timing-function: ease-out;
+  }
+
+  51.5% {
+    transform: rotate(-69deg);
+  }
+
+  58% {
+    transform: rotate(-90deg);
+  }
+
+  63% {
+    transform: rotate(-95deg);
+  }
+
+  70% {
+    transform: rotate(-92deg);
+    animation-timing-function: ease-out;
+  }
+
+  73% {
+    transform: rotate(-24deg);
+  }
+
+  76.5% {
+    transform: rotate(-45deg);
+    animation-timing-function: ease-out;
+  }
+
+  79.5% {
+    transform: rotate(-18deg);
+  }
+
+  88.5% {
+    transform: rotate(-87deg);
+  }
+
+  93.5% {
+    transform: rotate(-95deg);
   }
 }
 
@@ -540,18 +737,24 @@ footer a {
   }
 
   /* The headline keeps the tile's whole width; under it the mascot stands at the right of
-     the words, his feet near the tile's lower edge. */
+     the words, his feet near the tile's lower edge. Whatever else the tile holds goes in
+     the first column, one under the other; a button that is the tile's own child keeps its
+     own width there instead of the column's. */
   .hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 16px;
   }
 
+  .hero > * {
+    grid-column: 1;
+  }
+
   .hero h1 {
     grid-column: 1 / -1;
   }
 
-  .hero .button {
+  .hero > .button {
     justify-self: start;
   }
 
