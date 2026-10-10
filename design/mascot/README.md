@@ -1,8 +1,8 @@
 # The mascot
 
-MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it shows two pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`).
+MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it shows two pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`). The website shows two more, drawn the same way.
 
-Nothing in this folder is part of the app's build. The two pictures the app carries are written from here into `app/src/main/res/drawable-nodpi/` and committed.
+Nothing in this folder is part of the app's build. The two pictures the app carries are written from here into `app/src/main/res/drawable-nodpi/`, the website's two into `website/mascot/`, and all four are committed.
 
 | File | What it is |
 |---|---|
@@ -13,21 +13,33 @@ Nothing in this folder is part of the app's build. The two pictures the app carr
 | `scripts/export_milo.py` | Writes the `.glb` file and prints what is in it |
 | `scripts/render_greeting.py` | Draws the frames of the app's greeting: the walk, and the turn and wave |
 | `scripts/pack_greeting.py` | Packs those frames into the app's two pictures |
-| `export/milo_mascot.glb` | The model with every clip (1.69 MB), for whatever comes later. Nothing uses it today |
+| `scripts/render_clips.py` | Draws the frames of any clip, at any size |
+| `scripts/pack_clips.py` | Packs those frames into the pictures in `renders/`, and into the website's two |
+| `export/milo_mascot.glb` | The model with every clip (2.21 MB), for whatever comes later. Nothing uses it today |
 | `renders/milo_thumbs_up.png` | The mascot as Blender draws it, in the pose of the reference picture |
+| `renders/milo_flex.webp`, `milo_peace.webp`, `milo_rock_on.webp` | Three clips as animated pictures with a see-through background, for whatever comes later (below) |
+| `renders/milo_flex.png`, `milo_peace.png`, `milo_rock_on.png` | A still of the pose each of them holds |
 | `reference.webp` | The picture the mascot was built from |
 
-**The scripts are the source, the `.blend` is their result.** To change the mascot, change a script and run the first four again, in the order above, rather than editing the Blender file by hand: what is done by hand is gone at the next run. Each of them only rebuilds its own collections (`MilO_Mascot`, `MilO_Studio`, `MilO_Reference`). After a change the app's pictures have to be drawn again too (below).
+**The scripts are the source, the `.blend` is their result.** To change the mascot, change a script and run the first four again, in the order above, rather than editing the Blender file by hand: what is done by hand is gone at the next run. Each of them only rebuilds its own collections (`MilO_Mascot`, `MilO_Studio`, `MilO_Reference`). After a change to the model, or to a clip that a picture is drawn from, that picture has to be drawn again too (below).
+
+Without Blender's window, which is how it was last run (2026-10-09). `-b` is "no window", and the last part saves the file, which nothing else does:
 
 ```
-blender design/mascot/milo_mascot.blend --python design/mascot/scripts/build_milo.py --python design/mascot/scripts/studio_milo.py --python design/mascot/scripts/animate_milo.py --python design/mascot/scripts/export_milo.py
+blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/build_milo.py --python design/mascot/scripts/studio_milo.py --python design/mascot/scripts/animate_milo.py --python design/mascot/scripts/export_milo.py --python-expr "import bpy; bpy.ops.wm.save_mainfile(compress=True)"
 ```
 
-That command opens Blender's window and leaves the file to be saved by hand. The two greeting scripts are run differently, without the window, and are not part of it.
+It takes a few seconds. Blender keeps the file it replaced beside the new one as `milo_mascot.blend1`; git ignores it, and it can be deleted. On this Mac `blender` is `/Applications/Blender.app/Contents/MacOS/Blender`.
+
+The same command without `-b` and without its last part opens Blender's window and leaves the file to be saved by hand. The scripts that draw pictures are run differently and are not part of it.
+
+**Run twice, it writes the same clips and the same `.glb`, byte for byte.** That is the check that a change to a script left the other clips alone: build once from the scripts as they were and once from the changed ones, and compare. The Blender file that was committed before the evening of 2026-10-09 was not quite what its scripts write: about 850 of its 29,600 key values were off by less than a millionth, the mark of a file built in several sittings. Nothing that can be seen.
 
 ## The clips
 
 Each is one action, at 24 frames a second, starting on frame 0. Every clip but the two loops begins and ends in the same standing pose, so one can follow another. The needles move in every clip.
+
+`Flex`, `Peace` and `RockOn` were added on 2026-10-09 for pictures to come ("future content ideas or use on the website"); nothing plays them yet.
 
 | Clip | Length | What happens |
 |---|---|---|
@@ -36,6 +48,9 @@ Each is one action, at 24 frames a second, starting on frame 0. Every clip but t
 | `ThumbsUp` | 2 s | The pose of the reference picture, and back |
 | `Walk` | 1 s, loops | Walks on the spot. The greeting plays it at twice this speed |
 | `Celebrate` | 3 s | Crouches, jumps twice with both arms up |
+| `Flex` | 4.5 s | Shows off in four poses and squeezes each: both fists up beside the head; the right arm up and the left down; the other way round; both again. The RPM needle jumps with every squeeze |
+| `Peace` | 2.75 s | The left hand goes up beside the head and holds the peace sign for a second and a half: two fingers up and apart, the third curled under the thumb, the palm to the viewer |
+| `RockOn` | 2.75 s | The right hand goes up and holds the horns: the two outer fingers up, the middle one curled under the thumb. Three nods to a beat, the RPM needle at the red line with each |
 | `Gauge_Speed` | 2 s | The speed needle alone, from 0 to 240 |
 | `Gauge_RPM` | 2 s | The RPM needle alone, from 0 to 8 |
 
@@ -67,6 +82,47 @@ Seen from the studio's camera, which looks down on the ground a little, the foot
 
 To give the app another clip, draw it as one more picture the same way and add it to `MascotPictures` in `core/designsystem/component/Mascot.kt`: an animated picture if the mascot stands where it is, a sheet of frames if the app has to move it in step. Each second of a clip is about a third of a megabyte.
 
+**Two runs do not give the same bytes.** Drawn twice from the same file on the same Mac, every frame differs from its twin in a few dozen pixels, by 3 of 255 at most, and the packed pictures differ by a few bytes in 800,000. So the app's pictures cannot be checked by drawing them again and comparing the files: compare the frames, and expect that much. A change that is not meant to touch them leaves the committed pictures alone.
+
+## Any other clip as a picture
+
+`render_clips.py` draws any clip by its name, the standing mascot as many pixels high as it is told. It is the greeting's camera, lights, dulled dials and 24 frames a second, on a see-through background, so the mascot looks the same in every picture:
+
+```
+blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_clips.py -- 400 /tmp/milo-poses Flex Peace RockOn
+python3 design/mascot/scripts/pack_clips.py poses /tmp/milo-poses
+```
+
+- **The first step draws the frames** (five minutes for these three), each clip into a folder of its own. All the clips named in one run get one size of picture, with the mascot standing on the same spot in each, so that one can be cut after another without a jump. The size is measured: as far as the mascot reaches in any frame, 12 pixels more on every side, and made up to a multiple of 8. For these three it is 592 by 448 pixels. It saves nothing in the Blender file.
+- **The second step packs them** into `renders/`: an animated WebP of each that plays once and keeps its last frame, and a PNG still of the pose it holds. It needs what `pack_greeting.py` needs.
+
+| Picture | Frames | Size | Its still |
+|---|---|---|---|
+| `renders/milo_flex.webp` | 109 | 1.48 MB | `milo_flex.png`: both fists up, the first squeeze |
+| `renders/milo_peace.webp` | 67 | 0.96 MB | `milo_peace.png`: the peace sign, upright |
+| `renders/milo_rock_on.webp` | 67 | 0.95 MB | `milo_rock_on.png`: the horns, between two nods |
+
+For another size, give another number; for another clip, give its name and add a line to `POSES` in `pack_clips.py`.
+
+## The website's pictures
+
+The website's front page shows the mascot in its lime tile, and he waves when a pointer is rolled over him (APP_ENCYCLOPEDIA, Website). Two pictures in `website/mascot/`, drawn 560 pixels high so that the page can show him 280 high on a sharp screen:
+
+```
+blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_clips.py -- 560 /tmp/milo-web Wave
+python3 design/mascot/scripts/pack_clips.py website /tmp/milo-web
+```
+
+| Picture | What it is | Size |
+|---|---|---|
+| `website/mascot/standing.webp` | The first frame of `Wave`: the mascot standing, on a see-through background. 720 by 608 pixels | 31 KB |
+| `website/mascot/wave.webp` | Every second frame of `Wave`, 24 of them, one under the other in one still picture of 720 by 14,592 pixels. Not see-through where the standing mascot is (below) | 498 KB |
+
+- **The wave is not an animated picture.** The website runs no script (ADR-003, and its privacy page says so), and a page without one cannot start an animated picture again from its first frame. So the wave is a strip of frames that the stylesheet lays over the standing picture and steps through, twelve a second (`website/styles.css`, "The mascot"), as the app steps through the sheet of its walk.
+- **Each frame of the strip covers the standing mascot.** A page without a script cannot tell either whether the strip has arrived, so it cannot take the standing picture away for it: with the first version, on a slow line, the mascot was gone for two and a half seconds at the first rollover. So the standing picture stays, and each frame is filled with the lime of the tile wherever the standing mascot is and the waving one is not: his hanging right arm, most of all. `pack_clips.py` reads that lime from `--accent` in `website/styles.css`. **Change that colour, or stand him on another, and `wave.webp` has to be packed again,** or a shape in the old lime waves with him. WebP cannot store this lime exactly: the strip's is one step of 255 off in red and in blue, which cannot be seen.
+- **The page is told the sizes.** `pack_clips.py` prints the frame's size and how many there are. `index.html` holds half the frame's size as the picture's width and height; `styles.css` holds it too, with a quarter of it for a narrower screen, the 24 frames and their 2 seconds. Draw him another size, or pack another number of frames, and those change with it.
+- **The frame's height is a multiple of 8 pixels on purpose,** so that half of it is a whole number of the screen's pixels on a screen scaled by a quarter or a half more, as Windows laptops are. Otherwise he would shiver by a part of a pixel from frame to frame.
+
 ## What to know before changing the skeleton
 
 - The character faces Blender's −Y and stands on z = 0, about 2 units tall. `.L` is its own left.
@@ -75,3 +131,12 @@ To give the app another clip, draw it as one more picture the same way and add i
 - **`Walk` walks on the spot,** with a short stride: each foot goes 0.30 of a unit back while it is planted, on a mascot 2 units high. The greeting moves the picture by that much, so a longer or shorter stride here changes how long the walk across the screen takes.
 - **The feet lead the legs.** Move a foot and its leg follows; lower the body and the knees bend.
 - The "M" is the app's own mark: its outline is read from `app/src/main/res/drawable/ic_launcher_foreground.xml`, and the numbers on the dials are set in the app's `sora.ttf`.
+
+## What to know before writing a clip
+
+- **A hand has a thumb and three fingers:** `finger_a` next to the thumb, `finger_b` the middle and longest, `finger_c` the outer one. A pose curls each finger at its two joints and may spread it sideways (`spread` in `arm_pose`); the thumb folds across the palm with `(112, 0, 50, 62)` or near it. The peace sign is a and b up and apart; the horns are a and c up.
+- **The hands are large and the arms short.** A fist beside the head is clear of it only with the forearm leaning a little outwards and the fingers to the viewer; curled in towards the head, as a real arm flexes, it is inside the head. A hand held up beside the head has about a finger's width to spare.
+- **No overshoot towards the head.** `ThumbsUp` swings a little past its pose and back. A hand beside the head that does so goes through a dial: `Peace` and `RockOn` swing outwards as they arrive instead.
+- **An arm goes from one pose to another by the shortest way,** which between "forearm up" and "forearm down" can be through the body. `curved()` draws the way towards a third pose: `Flex` takes its fists round the outside with it.
+- **Turned about 10 degrees to its right and leaning back, the dials go pale.** Their glossy black faces then mirror the studio's key light into the camera, the same shine the greeting found in its turn. The pictures are drawn with the faces dulled, but the model and its `.glb` keep the gloss, so `Flex` does not lean back in the pose in which it is turned that way.
+- **Look at the frames.** `render_clips.py` at 250 pixels and a sheet of every second frame shows a hand in a dial, or a pop, that the numbers do not.

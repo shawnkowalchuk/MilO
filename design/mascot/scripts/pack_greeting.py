@@ -108,4 +108,6 @@ def main():
     print("together: %d bytes" % total)
 
 
-main()
+# pack_clips.py reads this file for its functions and must not set the greeting's pictures going.
+if __name__ == "__main__":
+    main()

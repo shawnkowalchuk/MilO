@@ -19,6 +19,7 @@
   --outline: #3a3e46;
   --text: #f2f3f5;
   --text-secondary: #9298a3;
+  /* The mascot's wave.webp carries this lime: see "The mascot" below before changing it. */
   --accent: #c6f432;
   --accent-pressed: #ddff7a;
   /* Buy Me a Coffee's own yellow, for its button alone (2026-10-08). */
@@ -218,6 +219,71 @@ main > * {
 .hero .small {
   margin: 14px 0 0;
   font-size: 14px;
+}
+
+/*
+ * The mascot stands in the lime tile: small and under the words on a phone, at their right
+ * from a tablet's width up, and twice as large on a wide screen (both further down). Its two
+ * pictures are drawn from the 3D model by design/mascot/scripts/pack_clips.py, 720 by 608
+ * pixels, and shown at half of that or at a quarter. The sizes here are those halves and
+ * quarters: change them with the pictures.
+ */
+.mascot {
+  position: relative;
+  width: 180px;
+  height: 152px;
+  margin: 16px 0 -16px auto;
+}
+
+.mascot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Roll the pointer over him and he waves once. The website runs no script, so the stylesheet
+ * does it: wave.webp holds the wave's 24 frames one under the other. It is laid over the
+ * standing picture for the two seconds of the wave and stepped through, twelve frames a
+ * second. It is fetched when the pointer first comes over the lime tile, not with the page.
+ * Each time the pointer comes back the wave starts at its first frame; when it leaves, he
+ * stands again at once. Not on a touch screen, which has no pointer to roll over him, and not
+ * for a visitor whose system asks for less motion.
+ *
+ * The standing picture is never taken away: a stylesheet cannot know whether the strip has
+ * arrived. Each frame of the strip covers it instead, with this tile's lime wherever the
+ * standing mascot would show beside the waving one. So wave.webp carries --accent: change the
+ * colour and it has to be packed again (design/mascot/README.md, "The website's pictures").
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .mascot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-size: 100% 2400%;
+    visibility: hidden;
+  }
+
+  .hero:hover .mascot::after {
+    background-image: url("/mascot/wave.webp");
+  }
+
+  .mascot:hover::after {
+    animation: mascot-wave 2s steps(24);
+  }
+}
+
+/* Seen only while it plays, from the first frame to one past the last: 24 steps of a frame. */
+@keyframes mascot-wave {
+  from {
+    visibility: visible;
+  }
+
+  to {
+    visibility: visible;
+    background-position-y: calc(2400% / 23);
+  }
 }
 
 /* Four phone screenshots: two across on a phone, four on a wide screen. */
@@ -471,5 +537,38 @@ footer a {
 
   .tile {
     padding: 28px 32px;
+  }
+
+  /* The headline keeps the tile's whole width; under it the mascot stands at the right of
+     the words, his feet near the tile's lower edge. */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+  }
+
+  .hero h1 {
+    grid-column: 1 / -1;
+  }
+
+  .hero .button {
+    justify-self: start;
+  }
+
+  .mascot {
+    grid-column: 2;
+    grid-row: 2 / span 3;
+    align-self: end;
+    margin: 0 0 -12px;
+  }
+}
+
+/* A wide screen: the mascot at his full size. He is as tall as the words beside him, less
+   what he stands below them, so the tile is no higher for him. */
+@media (min-width: 900px) {
+  .mascot {
+    width: 360px;
+    height: 304px;
+    margin: 0 -8px -20px 0;
   }
 }
