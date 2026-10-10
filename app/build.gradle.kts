@@ -142,6 +142,26 @@ android {
             getByName("debug") { signingConfig = miloSigning }
             getByName("release") { signingConfig = miloSigning }
         }
+
+        // The release build goes through R8 (ADR-008); the debug build does not. R8 removes the
+        // code and the resources nothing uses, rewrites what is left to be smaller, and gives
+        // the libraries' classes short names. Google Play asks for it, and the download is a
+        // third of what it was. MilO's own names are kept, for its event log: proguard-rules.pro.
+        //
+        // A fault R8 causes exists in the release build alone. The unit tests and CI run the
+        // debug build, so every release is installed and looked over before it is published
+        // (README, "Making a release"). R8 also writes mapping.txt, which each release keeps:
+        // without it a stack trace from that release cannot be read in full.
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // Android's own rules, then MilO's. The rules each library ships inside itself
+            // are added by the build.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
     }
 
     compileOptions {
