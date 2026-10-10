@@ -8,6 +8,11 @@
           "kind": "new",
           "title": "Email support",
           "body": "Settings has a new tile, Email support. It opens your email app with a message to support@milotriplog.top, with MilO's version and your phone's model filled in at the end. MilO is one person's project: answers come when he has time."
+        },
+        {
+          "kind": "improved",
+          "title": "A smaller download",
+          "body": "MilO is less than a third of the size it was to download: the file from the website is 12 MB where it was 40 MB, and the copy from Google Play shrinks in the same way. Code that MilO never used is no longer packed in. Nothing in the app works differently."
         }
       ]
     },

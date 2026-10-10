@@ -6,7 +6,7 @@
 >
 > **This is one of four documents** that work together — see §17 for how they fit.
 >
-> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-09
+> **Status:** Living document · **Owner:** Shawn · **Last updated:** 2026-10-10
 
 ---
 
@@ -42,7 +42,7 @@ Pinned. Changing the stack mid-project is the most expensive form of debt there 
 | Layer | Choice | Notes / rationale |
 |---|---|---|
 | **Language** | **Kotlin 2.4.20, `allWarningsAsErrors`** | Non-negotiable. A compiler warning fails the build. |
-| Build | AGP 9.4.1, Gradle 9.8.0, JDK 17, KSP 2.3.12 | One `:app` module. Kotlin is built into AGP 9: never apply `org.jetbrains.kotlin.android` or kapt. |
+| Build | AGP 9.4.1, Gradle 9.8.0, JDK 17, KSP 2.3.12 | One `:app` module. Kotlin is built into AGP 9: never apply `org.jetbrains.kotlin.android` or kapt. **The release build goes through R8** (since 2026-10-10, ADR-008): the tool in Android's build that removes unused code, rewrites the rest to be smaller and gives it short names. The debug build does not. MilO's own names are kept (`app/proguard-rules.pro`). |
 | SDK levels | minSdk 34, compileSdk 37, targetSdk 37 | Android 17 is the newest stable platform. The phone runs API 34 (Android 14), and MilO runs on nothing older: Shawn's decision of 2026-10-06 (FINDINGS_LOG, 2026-10-07). **No code is written for an older Android:** it could be tested nowhere. A branch on the Android version is only for something that differs from Android 14 upwards. |
 | UI | Jetpack Compose, Material 3 (Compose BOM 2026.09.00) | One UI toolkit. No XML layouts. |
 | Navigation | Navigation 3 1.2.0; kotlinx-serialization-json 1.11.0 for its back-stack keys | Navigation 2 is in maintenance mode. |
@@ -204,6 +204,7 @@ Code isn't "done" until **all** are true:
 - [ ] UI uses existing tokens/components — no one-off styles (§8)
 - [ ] Surface scope matches what was decided at kickoff (§9)
 - [ ] Self-reviewed the full PR diff
+- [ ] A change that reaches code by its name at run time (reflection, a library that does it) has run in the release build, which R8 rewrites, not only in the debug build (§11)
 - [ ] Works on the POCO X5 itself, not just the emulator. Work whose device checks have not run yet is merged all the same (§11), and the documents then say that it is unproven on the phone
 - [ ] FINDINGS_LOG.md updated; APP_ENCYCLOPEDIA.md updated if behavior changed
 
@@ -216,6 +217,7 @@ Code isn't "done" until **all** are true:
 - **No Robolectric.** Its current release needs Java 21 to simulate API 36 and 37, and the Mac has only JDK 17. Behaviour that needs Android is tested on the phone.
 - **Skip trivial UI tests.**
 - **Device test checklist** — `docs/DEVICE_TEST_CHECKLIST.md`, run on the POCO X5. A phase's behaviour counts as proven only when its checks have run there. **The checks do not hold up the next phase:** on 2026-10-05 Shawn replaced "stop after each phase" with "carry on through the phases without a stop in between", so the next phase starts when the last one is merged and the checks are run beside the later work (FINDINGS_LOG, 2026-10-06). If a check fails, that fix comes before anything built on top of it. Bluetooth triggers, background starts and HyperOS limits cannot be tested anywhere else. Every change that adds behaviour only the phone can prove adds its checks to that file in the same change.
+- **The release build is proven by running it** (since 2026-10-10, ADR-008). R8 rewrites the release build and leaves the debug build alone, and the unit tests and CI run the debug build. A fault that R8 causes is therefore in no test: it shows only when the release build runs. So every release is installed on the phone and looked over before it is published (README, "Making a release"), and a change that reaches code by its name at run time (reflection, a class looked up from a stored name, a new library that does either) is tried in the release build before it is merged. Such a change may also need a rule in `app/proguard-rules.pro`, with its reason written beside it.
 - Tools: JUnit 4, kotlinx-coroutines-test, Turbine (`./gradlew testDebugUnitTest`).
 
 The bar: *would a bug here lose a trip, or put a wrong number on the report accounts reads?* If yes, test it.
@@ -246,7 +248,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 
 ## 13. Environments & configuration
 
-- **One environment.** There is no backend, so `dev` / `staging` / `prod` have nothing to separate. The only build is the debug build installed on Shawn's phone from Android Studio.
+- **One environment.** There is no backend, so `dev` / `staging` / `prod` have nothing to separate. There are two builds of the one app. The **debug build** is what Android Studio's Run button and CI make. The **release build** is what is published, and since 2026-10-09 what is on Shawn's phone (the APK of each GitHub release, installed over the one before). Both are signed with the same key, so either installs over the other. **Since 2026-10-10 they differ under the hood:** the release build goes through R8 and the debug build does not (ADR-008). What must hold on the phone is proven in the release build.
 - **That build holds the real trips.** Never uninstall to fix a problem, and never lower `versionCode` (that forces an uninstall). Uninstalling deletes the data.
 - **No environment variables and no `.env.example`.** User settings live in DataStore.
 
@@ -263,6 +265,7 @@ The bar: *would a bug here lose a trip, or put a wrong number on the report acco
 - **Reproducible builds** — the Gradle wrapper is committed and checksum-pinned; every version is an exact pin. A GitHub Action is pinned to a full commit SHA with its release in a trailing comment (`# v7.0.1`), because a tag can be moved to different code.
 - **Google Play is the second channel** (since 2026-10-09, ADR-004): the same version as the GitHub release, as an app bundle (`./gradlew bundleRelease`) signed with the same key, uploaded in the Play Console by hand. One build for both: what differs between the two copies is decided in the app from the installer (`platform/system/InstallSource.kt`), never by a build flavour. The steps are in README, "Publishing on Google Play".
 - **Tag releases** (`v1.2.0`). **Since 2026-10-08 a release is also a GitHub Release with the APK attached,** for anyone to download: built with `assembleRelease` on the Mac, signed with the phone's own key, and uploaded by hand (Shawn's choice over a CI build, so the key never leaves the Mac). The steps are in README, "Making a release". There is no release pipeline.
+- **A release keeps its mapping file** (since 2026-10-10, ADR-008). R8 writes `mapping.txt` with every release build: what each renamed thing was called, and the real file and line behind every line of a stack trace. Without it a stack trace from that release cannot be read in full, MilO's own lines included. The bundle for Google Play carries it inside. For GitHub it is packed and attached to the release beside the APK. It is build output and is never committed. The APK and the bundle of one version come from one run of the build, so that one mapping file serves both.
 - **Versions and the list of changes** (since 2026-10-08). `app/src/main/assets/changelog.json` lists every version and what changed in it, in words for the person using the app: the app's What's new screen and the website's `/changes` page are made from it. FINDINGS_LOG.md stays the engineering record; there is no `CHANGELOG.md`. **A change Shawn will notice adds a line to the newest version in the same pull request,** and `python3 tools/changes_page.py` writes the page again. While the newest version is released (it has a date), that pull request opens the next one: a new number with `"date": null`, `versionName` set to it and `versionCode` raised by one. **A release dates the newest version.** `versionCode` and `versionName` are never lowered. CI checks the list's rules, that its newest version is the build's `versionName`, and that `website/changes.html` is the page it makes (`tools/changes_page.py --check`).
 
 ---

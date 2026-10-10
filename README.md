@@ -393,38 +393,67 @@ Each update that others can download is a GitHub Release with the APK attached. 
 
 1. **Start from `main`,** with everything merged: `git checkout main && git pull`.
 2. **Date the version.** In `app/src/main/assets/changelog.json` the newest version has `"date": null`. Set it to the day (`"2026-10-12"`), run `python3 tools/changes_page.py`, and merge that as its own small pull request. Its number is already the build's `versionName`: CI makes sure of it. (The version itself was raised when its first change was merged: "The list of changes", below.)
-3. **Build the release APK** and check its key:
+3. **Build the release APK and the bundle for Google Play in one go,** check the APK's key, and pack the mapping file:
 
    ```bash
-   ./gradlew assembleRelease
-   mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MilO-0.3.0.apk
-   "$(ls -d "$ANDROID_HOME"/build-tools/*/ | tail -1)apksigner" verify --print-certs app/build/outputs/apk/release/MilO-0.3.0.apk | grep SHA-256
+   ./gradlew assembleRelease bundleRelease
+   mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MilO-0.3.1.apk
+   "$(ls -d "$ANDROID_HOME"/build-tools/*/ | tail -1)apksigner" verify --print-certs app/build/outputs/apk/release/MilO-0.3.1.apk | grep SHA-256
+   gzip -9 -c app/build/outputs/mapping/release/mapping.txt > app/build/outputs/apk/release/MilO-0.3.1-mapping.txt.gz
    ```
 
    It is signed with `~/keys/milo.jks`, like the phone's builds, whose certificate's SHA-256 is `95a951079ea89ce645392c404cccacc5e42aba781ba52efe7afb27dd6e9414b4`. Any other digest: stop, and publish nothing.
-4. **Install it on the phone first,** and look it over. `"$ANDROID_HOME/platform-tools/adb" devices` names the phone; then:
+
+   **The mapping file** (since 2026-10-10, ADR-008). The release build goes through R8, which removes unused code and gives the rest short names. `mapping.txt` is R8's record of what everything was called, and of the real file and line behind each line of a stack trace. **A stack trace from this release can only be read in full with this file,** so it is kept with the release: packed (53 MB becomes 4 MB) and attached beside the APK in step 5. It is never committed: everything under `app/build/` is ignored by git. Build both files in one go, as above, so that the APK and the bundle are the same code with the same mapping file.
+4. **Install it on the phone first, and look it over.** `"$ANDROID_HOME/platform-tools/adb" devices` names the phone; then:
 
    ```bash
-   "$ANDROID_HOME/platform-tools/adb" -s PHONE_SERIAL install -r app/build/outputs/apk/release/MilO-0.3.0.apk
+   "$ANDROID_HOME/platform-tools/adb" -s PHONE_SERIAL install -r app/build/outputs/apk/release/MilO-0.3.1.apk
    ```
 
    Not `./gradlew installRelease`: it installs on every device adb sees, and an emulator's MilO, signed with the throwaway debug key, refuses it with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, which stops the task. The same error from the phone itself means a different key: stop there, and never uninstall.
-5. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.3.0` on `main`, title "MilO Trip Log 0.3.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool, with the notes written from the list of changes:
+
+   **This step is the only test the release build gets.** CI and the unit tests run the debug build, which R8 does not touch; a fault R8 causes exists in this APK alone. So before publishing: open MilO (the mascot walks in and waves); look at Home, Trips, Settings and the Log; start a trip with Start trip, let it run a minute, end it, and see it on Trips; open What's new from the Version tile; read the Log from the install on, and expect no `ERROR` and no `CRASH` line. If the change touched the Android Auto screen, the report, the export or the widget, use that too. Anything wrong: publish nothing, and say what the Log shows.
+5. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.3.1` on `main`, title "MilO Trip Log 0.3.1", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK and the packed mapping file on "Attach binaries", **Publish release**. Or with GitHub's command-line tool, with the notes written from the list of changes:
 
    ```bash
    python3 -c "import json;r=json.load(open('app/src/main/assets/changelog.json'))['releases'][0];print('\n'.join('- **%s.** %s'%(c['title'],c.get('body','')) for c in r['changes']))" > app/build/release-notes.md
-   gh release create v0.3.0 app/build/outputs/apk/release/MilO-0.3.0.apk --target main --title "MilO Trip Log 0.3.0" --notes-file app/build/release-notes.md
+   gh release create v0.3.1 app/build/outputs/apk/release/MilO-0.3.1.apk app/build/outputs/apk/release/MilO-0.3.1-mapping.txt.gz --target main --title "MilO Trip Log 0.3.1" --notes-file app/build/release-notes.md
    ```
 
 6. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
 
-Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **The first release, 0.1.0, was published on 2026-10-09, and 0.3.0 the same evening,** after its APK was installed over the phone's MilO this way.
+Because a release is signed with the phone's own key, its APK also installs over the phone's MilO, and the trips stay. **The first release, 0.1.0, was published on 2026-10-09, and 0.3.0 the same evening,** after its APK was installed over the phone's MilO this way. Those two were not minified and have no mapping file: their stack traces read as they are. 0.3.1 is the first release that goes through R8.
+
+### Reading a stack trace from a release
+
+In a release from 0.3.1 on, a stack trace in MilO's Log looks like this (from a test build of 2026-10-10 with a failure put in on purpose):
+
+```
+kotlinx.serialization.json.JsonDecodingException: Unexpected JSON token at offset 4 …
+	at mz1.k(r8-map-id-5288aac6…c54:40)
+	at com.shawnkowalchuk.milo.data.trip.TripRepository.setCategoryByHand(r8-map-id-5288aac6…c54:124)
+	at com.shawnkowalchuk.milo.feature.trips.TripCorrections.mark(r8-map-id-5288aac6…c54:105)
+```
+
+- **The exception and MilO's own classes and methods are named as in the source code.** Often that is enough to find the place.
+- **A library's line is a short name** (`mz1.k`): R8 renamed it.
+- **Where the file name was, there is an id** (`r8-map-id-…`), and the number after it is R8's own, not a line of the source file. The id says which mapping file the trace belongs to: it is the `pg_map_id` in the first lines of that release's `mapping.txt`.
+
+To turn it back, save the trace (or the whole shared Log) as a text file, get that release's mapping file from its GitHub release, and run R8's own tool, which the Android build already has on the Mac:
+
+```bash
+gunzip -k MilO-0.3.1-mapping.txt.gz
+java -cp "$(find ~/.gradle/caches/modules-2 -name 'builder-9.4.1.jar' | head -1)" com.android.tools.r8.retrace.Retrace MilO-0.3.1-mapping.txt trace.txt
+```
+
+(`9.4.1` is the Android Gradle plugin's version in `gradle/libs.versions.toml`; a newer one reads an older mapping file.) The same lines then read `TripRepository.setCategoryByHand(TripRepository.kt:229)` and `TripCorrections.mark(TripCorrections.kt:63)`, and the library's lines have their real names. Text that is not a stack trace passes through unchanged. A Log from a copy installed from Google Play is turned back with the same file: the two copies of a version are one build. The crash reports the Play Console shows need nothing: the bundle carries the mapping file.
 
 ### Publishing on Google Play
 
 MilO is being prepared for Google Play as a second channel beside GitHub Releases (ADR-004, 2026-10-09). The app exists in the Play Console of 2795748 Alberta Ltd. as "MilO Trip Log" (`com.shawnkowalchuk.milo`, English (Canada), free, automatic protection turned off), and Play App Signing uses MilO's own key. 0.2.0 (build 2) went to open testing on 2026-10-09, and 0.3.0 (build 3) is the first for the production track. Each version goes to both channels with the same number.
 
-1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release: `./gradlew bundleRelease`. **Google Play takes a build number once:** a second bundle of the same version needs `versionCode` in `app/build.gradle.kts` raised by one first. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`.
+1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release and in the same run as its APK: `./gradlew assembleRelease bundleRelease` ("Making a release", step 3). **Google Play takes a build number once:** a second bundle of the same version needs `versionCode` in `app/build.gradle.kts` raised by one first. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`. Since 2026-10-10 it has been through R8 (ADR-008) and carries two things for the Play Console inside it: R8's mapping file, so crash reports are shown with real names, and R8's own figures, which the Console's "DEX code optimization" page asked for. Nothing is uploaded by hand for either. **After the upload, read that page** (App bundle explorer, or the warning on the release) and write its percentages into FINDINGS_LOG: the first minified bundle is the first time Google's own count is seen.
 2. **The first upload decides the signing key, for good.** In Testing, Internal testing, create a release. When the Console asks how the app is signed, choose to use your own key (exporting and uploading a key from a Java keystore), and run the command it shows with `~/keys/milo.jks` and the alias `milo`. **Never let Google create the key:** a copy signed with another key can never update the phone's MilO without wiping its trips. **Done on 2026-10-09:** Google had made a key of its own when the app was created (its "deployment" certificate starts `0D:85:65`), and it was changed to `milo.jks` under Protected with Play, App signing, Change key, before anything was uploaded. The app signing key certificate there reads `95:A9:51:07:…:94:14:B4`; check it again if the page ever offers to change it.
 3. **App content** (Policy, App content). Privacy policy: `https://milotriplog.top/privacy`. App access: no sign-in; reviewers start a trip with Start on Home, as they have no truck. Ads: No (change it before an update with ads, if one ever comes). Content rating: the questionnaire. Target audience: 18 and over. Data safety: MilO's own code sends nothing anywhere; location stays on the phone, except the two ends of each trip given to the phone's address lookup (Google's on most phones) and Android's backup if it is switched on, which Google's guidance in the form says how to declare.
 4. **The two declarations that need a video.** Location in the background: a recording that shows Setup's "Location: Allow all the time" button, MilO's question "MilO uses your location", Continue, Android's page with "Allow all the time", and a trip that starts with MilO closed. Foreground service (location): a trip being recorded with its notification.
