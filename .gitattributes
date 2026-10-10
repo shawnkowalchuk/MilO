@@ -16,3 +16,7 @@ gradlew text eol=lf
 *.ttf binary
 *.glb binary
 *.blend binary
+*.jpg binary
+*.gif binary
+*.mp4 binary
+*.pdf binary

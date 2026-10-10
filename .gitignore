@@ -57,3 +57,7 @@ firebase-debug.*.log
 # --- The mascot (design/mascot/, ADR-007) -----------------------------------------------------
 # Blender's own backup of the file it has just saved.
 *.blend1
+
+# --- The marketing kit (marketing/) ------------------------------------------------------------
+# What Python leaves beside the kit's scripts when one of them reads another.
+__pycache__/
