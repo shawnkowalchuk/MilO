@@ -1,0 +1,189 @@
+/*
+ * The look of the marketing kit's pictures: the website's look (website/styles.css), which is
+ * the app's (core/designsystem/theme/Color.kt and Shape.kt). The page, tile and text colours,
+ * the lime accent, the corners and the typeface, Sora, are copied from there. Change them
+ * together. marketing/build.py writes one small page for each picture and draws it with
+ * headless Chrome; every page links this file.
+ */
+
+@font-face {
+  font-family: "Sora";
+  src: url("../../website/fonts/sora.ttf") format("truetype");
+  font-weight: 100 800;
+}
+
+:root {
+  --page: #121316;
+  --tile: #1e2025;
+  --quiet: #24262b;
+  --outline: #3a3e46;
+  --text: #f2f3f5;
+  --text-secondary: #9298a3;
+  --accent: #c6f432;
+  /* What stands quieter than the page colour on the lime: the page colour, let through. */
+  --on-accent-quiet: rgba(18, 19, 22, 0.74);
+  /* The app's amber tile, for something that is waiting (MiloTheme.colors). */
+  --amber-tile: #2e261a;
+  --amber-text: #ffe3a3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* One picture: as large as --w by --h says, and nothing of it outside. */
+.canvas {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  background: var(--page);
+  color: var(--text);
+  font-family: "Sora", sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.canvas.lime {
+  background: var(--accent);
+  color: var(--page);
+}
+
+.canvas.clear {
+  background: transparent;
+}
+
+.abs {
+  position: absolute;
+}
+
+/* The headline, as the website's: heavy, tight, close lines. */
+.h {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.06;
+}
+
+.sub {
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.32;
+  color: var(--text-secondary);
+}
+
+.lime .sub,
+.tile.accent .sub {
+  color: var(--on-accent-quiet);
+}
+
+.accent-text {
+  color: var(--accent);
+}
+
+/* The mark and the name on one line, as at the top of the website. */
+.brand {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.brand svg {
+  display: block;
+  flex: none;
+}
+
+/* A tile: the design's rounded panel, a shade lighter than the page. */
+.tile {
+  background: var(--tile);
+  border-radius: 26px;
+  color: var(--text);
+}
+
+.tile.accent {
+  background: var(--accent);
+  color: var(--page);
+}
+
+.tile.amber {
+  background: var(--amber-tile);
+  color: var(--amber-text);
+}
+
+.pill {
+  display: inline-block;
+  border-radius: 999px;
+  background: var(--page);
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lime .pill.quiet,
+.pill.quiet {
+  background: var(--quiet);
+  color: var(--text);
+}
+
+/*
+ * A phone, drawn here: no device frame was taken from anywhere. A flat rounded body with the
+ * screenshot in it, --pw wide. On the dark page the body is the tile colour with a hair of
+ * outline; on the lime it is the page colour. No shadow: the design has none.
+ */
+.phone {
+  position: absolute;
+  width: var(--pw);
+  padding: calc(var(--pw) * 0.026);
+  border-radius: calc(var(--pw) * 0.125);
+  background: var(--tile);
+  box-shadow: inset 0 0 0 calc(var(--pw) * 0.005) var(--outline);
+}
+
+.lime .phone,
+.tile.accent .phone {
+  background: var(--page);
+  box-shadow: none;
+}
+
+.phone img,
+.phone .screen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1080 / 2400;
+  border-radius: calc(var(--pw) * 0.1);
+  background: var(--page);
+}
+
+/* A sheet of paper: the report's page. */
+.paper {
+  position: absolute;
+  display: block;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.mascot {
+  position: absolute;
+  display: block;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
