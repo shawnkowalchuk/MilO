@@ -22,6 +22,14 @@
 
 ## Log
 
+### 2026-10-10
+
+**`[CHANGE]` MilO Trip Log has a Wikidata item, and the website links to it**
+Shawn made the item himself on wikidata.org: Q141683130, "MilO Trip Log", described as "mileage tracking app for Android", with the aliases "MilO" and "Milo Trip Log". This session cannot reach wikidata.org. The statements he was adding that day, each referenced to the website or to the GitHub repository and its release: instance of mobile app, operating system Android, official website, source code repository URL, programmed in Kotlin, version 0.1.0 published 2026-10-09, official name, short name, language English, and copyright status copyrighted (the repository has no licence). **Left off on purpose:** country of origin, because no public page says it; developer, because it would put Shawn's name on the item; the Google Play app ID, because whether the Play listing is public is unclear (ARCHITECTURE says nothing is uploaded yet, this log on 2026-10-09 that 0.2.0 went to open testing). The landing page's `SoftwareApplication` data now has `sameAs` with the item's address and the repository's. Nothing a visitor sees changed, so the page was not drawn again. Website only, and no line in the list of changes: nobody using the app will notice it. A newer GitHub Release is a new version statement on the item, added by hand; nothing here updates it.
+
+**`[FINDING]` The Wikidata item can be deleted until someone else writes about MilO**
+Wikidata's notability policy (WD:N, criterion 2) asks for "serious and publicly available references". Every reference on the item is MilO's own, the website and GitHub, so it can be nominated for deletion. Shawn was told so before he made it. What makes it safe is independent coverage: a review or an article about MilO that is not his. When one exists, add it to the item as a reference. Until then nothing here depends on the item: if it is deleted, its address comes out of `sameAs`.
+
 ### 2026-10-09
 
 **`[FINDING]` One line too long brings the car's scrolling back, so the odometer is not on the car**
