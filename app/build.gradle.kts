@@ -156,12 +156,9 @@ android {
     }
 
     packaging {
-        // TODO(debt): the APK the website offers carries Filament for x86 and x86_64 as well,
-        // about 13 MB that no phone uses. An abiFilters line for release builds would take
-        // them out; the emulator needs them in debug builds (FINDINGS_LOG, 2026-10-09).
         jniLibs {
-            // The app has no native code of its own. The .so files in the APK arrive prebuilt
-            // inside libraries: AndroidX's, and since ADR-005 Filament's. Stripping them needs the NDK version AGP 9.4
+            // The app has no native code of its own. The few .so files in the APK arrive
+            // prebuilt inside AndroidX libraries. Stripping them needs the NDK version AGP 9.4
             // expects (28.2.13676358); only 27.1 is installed, and no NDK is being added for an
             // app with no native code. Without this line every build prints "Unable to strip
             // the following libraries". Packaging them untouched costs nothing that matters here.
@@ -245,11 +242,6 @@ dependencies {
     // lifecycle runtime lets it follow the trip only while the car is showing it.
     implementation(libs.androidx.car.app.projected)
     implementation(libs.androidx.lifecycle.runtime)
-
-    // The mascot (core/designsystem/component/Mascot*.kt, ADR-005): Filament draws the 3D model,
-    // and gltfio reads its .glb file from the assets and plays the clip in it.
-    implementation(libs.filament.android)
-    implementation(libs.filament.gltfio)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

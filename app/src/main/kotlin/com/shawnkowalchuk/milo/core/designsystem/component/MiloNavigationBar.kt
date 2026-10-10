@@ -72,6 +72,8 @@ fun MiloNavigationBar(entries: List<NavigationBarEntry>, modifier: Modifier = Mo
             modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(NavigationBarDefaults.windowInsets.union(FloatAboveEdge))
+                // The greeting's mascot walks along the tile's top edge and counts on this
+                // top padding (MascotGreeting).
                 .padding(start = spacing.gutter, end = spacing.gutter, top = spacing.rowGap),
     ) {
         Surface(

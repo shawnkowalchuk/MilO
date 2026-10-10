@@ -7,13 +7,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.shawnkowalchuk.milo.R
@@ -125,20 +128,21 @@ fun MiloApp(
                 }
             }
 
-            // The greeting (2026-10-09): on a fresh start the mascot waves over Home, unless
-            // something else has that moment. One that is dropped is told so at once, so that it
-            // does not show up later, over a screen Shawn has gone to since.
+            // The greeting (2026-10-09): on a fresh start the mascot walks in over Home and
+            // waves, unless something else has that moment. One that is dropped is told so at
+            // once, so that it does not show up later, over a screen Shawn has gone to since.
             val greetings: GreetingViewModel =
                 viewModel(factory = greetingViewModelFactory(container))
-            val mascotTrusted by greetings.trusted.collectAsState()
             val greeting =
                 greeting(
                     asked = greetingAsked,
                     firstRun = firstRun,
                     onHome = backStack.lastOrNull() == HomeKey,
                     notificationTapped = reportToOpen != null || homeAsked,
-                    trusted = mascotTrusted,
                 )
+            // The room the bottom bar takes, as the Scaffold below works it out: the mascot
+            // walks along the bar's top edge.
+            var bottomBarHeight by remember { mutableStateOf(0.dp) }
             LaunchedEffect(greeting) {
                 if (greeting == Greeting.DROPPED) onGreetingDone()
             }
@@ -187,6 +191,7 @@ fun MiloApp(
                             )
                         },
                     ) { innerPadding ->
+                        SideEffect { bottomBarHeight = innerPadding.calculateBottomPadding() }
                         MiloNavigation(
                             container = container,
                             backStack = backStack,
@@ -208,12 +213,12 @@ fun MiloApp(
                 }
             }
 
-            // Over the screen and the bottom bar alike.
+            // Over the screen, and drawn after it. It takes no press from what is under it.
             if (greeting == Greeting.SHOWING) {
                 MascotGreeting(
                     onDone = onGreetingDone,
-                    beforeStart = greetings::starting,
-                    onShown = greetings::onShown,
+                    barHeight = bottomBarHeight,
+                    onUnreadable = greetings::onUnreadable,
                 )
             }
 

@@ -1399,21 +1399,21 @@ Shawn's requests of 2026-10-09: the odometer on Home, every trip of today in pla
 | HM-11 | **A trip the truck is not in.** With the truck not connected, press Start trip and move a kilometre or two (another vehicle, or on foot). End the trip. | The odometer does not move, during the trip or after it. | not run |
 | HM-12 | **Several vehicles.** With two vehicles paired and a reading for each, drive one of them with Home open. | Only that vehicle's row counts up; the other stays as it was. | not run |
 
-## The greeting: the mascot waves over Home (2026-10-09)
+## The greeting: the mascot walks in over Home and waves (2026-10-09)
 
-Shawn's request of 2026-10-09: the mascot's wave when MilO starts up; "Greeting over Home", phone only, drawn from the 3D model by Filament (ADR-005). Seen on an emulator with the PC's graphics card; no phone's graphics chip has drawn it. Do MG-1 first: if MilO closes there, stop and say so (MG-9 is what then protects the phone).
+Shawn's requests of 2026-10-09: the mascot's wave when MilO starts up, "Greeting over Home", phone only; and that evening, that he walk in from the right along the top of the bottom bar to the middle, then turn and wave. He is two animated pictures, played by Android itself (ADR-007); the 3D engine of that morning is gone. Seen on an emulator that draws without a graphics chip; never on the phone.
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| MG-1 | **The wave.** Close MilO (swipe it away from the recent apps), then open it. | Home appears as ever. Within a second the screen dims and the mascot fades in, large, in the middle: green, two gauges, the M, white gloves. His right hand goes up and waves, both needles move, and he fades away after about two seconds. MilO stays open. | not run |
-| MG-2 | **How he looks.** Watch MG-1 again, or take a screenshot while he waves. | Smooth, no stutter. Arms and legs are round hoses, not kinked. The numbers on the dials can be read. Write down anything that looks wrong; the rims of the gauges are meant to be dark. | not run |
-| MG-3 | **A tap skips him.** Open MilO fresh and tap anywhere as soon as he is seen. | He fades out at once. Home was not pressed by that tap. | not run |
-| MG-4 | **Back skips him.** Open MilO fresh and press Back while he waves. | He fades out; MilO stays open on Home. | not run |
-| MG-5 | **Not on coming back.** With MilO open, go to another app and come back. | No greeting. | not run |
+| MG-1 | **The walk and the wave.** Close MilO (swipe it away from the recent apps), then open it. | Home appears as ever and is not dimmed. Within a second or two the mascot comes in from the right edge, a hand first, and walks to the left with his feet just above the bottom bar. In the middle he turns to face you, waves once with his right hand while both needles move, and fades away. About 7 seconds in all. MilO stays open. | not run |
+| MG-2 | **How he looks.** Watch MG-1 twice more: once his feet, once the turn. | Smooth, no stutter. A foot that is on the ground stays where it is while the other one steps; it does not slide along the bar. He stops in the middle and turns at once: he does not walk on the spot there first. Nothing jumps or flashes where the turn begins. His edges are clean on the dark page. The big dial is meant to look pale for a moment as he turns: its glass catches the light. Write down anything else that looks wrong, and how the walk's length feels. | not run |
+| MG-3 | **A press goes through him.** Open MilO fresh and press Start trip while he walks. End the trip again. | The trip starts at the first press, and he walks on. | not run |
+| MG-4 | **Back is Android's.** Open MilO fresh and press Back while he walks. | MilO closes, as Back on Home always does. Opened again, it greets again. | not run |
+| MG-5 | **Not on coming back.** With MilO open, go to another app and come back. Then open MilO fresh, go to the phone's home screen while he walks, and come back. | No greeting the first time. The second time he is gone when MilO comes back, and does not start again. | not run |
 | MG-6 | **Not after a notification.** Tap the daily check's or the monthly reminder's notification with MilO closed. | MilO opens on what the notification asked for, with no greeting. | not run |
-| MG-7 | **Not with animations off.** In the phone's developer options set "Animator duration scale" to off (or switch on "Remove animations" under Accessibility), then open MilO fresh. Set it back afterwards. | No greeting, and Home does not dim. | not run |
+| MG-7 | **Not with animations off.** In the phone's developer options set "Animator duration scale" to off (or switch on "Remove animations" under Accessibility), then open MilO fresh. Set it back afterwards. | No greeting. | not run |
 | MG-8 | **Not over What's new.** Install a build with a higher version over this one and open it. | What's new opens. No mascot over it; at most a flicker of him before it. The next fresh start greets. | not run |
-| MG-9 | **The safety catch.** Only if MilO closed by itself in MG-1: open it again, and a third time. | It may close once more. From the third start on it opens with no greeting, and the Log has "The greeting is off: 2 in a row began and never showed the mascot". | not run |
+| MG-9 | **Leaving Home ends him.** Open MilO fresh and press the bar's Trips button while he walks. Then open MilO fresh again and turn the phone on its side while he walks. | Trips opens at once and he is gone; back on Home there is no greeting. After the turn he is gone too. MilO stays open both times. | not run |
 
 ## Home: the truck's tile, lower (2026-10-09)
 

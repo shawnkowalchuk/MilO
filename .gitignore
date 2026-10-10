@@ -54,6 +54,6 @@ app/src/debug/res/raw/
 firebase-debug.log
 firebase-debug.*.log
 
-# --- The mascot (design/mascot/, ADR-005) -----------------------------------------------------
+# --- The mascot (design/mascot/, ADR-007) -----------------------------------------------------
 # Blender's own backup of the file it has just saved.
 *.blend1
