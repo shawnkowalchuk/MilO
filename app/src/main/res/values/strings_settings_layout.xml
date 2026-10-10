@@ -106,6 +106,19 @@
     <string name="settings_about_data">About backup, export and import</string>
 
     <!--
+        The tile that starts an email to MilO's support address in the phone's email app
+        (2026-10-10). The address itself is in SupportTile.kt, as it is not to be translated.
+    -->
+    <string name="settings_support_label">Email support</string>
+    <string name="settings_support_hint">Opens your email app with a new message. MilO\'s version and your phone\'s model are filled in at the end, to help with the answer. MilO is one person\'s project: answers come when he has time.</string>
+    <!-- Spoken by the screen reader for what a press on the tile does. -->
+    <string name="settings_support_open">write an email to support</string>
+    <!-- The subject of the email, and the line at the end of its text. -->
+    <string name="settings_support_subject">MilO Trip Log support</string>
+    <string name="settings_support_about">MilO Trip Log %1$s (build %2$d) · Android %3$s · %4$s</string>
+    <!-- On the tile after a press, on a phone with no email app. -->
+    <string name="settings_support_no_email_app">No app on this phone writes emails. You can write to the address above from another device.</string>
+    <!--
         The tile above Version (2026-10-08) that opens Shawn's page on Buy Me a Coffee in the
         browser. Its value is the page's address as it can be typed in.
     -->

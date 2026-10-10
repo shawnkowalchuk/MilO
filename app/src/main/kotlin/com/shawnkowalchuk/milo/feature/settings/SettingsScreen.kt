@@ -281,7 +281,9 @@ internal fun SettingsContent(
         // Last: it is used a few times a year, and it is the one tile that can replace
         // everything, so it is not among the settings that are changed in passing.
         if (state != SettingsUiState.Reading) dataTile()
-        // Beside the version: neither is a setting.
+        // Beside the version: none of them is a setting. Support first: it is the one a
+        // person with a problem is looking for.
+        SupportTile()
         if (showCoffee) CoffeeTile()
         versionTile()
     }

@@ -177,7 +177,7 @@ PAGE_TEMPLATE = """<!doctype html>
 
     <footer>
       <p>© 2026 Shawn Kowalchuk. All rights reserved.</p>
-      <p><a href="/privacy">Privacy</a> · <a href="https://github.com/shawnkowalchuk/MilO">Source on GitHub</a> · <a href="https://www.buymeacoffee.com/SeaWingman">Buy me a coffee</a> · The typeface is Sora, under the <a href="/fonts/Sora-OFL.txt">SIL Open Font License 1.1</a>.</p>
+      <p><a href="/privacy">Privacy</a> · <a href="mailto:support@milotriplog.top?subject=MilO%20Trip%20Log%20support">Support</a> · <a href="https://github.com/shawnkowalchuk/MilO">Source on GitHub</a> · <a href="https://www.buymeacoffee.com/SeaWingman">Buy me a coffee</a> · The typeface is Sora, under the <a href="/fonts/Sora-OFL.txt">SIL Open Font License 1.1</a>.</p>
       <p>MilO Trip Log is an independent project, not affiliated with any other app or company named Milo.</p>
     </footer>
   </div>

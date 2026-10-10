@@ -30,6 +30,17 @@ Shawn made the item himself on wikidata.org: Q141683130, "MilO Trip Log", descri
 **`[FINDING]` The Wikidata item can be deleted until someone else writes about MilO**
 Wikidata's notability policy (WD:N, criterion 2) asks for "serious and publicly available references". Every reference on the item is MilO's own, the website and GitHub, so it can be nominated for deletion. Shawn was told so before he made it. What makes it safe is independent coverage: a review or an article about MilO that is not his. When one exists, add it to the item as a reference. Until then nothing here depends on the item: if it is deleted, its address comes out of `sameAs`.
 
+### 2026-10-10
+
+**`[CHANGE]` Email support: a link on the website and a tile in Settings**
+Shawn: "what about adding a support link? can we have it send email to me?". Asked where, he chose the website and the app; nothing on Android Auto. **Website:** a Support link in every page's footer, and the three places that said "there is no support" now say that one person answers email when he has time, because "no support" would be untrue beside a support link and "support" alone would promise a desk that does not exist. **App (phone):** a tile "Email support" above Buy me a coffee, which opens the email app on a draft that ends with MilO's version, the Android version and the phone's model. MilO still sends nothing and still has no internet permission: the email app sends, if the person does. The privacy policy says what the draft carries. Not merged until a test email had reached him (device check SP-1): it did, the same day, and **Gmail filed it under Spam.** Mail that a forwarder passes on often is: it arrives from Namecheap's servers under someone else's name. The cure is on his side of the mailbox, a Gmail filter for mail to the support address that never sends it to Spam. Until he has made it, a support email can sit unseen in Spam for thirty days and then be deleted.
+
+**`[DECISION]` The support address is at the website's domain, and forwards to his own**
+He first chose his Gmail address, then asked: "can we hide my email address?". An address on a public page cannot be hidden from the programs that collect them, with or without a script, and the app would show it in every draft. So the address is `support@milotriplog.top`. The domain's public records showed that it is at Namecheap and that its mail already went to Namecheap's free forwarding service (the MX records and the SPF line were there); he added one forwarder, `support` to his mailbox. **What it does not hide:** his replies come from his own address, to the people he answers. Sending as the support address would need a mail server that sends, which the forwarding does not include.
+
+**`[CHANGE]` Version 0.3.1, build 4, is open**
+0.3.0 is released, so the first change to the app after it raises the version (README, "The list of changes"): `versionName` 0.3.1, `versionCode` 4, and a 0.3.1 block in the list of changes without a date, which the What's new page shows as "Not released yet". The website part of this change is live with the merge; the tile reaches phones with 0.3.1's release.
+
 ### 2026-10-09
 
 **`[FINDING]` 0.3.0 was published without the mascot's last fix, and published again with it**
