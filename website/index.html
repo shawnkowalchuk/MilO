@@ -42,6 +42,7 @@
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Android 14 or newer",
     "downloadUrl": "https://github.com/shawnkowalchuk/MilO/releases/latest",
+    "installUrl": "https://play.google.com/store/apps/details?id=com.shawnkowalchuk.milo",
     "screenshot": "https://milotriplog.top/screenshots/home.jpg",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
     "author": { "@type": "Person", "name": "Shawn Kowalchuk" }
@@ -129,7 +130,7 @@
       "name": "Is MilO on Google Play?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Not at the moment. You install it from its GitHub release, as the steps above describe."
+        "text": "Yes. MilO Trip Log is on Google Play, and the same app can be downloaded as an APK from its GitHub release."
       }
     }
   ]
@@ -154,7 +155,10 @@
       <section class="tile accent hero">
         <h1>Business mileage that logs itself.</h1>
         <p class="lead">When your phone connects to the Bluetooth of one of your work vehicles, MilO starts a trip, records the drive with GPS, sorts it into Business or Personal by your work hours, and at the end of the month makes the mileage report for your accountant, as a PDF and a CSV file.</p>
-        <a class="button" href="https://github.com/shawnkowalchuk/MilO/releases/latest">Download the latest APK</a>
+        <div class="actions">
+          <a class="button" href="https://play.google.com/store/apps/details?id=com.shawnkowalchuk.milo">Install from Google Play</a>
+          <a class="button" href="https://github.com/shawnkowalchuk/MilO/releases/latest">Download the latest APK</a>
+        </div>
         <p class="small">For Android 14 or newer · Free · <a href="#install">How to install</a></p>
         <div class="mascot"><img src="/mascot/standing.webp" width="360" height="304" alt="MilO's mascot: a green block with two dials for eyes"><span class="dial dial-speed"></span><span class="dial dial-rpm"></span></div>
       </section>
@@ -212,15 +216,17 @@
       </section>
 
       <section class="tile" id="install">
-        <h2>Installing the APK</h2>
+        <h2>Installing MilO</h2>
+        <p><strong>The simplest way is Google Play:</strong> <a href="https://play.google.com/store/apps/details?id=com.shawnkowalchuk.milo">MilO Trip Log on Google Play</a>. It updates by itself, and it is the copy whose screen can show in a car with Android Auto.</p>
+        <p><strong>Or install the APK,</strong> which is the same app signed with the same key, so either installs over the other and your trips stay:</p>
         <ol>
           <li>On your phone, open the <a href="https://github.com/shawnkowalchuk/MilO/releases/latest">latest release</a> and download the <code>.apk</code> file under "Assets".</li>
           <li>Open the downloaded file. The first time, Android asks you to let your browser or Files <strong>install unknown apps</strong>: allow it, go back, and press Install. Developer options are not needed.</li>
-          <li>Google Play Protect may warn that the app is from an unknown developer, because MilO is not on the Play Store. Install anyway if you trust it.</li>
+          <li>Google Play Protect may warn that the app is from an unknown developer, because this copy did not come from the Play Store. Install anyway if you trust it.</li>
           <li>Open MilO. A first page says what it does; OK leads to Setup, which asks for the permissions and pairs your vehicles.</li>
         </ol>
         <p><strong>To update,</strong> install the newer APK over the old one: your trips stay. Never uninstall MilO to update it, because that deletes every trip.</p>
-        <p class="secondary">MilO is built and tested on one Xiaomi phone. On other phones the automatic start depends on how hard the maker stops apps in the background; Setup shows what it can check. The Android Auto screen is not expected to appear in a car for an app that is not from the Play Store.</p>
+        <p class="secondary">MilO is built and tested on one Xiaomi phone. On other phones the automatic start depends on how hard the maker stops apps in the background; Setup shows what it can check. The Android Auto screen is not expected to appear in a car for a copy that was not installed from Google Play.</p>
       </section>
 
       <section class="tile" id="privacy">
@@ -269,7 +275,7 @@
           </details>
           <details>
             <summary>Is MilO on Google Play?</summary>
-            <p>Not at the moment. You install it from its GitHub release, as the steps above describe.</p>
+            <p>Yes: <a href="https://play.google.com/store/apps/details?id=com.shawnkowalchuk.milo">MilO Trip Log on Google Play</a>. The same app can also be downloaded as an APK from its GitHub release, as the steps above describe.</p>
           </details>
       </section>
 
@@ -280,7 +286,7 @@
 
       <section class="tile">
         <h2>A personal project</h2>
-        <p>MilO Trip Log, MilO for short, was built by Shawn Kowalchuk for one phone and one work truck, and has been in daily use since October 2026. It is not on the Play Store. For a question or a problem, write to <a href="mailto:support@milotriplog.top?subject=MilO%20Trip%20Log%20support">support@milotriplog.top</a>: there is no support desk, and one person answers when he has time. The code is public on <a href="https://github.com/shawnkowalchuk/MilO">GitHub</a> to read; all rights are reserved.</p>
+        <p>MilO Trip Log, MilO for short, was built by Shawn Kowalchuk for one phone and one work truck, and has been in daily use since October 2026. It is on Google Play and on GitHub. For a question or a problem, write to <a href="mailto:support@milotriplog.top?subject=MilO%20Trip%20Log%20support">support@milotriplog.top</a>: there is no support desk, and one person answers when he has time. The code is public on <a href="https://github.com/shawnkowalchuk/MilO">GitHub</a> to read; all rights are reserved.</p>
         <p>MilO is free. If it saves you time, a coffee is a welcome thank-you.</p>
         <a class="coffee" href="https://www.buymeacoffee.com/SeaWingman"><span aria-hidden="true">☕ </span>Buy me a coffee</a>
       </section>
@@ -289,7 +295,7 @@
     <footer>
       <p>© 2026 Shawn Kowalchuk. All rights reserved.</p>
       <p><a href="/changes">What's new</a> · <a href="/privacy">Privacy</a> · <a href="mailto:support@milotriplog.top?subject=MilO%20Trip%20Log%20support">Support</a> · <a href="https://github.com/shawnkowalchuk/MilO">Source on GitHub</a> · <a href="https://www.buymeacoffee.com/SeaWingman">Buy me a coffee</a> · The typeface is Sora, under the <a href="/fonts/Sora-OFL.txt">SIL Open Font License 1.1</a>.</p>
-      <p>MilO Trip Log is an independent project, not affiliated with any other app or company named Milo.</p>
+      <p>MilO Trip Log is an independent project, not affiliated with any other app or company named Milo. Google Play is a trademark of Google LLC.</p>
     </footer>
   </div>
 </body>
