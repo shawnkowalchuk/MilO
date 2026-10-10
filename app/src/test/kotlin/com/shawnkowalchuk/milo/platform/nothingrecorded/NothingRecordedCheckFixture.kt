@@ -10,6 +10,7 @@ import com.shawnkowalchuk.milo.data.eventlog.EventLogDao
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.platform.clock.AskedAlarm
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.FakeEventLogDao
 import com.shawnkowalchuk.milo.platform.trip.FakeSettingsFile
@@ -47,9 +48,27 @@ abstract class NothingRecordedCheckFixture {
     /** The check's clock. A test that needs every reading to differ replaces it. */
     protected var clock: () -> Long = { nowMs }
 
-    /** Every time the daily alarm was asked for, and for when. */
+    /** Whether MilO's clock is the phone's. A test of a phone whose date is set ahead replaces it. */
+    protected var phoneClockAgrees: () -> Boolean = { true }
+
+    /** Whether MilO's clock is on probation. A test of a first start of a boot replaces it. */
+    protected var clockOnProbation: () -> Boolean = { false }
+
+    /** Every time the daily alarm was asked for at a time of day, and for when. */
     protected val alarmsAskedFor = mutableListOf<Long>()
+
+    /**
+     * Every time it was asked for on the clock that counts from boot, and how far ahead: what
+     * the check does while MilO's clock and the phone's disagree.
+     */
+    protected val alarmsAskedAfter = mutableListOf<Long>()
     protected var alarmsCancelled = 0
+
+    /** The request Android holds now: the newest of either kind, or none. */
+    protected var alarmHeld: AskedAlarm? = null
+
+    /** Time since boot, for a request that counts from it. A test with a phone replaces it. */
+    protected var elapsedNow: () -> Long = { 0L }
 
     /** Set to make every request for the alarm fail. */
     protected var failAskingForAlarm: Exception? = null
@@ -116,10 +135,18 @@ abstract class NothingRecordedCheckFixture {
                 override fun setFor(atMs: Long) {
                     failAskingForAlarm?.let { throw it }
                     alarmsAskedFor += atMs
+                    alarmHeld = AskedAlarm.AtTimeOfDay(atMs)
+                }
+
+                override fun setAfter(delayMs: Long) {
+                    failAskingForAlarm?.let { throw it }
+                    alarmsAskedAfter += delayMs
+                    alarmHeld = AskedAlarm.CountedFromBoot(elapsedNow() + delayMs)
                 }
 
                 override fun cancel() {
                     alarmsCancelled++
+                    alarmHeld = null
                 }
             },
         show = {
@@ -139,6 +166,8 @@ abstract class NothingRecordedCheckFixture {
         eventLog = EventLogRepository(eventLog),
         crashFileStore = crashFiles,
         clock = { clock() },
+        phoneClockAgrees = { phoneClockAgrees() },
+        clockOnProbation = { clockOnProbation() },
         zone = { zone },
         scope = backgroundScope,
     )

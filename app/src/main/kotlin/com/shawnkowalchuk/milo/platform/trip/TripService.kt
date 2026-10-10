@@ -59,6 +59,9 @@ class TripService :
     private val container get() = (application as MiloApplication).container
     private val controller get() = container.tripController
 
+    /** MilO's clock, asked for at each use: the container is not there while this is built. */
+    private val clock: () -> Long = { container.clock() }
+
     /** For the timers. They run inside the service, so they end when it does. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -83,7 +86,7 @@ class TripService :
     private var work = Work.NONE
     private var destroyed = false
     private var session: Job? = null
-    private val checkTimer = TripCheckTimer(scope) { controller.onCheckDue(it) }
+    private val checkTimer = TripCheckTimer(scope, clock) { controller.onCheckDue(it) }
 
     /** Beside the parked truck: how GPS is read (see [watchParked]). */
     private var parkedGps = ParkedGps()
@@ -96,15 +99,14 @@ class TripService :
      * arrives after it stands in when it is late.
      */
     private val parkedGpsTimer =
-        TripCheckTimer(scope) { dueMs ->
-            mainExecutor.execute { parkedGpsInLine(max(System.currentTimeMillis(), dueMs)) }
+        TripCheckTimer(scope, clock) { dueMs ->
+            mainExecutor.execute { parkedGpsInLine(max(clock(), dueMs)) }
         }
     private var androidAutoConnected = false
     private val pollPacer = PollPacer()
 
     override fun onCreate() {
         super.onCreate()
-        val clock = System::currentTimeMillis
         location =
             LocationRecorder(
                 context = this,
@@ -146,7 +148,7 @@ class TripService :
         }
         inForeground = true
         newestStartId = startId
-        val request = intent?.let(::startRequestFrom)
+        val request = intent?.let { startRequestFrom(it, nowMs = clock()) }
         val forWhat = request?.let { "${it.source}: ${it.trigger}" } ?: "restarted by Android"
         controller.note(EventCategory.SERVICE, "Trip service in the foreground ($forWhat)")
         controller.onServiceStarted(this, request)
@@ -158,7 +160,7 @@ class TripService :
         val shown = container.tripNotifications.showCouldNotStart()
         val unseen =
             if (shown) "" else "\nNotifications are off for MilO, so the warning was not shown."
-        val request = intent?.let(::startRequestFrom)
+        val request = intent?.let { startRequestFrom(it, nowMs = clock()) }
         controller.onServiceStartFailed(request, StartFailure(emptyList(), "$failure$unseen"))
         // A service that is already in the foreground from an earlier start carries on: one
         // refused start must not end a trip that is being recorded.
@@ -255,24 +257,19 @@ class TripService :
      * times. Called with each order, when the timer runs out, and with each fix, which stands
      * in for a timer that runs late while the phone sleeps.
      */
-    private fun parkedGpsInLine(nowMs: Long = System.currentTimeMillis()) {
+    private fun parkedGpsInLine(nowMs: Long = clock()) {
         if (work != Work.WATCHING_PARKED) return
-        val fast = parkedGps.fastUntilMs?.let { nowMs < it } ?: false
-        val on = parkedGps.untilMs?.let { nowMs < it } ?: true
-        if (fast || on) {
+        val rate = parkedGps.rateAt(nowMs)
+        if (rate != null) {
             parkedGpsOff = false
-            location.start(if (fast) FixRate.RECORDING else FixRate.WATCHING_PARKED)
+            location.start(rate)
         } else if (!parkedGpsOff) {
             // Also when it never came on: a service that Android restarted after the hour.
             parkedGpsOff = true
             location.stop()
             controller.note(EventCategory.LOCATION, PARKED_GPS_OFF)
         }
-        val nextChangeMs =
-            listOfNotNull(parkedGps.fastUntilMs, parkedGps.untilMs).filter {
-                it > nowMs
-            }.minOrNull()
-        parkedGpsTimer.set(nextChangeMs)
+        parkedGpsTimer.set(parkedGps.nextChangeAfter(nowMs))
     }
 
     /**

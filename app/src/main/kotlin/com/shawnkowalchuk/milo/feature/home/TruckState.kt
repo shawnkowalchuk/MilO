@@ -54,6 +54,8 @@ internal data class TruckFacts(
  *
  * @param title the state in a word or two. Also the word of the small tile.
  * @param sentence what the state means for the next trip, or null if there is nothing to add.
+ * Kept short (since 2026-10-09, when the tile was made lower): one line where it can be, and
+ * never more than two, at the usual font size on a phone 360 dp wide.
  */
 internal enum class TruckState(val look: TruckLinkLook, val title: Int, val sentence: Int?) {
     /** The settings or the truck's connection have not been read yet. A moment at a start. */
@@ -100,7 +102,7 @@ internal enum class TruckState(val look: TruckLinkLook, val title: Int, val sent
     /**
      * The parked rule ended the trip, the truck is still connected (by Bluetooth, or by Android
      * Auto on the cable), and MilO watches its position: the next trip starts when it moves.
-     * The words are the ones the notification and the old Home used for it.
+     * The title is the notification's; the sentence is the tile's own.
      */
     PARKED_WAITING(
         TruckLinkLook.CONNECTED,
@@ -197,10 +199,24 @@ internal fun truckFacts(
 /**
  * What the truck's tile shows.
  *
- * @param truckName the paired truck's name as the phone knows it, or null if it has none, or
- * no truck is paired. The screen then writes "The truck".
+ * @param truckName the name, as the phone knows it, of the vehicle the tile is about
+ * (`vehicleName` in `HomeUi.kt`): the one that is connected or in the trip, and otherwise the
+ * first one paired. Null if that vehicle has no name, if none is paired, or while the settings
+ * have not been read. What the tile then writes is [vehicleShown]'s to say.
  */
 internal data class TruckTileState(val state: TruckState, val truckName: String?)
+
+/**
+ * What stands at the end of the tile's first line, where the vehicle is named, or null to
+ * write nothing there. With no vehicle paired there is none to name, and while MilO is still
+ * reading, only a name it has read already is shown. In every other state there is a vehicle,
+ * and one the phone knows no name for is called by [withoutName], "The truck", as on Settings.
+ */
+internal fun TruckTileState.vehicleShown(withoutName: String): String? = when (state) {
+    TruckState.NO_TRUCK -> null
+    TruckState.CHECKING -> truckName
+    else -> truckName ?: withoutName
+}
 
 /**
  * The quieter line on the Start tile. The design's "Or just connect the truck" is only true

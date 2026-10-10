@@ -9,6 +9,14 @@ import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogRepository
 import com.shawnkowalchuk.milo.data.settings.SettingsStore
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.flow.first
+
+/**
+ * How many of the newest process lines are looked through for a record that is already in the
+ * log. Far more than the system keeps records for (16), so a record is found again for as long
+ * as it can come back.
+ */
+private const val KNOWN_LINES_LOOKED_AT = 500
 
 /**
  * Runs once at every process start and writes to the event log what happened since the last one:
@@ -21,6 +29,13 @@ import kotlin.coroutines.cancellation.CancellationException
  * imported again at the next start. A duplicate line is harmless; a lost one could be the line
  * that explains a missed trip.
  *
+ * **Android dates a process's end with the phone's clock, and MilO has a clock of its own**
+ * (ADR-005). A process that died while the phone's date was set a day ahead is recorded as
+ * having died tomorrow. Such a record is written at the time MilO reads it, with a note that
+ * says so, and the "imported up to" mark is never moved past the present: moved to tomorrow, it
+ * would hide every death of the next 24 hours. Since the mark then cannot say that this record
+ * is done, a record is looked for in the log before it is written.
+ *
  * Gathering evidence must never be what stops the app. Each of the four steps runs on its own:
  * a step that fails is written to the event log and the next one still runs (see [attempt]).
  *
@@ -28,7 +43,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * In the app this is `ProcessExitReader.exitsAfter`; a parameter so the import is tested on the
  * JVM.
  * @param processId this process's id, for the "started" line.
- * @param clock wall-clock milliseconds.
+ * @param clock the time of day in milliseconds: MilO's clock (`AppContainer.clock`).
  */
 class StartupDiagnostics(
     private val crashFileStore: CrashFileStore,
@@ -69,7 +84,9 @@ class StartupDiagnostics(
         for (file in crashFileStore.pendingFiles()) {
             val crash = crashFileStore.read(file)
             eventLog.add(
-                atMs = crash.atMs,
+                // Never after now: a file that cannot be read in full is dated by the file
+                // system, which goes by the phone's clock.
+                atMs = minOf(crash.atMs, clock()),
                 category = EventCategory.CRASH,
                 message = crash.summary,
                 detail = "Thread: ${crash.threadName}\n${crash.stackTrace}",
@@ -79,13 +96,35 @@ class StartupDiagnostics(
     }
 
     private suspend fun importProcessExits() {
-        val exits = processExitsAfter(settings.current().lastProcessExitImportedAtMs)
+        val nowMs = clock()
+        val importedUpToMs = settings.current().lastProcessExitImportedAtMs
+        // A mark that lies after now was stored by a build that went by the phone's clock,
+        // from a record dated ahead. What it has hidden since is read again, from the start.
+        val exits = processExitsAfter(if (importedUpToMs > nowMs) 0L else importedUpToMs)
+        if (exits.isEmpty()) return
+        val known =
+            eventLog.observeNewest(KNOWN_LINES_LOOKED_AT, listOf(EventCategory.PROCESS)).first()
         for (exit in exits) {
-            eventLog.add(exit.atMs, EventCategory.PROCESS, exit.message(), exit.detail())
+            val datedAhead = exit.atMs > nowMs
+            // The same record, as it is written when it is dated ahead, or under the time
+            // Android gave it: that is how it is written otherwise, and how a build that
+            // went by the phone's clock wrote every record.
+            val aheadMessage = exit.messageDatedAhead()
+            val aheadDetail = exit.detailDatedAhead()
+            val written =
+                known.any {
+                    (it.message == aheadMessage && it.detail == aheadDetail) ||
+                        (it.atMs == exit.atMs && it.message == exit.message())
+                }
+            if (!written && datedAhead) {
+                eventLog.add(nowMs, EventCategory.PROCESS, aheadMessage, aheadDetail)
+            } else if (!written) {
+                eventLog.add(exit.atMs, EventCategory.PROCESS, exit.message(), exit.detail())
+            }
             // Moved on after every record, not once after the batch: a process that keeps dying
             // early would otherwise import the whole batch again at each start, and the system
-            // holds up to 16 records.
-            settings.setLastProcessExitImportedAtMs(exit.atMs)
+            // holds up to 16 records. Never past the present: see the class comment.
+            if (!datedAhead) settings.setLastProcessExitImportedAtMs(exit.atMs)
         }
     }
 

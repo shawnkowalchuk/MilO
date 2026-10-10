@@ -31,7 +31,7 @@ class WidgetObjects(private val appContext: Context, private val container: AppC
             settings = container.settingsStore,
             shownUnit = container.shownUnit.unit,
             eventLog = container.eventLogRepository,
-            clock = System::currentTimeMillis,
+            clock = container.clock,
             zone = ZoneId::systemDefault,
             scope = container.applicationScope,
         )
@@ -52,7 +52,7 @@ internal fun homeWidgetViewModelFactory(container: AppContainer): ViewModelProvi
                 homeScreenTakesRequests = widget::homeScreenTakesRequests,
                 askToAdd = widget::askToAdd,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
             )
         }
     }

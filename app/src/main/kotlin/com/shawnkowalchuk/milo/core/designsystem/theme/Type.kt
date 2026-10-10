@@ -136,8 +136,9 @@ private fun style(
  * - `bodyLarge`: the main line of a row. `bodyMedium`: the quieter second line, a tile's
  *   label, a note. `bodySmall`: a caption, such as the label above a text field.
  * - `labelLarge`: the words on a small button or a link, which is also what Material gives
- *   its own buttons. `labelMedium`: a chip, a button inside a row, and in the design a pill.
- *   `labelSmall`: a caption that has to stand out (nothing uses it yet).
+ *   its own buttons. `labelMedium`: a chip, a button inside a row, in the design a pill, and
+ *   the vehicle's name at the end of the first line of the truck's tile.
+ *   `labelSmall`: a caption that has to stand out (nothing uses it today).
  *
  * **Why the main line of a row is semi-bold.** The screens set a row's main line in `bodyLarge`
  * and its second line in `bodyMedium`, so those two roles carry the design's 14 at weight 600

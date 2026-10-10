@@ -28,8 +28,9 @@ import androidx.compose.ui.unit.dp
  * @param tileGap between the rows inside a tile, and on Home between two tiles.
  * @param rowGap between a row's dot or button and its text, and above a bar that floats.
  * @param controlPadding inside a small button or a text field, left and right of its words.
- * Also between the rows of a tile that the design gives more air: the truck's tile, and the
- * tile of the trip being recorded.
+ * Also between the rows of a tile that the design gives more air (the tile of the trip being
+ * recorded), and above and below what a low tile holds: the small tile, and since 2026-10-09
+ * the truck's tile.
  * @param medium inside a tile, from its edge to its content. Today also from the edge of the
  * screen to the tiles.
  * @param gutter the 18 of the design: beside the bottom bar, left and right of the main button's

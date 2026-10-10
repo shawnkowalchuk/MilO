@@ -30,15 +30,19 @@ internal fun tripServiceIntent(
     .apply { if (atMs != null) putExtra(EXTRA_AT_MS, atMs) }
     .apply { if (vehicle != null) putExtra(EXTRA_VEHICLE, vehicle) }
 
-/** Reads [tripServiceIntent] back. An intent MilO did not build is treated as a reconcile. */
-internal fun startRequestFrom(intent: Intent): StartRequest {
+/**
+ * Reads [tripServiceIntent] back. An intent MilO did not build is treated as a reconcile.
+ *
+ * @param nowMs the time by MilO's clock, for an intent that carries no time of its own.
+ */
+internal fun startRequestFrom(intent: Intent, nowMs: Long): StartRequest {
     val trigger = TripTrigger.entries.firstOrNull {
         it.name == intent.getStringExtra(EXTRA_TRIGGER)
     }
     return StartRequest(
         trigger = trigger ?: TripTrigger.RECONCILE,
         source = intent.getStringExtra(EXTRA_SOURCE) ?: "an intent without a source",
-        atMs = intent.getLongExtra(EXTRA_AT_MS, System.currentTimeMillis()),
+        atMs = intent.getLongExtra(EXTRA_AT_MS, nowMs),
         vehicle = intent.getStringExtra(EXTRA_VEHICLE),
     )
 }

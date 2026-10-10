@@ -34,9 +34,11 @@ import com.shawnkowalchuk.milo.core.designsystem.component.AppHeader
 import com.shawnkowalchuk.milo.core.designsystem.component.CameToFrontEffect
 import com.shawnkowalchuk.milo.core.designsystem.component.ConfirmDialog
 import com.shawnkowalchuk.milo.core.designsystem.component.GroupLabel
+import com.shawnkowalchuk.milo.core.designsystem.component.LocalMiloClock
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
 import com.shawnkowalchuk.milo.core.designsystem.component.SquareIconButton
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
+import com.shawnkowalchuk.milo.core.util.localDateOf
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.eventlog.EventLogEntry
 import java.time.LocalDate
@@ -113,11 +115,14 @@ private fun EventLogContent(
 
     val zone = ZoneId.systemDefault()
     // Which day is "today" is looked up again whenever the list changes and whenever the
-    // screen is looked at again: MilO can stay open past midnight.
+    // screen is looked at again: MilO can stay open past midnight. By MilO's clock, like the
+    // lines themselves.
+    val clock = LocalMiloClock.current
     var looks by remember { mutableIntStateOf(0) }
     CameToFrontEffect { looks++ }
     val entries = state?.entries.orEmpty()
-    val days = remember(entries, zone, looks) { logDays(entries, zone, LocalDate.now(zone)) }
+    val days =
+        remember(entries, zone, looks) { logDays(entries, zone, localDateOf(clock(), zone)) }
     val timeWidth = rememberLogTimeWidth()
     val spacing = MiloTheme.spacing
 

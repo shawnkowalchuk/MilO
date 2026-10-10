@@ -16,7 +16,7 @@ internal fun greetingViewModelFactory(container: AppContainer): ViewModelProvide
             GreetingViewModel(
                 settings = container.settingsStore,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
             )
         }
     }

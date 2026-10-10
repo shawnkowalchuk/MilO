@@ -87,6 +87,7 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
                           #   tests. It sorts a trip that has closed; it never starts one
   core/report/            # the report for the accountant: its rules, its layout and its CSV.
                           #   Pure Kotlin with unit tests; the drawing is in platform/
+  core/clock/             # MilO's own clock (ADR-005): pure Kotlin with unit tests
   core/util/              # pure Kotlin helpers with unit tests (time, formatting)
   data/                   # Room, DAOs, repositories, DataStore, crash files: the only layer that
                           #   touches storage
@@ -115,6 +116,7 @@ Also outside the app module, `website/` is the public website (ADR-003): plain H
 - **No magic numbers/strings.** Name them as constants. UI values come from design tokens (§8).
 - **Comments explain *why*, not *what*.**
 - **Errors are handled, never swallowed.** No empty `catch {}`.
+- **Nothing reads the phone's clock.** A class that needs the time takes a `clock: () -> Long` in its constructor and is handed MilO's own clock (`AppContainer.clock`, ADR-005); `System.currentTimeMillis()`, `LocalDate.now()` and their like fail `WallClockReadersTest` anywhere but in `platform/clock/PhoneClock.kt`. So does what goes by the phone's clock without saying so (`DateUtils`, `measureTimeMillis`, a file's date, a notification's `setWhen`), outside the three files the test allows, each with its reason.
 
 ### Automated enforcement (set up before writing features)
 - [x] **Kotlin `allWarningsAsErrors`** for app and test code. `org.gradle.kotlin.dsl.allWarningsAsErrors` in `gradle.properties` does the same for the Gradle Kotlin scripts.

@@ -48,7 +48,7 @@ internal fun WhatsNewEntry(container: AppContainer, backStack: NavBackStack<NavK
                             changelog = container.whatsNew.changelog::read,
                             installed = container.whatsNew.installedVersion,
                             eventLog = container.eventLogRepository,
-                            clock = System::currentTimeMillis,
+                            clock = container.clock,
                         )
                     }
                 },
@@ -74,7 +74,7 @@ internal fun whatsNewNoticeViewModelFactory(container: AppContainer): ViewModelP
                 settings = container.settingsStore,
                 installedVersion = container.whatsNew.installedVersion.name,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
             )
         }
     }

@@ -247,7 +247,7 @@ class HomeWidget(
         if (!enabled) return false
         val shown = manager.getAppWidgetIds(provider)
         if (shown.isEmpty()) return false
-        manager.updateAppWidget(shown, homeWidgetViews(context, content))
+        manager.updateAppWidget(shown, homeWidgetViews(context, content, clock()))
         return true
     }
 

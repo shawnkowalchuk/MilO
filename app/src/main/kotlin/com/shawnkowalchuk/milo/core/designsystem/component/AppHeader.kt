@@ -35,7 +35,8 @@ import androidx.compose.ui.unit.dp
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.util.formatShortDay
-import java.time.LocalDate
+import com.shawnkowalchuk.milo.core.util.localDateOf
+import java.time.ZoneId
 
 /** How large the design draws the app's mark. */
 private val MarkSize = 36.dp
@@ -117,9 +118,12 @@ private fun AppMark() {
 @Composable
 private fun AppNameAndDay() {
     val locale = LocalConfiguration.current.locales[0]
+    // The day by MilO's clock, not the phone's: the date in the header must not jump while the
+    // phone's date is being played with (ADR-005).
+    val clock = LocalMiloClock.current
     // MilO can stay open past midnight, and Android says nothing when the day changes.
-    var today by remember { mutableStateOf(LocalDate.now()) }
-    CameToFrontEffect { today = LocalDate.now() }
+    var today by remember { mutableStateOf(localDateOf(clock(), ZoneId.systemDefault())) }
+    CameToFrontEffect { today = localDateOf(clock(), ZoneId.systemDefault()) }
     Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Text(text = stringResource(R.string.app_name), style = MiloTheme.textStyles.appName)
         Text(

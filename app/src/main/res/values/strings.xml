@@ -126,22 +126,28 @@
     <!--
         Home: the truck's tile. A title and a sentence for each state MilO can really be in
         (feature/home/TruckState.kt). "Not connected" and "Connected" are also the word on the
-        small Truck tile that is shown while a trip is being recorded.
+        small Truck tile that is shown while a trip is being recorded, and "Truck" is that
+        small tile's label.
+
+        The sentences are short on purpose (since 2026-10-09, when the tile was made lower):
+        each fits on one line at the usual font size on a phone 360 dp wide, except the one
+        after End was pressed and the one for a truck MilO has stopped watching, which take
+        two. A new or a longer sentence is looked at on a phone that narrow before it is kept.
     -->
     <string name="home_truck_corner">Truck</string>
-    <string name="home_truck_phone">Your phone</string>
     <string name="home_truck_checking">Checking…</string>
     <string name="home_truck_checking_text">Reading the truck\'s connection</string>
     <string name="home_truck_none">No truck paired</string>
-    <string name="home_truck_none_text">Tap here to pair the truck, so that a trip can start by itself when it connects.</string>
+    <!-- Under "No truck paired": "one" is a truck. The tile is then a button to pairing. -->
+    <string name="home_truck_none_text">Tap to pair one, so a trip can start by itself.</string>
     <!-- Spoken by the screen reader for what a tap on that tile does, after "double tap to". -->
     <string name="home_truck_none_press">pair the truck</string>
     <string name="home_truck_not_connected">Not connected</string>
     <string name="home_truck_not_connected_text">A trip starts by itself when the truck connects</string>
-    <string name="home_truck_may_not_start_text">A trip may not start by itself when the truck connects. Setup says why.</string>
+    <string name="home_truck_may_not_start_text">A trip may not start by itself. Setup says why.</string>
     <string name="home_truck_connected">Connected</string>
-    <string name="home_truck_held_off_text">You ended the trip. The next one starts by itself after the truck disconnects and connects again.</string>
-    <string name="home_truck_not_recording_text">No trip is being recorded. Press Start trip to record one.</string>
+    <string name="home_truck_held_off_text">You ended the trip. The next one starts by itself after the truck reconnects.</string>
+    <string name="home_truck_not_recording_text">No trip is being recorded. Press Start trip.</string>
     <!--
         Home: the truck's tile for a moment after the truck has arrived while Home was open, as
         the design plays it. First the two "Connecting" strings, then "Connected" with the
@@ -153,10 +159,11 @@
     <!--
         Home: the sentences of the truck's tile beside a truck that is connected and parked,
         after the parked rule has ended its trip. Their titles are trip_status_parked and
-        trip_status_parked_not_watched, which the notification uses too.
+        trip_status_parked_not_watched, which the notification uses too. In the second, "It"
+        is the truck of the title above it.
     -->
-    <string name="home_trip_parked_detail">The last trip ended where the truck stopped. A new trip starts by itself when the truck moves.</string>
-    <string name="home_trip_parked_not_watched_detail">The truck has not moved for a long time. Press Start trip before you drive off.</string>
+    <string name="home_trip_parked_detail">A trip starts by itself when the truck moves</string>
+    <string name="home_trip_parked_not_watched_detail">It has not moved for a long time. Press Start trip before you drive off.</string>
     <!--
         Home: the amber tile, shown while the monthly reminder's rule says last month's report
         is waiting. The title's argument is a month from formatMonthName(), such as September.

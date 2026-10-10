@@ -5,6 +5,11 @@
       "date": null,
       "changes": [
         {
+          "kind": "fixed",
+          "title": "The phone's date set ahead",
+          "body": "MilO keeps its own time. Setting the phone's date a day ahead for a few seconds no longer brings \"No trip recorded today\" after a day of trips, and no longer cuts a trip short or dates it tomorrow. The Log gets a line when MilO sees the date change."
+        },
+        {
           "kind": "new",
           "title": "MilO waves hello",
           "body": "When you open MilO, its mascot waves over Home for a moment. Tap anywhere to skip him."
@@ -23,6 +28,11 @@
           "kind": "improved",
           "title": "All of today's trips on Home",
           "body": "Home lists every finished trip of today, the newest at the top, in place of the last trip alone. Its top line no longer says Home."
+        },
+        {
+          "kind": "improved",
+          "title": "A lower truck tile on Home",
+          "body": "The tile for the truck's connection takes less room. The vehicle's name is on its first line, its sentences are shorter, and the drawing of the phone and the truck is smaller. It moves as before."
         },
         {
           "kind": "improved",

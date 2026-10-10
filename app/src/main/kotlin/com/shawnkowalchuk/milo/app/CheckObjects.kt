@@ -45,6 +45,8 @@ class CheckObjects(private val appContext: Context, private val container: AppCo
                 object : NothingRecordedAlarm {
                     override fun setFor(atMs: Long) = alarm.setFor(atMs)
 
+                    override fun setAfter(delayMs: Long) = alarm.setAfter(delayMs)
+
                     override fun cancel() = alarm.cancel()
                 },
             show = { notification.show() },
@@ -58,7 +60,9 @@ class CheckObjects(private val appContext: Context, private val container: AppCo
             whenTripsCaughtUp = container.tripController::whenCaughtUp,
             eventLog = container.eventLogRepository,
             crashFileStore = container.crashFileStore,
-            clock = System::currentTimeMillis,
+            clock = container.clock,
+            phoneClockAgrees = container.clocks.agreesWithPhone,
+            clockOnProbation = container.clocks.onProbation,
             zone = ZoneId::systemDefault,
             scope = container.applicationScope,
         )
@@ -76,7 +80,7 @@ internal fun nothingRecordedViewModelFactory(container: AppContainer): ViewModel
                 settings = container.settingsStore,
                 armCheck = container.checks.nothingRecorded::arm,
                 eventLog = container.eventLogRepository,
-                clock = System::currentTimeMillis,
+                clock = container.clock,
             )
         }
     }

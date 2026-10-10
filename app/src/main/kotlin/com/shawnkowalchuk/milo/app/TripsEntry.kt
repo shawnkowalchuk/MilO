@@ -39,14 +39,14 @@ internal fun TripsEntry(
                                 TripCorrections(
                                     trips = container.tripRepository,
                                     eventLog = container.eventLogRepository,
-                                    clock = System::currentTimeMillis,
+                                    clock = container.clock,
                                 ),
                             tripActivity = container.tripController.activity,
                             openTripStart = container.tripAddresses.openTripStart,
                             unit = container.shownUnit.unit,
                             sentReports = container.sentReportRepository.observeSent(),
                             lookUpAddresses = container.tripAddresses::catchUp,
-                            clock = System::currentTimeMillis,
+                            clock = container.clock,
                             zone = ZoneId::systemDefault,
                         )
                     }
@@ -59,7 +59,7 @@ internal fun TripsEntry(
                         TripLabelViewModel(
                             trips = container.tripRepository,
                             eventLog = container.eventLogRepository,
-                            clock = System::currentTimeMillis,
+                            clock = container.clock,
                         )
                     }
                 },

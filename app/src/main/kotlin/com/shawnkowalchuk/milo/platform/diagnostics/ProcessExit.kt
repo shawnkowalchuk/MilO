@@ -10,7 +10,7 @@ import android.app.ApplicationExitInfo
  * A plain value with no Android object inside, so turning it into event-log text is tested on
  * the JVM.
  *
- * @param atMs wall-clock time the process ended.
+ * @param atMs the time the process ended, as Android recorded it: by the phone's clock.
  * @param reason one of the `ApplicationExitInfo.REASON_` numbers.
  * @param description the system's free text, or null. On this phone it is the important part:
  * Xiaomi's cleaners all report the catch-all reason OTHER and put their own name here, such as
@@ -35,6 +35,19 @@ data class ProcessExit(
 
     /** The numbers behind the message, for the event log's detail field. */
     fun detail(): String = "reason=$reason importance=$importance status=$status"
+
+    /**
+     * The message for a record that Android dated later than MilO's clock reads: the process
+     * ended while the phone's date was set ahead (ADR-005). The line is written at the time MilO
+     * read the record, and says that this is not the time the process ended.
+     */
+    fun messageDatedAhead(): String =
+        "${message()}. It ended while the phone's clock was set ahead; this line stands at the " +
+            "time MilO read the record, not at the time the process ended"
+
+    /** [detail], with the time Android gave the record, which tells it from every other. */
+    fun detailDatedAhead(): String =
+        "${detail()} datedByThePhoneAtMs=$atMs (milliseconds since 1970, by the phone's clock)"
 }
 
 /**

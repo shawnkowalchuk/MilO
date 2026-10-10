@@ -70,6 +70,8 @@ class NothingRecordedWithControllerTest {
                 object : NothingRecordedAlarm {
                     override fun setFor(atMs: Long) = Unit
 
+                    override fun setAfter(delayMs: Long) = Unit
+
                     override fun cancel() = Unit
                 },
             show = {
@@ -87,6 +89,8 @@ class NothingRecordedWithControllerTest {
             eventLog = EventLogRepository(world.log),
             crashFileStore = CrashFileStore(folder.root),
             clock = { world.nowMs },
+            phoneClockAgrees = { true },
+            clockOnProbation = { false },
             zone = { world.zone },
             scope = backgroundScope,
         ).also { runCurrent() }
