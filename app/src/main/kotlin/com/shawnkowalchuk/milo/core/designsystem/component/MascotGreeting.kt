@@ -11,7 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -53,8 +53,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * ([onUnreadable] is then told why); and when MilO is put away in the middle of it, which is
  * also how a turn of the phone ends it.
  *
- * Whether there is a greeting at all is not decided here (`feature/greeting`); where the mascot
- * is at each moment is worked out in `MascotWalk.kt`.
+ * Whether there is a greeting at all is not decided here (`feature/greeting`); which frame of
+ * the walk is due at each moment, and where the mascot is in it, is worked out in
+ * `MascotWalk.kt`.
  *
  * @param barHeight the room the bottom bar takes at the foot of the screen, with everything
  * under it: what a `Scaffold` reports as its content's bottom padding.
@@ -76,19 +77,18 @@ fun MascotGreeting(
     // Put away in the middle of a greeting, MilO does not carry on with it when it comes back.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { course.on(GreetingEvent.CUT_SHORT) }
 
-    // Leaving the composition is what stops the pictures (the effect in GreetingOnScreen).
+    // Leaving the composition is what stops the greeting (the effect in GreetingOnScreen).
     if (stage != GreetingStage.OVER) {
         BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-            GreetingOnScreen(course, stage, barHeight, onUnreadable = { newestOnUnreadable(it) })
+            GreetingOnScreen(course, barHeight, onUnreadable = { newestOnUnreadable(it) })
         }
     }
 }
 
-/** Plays one greeting through, telling [course] of each step, and draws what [stage] asks for. */
+/** Plays one greeting through, telling [course] of each step, and draws the mascot. */
 @Composable
 private fun BoxWithConstraintsScope.GreetingOnScreen(
     course: GreetingCourse,
-    stage: GreetingStage,
     barHeight: Dp,
     onUnreadable: (IOException) -> Unit,
 ) {
@@ -96,7 +96,9 @@ private fun BoxWithConstraintsScope.GreetingOnScreen(
     // Worked out once: a window that is resized under the greeting does not start it again.
     val way = remember { MascotWalk(screenWidth = maxWidth.value) }
     var pictures by remember { mutableStateOf<MascotPictures?>(null) }
-    val middle = remember { mutableFloatStateOf(way.start) }
+    // The frame of the walk that is due. The mascot's step and its place are both read from
+    // this one number, and both while drawing: they cannot come apart.
+    val walkFrame = remember { mutableIntStateOf(0) }
     val fade = remember { Animatable(1f) }
 
     LaunchedEffect(Unit) {
@@ -118,11 +120,16 @@ private fun BoxWithConstraintsScope.GreetingOnScreen(
         try {
             pictures = read
             course.on(GreetingEvent.PICTURES_READ)
-            read.walkIn(way) { middle.floatValue = it }
-            // In one go, between two frames: the walk's last frame, then the turn's first.
-            read.walk.stop()
-            val waved = read.startTurnAndWave()
-            course.on(GreetingEvent.WALK_OVER)
+            val waved = CompletableDeferred<Unit>()
+            walkIn(way) { frame ->
+                walkFrame.intValue = frame
+                // Still before the screen is drawn: the drawing that no longer shows the walk
+                // is the one that shows the turn's first frame, and starts its clock.
+                if (frame == way.frames) {
+                    read.turnAndWave.playOnce { waved.complete(Unit) }
+                    course.on(GreetingEvent.WALK_OVER)
+                }
+            }
             withTimeoutOrNull(MascotPicture.TURN_AND_WAVE_MS + PICTURE_PATIENCE_MS) {
                 waved.await()
             }
@@ -135,12 +142,8 @@ private fun BoxWithConstraintsScope.GreetingOnScreen(
         }
     }
 
-    val shown =
-        when (stage) {
-            GreetingStage.WALKING -> pictures?.walk
-            GreetingStage.WAVING, GreetingStage.LEAVING -> pictures?.turnAndWave
-            GreetingStage.READING, GreetingStage.OVER -> null
-        }
+    // Nothing is drawn while the pictures are being read.
+    val shown = pictures
     if (shown != null) {
         val shadow = MaterialTheme.colorScheme.scrim.copy(alpha = SHADOW_DARKEST)
         // The bar's tile begins rowGap below the top of the room the bar takes
@@ -152,51 +155,34 @@ private fun BoxWithConstraintsScope.GreetingOnScreen(
                 Modifier
                     .align(AbsoluteAlignment.BottomLeft)
                     .offset(y = MascotPicture.SOLES.dp - solesAboveFoot)
-                    // Read while drawing, so a step of the walk moves the picture and nothing
+                    // Read while drawing, so a step of the walk moves the mascot and nothing
                     // is composed or laid out again.
                     .graphicsLayer {
-                        translationX = (middle.floatValue - MascotPicture.WIDTH / 2).dp.toPx()
+                        val middle = way.middleIn(walkFrame.intValue)
+                        translationX = (middle - MascotPicture.WIDTH / 2).dp.toPx()
                         alpha = fade.value
                     }.drawBehind { groundShadow(shadow) },
         ) {
-            Mascot(shown)
+            Mascot(shown, walkFrame = { walkFrame.intValue.takeIf { it < way.frames } })
         }
     }
 }
 
 /**
- * Plays the walk's picture as often as [way] asks and moves the mascot along with it, a step
- * for every frame of the screen. Returns when the walk is over ([MascotWalk.isOver]).
+ * Walks the mascot in. Before every drawing of the screen, [onFrame] is told the frame of the
+ * walk that is due ([MascotWalk.frameAt]); the last it is told is [MascotWalk.frames], when the
+ * walk is over. What [onFrame] does is drawn in that same drawing of the screen.
  *
  * The walk's clock is the screen's frame time, read as it is and not stretched by the phone's
- * "animator duration scale": the picture plays at its own pace whatever that is set to, and the
- * two must keep step.
+ * "animator duration scale": the turn and wave that follows plays at its own pace whatever that
+ * is set to.
  */
-// TODO(debt): the app cannot ask the picture which frame it shows, so the mascot is moved by
-// the clock and the picture is trusted to keep up. On a phone that draws too slowly it falls
-// behind, and the mascot marks time in the middle until its last step (FINDINGS_LOG,
-// 2026-10-09).
-private suspend fun MascotPictures.walkIn(way: MascotWalk, onMoved: (Float) -> Unit) {
-    var lastFrameShown = false
-    walk.play(times = way.cycles) { lastFrameShown = true }
+private suspend fun walkIn(way: MascotWalk, onFrame: (Int) -> Unit) {
     val began = withFrameNanos { it }
-    var lastFrameAt: Long? = null
     do {
-        val over =
-            withFrameNanos { now ->
-                val at = (now - began) / NANOS_IN_MILLI
-                if (lastFrameShown && lastFrameAt == null) lastFrameAt = at
-                onMoved(way.middleAt(at))
-                way.isOver(at, lastFrameAt)
-            }
-    } while (!over)
-}
-
-/** Starts the turn and the wave. What it returns completes when the mascot stands again. */
-private fun MascotPictures.startTurnAndWave(): CompletableDeferred<Unit> {
-    val standing = CompletableDeferred<Unit>()
-    turnAndWave.play(times = 1) { standing.complete(Unit) }
-    return standing
+        val frame =
+            withFrameNanos { now -> way.frameAt((now - began) / NANOS_IN_MILLI).also(onFrame) }
+    } while (frame < way.frames)
 }
 
 /** A faint, soft patch of dark on the ground under the mascot's feet. */

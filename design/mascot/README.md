@@ -1,6 +1,6 @@
 # The mascot
 
-MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it plays two animated pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`).
+MilO's mascot: a green block with a speedometer and a rev counter for eyes, the app's "M" for a mouth, hose arms and legs, white gloves and green shoes. Built in Blender 5.2 on 2026-10-09 from the picture in `reference.webp`. It is a 3D model here. The app carries no model: it shows two pictures of it, drawn here once (`docs/adr/ADR-007-mascot-animated-picture.md`).
 
 Nothing in this folder is part of the app's build. The two pictures the app carries are written from here into `app/src/main/res/drawable-nodpi/` and committed.
 
@@ -12,7 +12,7 @@ Nothing in this folder is part of the app's build. The two pictures the app carr
 | `scripts/animate_milo.py` | Writes the clips |
 | `scripts/export_milo.py` | Writes the `.glb` file and prints what is in it |
 | `scripts/render_greeting.py` | Draws the frames of the app's greeting: the walk, and the turn and wave |
-| `scripts/pack_greeting.py` | Packs those frames into the app's two animated pictures |
+| `scripts/pack_greeting.py` | Packs those frames into the app's two pictures |
 | `export/milo_mascot.glb` | The model with every clip (1.69 MB), for whatever comes later. Nothing uses it today |
 | `renders/milo_thumbs_up.png` | The mascot as Blender draws it, in the pose of the reference picture |
 | `reference.webp` | The picture the mascot was built from |
@@ -43,14 +43,14 @@ The two gauge clips move one bone each and nothing else, so they can be laid ove
 
 ## The app's pictures
 
-The app's greeting is two animated pictures (animated WebP with a see-through background, 600 by 420 pixels, 24 frames a second):
+The app's greeting is two pictures (WebP with a see-through background; a frame is 600 by 420 pixels, 24 frames a second):
 
 | Picture | What it shows | Size |
 |---|---|---|
-| `app/src/main/res/drawable-nodpi/mascot_walk.webp` | One cycle of the walk toward the left, 12 frames. It starts again for ever | 100 KB |
-| `app/src/main/res/drawable-nodpi/mascot_turn_and_wave.webp` | From the walk's first frame: the turn to the viewer in 11 frames, then the Wave clip. 60 frames, played once | 773 KB |
+| `app/src/main/res/drawable-nodpi/mascot_walk.webp` | One cycle of the walk toward the left, 12 frames. A still picture: the frames lie side by side, four across and three down. The app draws the frame it wants, because it moves the mascot with every step | 98 KB |
+| `app/src/main/res/drawable-nodpi/mascot_turn_and_wave.webp` | From the walk's first frame: the turn to the viewer in 11 frames, then the Wave clip. An animated picture of 60 frames, which Android plays once | 782 KB |
 
-They are made in two steps. Both need the Mac's Blender, and the second needs `cwebp` and `webpmux` (`brew install webp`). The two folders are for the frames and can be anywhere outside the repository:
+They are made in two steps. The first needs the Mac's Blender. The second needs `cwebp` and `webpmux` (`brew install webp`) and `ffmpeg` (`brew install ffmpeg`). The two folders are for the frames and can be anywhere outside the repository:
 
 ```
 blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_greeting.py -- /tmp/milo-greeting/walk /tmp/milo-greeting/wave
@@ -59,12 +59,13 @@ python3 design/mascot/scripts/pack_greeting.py /tmp/milo-greeting/walk /tmp/milo
 
 - **The first step draws the frames** (a minute and a half), from the studio's camera and under its lights, with the backdrop hidden so that the background is see-through. It saves nothing in the Blender file. At its end it prints the picture's size, how far the mascot reaches ahead while it walks, where its soles are, and its stride.
 - **The second step packs them** into the two pictures and prints what each weighs.
-- **The app's code has to be told what the first step printed:** `MascotPicture` in `core/designsystem/component/MascotWalk.kt` holds those numbers. `MascotPicturesTest` fails if the pictures' size, their frames or how often they play are not what stands there. The stride, the reach and the soles are not in the files, and no test can check them: a wrong stride shows as feet that slide.
+- **The app's code has to be told what the first step printed:** `MascotPicture` in `core/designsystem/component/MascotWalk.kt` holds those numbers. `MascotPicturesTest` fails if the pictures' size, the sheet's rows, the animated picture's frames or how often it plays are not what stands there. The stride, the reach and the soles are not in the files, and no test can check them: a wrong stride shows as feet that slide.
 - **What can be changed at the top of `render_greeting.py`:** how high the mascot is drawn, how far it is turned while it walks, how fast it steps, and how long the turn takes.
+- **The dials' black faces are drawn without their shine** (`dull_the_dials` in `render_greeting.py`; nothing is saved). They are glossy in the model, and as the mascot came round to the viewer the big dial mirrored the key light: pale grey for three frames, like a flicker.
 
 Seen from the studio's camera, which looks down on the ground a little, the foot nearer the viewer stands about 11 dp lower in the picture than the other, and a planted foot rises about 3 dp while it steps back. That is the view: the mascot walks a little toward the viewer. From left to right a planted foot stays where it is.
 
-To give the app another clip, draw it as one more picture the same way and add it to `MascotPictures` in `core/designsystem/component/Mascot.kt`. Each second of a clip is about a third of a megabyte.
+To give the app another clip, draw it as one more picture the same way and add it to `MascotPictures` in `core/designsystem/component/Mascot.kt`: an animated picture if the mascot stands where it is, a sheet of frames if the app has to move it in step. Each second of a clip is about a third of a megabyte.
 
 ## What to know before changing the skeleton
 

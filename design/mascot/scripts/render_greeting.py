@@ -5,8 +5,8 @@
 #   blender -b design/mascot/milo_mascot.blend --python design/mascot/scripts/render_greeting.py -- <folder for the walk> <folder for the turn and wave>
 #
 # Each folder gets numbered PNG frames with a see-through background, all of one size, from the
-# studio's camera and under the studio's lights. pack_greeting.py then makes the two animated
-# pictures the app carries out of them. What this script prints at the end (the picture's size,
+# studio's camera and under the studio's lights. pack_greeting.py then makes the two pictures
+# the app carries out of them. What this script prints at the end (the picture's size,
 # the frames, the stride, how far the mascot reaches ahead, where its soles are) is what the
 # app's code is told, in core/designsystem/component/MascotWalk.kt.
 #
@@ -18,9 +18,9 @@
 # The turn and wave's first frame is the frame the walk would show next, so the one follows the
 # other without a jump; its last frame is the standing pose.
 #
-# NOTHING IS SAVED. The script hides the backdrop, turns the mascot, changes the camera's lens
-# and writes two clips of its own, all in memory, and Blender closes without saving. It changes
-# no collection and no stored clip.
+# NOTHING IS SAVED. The script hides the backdrop, turns the mascot, changes the camera's lens,
+# takes the shine off the dials' black faces and writes two clips of its own, all in memory, and
+# Blender closes without saving. It changes no collection, no stored clip and no stored material.
 
 import os
 import sys
@@ -182,6 +182,7 @@ def set_stage():
     bpy.data.objects["MilO_Backdrop"].hide_render = True
     for ob in bpy.data.collections["MilO_Reference"].objects:
         ob.hide_render = True
+    dull_the_dials()
 
     clips.reset_pose()
     clips.neutral()
@@ -195,6 +196,24 @@ def set_stage():
     lens.lens *= MASCOT_DP * PX_PER_DP / ((max(ups) - min(ups)) * height)
     slide_view("shift_x", lambda: 0.5 - seen((0, 0, 0))[0])
     return width, height
+
+
+def dull_the_dials():
+    """Draws the black face of both dials without its shine. That face is glossy, and as the
+    mascot came round to the viewer it mirrored the key light: the whole big dial was pale grey
+    for three frames and black again, which read as a flicker at the moment he looks at you.
+    The dials get a copy of the material, so the M and the needles' caps keep theirs. The marks
+    on the dials, the chrome rims and the glass are as they were. In every other frame the two
+    faces are a shade blacker, and nothing else is changed."""
+    glossy = bpy.data.materials["MilO_Black_Gloss"]
+    dull = glossy.copy()
+    shader = next(node for node in dull.node_tree.nodes if node.type == "BSDF_PRINCIPLED")
+    shader.inputs["Specular IOR Level"].default_value = 0.0
+    shader.inputs["Coat Weight"].default_value = 0.0
+    for name in ("Eye_Speedo_Dial", "Eye_RPM_Dial"):
+        for slot in bpy.data.objects[name].material_slots:
+            if slot.material == glossy:
+                slot.material = dull
 
 
 def slide_view(shift, off):

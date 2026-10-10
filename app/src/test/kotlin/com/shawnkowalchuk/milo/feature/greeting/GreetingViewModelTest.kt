@@ -35,13 +35,14 @@ class GreetingViewModelTest {
         val viewModel = GreetingViewModel(EventLogRepository(log), clock = { 42L })
         assertEquals(0, log.entries.size)
 
-        viewModel.onUnreadable(IOException("mascot_walk is not an animated picture"))
+        val why = "mascot_turn_and_wave is not an animated picture"
+        viewModel.onUnreadable(IOException(why))
         runCurrent()
 
         val line = log.entries.single()
         assertEquals(42L, line.atMs)
         assertEquals(EventCategory.ERROR, line.category)
         assertEquals("MilO did not greet: a picture of its mascot could not be read", line.message)
-        assertTrue(line.detail.orEmpty().contains("mascot_walk is not an animated picture"))
+        assertTrue(line.detail.orEmpty().contains(why))
     }
 }

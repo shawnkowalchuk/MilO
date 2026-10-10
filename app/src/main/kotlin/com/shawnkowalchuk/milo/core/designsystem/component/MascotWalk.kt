@@ -3,8 +3,8 @@ package com.shawnkowalchuk.milo.core.designsystem.component
 import kotlin.math.ceil
 import kotlin.math.max
 
-// The greeting's course, apart from its drawing (ADR-007): where the mascot is at any moment of
-// its walk, when the walk is over, and which stage follows which. Plain Kotlin with unit tests;
+// The greeting's course, apart from its drawing (ADR-007): which frame of the walk is due at any
+// moment, where the mascot is in it, and which stage follows which. Plain Kotlin with unit tests;
 // `MascotGreeting.kt` draws what this works out.
 
 /**
@@ -13,17 +13,17 @@ import kotlin.math.max
  * whatever its density. `MascotPicturesTest` holds the two files to the sizes and the frames.
  */
 internal object MascotPicture {
-    /** Both pictures are this wide and this high, and the mascot turns about their middle. */
+    /** Every frame is this wide and this high, and the mascot turns about its middle. */
     const val WIDTH = 240f
     const val HEIGHT = 168f
 
     /** The pictures have this many pixels to the dp. */
     const val PIXELS_PER_DP = 2.5f
 
-    /** While it walks, the mascot's soles are this far above the picture's lower edge. */
+    /** While it walks, the mascot's soles are this far above the frame's lower edge. */
     const val SOLES = 1.6f
 
-    /** While it walks, the mascot reaches this far to the left of the picture's middle. */
+    /** While it walks, the mascot reaches this far to the left of the frame's middle. */
     const val REACH = 66.4f
 
     /** One cycle of the walk, two steps, carries the mascot this far. */
@@ -32,9 +32,13 @@ internal object MascotPicture {
     /** Every frame of both pictures is shown for this long: 24 frames a second. */
     const val FRAME_MS = 42
 
-    /** The walk's picture is one cycle, and starts again for ever. */
+    /**
+     * The walk's picture is one cycle, drawn on the spot: its frames lie side by side on one
+     * sheet, [WALK_COLUMNS] across, row after row. The frame after the last is the first.
+     */
     const val WALK_FRAMES = 12
-    const val WALK_CYCLE_MS = WALK_FRAMES * FRAME_MS
+    const val WALK_COLUMNS = 4
+    const val WALK_ROWS = WALK_FRAMES / WALK_COLUMNS
 
     /** The other picture, the turn and the wave, plays once and keeps its last frame. */
     const val TURN_AND_WAVE_FRAMES = 60
@@ -42,62 +46,63 @@ internal object MascotPicture {
 }
 
 /**
- * How long a picture that does not say it has ended is waited for, past the time it should have
- * taken. Android moves the pictures on by itself, and only while they are being drawn.
+ * How long the turn and wave is waited for past the time it should have taken, if it does not
+ * say it has ended. Android moves that picture on by itself, and only while it is being drawn.
  */
 internal const val PICTURE_PATIENCE_MS = 1_000L
 
 /**
  * The mascot's way in: from wholly beyond the right edge of the screen to the middle of its
- * width, at an even pace. Positions are where the middle of the picture is, in dp from the
- * screen's left edge; moments are milliseconds since the walk began.
+ * width, one frame of the walk after the other. Positions are where the middle of the frame is,
+ * in dp from the screen's left edge; moments are milliseconds since the walk began.
  *
- * **The feet do not slide,** because the picture moves by exactly [stride] in the time one
- * cycle of the walk plays: that is how far the planted feet go back in the picture.
+ * **The step and the place come from one number,** the frame that is due ([frameAt]): the app
+ * draws that frame of the walk, [middleIn] that frame. A phone that draws too slowly leaves
+ * frames out; it cannot show the mascot in one place with the step of another, and the walk
+ * ends when the clock says so.
  *
- * **The walk is a whole number of cycles,** because the walk's picture can only be left where
- * it starts again: there the turn begins. So the mascot does not start at the screen's edge
- * but up to one cycle further out, and the first part of that cycle is not seen.
+ * **The feet do not slide,** because each frame stands a twelfth of [stride] to the left of the
+ * one before it: that is how far the planted foot has gone back in it.
+ *
+ * **The walk is a whole number of cycles,** because the turn begins with the frame that
+ * follows the walk's last one. So the mascot does not start at the screen's edge but up to one
+ * cycle further out, and the first part of that cycle is not seen.
  *
  * @param screenWidth the width the mascot walks into, in dp.
  * @param stride how far one cycle of the walk carries the mascot, in dp.
- * @param reach how far the walking mascot reaches ahead of the picture's middle, in dp.
- * @param cycleMillis how long one cycle of the walk plays.
+ * @param reach how far the walking mascot reaches ahead of the frame's middle, in dp.
+ * @param frameMillis how long one frame of the walk is shown.
  */
 internal class MascotWalk(
     screenWidth: Float,
     private val stride: Float = MascotPicture.STRIDE,
     reach: Float = MascotPicture.REACH,
-    private val cycleMillis: Int = MascotPicture.WALK_CYCLE_MS,
+    private val frameMillis: Int = MascotPicture.FRAME_MS,
 ) {
     /** Where the mascot stops: the middle of the screen's width. */
     val end: Float = screenWidth / 2
 
-    /** How many times the walk's picture plays. */
+    /** How many times the walk's cycle is gone through. */
     val cycles: Int = max(1, ceil((screenWidth - end + reach) / stride).toInt())
+
+    /** How many frames the walk shows, one after the other. */
+    val frames: Int = cycles * MascotPicture.WALK_FRAMES
 
     /** Where the mascot starts: nothing of it is on the screen. */
     val start: Float = end + cycles * stride
 
     /** How long the walk takes. */
-    val millis: Long = cycles.toLong() * cycleMillis
-
-    /** Where the mascot is at [atMillis]: at [start] before the walk, at [end] after it. */
-    fun middleAt(atMillis: Long): Float =
-        start - stride * atMillis.coerceIn(0, millis) / cycleMillis
+    val millis: Long = frames.toLong() * frameMillis
 
     /**
-     * Whether the walk's picture may give way to the turn at [atMillis]. The picture says when
-     * it shows the last frame of its last cycle ([lastFrameAt], null until it has); that frame
-     * then gets its time on the screen, and the mascot the time to arrive. If the picture has
-     * fallen behind, the mascot marks time in the middle until it has caught up; a picture that
-     * says nothing is waited for [PICTURE_PATIENCE_MS] and no longer.
+     * The frame of the walk that is due at [atMillis], counted from 0 through all its cycles.
+     * [frames] once the walk is over: the last frame has then had its time, and the turn begins.
      */
-    fun isOver(atMillis: Long, lastFrameAt: Long?): Boolean = if (lastFrameAt == null) {
-        atMillis >= millis + PICTURE_PATIENCE_MS
-    } else {
-        atMillis >= max(millis, lastFrameAt + MascotPicture.FRAME_MS)
-    }
+    fun frameAt(atMillis: Long): Int = (atMillis.coerceIn(0, millis) / frameMillis).toInt()
+
+    /** Where the mascot is in [frame]: at [start] in the first, at [end] once the walk is over. */
+    fun middleIn(frame: Int): Float =
+        start - stride * frame.coerceIn(0, frames) / MascotPicture.WALK_FRAMES
 }
 
 /** How far a greeting has come. */

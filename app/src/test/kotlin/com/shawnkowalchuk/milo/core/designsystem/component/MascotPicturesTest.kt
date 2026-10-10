@@ -5,19 +5,20 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The mascot's two animated pictures are made by hand, by scripts outside the build
+ * The mascot's two pictures are made by hand, by scripts outside the build
  * (`design/mascot/scripts/render_greeting.py` and `pack_greeting.py`), and committed. This
  * holds the files to what the code expects ([MascotPicture]): a picture that is made again
  * with another size, a frame more or another way of repeating fails here and not on the phone,
- * where the mascot would walk on the spot or turn in the middle of a step.
+ * where the mascot would be drawn in pieces or turn in the middle of a step.
  *
- * An animated WebP file is a list of named chunks. "VP8X" says what the file holds and how
- * large its pictures are, "ANIM" how often it plays, and each "ANMF" is one frame with the
- * time it is shown for. Only those are read: no test off the phone can draw the frames.
+ * A WebP file is a list of named chunks. "VP8X" says what the file holds and how large its
+ * picture is. In an animated one "ANIM" says how often it plays, and each "ANMF" is one frame
+ * with the time it is shown for. Only those are read: no test off the phone can draw a frame.
  */
 class MascotPicturesTest {
     private class Frame(val width: Int, val height: Int, val millis: Int, val seeThrough: Boolean)
@@ -74,52 +75,50 @@ class MascotPicturesTest {
 
     private val walk = Picture(File("$PICTURES/mascot_walk.webp"))
     private val turnAndWave = Picture(File("$PICTURES/mascot_turn_and_wave.webp"))
-    private val both = listOf("the walk" to walk, "the turn and wave" to turnAndWave)
+
+    /** One frame, as the code draws it: 600 by 420 pixels. */
+    private val frameWidth = (MascotPicture.WIDTH * MascotPicture.PIXELS_PER_DP).roundToInt()
+    private val frameHeight = (MascotPicture.HEIGHT * MascotPicture.PIXELS_PER_DP).roundToInt()
 
     @Test
-    fun `both are animated pictures with a see-through background`() {
-        for ((name, picture) in both) {
-            assertTrue("$name is animated", picture.animated)
-            assertTrue("$name is see-through", picture.seeThrough)
-            assertTrue("$name: every frame is", picture.frames.all { it.seeThrough })
-        }
+    fun `a frame is 600 by 420 pixels`() {
+        assertEquals(600, frameWidth)
+        assertEquals(420, frameHeight)
     }
 
     @Test
-    fun `both are the size the code draws them at, and so lie exactly over each other`() {
-        val width = (MascotPicture.WIDTH * MascotPicture.PIXELS_PER_DP).roundToInt()
-        val height = (MascotPicture.HEIGHT * MascotPicture.PIXELS_PER_DP).roundToInt()
-        assertEquals(600, width)
-        assertEquals(420, height)
-        for ((name, picture) in both) {
-            assertEquals("$name, width", width, picture.width)
-            assertEquals("$name, height", height, picture.height)
-            // Every frame is the whole picture: none is a patch laid over the one before.
-            assertTrue(name, picture.frames.all { it.width == width && it.height == height })
-        }
+    fun `the walk is a still, see-through sheet of twelve frames, four across and three down`() {
+        // The app steps through the walk by its own clock; an animated picture would play by
+        // Android's, and the mascot's place could not follow its step.
+        assertFalse("the walk is not animated", walk.animated)
+        assertTrue("the walk is see-through", walk.seeThrough)
+        assertEquals(12, MascotPicture.WALK_FRAMES)
+        assertEquals(4, MascotPicture.WALK_COLUMNS)
+        assertEquals(3, MascotPicture.WALK_ROWS)
+        assertEquals(MascotPicture.WALK_COLUMNS * frameWidth, walk.width)
+        assertEquals(MascotPicture.WALK_ROWS * frameHeight, walk.height)
     }
 
     @Test
-    fun `the walk is one cycle of twelve frames, and starts again for ever`() {
-        assertEquals(MascotPicture.WALK_FRAMES, walk.frames.size)
-        assertEquals(12, walk.frames.size)
-        assertEquals(0, walk.plays)
+    fun `the turn and wave is an animated, see-through picture the size of one frame`() {
+        assertTrue("the turn and wave is animated", turnAndWave.animated)
+        assertTrue("the turn and wave is see-through", turnAndWave.seeThrough)
+        assertTrue("every frame is see-through", turnAndWave.frames.all { it.seeThrough })
+        // So it lies exactly over the walk's last frame.
+        assertEquals(frameWidth, turnAndWave.width)
+        assertEquals(frameHeight, turnAndWave.height)
+        // Every frame is the whole picture: none is a patch laid over the one before.
+        assertTrue(turnAndWave.frames.all { it.width == frameWidth && it.height == frameHeight })
     }
 
     @Test
-    fun `the turn and wave is sixty frames, and plays once`() {
+    fun `the turn and wave is sixty frames of 42 milliseconds, and plays once`() {
         assertEquals(MascotPicture.TURN_AND_WAVE_FRAMES, turnAndWave.frames.size)
         assertEquals(60, turnAndWave.frames.size)
         assertEquals(1, turnAndWave.plays)
-    }
-
-    @Test
-    fun `every frame of both is shown for 42 milliseconds`() {
+        // The walk's frames are shown for as long, each: the two are one film.
         assertEquals(42, MascotPicture.FRAME_MS)
-        for ((name, picture) in both) {
-            assertTrue(name, picture.frames.all { it.millis == MascotPicture.FRAME_MS })
-        }
-        assertEquals(504, MascotPicture.WALK_CYCLE_MS)
+        assertTrue(turnAndWave.frames.all { it.millis == MascotPicture.FRAME_MS })
         assertEquals(2_520, MascotPicture.TURN_AND_WAVE_MS)
     }
 
@@ -151,7 +150,7 @@ class MascotPicturesTest {
         const val ANIMATION_FLAG = 0x02
         const val ALPHA_FLAG = 0x10
 
-        /** Measured on 2026-10-09: 100 KB and 773 KB. */
+        /** Measured on 2026-10-09: 98 KB and 782 KB. */
         const val MOST_WALK_BYTES = 150_000L
         const val MOST_WAVE_BYTES = 850_000L
     }
