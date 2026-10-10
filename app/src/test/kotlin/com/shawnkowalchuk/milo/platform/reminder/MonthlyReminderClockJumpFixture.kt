@@ -12,7 +12,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * What the tests of the monthly reminder share on a phone whose date is set a day ahead by hand
- * (ADR-005): the reminder, its look and its alarm requests are the real ones, on MilO's real
+ * (ADR-006): the reminder, its look and its alarm requests are the real ones, on MilO's real
  * clock ([JumpingPhone]), with the real [ClockWatch] to have the alarm asked for again.
  *
  * Android's part is played by hand. The alarm service holds the newest request (`alarmHeld`):

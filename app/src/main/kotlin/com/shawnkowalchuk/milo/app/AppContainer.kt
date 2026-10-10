@@ -72,7 +72,7 @@ class AppContainer(context: Context, private val trustedClock: TrustedClock) {
     private val appContext: Context = context.applicationContext
 
     /**
-     * The time of day, for everything in MilO: MilO's own clock, not the phone's (ADR-005).
+     * The time of day, for everything in MilO: MilO's own clock, not the phone's (ADR-006).
      * **Nothing in MilO reads the phone's clock itself;** whatever needs the time is handed this.
      */
     val clock: () -> Long = trustedClock::now

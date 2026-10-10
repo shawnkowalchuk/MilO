@@ -38,7 +38,7 @@ data class ProcessExit(
 
     /**
      * The message for a record that Android dated later than MilO's clock reads: the process
-     * ended while the phone's date was set ahead (ADR-005). The line is written at the time MilO
+     * ended while the phone's date was set ahead (ADR-006). The line is written at the time MilO
      * read the record, and says that this is not the time the process ended.
      */
     fun messageDatedAhead(): String =

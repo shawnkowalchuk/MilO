@@ -34,7 +34,7 @@ private const val HOUR_SECONDS = 3_600
 
 /**
  * The phone's date is set one day ahead by hand for a few seconds and then comes back (the
- * owner's habit, ADR-005), **while a trip is being recorded, or in the seconds in which one
+ * owner's habit, ADR-006), **while a trip is being recorded, or in the seconds in which one
  * starts.** The real trip controller, rules, ledger and storage stand-ins run on MilO's real
  * clock ([ClockJumpScene]), and each test asserts one trip, with its true times.
  *

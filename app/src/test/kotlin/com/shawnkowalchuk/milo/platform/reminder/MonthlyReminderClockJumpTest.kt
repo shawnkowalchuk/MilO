@@ -19,7 +19,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * The monthly reminder on a phone whose date is set one day ahead by hand for a few seconds and
- * then set back (ADR-005). The phone, the process and Android's part are those of
+ * then set back (ADR-006). The phone, the process and Android's part are those of
  * [MonthlyReminderClockJumpFixture].
  *
  * These began as the investigation's proofs of what the reminder did before MilO had a clock of

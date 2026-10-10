@@ -116,7 +116,7 @@ fun reminderMoment(
 /**
  * Whether the stored record says the reminder was shown on a day that has not come yet. Nothing
  * can have been shown tomorrow: the record was stored while the phone's date was set ahead
- * (until 2026-10-07 MilO went by the phone's clock, ADR-005). It counts as not shown, or the
+ * (until 2026-10-07 MilO went by the phone's clock, ADR-006). It counts as not shown, or the
  * real day would lose its reminder when it comes.
  */
 fun shownAhead(shown: ReminderShown, today: LocalDate): Boolean = shown.onDay.isAfter(today)

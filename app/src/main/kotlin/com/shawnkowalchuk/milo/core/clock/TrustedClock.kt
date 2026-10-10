@@ -11,7 +11,7 @@ const val FOLLOW_AT_ONCE_MS = 2L * 60L * 1000L
 /**
  * A larger change is believed only once the phone's clock has kept it for this long, counted on
  * the clock that runs from boot. The owner sets the date a day ahead for 5 to 16 seconds to get
- * lives in a game (ADR-005); ten minutes is far beyond that, and short enough that a date he
+ * lives in a game (ADR-006); ten minutes is far beyond that, and short enough that a date he
  * really changed is followed the same evening.
  */
 const val HOLD_MS = 10L * 60L * 1000L
@@ -49,7 +49,7 @@ private const val UNHEARD_NEWS_KEPT = 16
 
 /**
  * MilO's own clock: the time of day that every part of MilO goes by, kept right while the
- * phone's clock is being played with (ADR-005).
+ * phone's clock is being played with (ADR-006).
  *
  * It holds a [ClockAnchor], and "now" is the anchor's time plus what the clock that runs from
  * boot has counted since. At every reading that is held against the phone's clock:

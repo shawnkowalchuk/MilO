@@ -7,7 +7,7 @@ private const val PREVIEW_NOW_MS = 1_791_396_000_000L
 
 /**
  * The time of day for the few components that show one by themselves (the header's date, the
- * Log screen's "today"): MilO's clock, in milliseconds, never the phone's (ADR-005).
+ * Log screen's "today"): MilO's clock, in milliseconds, never the phone's (ADR-006).
  *
  * `MiloApp` provides it once, from the app's container, for every screen. The default is a
  * fixed moment, so that a component can be previewed on its own; `WallClockReadersTest` checks

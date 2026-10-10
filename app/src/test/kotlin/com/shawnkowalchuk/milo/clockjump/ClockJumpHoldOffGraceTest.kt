@@ -27,7 +27,7 @@ private const val GRACE_MS = GRACE_SECONDS * 1000L
 
 /**
  * The phone's date is set one day ahead by hand for a few seconds and then comes back (the
- * owner's habit, ADR-005), **while automatic start is held off after End, or while a grace
+ * owner's habit, ADR-006), **while automatic start is held off after End, or while a grace
  * period is running after a disconnect.** The real trip controller, rules, ledger and storage
  * stand-ins run on MilO's real clock ([ClockJumpScene]), and each test asserts that the
  * hold-off and the grace period are untouched.

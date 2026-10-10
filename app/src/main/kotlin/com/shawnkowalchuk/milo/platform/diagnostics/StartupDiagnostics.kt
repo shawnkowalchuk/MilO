@@ -30,7 +30,7 @@ private const val KNOWN_LINES_LOOKED_AT = 500
  * that explains a missed trip.
  *
  * **Android dates a process's end with the phone's clock, and MilO has a clock of its own**
- * (ADR-005). A process that died while the phone's date was set a day ahead is recorded as
+ * (ADR-006). A process that died while the phone's date was set a day ahead is recorded as
  * having died tomorrow. Such a record is written at the time MilO reads it, with a note that
  * says so, and the "imported up to" mark is never moved past the present: moved to tomorrow, it
  * would hide every death of the next 24 hours. Since the mark then cannot say that this record

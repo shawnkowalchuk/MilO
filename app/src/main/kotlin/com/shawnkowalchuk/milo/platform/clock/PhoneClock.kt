@@ -15,7 +15,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-// The Android side of MilO's clock (ADR-005): the two clocks of the phone, the number of this
+// The Android side of MilO's clock (ADR-006): the two clocks of the phone, the number of this
 // boot, and the file the anchor is kept in. The rule itself is `core/clock/TrustedClock`.
 //
 // THIS FILE IS THE ONE PLACE IN MILO THAT READS THE PHONE'S WALL CLOCK. Everything else is

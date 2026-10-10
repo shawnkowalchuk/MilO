@@ -15,7 +15,7 @@ import org.junit.Test
 
 /**
  * Where the lines that are written while the phone's date is one day ahead stand on the Log
- * screen and in the shared log file (ADR-005).
+ * screen and in the shared log file (ADR-006).
  *
  * Two kinds of line, and the tests keep them apart:
  * - **Lines MilO writes now** are dated by its own clock ([JumpingPhone]), also in the seconds

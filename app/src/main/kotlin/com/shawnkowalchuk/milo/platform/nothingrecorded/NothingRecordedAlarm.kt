@@ -26,7 +26,7 @@ interface NothingRecordedAlarm {
     /**
      * Asks to be woken about [delayMs] from now, counted on the clock that runs from the
      * phone's boot, which setting the phone's date does not move. For the time MilO's clock
-     * and the phone's disagree (ADR-005): Android judges [setFor] by the phone's clock. An
+     * and the phone's disagree (ADR-006): Android judges [setFor] by the phone's clock. An
      * earlier request of either kind is replaced, and a later one of either kind replaces this.
      */
     fun setAfter(delayMs: Long)

@@ -32,7 +32,7 @@ private const val HOUR_SECONDS = 3_600
 
 /**
  * The phone's date is set one day ahead by hand for a few seconds and then comes back (the
- * owner's habit, ADR-005), **while MilO waits beside the parked, connected truck, or is idle.**
+ * owner's habit, ADR-006), **while MilO waits beside the parked, connected truck, or is idle.**
  * Each test runs the real trip controller, rules, ledger and storage stand-ins on MilO's real
  * clock ([ClockJumpScene]), and asserts that the wait is exactly what it was.
  *

@@ -3,7 +3,7 @@ package com.shawnkowalchuk.milo.platform.clock
 import com.shawnkowalchuk.milo.core.clock.PROBATION_MS
 
 /**
- * How one of MilO's two daily alarms was asked of Android (ADR-005). Android's alarm service
+ * How one of MilO's two daily alarms was asked of Android (ADR-006). Android's alarm service
  * goes by the phone's clock, so which way is right depends on how MilO's clock stands to it.
  */
 internal sealed interface DailyAlarmAsked {

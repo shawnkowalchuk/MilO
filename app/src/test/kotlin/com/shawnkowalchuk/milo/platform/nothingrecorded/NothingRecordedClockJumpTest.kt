@@ -20,7 +20,7 @@ private const val SECOND_MS = 1_000L
 /**
  * The "nothing recorded" check on a phone whose date is set one day ahead by hand for a few
  * seconds and then set back (the owner does this in the evening, several times on some
- * evenings; ADR-005). The phone, the process and Android's part are those of
+ * evenings; ADR-006). The phone, the process and Android's part are those of
  * [NothingRecordedClockJumpFixture].
  *
  * These began as the investigation's proofs of what the check did before MilO had a clock of

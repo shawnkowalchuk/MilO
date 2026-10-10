@@ -10,7 +10,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * What the tests of the "nothing recorded" check share on a phone whose date is set a day
- * ahead by hand (ADR-005): the check, its look and its alarm requests are the real ones, on
+ * ahead by hand (ADR-006): the check, its look and its alarm requests are the real ones, on
  * MilO's real clock ([JumpingPhone]), with the real [ClockWatch] to have the alarm asked for
  * again.
  *

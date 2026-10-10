@@ -10,7 +10,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * The check's own rules, handed the time MilO's clock gives while the phone's date is one day
- * ahead (ADR-005). The rules are not changed: these were the three things an emulator showed on
+ * ahead (ADR-006). The rules are not changed: these were the three things an emulator showed on
  * 2026-10-07 when the date was set ahead for ten seconds with the check's time passed and trips
  * recorded (run 1 of that investigation), as the rules then decided them. Each now shows that
  * the rules are no longer handed tomorrow.

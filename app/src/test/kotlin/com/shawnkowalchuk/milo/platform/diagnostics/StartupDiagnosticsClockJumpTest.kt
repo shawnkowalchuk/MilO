@@ -28,7 +28,7 @@ private const val EVENING_MS = 1_791_419_562_000L
 
 /**
  * What a process start writes to the event log when the phone's date is, or just was, one day
- * ahead for a few seconds (ADR-005). The start-up diagnostics run on MilO's clock
+ * ahead for a few seconds (ADR-006). The start-up diagnostics run on MilO's clock
  * ([JumpingPhone]); Android stamps each record of a process's end with the PHONE's clock at
  * the moment the process died (`ApplicationExitInfo.getTimestamp`).
  *

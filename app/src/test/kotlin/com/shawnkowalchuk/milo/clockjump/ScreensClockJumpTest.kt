@@ -35,7 +35,7 @@ private const val MINUTE_MS = 60 * SECOND_MS
 
 /**
  * What the screens, the report and the work schedule make of a trip whose START or END falls
- * into the seconds in which the phone's date is one day ahead (ADR-005). The pure functions
+ * into the seconds in which the phone's date is one day ahead (ADR-006). The pure functions
  * every screen counts with are not changed. These were the investigation's proofs (2026-10-07)
  * of what follows downstream from a start or an end stamped a day ahead: the trip in the next
  * month's report, sorted by tomorrow's weekday, flagged as past the schedule. Each stamp is now
@@ -153,7 +153,7 @@ class ScreensClockJumpTest {
     @Test
     fun `a trip the build before this one dated tomorrow is put right by setting its day back`() {
         // Kept as the investigation wrote it: a trip that an earlier build stored with
-        // tomorrow's date is not changed by ADR-005, and this is the way out it always had.
+        // tomorrow's date is not changed by ADR-006, and this is the way out it always had.
         val realStart = at("2026-10-07T15:10")
         val nowMs = at("2026-10-07T19:00")
         val trip = businessTrip(realStart + DAY_MS, realStart + DAY_MS + 20 * MINUTE_MS)

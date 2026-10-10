@@ -9,7 +9,7 @@ private const val NOW_MS = 1_791_419_562_000L
 
 /**
  * The three ways a daily alarm is asked of Android, by how MilO's clock stands to the phone's
- * (ADR-005). The monthly reminder and the daily check both ask through [askForDailyAlarm].
+ * (ADR-006). The monthly reminder and the daily check both ask through [askForDailyAlarm].
  */
 class DailyAlarmAskedTest {
     /** What Android was asked: "for <time of day>" or "after <wait>". */

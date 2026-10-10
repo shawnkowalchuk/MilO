@@ -119,7 +119,7 @@ private fun AppMark() {
 private fun AppNameAndDay() {
     val locale = LocalConfiguration.current.locales[0]
     // The day by MilO's clock, not the phone's: the date in the header must not jump while the
-    // phone's date is being played with (ADR-005).
+    // phone's date is being played with (ADR-006).
     val clock = LocalMiloClock.current
     // MilO can stay open past midnight, and Android says nothing when the day changes.
     var today by remember { mutableStateOf(localDateOf(clock(), ZoneId.systemDefault())) }

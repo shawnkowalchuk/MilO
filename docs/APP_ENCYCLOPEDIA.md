@@ -99,7 +99,7 @@ Each line gives the phase the brief put the capability in, and the states of its
 - [Trip labels](#trip-labels) — not in the brief; Shawn's request of 2026-10-08. Built, not yet proven on the phone (it has run nowhere)
 - [Monthly PDF and submission](#monthly-pdf-and-submission) — phase 3. Built, not yet proven on the phone
 - [Diagnostics and reminders](#diagnostics-and-reminders) — phases 1 and 4. Built, proven on the phone (the event log being written). Built, not yet proven on the phone (the Log screen; the reminder; the watch on Android Auto outside trips; the daily "nothing recorded" check)
-- [MilO's clock](#milos-clock) — not in the brief; ADR-005 of 2026-10-07. Built, not yet proven on the phone (it has run in unit tests only)
+- [MilO's clock](#milos-clock) — not in the brief; ADR-006 of 2026-10-07. Built, not yet proven on the phone (it has run in unit tests only)
 - [Backup, export and import](#backup-export-and-import) — phase 4, part B. Built, not yet proven on the phone
 - [Units: kilometres or miles](#units-kilometres-or-miles) — not in the brief; Shawn's request of 2026-10-07. Built, not yet proven on the phone (unit tests and an emulator; the Android Auto screen has run nowhere)
 - [Settings](#settings) — phases 1 to 4. Built, not yet proven on the phone
@@ -1558,7 +1558,7 @@ Checked on an emulator (Android 16) on 2026-10-03: an induced crash, a force sto
 **Status:** Built, not yet proven on the phone. It ran on a stock-Android emulator on 2026-10-09 with the date set a day ahead 18 times, and no trip, wait, hold-off or stored point was changed (FINDINGS_LOG 2026-10-09, "MilO's clock ran on an emulator"). What was changed after that run runs in unit tests only: no notification by a clock on probation, the alarm asked for two minutes ahead, and the alarms asked for when the clock is set back. Device checks CJ-1 to CJ-15 · **Surfaces:** Both. It has no screen of its own; every time on the phone UI and on the Android Auto screen comes from it · **Last updated:** 2026-10-09 (after its run on an emulator; before that, the same day, after its verification: the daily alarms count from boot while the clocks disagree, and an anchor taken with nothing to check it against is on probation; built on 2026-10-07)
 
 **What it does**
-MilO keeps the time of day itself. A phone whose date is set a day ahead for a few seconds, which Shawn does to get lives in a game, no longer reaches a trip, a wait, a check or a line of the log. While nobody touches the phone's clock, MilO's time is exactly the phone's. The decision and its price are in `docs/adr/ADR-005-trusted-clock.md`.
+MilO keeps the time of day itself. A phone whose date is set a day ahead for a few seconds, which Shawn does to get lives in a game, no longer reaches a trip, a wait, a check or a line of the log. While nobody touches the phone's clock, MilO's time is exactly the phone's. The decision and its price are in `docs/adr/ADR-006-trusted-clock.md`.
 
 **How it works (step by step)**
 1. **One clock for everything.** `MiloApplication` makes it before anything else (`miloClock`), and the `AppContainer` hands `container.clock` to every object that needs the time: the trip controller and through it the trip rules, the trip service and its timers, the daily check, the monthly reminder, the driving alert, everything that writes to the event log, the screens' ViewModels (the first start's, What's new's and the trip label's among them), the widget and the Android Auto screen. The header's date and the Log screen's "today" get it through `LocalMiloClock`, which `MiloApp` provides once. Android's backup agent runs without the container and asks `miloClock` itself. **Nothing else reads the phone's clock:** `WallClockReadersTest` reads the source code and fails if something does. The time zone is still the phone's (`ZoneId.systemDefault()`).
@@ -1618,7 +1618,7 @@ Android only: `SystemClock.elapsedRealtime`, `Settings.Global.BOOT_COUNT` and th
 - The clock is read from any thread. A reading takes a lock for a moment.
 
 **Related**
-[Diagnostics and reminders](#diagnostics-and-reminders) (the event log, the monthly reminder, the daily check), [Truck pairing and trip detection](#truck-pairing-and-trip-detection), `docs/adr/ADR-005-trusted-clock.md`, FINDINGS_LOG 2026-10-07 (night) and 2026-10-09 ("MilO's clock put onto today's main", "What the verification of MilO's clock found" with its two decisions, and "MilO's clock ran on an emulator").
+[Diagnostics and reminders](#diagnostics-and-reminders) (the event log, the monthly reminder, the daily check), [Truck pairing and trip detection](#truck-pairing-and-trip-detection), `docs/adr/ADR-006-trusted-clock.md`, FINDINGS_LOG 2026-10-07 (night) and 2026-10-09 ("MilO's clock put onto today's main", "What the verification of MilO's clock found" with its two decisions, and "MilO's clock ran on an emulator").
 
 ---
 

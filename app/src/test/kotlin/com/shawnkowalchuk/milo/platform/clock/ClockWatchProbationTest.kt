@@ -34,7 +34,7 @@ private val ASKED_FOR_BOTH =
     listOf("reminder, the phone's clock is back", "daily check, the phone's clock is back")
 
 /**
- * The clock watch around a MilO that started with no anchor to go by (ADR-005, decided on
+ * The clock watch around a MilO that started with no anchor to go by (ADR-006, decided on
  * 2026-10-09): its anchor is on probation. If it was taken while the phone's date was set
  * ahead, the watch writes the line for that when the date comes back, and has both daily
  * alarms asked for again and both checks look again, as after any change that came back.

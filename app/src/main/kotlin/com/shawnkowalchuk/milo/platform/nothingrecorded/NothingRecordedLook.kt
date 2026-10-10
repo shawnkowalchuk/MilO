@@ -52,7 +52,7 @@ internal const val TRIP_START_WAIT_MS = 2_500L
  * **A notification is posted only after two looks that both found no trip,**
  * [TRIP_START_WAIT_MS] apart: see there. Every other answer is acted on at once.
  *
- * **No notification by a clock that is on probation** (ADR-005). A MilO that started with
+ * **No notification by a clock that is on probation** (ADR-006). A MilO that started with
  * nothing to check the phone's clock against may have started in the seconds the date is set
  * ahead, and "today" is then tomorrow, a day with no trip. Such a look says so in the log,
  * shows nothing and stores nothing. The check asks for its alarm two minutes ahead while the
@@ -167,7 +167,7 @@ internal class NothingRecordedLook(
     /**
      * A stored "shown on" that names a day after today is taken out of the settings, with one
      * line. Nothing can have been shown tomorrow: it was stored while the phone's date was set
-     * ahead (until 2026-10-07 MilO went by the phone's clock, ADR-005). It counts as not shown,
+     * ahead (until 2026-10-07 MilO went by the phone's clock, ADR-006). It counts as not shown,
      * and left in the file it would count again on the day it names: the one notification of
      * that day, used up before the day began.
      *

@@ -15,7 +15,7 @@ private const val HOUR_MS = 60 * MINUTE_MS
 private const val EVENING_MS = 1_791_419_562_000L
 
 /**
- * An anchor on probation (ADR-005, decided on 2026-10-09). A MilO process that starts with no
+ * An anchor on probation (ADR-006, decided on 2026-10-09). A MilO process that starts with no
  * anchor to go by takes the phone's clock as it is, and that can be in the very seconds the
  * date is set a day ahead. Until the phone's clock has agreed with such an anchor at a reading
  * two minutes or more after it was taken, a phone's clock found far BEHIND MilO's time is
