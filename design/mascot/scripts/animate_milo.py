@@ -8,6 +8,9 @@
 #   ThumbsUp     2 s           a trip was saved
 #   Walk         1 s, loops    a trip is being recorded (walks on the spot)
 #   Celebrate    3 s           a mileage goal was reached
+#   Flex         4.5 s         shows off: both arms, one arm to each side, both again
+#   Peace        2.75 s        holds up the peace sign with its left hand
+#   RockOn       2.75 s        holds up the horns with its right hand, and nods to the beat
 #   Gauge_Speed  2 s           the speed needle alone, 0 to 240: seek to speed / 240 of its length
 #   Gauge_RPM    2 s           the RPM needle alone, 0 to 8: seek to rpm / 8 of its length
 #
@@ -100,9 +103,11 @@ def frame_of(along, palm):
 # ---------------------------------------------------------------- arm poses
 # All written for the LEFT arm (+X is outwards); the right arm is the mirror image.
 # "curl" is two angles for each of the three fingers; "thumb" is thumb.01's x, y, z and thumb.02's x.
-def arm_pose(upper, upper_palm, fore, fore_palm, hand, hand_palm, curl, thumb):
+# "spread" is one angle for each finger: how far it is turned sideways in the palm's plane, towards
+# the thumb. The hand signs need it; every other pose leaves the fingers side by side.
+def arm_pose(upper, upper_palm, fore, fore_palm, hand, hand_palm, curl, thumb, spread=(0.0, 0.0, 0.0)):
     return dict(upper=upper, upper_palm=upper_palm, fore=fore, fore_palm=fore_palm,
-                hand=hand, hand_palm=hand_palm, curl=curl, thumb=thumb)
+                hand=hand, hand_palm=hand_palm, curl=curl, thumb=thumb, spread=spread)
 
 
 RELAXED = arm_pose(V(0.80, -0.05, -0.60), V(0.0, 0.5, -0.8), V(0.30, -0.22, -0.93), V(0.0, 1.0, 0.0),
@@ -117,6 +122,36 @@ THUMBS_UP = arm_pose(V(0.80, -0.25, -0.55), V(-0.3, 0.0, -0.9), V(0.15, -0.70, 0
 CHEER = arm_pose(V(0.55, -0.08, 0.83), V(0.0, -1.0, 0.0), V(0.38, -0.05, 0.92), V(0.0, -1.0, 0.0),
                  V(0.34, -0.05, 0.94), V(0.0, -1.0, 0.0), (2, 2, 0, 0, 2, 2), (0, 0, 0, 0))
 
+# A fist, and the thumb laid across it.
+FIST = (86, 92, 88, 94, 86, 92)
+THUMB_ACROSS = (112, 0, 50, 62)
+# Flexing: the upper arm out and up, the forearm up, the fist beside the top of the head and
+# clear of it, its fingers to the viewer. The arms are short and the hands large: a fist turned
+# in towards the head, as a real arm is flexed, would be inside it.
+BICEPS = arm_pose(V(0.86, -0.08, 0.50), V(0.30, -0.80, -0.50), V(0.26, -0.14, 0.955), V(-0.45, -0.88, 0.0),
+                  V(0.06, -0.12, 0.99), V(-0.50, -0.86, -0.07), FIST, THUMB_ACROSS)
+# The other arm of a one-arm flex: the upper arm out, the forearm down.
+LOW = arm_pose(V(0.96, -0.05, -0.10), V(-0.10, 0.20, -0.97), V(0.22, -0.16, -0.96), V(-0.95, 0.20, -0.25),
+               V(0.12, -0.14, -0.98), V(-0.97, 0.25, -0.15), FIST, THUMB_ACROSS)
+# Where an arm passes between those two: out in front, so the fist goes round the body, not through it.
+REACH = arm_pose(V(0.93, -0.30, 0.10), V(-0.10, 0.30, -0.95), V(0.70, -0.70, 0.05), V(-0.70, -0.70, -0.20),
+                 V(0.55, -0.82, 0.0), V(-0.82, -0.55, -0.20), FIST, THUMB_ACROSS)
+# And where it passes on its way up from hanging and back: straight out to the side, so that
+# the fists go round the head and not across the dials.
+OUT = arm_pose(V(0.98, -0.15, 0.0), V(0.0, 0.0, -1.0), V(0.97, -0.20, 0.10), V(0.0, 0.0, -1.0),
+               V(0.95, -0.20, 0.20), V(0.0, 0.0, -1.0), FIST, THUMB_ACROSS)
+
+# The two hand signs: the hand beside the head, fingers up, the palm to the viewer. The mascot has
+# three fingers: "a" is next to the thumb, "b" is the middle one, "c" the outer one.
+# Peace: a and b up and apart, c curled, the thumb across it.
+PEACE = arm_pose(V(0.93, -0.12, 0.30), V(0.0, -1.0, 0.0), V(0.56, -0.20, 0.80), V(0.0, -1.0, 0.0),
+                 V(0.08, -0.10, 1.0), V(0.0, -1.0, 0.0), (0, 0, 0, 0, 84, 90), (115, 0, 62, 62),
+                 spread=(14.0, -14.0, 0.0))
+# The horns: a and c up, b curled under the thumb.
+HORNS = arm_pose(V(0.93, -0.14, 0.32), V(0.0, -1.0, 0.0), V(0.54, -0.22, 0.81), V(0.0, -1.0, 0.0),
+                 V(0.07, -0.12, 1.0), V(0.0, -1.0, 0.0), (0, 0, 86, 92, 0, 0), (112, 0, 66, 64),
+                 spread=(8.0, 0.0, -8.0))
+
 
 def blend_arms(a, b, w):
     out = {}
@@ -124,6 +159,20 @@ def blend_arms(a, b, w):
         out[key] = swing(a[key], b[key], w)
     out["curl"] = tuple(clamp(x + (y - x) * w, -10, 96) for x, y in zip(a["curl"], b["curl"]))
     out["thumb"] = tuple(x + (y - x) * w for x, y in zip(a["thumb"], b["thumb"]))
+    out["spread"] = tuple(x + (y - x) * w for x, y in zip(a["spread"], b["spread"]))
+    return out
+
+
+def curved(a, by, b, w):
+    """From arm a to arm b on a curve that is drawn towards the arm `by` on its way."""
+    return blend_arms(blend_arms(a, by, w), blend_arms(by, b, w), w)
+
+
+def with_fingers(arm, of):
+    """One arm with the fingers and thumb of another, for a hand that closes before the arm is up."""
+    out = dict(arm)
+    for key in ("curl", "thumb", "spread"):
+        out[key] = of[key]
     return out
 
 
@@ -162,8 +211,10 @@ def set_arm(side, arm, body):
         set_rotation(name, (parent @ REST[above].inverted() @ REST[name]).inverted() @ target)
         parent = target
     flip = 1.0 if side == "L" else -1.0
-    for bone, angle in zip(FINGER_BONES, arm["curl"]):
-        pb["%s.%s" % (bone, side)].rotation_euler = (radians(angle), 0.0, 0.0)
+    for i, (bone, angle) in enumerate(zip(FINGER_BONES, arm["curl"])):
+        # only a finger's first bone turns sideways; one that is not spread gets a plain 0
+        spread = arm["spread"][i // 2] if i % 2 == 0 else 0.0
+        pb["%s.%s" % (bone, side)].rotation_euler = (radians(angle), 0.0, radians(flip * spread) if spread else 0.0)
     x1, y1, z1, x2 = arm["thumb"]
     pb["thumb.01." + side].rotation_euler = (radians(x1), radians(flip * y1), radians(flip * z1))
     pb["thumb.02." + side].rotation_euler = (radians(x2), 0.0, 0.0)
@@ -301,8 +352,83 @@ def celebrate(t):
     set_gauges(speed=revs * (225 + 15 * sin(2 * pi * 4 * t)), rpm=IDLE_RPM + revs * (6.6 + 0.5 * sin(2 * pi * 6 * t)))
 
 
+def flex(t):
+    """Four poses, each squeezed once or twice: both arms; the right arm up and the left down;
+    the other way round; both arms again."""
+    up = smooth((t - 0.08) / 0.44) * (1 - smooth((t - 3.98) / 0.48))
+    # in the second pose the left arm is the low one, in the third the right; where they change
+    # over the left arm leads, so the two are never straight out at the same moment
+    left_low = smooth((t - 1.18) / 0.36) * (1 - smooth((t - 2.08) / 0.38))
+    right_low = smooth((t - 2.20) / 0.38) * (1 - smooth((t - 3.12) / 0.36))
+    squeeze = up * (bump(t, 0.50, 0.84) + bump(t, 0.84, 1.18) + bump(t, 1.56, 2.00) + bump(t, 2.60, 3.04)
+                    + bump(t, 3.48, 3.74) + bump(t, 3.72, 3.98))
+    crouch = bump(t, 0.0, 0.34)
+    # It leans back to show off, but not while it is turned to its right: leaning back and
+    # turned that way, the dials' glossy black faces mirror the studio's key light and go pale
+    # grey. The pictures are drawn with those faces dulled (render_greeting.py); the model and
+    # its .glb keep the gloss, so the clip keeps out of that angle.
+    back = up * (1 - right_low)
+    body = set_body(right=0.05 * (left_low - right_low), up=0.015 * squeeze - 0.035 * crouch,
+                    stretch=-0.04 * crouch + 0.035 * squeeze, lean=-(3.5 + 1.5 * squeeze) * back + 2.0 * right_low,
+                    turn_left=10 * left_low - 4 * right_low, tilt_left=7 * (left_low - right_low))
+    high = turned(BICEPS, "Y", -4 * squeeze, -7 * squeeze, -12 * squeeze)
+    for name, low in (("L", left_low), ("R", right_low)):
+        set_arm(name, curved(RELAXED, OUT, curved(high, REACH, LOW, low), up), body)
+    set_foot("L")
+    set_foot("R")
+    look = 5 * (right_low - left_low)
+    set_eyes(twist_speedo=look, twist_rpm=look, pop_speedo=0.05 * squeeze, pop_rpm=0.05 * squeeze)
+    # the engine is revved with every squeeze
+    set_gauges(speed=up * 20 + 30 * squeeze, rpm=IDLE_RPM + up * 1.0 + 4.6 * squeeze)
+
+
+def peace(t):
+    fall = 1 - smooth((t - 2.15) / 0.52)
+    # No overshoot on the way up, as ThumbsUp has: past its place the hand would be in the RPM
+    # dial. It swings a little outwards as it arrives instead.
+    e = smooth((t - 0.05) / 0.40) * fall
+    arrive = bump(t, 0.30, 0.62)
+    # the fingers make the sign while the arm is still on its way, and let go as it comes down
+    sign = smooth((t - 0.10) / 0.30) * (1 - smooth((t - 2.18) / 0.34))
+    held = smooth((t - 0.50) / 0.25) * (1 - smooth((t - 1.90) / 0.25))
+    rock = sin(2 * pi * 1.25 * (t - 0.50)) * held
+    stretch = -0.03 * bump(t, 0.0, 0.26) + 0.04 * bump(t, 0.20, 0.62)
+    body = set_body(up=0.02 * bump(t, 0.24, 0.64), stretch=stretch, lean=-2.0 * e, tilt_left=3.5 * e + 1.0 * rock)
+    shown = turned(PEACE, "Y", 0.0, 3 * rock + 4 * arrive, 6 * rock + 7 * arrive)
+    set_arm("L", with_fingers(blend_arms(RELAXED, shown, e), blend_arms(RELAXED, PEACE, sign)), body)
+    set_arm("R", turned(RELAXED, "X", -4 * e, -6 * e, -6 * e), body)
+    set_foot("L")
+    set_foot("R")
+    set_eyes(twist_speedo=4 * e, twist_rpm=4 * e, pop_speedo=0.04 * bump(t, 0.25, 0.70), pop_rpm=0.04 * bump(t, 0.30, 0.75))
+    # an easy cruise: 50 km/h at 2,000 RPM
+    arrived = spring(t - 0.15) * fall
+    set_gauges(speed=50 * arrived, rpm=IDLE_RPM + (2.0 - IDLE_RPM) * arrived)
+
+
+def rock_on(t):
+    fall = 1 - smooth((t - 2.15) / 0.52)
+    e = smooth((t - 0.05) / 0.36) * fall
+    arrive = bump(t, 0.26, 0.56)
+    sign = smooth((t - 0.08) / 0.28) * (1 - smooth((t - 2.18) / 0.34))
+    # three nods to a beat of two a second, the hand pumping with them
+    held = smooth((t - 0.42) / 0.12) * (1 - smooth((t - 1.92) / 0.20))
+    nod = held * (0.5 - 0.5 * cos(2 * pi * 2.0 * (t - 0.42)))
+    stretch = -0.03 * bump(t, 0.0, 0.24) + 0.03 * bump(t, 0.18, 0.50) - 0.025 * nod
+    body = set_body(up=-0.02 * nod, forward=0.02 * nod, stretch=stretch, lean=-2.0 * e + 8.0 * nod, tilt_left=-3.0 * e)
+    shown = turned(turned(HORNS, "X", 0.0, 7 * nod, 13 * nod), "Y", 0.0, 4 * arrive, 7 * arrive)
+    set_arm("R", with_fingers(blend_arms(RELAXED, shown, e), blend_arms(RELAXED, HORNS, sign)), body)
+    set_arm("L", turned(RELAXED, "X", -4 * e - 5 * nod, -6 * e - 8 * nod, -6 * e - 10 * nod), body)
+    set_foot("L")
+    set_foot("R")
+    set_eyes(twist_speedo=-4 * e, twist_rpm=-4 * e, pop_speedo=0.05 * nod, pop_rpm=0.05 * nod)
+    # every nod takes the engine to the red line
+    loud = smooth((t - 0.20) / 0.25) * fall
+    set_gauges(speed=loud * (110 + 30 * nod), rpm=IDLE_RPM + loud * (3.2 + 3.0 * nod))
+
+
 CLIPS = [("Idle", 4.0, idle, True), ("Wave", 2.0, wave, False), ("ThumbsUp", 2.0, thumbs_up, False),
-         ("Walk", 1.0, walk, True), ("Celebrate", 3.0, celebrate, False)]
+         ("Walk", 1.0, walk, True), ("Celebrate", 3.0, celebrate, False),
+         ("Flex", 4.5, flex, False), ("Peace", 2.75, peace, False), ("RockOn", 2.75, rock_on, False)]
 NEEDLE_CLIPS = [("Gauge_Speed", "speed_kmh", 240.0), ("Gauge_RPM", "rpm", 8.0)]
 NEEDLE_SECONDS = 2.0
 

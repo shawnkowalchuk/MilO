@@ -165,11 +165,13 @@ def seen(point):
     return at.x, at.y
 
 
-def set_stage():
+def set_stage(width=None, height=None, mascot=MASCOT_DP * PX_PER_DP):
     """A see-through background, and the picture's size. The camera stays where the studio put
     it: only its lens and the part of its view that is kept change, so that the standing mascot
-    is MASCOT_DP high and the axis it turns about is the picture's middle."""
-    width, height = (round(side * PX_PER_DP) for side in PICTURE_DP)
+    is MASCOT_DP high and the axis it turns about is the picture's middle. render_clips.py asks
+    for a picture and a mascot of its own size, in pixels; the greeting asks for nothing."""
+    if width is None:
+        width, height = (round(side * PX_PER_DP) for side in PICTURE_DP)
     render = scene.render
     render.film_transparent = True
     render.resolution_x, render.resolution_y, render.resolution_percentage = width, height, 100
@@ -193,7 +195,7 @@ def set_stage():
     lens = camera.data
     lens.shift_x = lens.shift_y = 0.0
     ups = [seen(p)[1] for p in mascot_points()]
-    lens.lens *= MASCOT_DP * PX_PER_DP / ((max(ups) - min(ups)) * height)
+    lens.lens *= mascot / ((max(ups) - min(ups)) * height)
     slide_view("shift_x", lambda: 0.5 - seen((0, 0, 0))[0])
     return width, height
 
