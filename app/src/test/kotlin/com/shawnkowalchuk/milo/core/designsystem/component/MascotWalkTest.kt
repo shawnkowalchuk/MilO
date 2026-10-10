@@ -1,13 +1,13 @@
 package com.shawnkowalchuk.milo.core.designsystem.component
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The mascot's walk into the screen, and a greeting's course from stage to stage: where the
- * mascot is at each moment, that its feet cannot slide, and that a greeting ends once.
+ * The mascot's walk into the screen, and a greeting's course from stage to stage: which frame
+ * of the walk is due at each moment and where the mascot is in it, that its step and its place
+ * cannot come apart, and that a greeting ends once.
  */
 class MascotWalkTest {
     private val exact = 0.001f
@@ -15,10 +15,14 @@ class MascotWalkTest {
     /** Every width from a small phone to a tablet on its side, in dp. */
     private val widths = (320..1280).map { it.toFloat() }
 
+    /** How far one frame of the walk carries the mascot. */
+    private val perFrame = MascotPicture.STRIDE / MascotPicture.WALK_FRAMES
+
     @Test
     fun `at the start nothing of the mascot is on the screen`() {
         for (width in widths) {
             val walk = MascotWalk(width)
+            assertEquals(walk.start, walk.middleIn(0), exact)
             val leftmost = walk.start - MascotPicture.REACH
             assertTrue("$width dp: the mascot begins at $leftmost", leftmost >= width)
         }
@@ -34,77 +38,94 @@ class MascotWalkTest {
     }
 
     @Test
-    fun `the picture itself is on the screen from the start, or Android would not play it`() {
-        // An animated picture only moves on while some part of it is drawn. The picture is
-        // wider than the mascot in it, and that see-through margin is what is on the screen.
-        for (width in widths) {
-            val walk = MascotWalk(width)
-            assertTrue("$width dp", walk.start - MascotPicture.WIDTH / 2 < width)
-        }
-    }
-
-    @Test
     fun `at the end it stands in the middle of the screen's width`() {
         for (width in widths) {
             val walk = MascotWalk(width)
             assertEquals(width / 2, walk.end, exact)
-            assertEquals(width / 2, walk.middleAt(walk.millis), exact)
-            // And stays there, however long the turn is waited for.
-            assertEquals(width / 2, walk.middleAt(walk.millis + 5_000), exact)
+            assertEquals(width / 2, walk.middleIn(walk.frames), exact)
+            assertEquals(walk.frames, walk.frameAt(walk.millis))
+            // And stays there, however long the turn and the wave take.
+            assertEquals(walk.frames, walk.frameAt(walk.millis + 5_000))
+            assertEquals(width / 2, walk.middleIn(walk.frames + 100), exact)
         }
     }
 
     @Test
-    fun `the walk is a whole number of cycles of its picture`() {
+    fun `the walk is a whole number of cycles, so the turn follows its last frame`() {
         for (width in widths) {
             val walk = MascotWalk(width)
             assertTrue("$width dp: ${walk.cycles} cycles", walk.cycles >= 1)
-            assertEquals(walk.cycles * MascotPicture.WALK_CYCLE_MS.toLong(), walk.millis)
+            assertEquals(walk.cycles * MascotPicture.WALK_FRAMES, walk.frames)
+            assertEquals(walk.frames.toLong() * MascotPicture.FRAME_MS, walk.millis)
             assertEquals(walk.cycles * MascotPicture.STRIDE, walk.start - walk.end, exact)
         }
     }
 
     @Test
-    fun `the feet do not slide, every cycle moves the picture by one stride`() {
+    fun `the feet do not slide, every frame stands a twelfth of a stride left of the last`() {
         for (width in listOf(320f, 360f, 393f, 411f, 430f, 600f, 840f, 1280f)) {
             val walk = MascotWalk(width)
-            for (cycle in 0 until walk.cycles) {
-                val from = walk.middleAt(cycle * MascotPicture.WALK_CYCLE_MS.toLong())
-                val to = walk.middleAt((cycle + 1) * MascotPicture.WALK_CYCLE_MS.toLong())
-                assertEquals("$width dp, cycle $cycle", MascotPicture.STRIDE, from - to, exact)
+            for (frame in 0 until walk.frames) {
+                val moved = walk.middleIn(frame) - walk.middleIn(frame + 1)
+                assertEquals("$width dp, frame $frame", perFrame, moved, exact)
             }
+            // The walk's last frame is one step short of the middle. The turn's first frame is
+            // the frame that follows it, and stands in the middle.
+            assertEquals(walk.end + perFrame, walk.middleIn(walk.frames - 1), exact)
         }
     }
 
     @Test
-    fun `it walks at an even pace, a twelfth of a stride for each frame of the picture`() {
+    fun `every frame is due for 42 milliseconds, the first from the start`() {
         val walk = MascotWalk(393f)
-        val perFrame = MascotPicture.STRIDE / MascotPicture.WALK_FRAMES
-        var at = 0L
-        while (at + MascotPicture.FRAME_MS <= walk.millis) {
-            val moved = walk.middleAt(at) - walk.middleAt(at + MascotPicture.FRAME_MS)
-            assertEquals("at $at ms", perFrame, moved, exact)
-            at += MascotPicture.FRAME_MS
-        }
+        assertEquals(0, walk.frameAt(0))
+        assertEquals(0, walk.frameAt(41))
+        assertEquals(1, walk.frameAt(42))
+        assertEquals(11, walk.frameAt(503))
+        // The second cycle: the app draws frame 12 as the sheet's first again.
+        assertEquals(12, walk.frameAt(504))
+        // The last frame has its 42 milliseconds too, and then the walk is over.
+        assertEquals(walk.frames - 1, walk.frameAt(walk.millis - 42))
+        assertEquals(walk.frames - 1, walk.frameAt(walk.millis - 1))
+        assertEquals(walk.frames, walk.frameAt(walk.millis))
     }
 
     @Test
     fun `before the walk it waits at its start`() {
         val walk = MascotWalk(393f)
-        assertEquals(walk.start, walk.middleAt(0), exact)
-        assertEquals(walk.start, walk.middleAt(-300), exact)
+        assertEquals(0, walk.frameAt(-300))
+        assertEquals(walk.start, walk.middleIn(0), exact)
+        assertEquals(walk.start, walk.middleIn(-3), exact)
     }
 
     @Test
-    fun `a stride and a reach of one's own are used as given`() {
-        // 100 to the middle and 20 of reach, in strides of 50: three cycles, from 250.
-        val walk = MascotWalk(screenWidth = 200f, stride = 50f, reach = 20f, cycleMillis = 400)
-        assertEquals(3, walk.cycles)
-        assertEquals(250f, walk.start, exact)
+    fun `a phone that draws slowly leaves frames out, and the walk still ends on time`() {
+        val walk = MascotWalk(393f)
+        // The screen is drawn every 130 ms: three frames of the walk pass between two drawings.
+        val drawn = (0..walk.millis + 130 step 130).map(walk::frameAt)
+        assertEquals(listOf(0, 3, 6, 9, 12), drawn.take(5))
+        assertTrue(drawn.zipWithNext().all { (earlier, later) -> later >= earlier })
+        // Whatever is left out, the place is the frame's own: the two are one number.
+        for (frame in drawn) {
+            assertEquals(walk.start - frame * perFrame, walk.middleIn(frame), exact)
+        }
+        // The first drawing at or after the walk's time shows the turn, in the middle.
+        assertEquals(walk.frames, drawn.last())
+        assertEquals(walk.frames, walk.frameAt(walk.millis + 129))
+    }
+
+    @Test
+    fun `a stride, a reach and a frame's time of one's own are used as given`() {
+        // 100 to the middle and 20 of reach, in strides of 60: two cycles, from 220.
+        val walk = MascotWalk(screenWidth = 200f, stride = 60f, reach = 20f, frameMillis = 50)
+        assertEquals(2, walk.cycles)
+        assertEquals(24, walk.frames)
+        assertEquals(220f, walk.start, exact)
         assertEquals(1_200L, walk.millis)
-        assertEquals(175f, walk.middleAt(600), exact)
-        // A way that is a whole number of strides is not made one cycle longer.
-        assertEquals(2, MascotWalk(200f, stride = 60f, reach = 20f, cycleMillis = 400).cycles)
+        assertEquals(12, walk.frameAt(600))
+        assertEquals(160f, walk.middleIn(12), exact)
+        // A way that is not a whole number of strides is made one cycle longer.
+        assertEquals(3, MascotWalk(200f, stride = 50f, reach = 20f).cycles)
     }
 
     @Test
@@ -112,39 +133,11 @@ class MascotWalkTest {
         // 360 to 430 dp is every phone held upright. Shawn's is 393 dp wide.
         assertEquals(7, MascotWalk(360f).cycles)
         assertEquals(8, MascotWalk(393f).cycles)
+        assertEquals(96, MascotWalk(393f).frames)
         assertEquals(4_032L, MascotWalk(393f).millis)
         assertEquals(8, MascotWalk(411f).cycles)
         assertEquals(8, MascotWalk(430f).cycles)
         assertEquals(20, MascotWalk(1280f).cycles)
-    }
-
-    @Test
-    fun `the walk is over when its last frame has had its time and the mascot has arrived`() {
-        val walk = MascotWalk(393f)
-        val end = walk.millis
-        // The picture shows its last frame one frame before the end.
-        val lastFrameAt = end - MascotPicture.FRAME_MS
-        assertFalse(walk.isOver(end - 1, lastFrameAt))
-        assertTrue(walk.isOver(end, lastFrameAt))
-        // The mascot is not turned before it has arrived, even if the picture were early.
-        assertFalse(walk.isOver(end - 1, lastFrameAt - 500))
-    }
-
-    @Test
-    fun `a picture that has fallen behind is waited for, and its last frame still gets its time`() {
-        val walk = MascotWalk(393f)
-        val end = walk.millis
-        assertFalse(walk.isOver(end + 200, lastFrameAt = null))
-        assertFalse(walk.isOver(end + 200, lastFrameAt = end + 180))
-        assertTrue(walk.isOver(end + 180 + MascotPicture.FRAME_MS, lastFrameAt = end + 180))
-    }
-
-    @Test
-    fun `a picture that never says it has ended is not waited for longer than a second`() {
-        val walk = MascotWalk(393f)
-        assertFalse(walk.isOver(walk.millis + PICTURE_PATIENCE_MS - 1, lastFrameAt = null))
-        assertTrue(walk.isOver(walk.millis + PICTURE_PATIENCE_MS, lastFrameAt = null))
-        assertEquals(1_000L, PICTURE_PATIENCE_MS)
     }
 
     // ------------------------------------------------------------ a greeting's course
