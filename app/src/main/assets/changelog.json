@@ -16,6 +16,11 @@
         },
         {
           "kind": "improved",
+          "title": "A GPS point every 2 seconds",
+          "body": "During a trip MilO now reads the truck's position every 2 seconds. It was every 5. The recorded route follows bends more closely."
+        },
+        {
+          "kind": "improved",
           "title": "The odometer counts up as you drive",
           "body": "During a trip in a paired vehicle, the odometer on Home and in Settings adds the distance as it is driven. Until now the whole trip was added when it ended."
         },

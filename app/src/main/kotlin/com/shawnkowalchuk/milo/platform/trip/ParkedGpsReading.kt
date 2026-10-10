@@ -16,7 +16,7 @@ internal fun ParkedGps.rateAt(nowMs: Long): FixRate? {
     val fast = fastUntilMs?.let { nowMs < it } ?: false
     val on = untilMs?.let { nowMs < it } ?: true
     return when {
-        fast -> FixRate.RECORDING
+        fast -> FixRate.WATCHING_CLOSELY
         on -> FixRate.WATCHING_PARKED
         else -> null
     }

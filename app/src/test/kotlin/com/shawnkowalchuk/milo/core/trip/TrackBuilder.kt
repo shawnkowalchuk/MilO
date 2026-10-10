@@ -12,7 +12,12 @@ private const val METRES_PER_DEGREE = 111_195.08
 /** The wall clock at elapsed time zero in the test tracks: 2026-10-03 12:00 UTC. */
 const val TRACK_START_WALL_CLOCK_MS = 1_791_028_800_000L
 
-/** The interval MilO asks the phone for. */
+/**
+ * The interval the test tracks are built at: what MilO asked the phone for during a trip until
+ * 2026-10-09, and still asks for beside a parked truck after a report of getting into a vehicle.
+ * A trip is recorded every 2 seconds now. The trip rules count time and metres, not fixes, so
+ * the tracks stand as they are.
+ */
 const val FIX_INTERVAL_SECONDS = 5
 
 /** A typical open-sky accuracy. */

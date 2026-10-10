@@ -60,8 +60,8 @@ fun parkedGpsUntilMs(
  * How a wait beside the parked truck reads GPS.
  *
  * @param untilMs when GPS goes off ([parkedGpsUntilMs]), or null to keep it on.
- * @param fastUntilMs until when it is read every 5 seconds, the rate of a trip, instead of
- * every 30: [GPS_AFTER_VEHICLE_REPORT_MS] after the phone last reported getting into a vehicle,
+ * @param fastUntilMs until when it is read every 5 seconds (the rate of a trip at the time)
+ * instead of every 30: [GPS_AFTER_VEHICLE_REPORT_MS] after the phone last reported getting into a vehicle,
  * or null without such a report (Shawn's choice of 2026-10-07: "Yes, every 5 s"). The trip then
  * starts within seconds of pulling out, with its real start and the road's distance. At one
  * fix every 30 seconds, the hop of 2026-10-07 at 12:18 fell between two fixes and was recorded

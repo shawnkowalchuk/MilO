@@ -21,8 +21,8 @@ class ParkedGpsReadingTest {
     fun `GPS is read every 5 seconds, then every 30, then not at all`() {
         val gps = ParkedGps(untilMs = now + 3_600_000, fastUntilMs = now + 600_000)
 
-        assertEquals(FixRate.RECORDING, gps.rateAt(now))
-        assertEquals(FixRate.RECORDING, gps.rateAt(now + 599_999))
+        assertEquals(FixRate.WATCHING_CLOSELY, gps.rateAt(now))
+        assertEquals(FixRate.WATCHING_CLOSELY, gps.rateAt(now + 599_999))
         assertEquals(FixRate.WATCHING_PARKED, gps.rateAt(now + 600_000))
         assertEquals(FixRate.WATCHING_PARKED, gps.rateAt(now + 3_599_999))
         assertNull(gps.rateAt(now + 3_600_000))
@@ -42,7 +42,7 @@ class ParkedGpsReadingTest {
         // A report of getting into a vehicle 55 minutes into the wait.
         val gps = ParkedGps(untilMs = now + 600_000, fastUntilMs = now + 600_000)
 
-        assertEquals(FixRate.RECORDING, gps.rateAt(now + 599_999))
+        assertEquals(FixRate.WATCHING_CLOSELY, gps.rateAt(now + 599_999))
         assertNull(gps.rateAt(now + 600_000))
     }
 }
