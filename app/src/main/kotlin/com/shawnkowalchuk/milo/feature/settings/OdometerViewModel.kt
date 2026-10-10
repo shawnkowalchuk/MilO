@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
+import com.shawnkowalchuk.milo.core.odometer.TripAtReading
 import com.shawnkowalchuk.milo.core.odometer.parseOdometer
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
@@ -29,7 +30,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -151,7 +151,8 @@ private fun cardOf(
  * itself says that, above the tiles.
  *
  * @param activity the trip controller's state: the trip being recorded is counted while it is
- * driven (since 2026-10-09), as on Home.
+ * driven (since 2026-10-09), as on Home, and is kept with a reading typed during it (since
+ * 2026-10-10).
  * @param clock wall-clock milliseconds: the time of a reading, and the moment the figure is for.
  * @param zone the phone's time zone.
  */
@@ -165,12 +166,20 @@ class OdometerViewModel(
 ) : ViewModel() {
     private val couldNotSave = MutableStateFlow(false)
 
+    /**
+     * The trip being recorded, as the trip controller last said it. Followed for as long as the
+     * tile's ViewModel lives, and not only while the tile is watched: a press of "Save reading"
+     * has to know the trip of that very moment ([onSaveReading]).
+     */
+    private val tripSoFar: StateFlow<TripSoFar?> =
+        activity.map { it.tripSoFar() }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     /** One tile for each paired vehicle ([odometerCardStates]), or null until they are read. */
     val state: StateFlow<List<OdometerCardState>?> =
         combine(
             stored(),
             trips.observeFinishedTrips(),
-            activity.map { it.tripSoFar() }.distinctUntilChanged(),
+            tripSoFar,
             couldNotSave,
         ) { stored, finished, soFar, failed ->
             stored?.let { odometerCardStates(it, finished, clock(), zone(), failed, soFar) }
@@ -178,6 +187,14 @@ class OdometerViewModel(
 
     /**
      * Stores what Shawn typed as the reading on the dashboard now.
+     *
+     * **With a trip being recorded, the reading keeps which trip it is and how far it has gone**
+     * (since 2026-10-10, `TripAtReading`): MilO opens a trip when the phone connects to the
+     * truck, so a reading typed in the truck before driving off is typed during a trip, and
+     * only what that trip drives after the press may be added to it. Kept for any open trip,
+     * whichever vehicle it is in and whether a paired vehicle has been seen in it yet: whose
+     * odometer the trip moves is decided when the odometer is worked out, as for every trip.
+     * The time and the trip are read at the press, before the write, so they are of one moment.
      *
      * @param unit the unit the tile named when he typed it. The reading is kept as typed with
      * this unit beside it, and is never converted in storage, so it comes back exactly.
@@ -187,9 +204,11 @@ class OdometerViewModel(
      */
     fun onSaveReading(typed: String, unit: DistanceUnit, vehicle: String? = null): Boolean {
         val value = parseOdometer(typed) ?: return false
+        val open = tripSoFar.value?.let { TripAtReading(it.tripId, it.metres) }
+        val reading = OdometerReading(clock(), value, unit, vehicle, open)
         viewModelScope.launch {
             try {
-                settings.addOdometerReading(OdometerReading(clock(), value, unit, vehicle))
+                settings.addOdometerReading(reading)
                 couldNotSave.value = false
             } catch (notStored: IOException) {
                 couldNotSave.value = true

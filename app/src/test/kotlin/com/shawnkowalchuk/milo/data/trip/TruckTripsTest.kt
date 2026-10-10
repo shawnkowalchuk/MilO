@@ -57,13 +57,15 @@ class TruckTripsTest {
         }
     }
 
+    // Since 2026-10-10 each trip is handed over with its number, by which a reading typed
+    // during it finds it again (`cutAtReadings`).
     @Test
-    fun `the odometer is handed each trip's start and distance`() {
+    fun `the odometer is handed each trip's start, distance and number`() {
         val kept = trip()
         val left = trip(status = TripStatus.DELETED)
 
         assertEquals(
-            listOf(DrivenTrip(kept.startedAtMs, kept.distanceMetres)),
+            listOf(DrivenTrip(kept.startedAtMs, kept.distanceMetres, id = kept.id)),
             drivenTrips(listOf(kept, left)),
         )
     }
@@ -81,11 +83,11 @@ class TruckTripsTest {
     @Test
     fun `the trip being recorded is handed over with them, once the truck was seen in it`() {
         val kept = trip()
-        val ended = DrivenTrip(kept.startedAtMs, kept.distanceMetres)
+        val ended = DrivenTrip(kept.startedAtMs, kept.distanceMetres, id = kept.id)
         val soFar = recording(tripId = 2)
 
         assertEquals(
-            listOf(ended, DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle)),
+            listOf(ended, DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle, id = 2)),
             drivenTrips(listOf(kept), soFar),
         )
         // Started with the button, and no paired vehicle has joined it yet.
@@ -99,7 +101,7 @@ class TruckTripsTest {
         val asEnded = trip()
 
         assertEquals(
-            listOf(DrivenTrip(asEnded.startedAtMs, asEnded.distanceMetres)),
+            listOf(DrivenTrip(asEnded.startedAtMs, asEnded.distanceMetres, id = asEnded.id)),
             drivenTrips(listOf(asEnded), soFar),
         )
         for (status in listOf(TripStatus.DISCARDED, TripStatus.DELETED)) {
@@ -109,7 +111,7 @@ class TruckTripsTest {
         }
         // Its own row while it is still open hides nothing.
         assertEquals(
-            listOf(DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle)),
+            listOf(DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle, id = 1)),
             drivenTrips(listOf(trip(TripStatus.OPEN)), soFar),
         )
     }

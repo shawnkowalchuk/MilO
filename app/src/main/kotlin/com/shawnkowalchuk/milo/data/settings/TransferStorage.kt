@@ -45,7 +45,8 @@ data class TransferredTruck(val address: String, val name: String?)
  *  the same on another phone, and it is not here: adding it changes the export file's form,
  *  which needs a new format version and a reader for both. An import leaves the phone's own
  *  value in place. See docs/FINDINGS_LOG.md, 2026-10-06 (evening). The odometer readings
- *  ([MiloSettings.odometerReadings], 2026-10-07) and the widget's rate
+ *  ([MiloSettings.odometerReadings], 2026-10-07; with the trip each was typed during, since
+ *  2026-10-10) and the widget's rate
  *  ([MiloSettings.homeWidgetCentsPerKm], 2026-10-07) are left out on the same terms: Android's
  *  backup carries them, an export file does not. See docs/FINDINGS_LOG.md, 2026-10-07. So is
  *  the unit distances are shown in ([MiloSettings.distanceUnit], 2026-10-07 (evening)): an

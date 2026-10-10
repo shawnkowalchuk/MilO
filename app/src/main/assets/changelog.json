@@ -5,6 +5,11 @@
       "date": null,
       "changes": [
         {
+          "kind": "fixed",
+          "title": "The odometer after a reading typed before driving off",
+          "body": "A reading typed in the truck before you drive off no longer loses that drive. MilO starts the trip when the phone connects, so the reading was typed during the trip, and the whole trip was left out of the odometer. Now what you drive after the reading is added. If your odometer is short from a reading typed before this version, type the dashboard's figure once more."
+        },
+        {
           "kind": "new",
           "title": "Email support",
           "body": "Settings has a new tile, Email support. It opens your email app with a message to support@milotriplog.top, with MilO's version and your phone's model filled in at the end. MilO is one person's project: answers come when he has time."
