@@ -24,6 +24,9 @@
 
 ### 2026-10-10
 
+**`[FIX]` The Support link is in the website's menu and in the README, not only in the footer**
+The link went live in every page's footer and in two paragraphs, and Shawn asked an hour later: "do we not have the suppot email link on the website? What about on github?". He had looked where a visitor looks first, the menu at the top, and it was not there; and the README, which is the project's front page on GitHub, still said "there is no support". Now "Support" is the fifth entry of the menu on all four pages, and the README has it in its top line and in the sentence about the project. A link a person has to scroll to the end of a page for is not a support link.
+
 **`[CHANGE]` The website's mascot: his needles keep moving, and he waves for as long as the pointer stays**
 Website only; nothing in the app changes. Shawn saw the mascot on the live site ("yes mascot looks great") and asked: "for the website can we change the mascot animation. can we have the hands for his eyes continuely moving when non rolled over. and when you rollover him he continuely waves tell you stop rolling over him". New: `website/mascot/dials.webp` (8 KB) and `waving.webp` (228 KB, in place of `wave.webp`, 498 KB), two spans for the dials in `index.html`, the rules in `styles.css`, `render_dials.py`, and two clips in the model. APP_ENCYCLOPEDIA, Website, step 7.
 - **Decided for Shawn, the needles:** an engine ticking over, not a metronome. The RPM needle sits at 900 and is revved three times in 7 seconds, up fast and down slower; the speed needle wanders between 0 and 36 km/h in 11 seconds. Different times, so the pair repeats only after 77 seconds. His body stands still. A breath drawn frame by frame would weigh on every visitor, and one made by stretching the picture could not be judged from still screenshots.
