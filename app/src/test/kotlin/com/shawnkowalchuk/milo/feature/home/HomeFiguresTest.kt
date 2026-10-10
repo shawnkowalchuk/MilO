@@ -131,6 +131,8 @@ class HomeFiguresTest {
         assertEquals(DistanceUnit.MILES, figures.unit)
         // The month: 0.7 + 0.7 + 0.7 + 7.6 mi of Business.
         assertEquals(97L, figures.month.businessTenths)
+        // The dollars are priced from kilometres whatever is shown: 1.1 + 1.1 + 1.1 + 12.3 km.
+        assertEquals(156L, figures.month.businessKmTenths)
         // Today: 0.7 + 7.6 mi of Business, and 3.1 mi Personal kept apart.
         assertEquals(Tally(2, 83), figures.todayTotals.business)
         assertEquals(Tally(1, 31), figures.todayTotals.personal)
@@ -139,6 +141,7 @@ class HomeFiguresTest {
         // The same reading in kilometres is what it was.
         val inKilometres = homeTrips(today, edmonton, month, DistanceUnit.KILOMETRES)
         assertEquals(156L, inKilometres.month.businessTenths)
+        assertEquals(156L, inKilometres.month.businessKmTenths)
         assertEquals(Tally(2, 134), inKilometres.todayTotals.business)
         assertEquals(DistanceUnit.KILOMETRES, inKilometres.unit)
     }

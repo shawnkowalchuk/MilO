@@ -7,9 +7,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
+import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.trip.TripRepository
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.trip.TripController
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -26,6 +28,7 @@ class MiloCarSession(
     private val controller: TripController,
     private val trips: TripRepository,
     private val checklist: SetupChecklist,
+    private val settings: Flow<MiloSettings>,
     private val shownUnit: StateFlow<DistanceUnit>,
     private val clock: () -> Long,
 ) : Session() {
@@ -39,7 +42,7 @@ class MiloCarSession(
 
     /** The only screen. Nothing is ever pushed on top of it (see [TripStatusScreen]). */
     override fun onCreateScreen(intent: Intent): Screen =
-        TripStatusScreen(carContext, controller, trips, checklist, shownUnit, clock)
+        TripStatusScreen(carContext, controller, trips, checklist, settings, shownUnit, clock)
 
     private fun logLineFor(event: Lifecycle.Event): String? = when (event) {
         Lifecycle.Event.ON_CREATE -> sessionCreatedText(hostPackage(), carApiLevel())

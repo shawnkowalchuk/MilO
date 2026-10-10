@@ -22,6 +22,13 @@
     -->
     <color name="milo_notification_accent">#C6F432</color>
     <!--
+        The Android Auto screen's colour (platform/car/TripStatusScreen.kt): the icons of its
+        two rows and its button. The car draws the screen, outside Compose. The accent of the
+        theme; kept equal by NotificationAccentTest. The car may replace it with a colour of its
+        own where it judges the accent hard to read.
+    -->
+    <color name="milo_car_accent">#C6F432</color>
+    <!--
         The home-screen widget's colours (res/layout/widget_home.xml): the home screen app draws
         it, outside Compose. Each is a colour of the theme, kept equal by WidgetColorsTest: the
         tile, the main and the secondary text, the accent, the text on the accent, and the fill

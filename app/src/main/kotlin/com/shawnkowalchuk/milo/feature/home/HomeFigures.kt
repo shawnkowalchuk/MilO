@@ -40,11 +40,15 @@ private const val PERCENT = 100L
  * @param businessPercent the Business share of all the month's counted kilometres, in whole
  * percent, or null while the month has no kilometres at all: a share of nothing is not a
  * number.
+ * @param businessKmTenths the same Business trips in tenths of a kilometre, whichever unit is
+ * chosen: what the month's dollars are priced from (since 2026-10-09), because the rate is a
+ * rate per kilometre. The widget prices the month from the same figure.
  */
 internal data class MonthFigures(
     val month: YearMonth,
     val businessTenths: Long,
     val businessPercent: Int?,
+    val businessKmTenths: Long,
 )
 
 /**
@@ -146,6 +150,8 @@ internal fun homeTrips(
                 month = YearMonth.from(date),
                 businessTenths = totals.business.tenths,
                 businessPercent = businessPercent(totals),
+                businessKmTenths =
+                    categoryTotals(monthTrips, DistanceUnit.KILOMETRES).business.tenths,
             ),
         unit = unit,
     )

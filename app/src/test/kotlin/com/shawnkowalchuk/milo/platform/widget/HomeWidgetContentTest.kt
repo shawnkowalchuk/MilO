@@ -175,7 +175,7 @@ class HomeWidgetContentTest {
         assertEquals("12.4", shown.screen.trip?.kilometres)
         assertEquals(STARTED_AT_MS, shown.tripStartedAtMs)
         // The widget does not show today's trips.
-        assertNull(shown.screen.today)
+        assertNull(shown.screen.business)
     }
 
     @Test

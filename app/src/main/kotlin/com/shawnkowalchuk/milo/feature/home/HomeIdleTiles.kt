@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.allowance.allowanceCents
+import com.shawnkowalchuk.milo.core.allowance.formatWholeDollars
 import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
 import com.shawnkowalchuk.milo.core.designsystem.component.HeroActionTile
@@ -44,7 +46,7 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
             TodayTile(ui.figures, FigureSize.LARGE, format, half)
         },
         second = { half ->
-            MonthTile(YearMonth.from(ui.date), ui.figures?.month, format, half)
+            MonthTile(YearMonth.from(ui.date), ui.figures?.month, ui.centsPerKm, format, half)
         },
     )
     HomeTruckTile(shown.truckTile, ui.truck, actions.onOpenPairing)
@@ -66,14 +68,18 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
 
 /**
  * The month's Business kilometres, a line that is filled by their share of all the month's
- * kilometres, and that share as a number.
+ * kilometres, that share as a number, and what those kilometres come to in dollars (Shawn,
+ * 2026-10-09: "the business dollar value that the person's getting back"). The dollars are the
+ * widget's: the month's Business kilometres at the one rate set in Settings, in whole dollars.
  *
  * @param figures null while the trips are being read. The month's name is known all the same.
+ * @param centsPerKm null while the rate has not been read: the share then stands alone.
  */
 @Composable
 private fun MonthTile(
     month: YearMonth,
     figures: MonthFigures?,
+    centsPerKm: Int?,
     format: HomeFormat,
     modifier: Modifier,
 ) {
@@ -93,7 +99,17 @@ private fun MonthTile(
                         stringResource(unitNameRes(format.unit)),
                     )
 
-                else -> stringResource(R.string.home_month_share, percent)
+                centsPerKm == null -> stringResource(R.string.home_month_share, percent)
+
+                else ->
+                    stringResource(
+                        R.string.home_month_share_dollars,
+                        percent,
+                        formatWholeDollars(
+                            allowanceCents(figures.businessKmTenths, centsPerKm),
+                            format.locale,
+                        ),
+                    )
             },
         )
     }

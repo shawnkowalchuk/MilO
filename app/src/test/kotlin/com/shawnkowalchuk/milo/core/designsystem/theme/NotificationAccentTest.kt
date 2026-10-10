@@ -18,13 +18,20 @@ class NotificationAccentTest {
         val file = File("src/main/res/values/colors.xml")
         assertTrue("Not found: ${file.absolutePath}", file.isFile)
 
-        val written =
-            Regex("""<color name="milo_notification_accent">#([0-9A-Fa-f]{6})</color>""")
-                .find(file.readText())
-                ?.groupValues
-                ?.get(1)
         val accent = "%06X".format(MiloColorScheme.primary.toArgb() and 0xFFFFFF)
 
-        assertEquals(accent, written?.uppercase())
+        assertEquals(accent, written(file, "milo_notification_accent"))
     }
+
+    @Test
+    fun `the Android Auto screen's icons and button are in the accent of the theme`() {
+        val file = File("src/main/res/values/colors.xml")
+        val accent = "%06X".format(MiloColorScheme.primary.toArgb() and 0xFFFFFF)
+
+        assertEquals(accent, written(file, "milo_car_accent"))
+    }
+
+    private fun written(file: File, name: String): String? = Regex(
+        """<color name="$name">#([0-9A-Fa-f]{6})</color>""",
+    ).find(file.readText())?.groupValues?.get(1)?.uppercase()
 }

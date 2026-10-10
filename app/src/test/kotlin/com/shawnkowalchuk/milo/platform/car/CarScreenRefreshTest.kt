@@ -45,7 +45,7 @@ class CarScreenRefreshTest {
         assertEquals("7.7", inMiles.trip?.kilometres)
         assertEquals(DistanceUnit.MILES, inMiles.unit)
         assertFalse(inKilometres.differsOnlyInTripFigures(inMiles))
-        // Without a trip and with no trips today nothing printed changes, but the content does,
+        // Without a trip the status line does not change with the unit, but the content does,
         // so that the unit a later figure is written with is the new one.
         val idle = TripActivity(truckConnected = true)
         assertFalse(carContent(idle) == carContent(idle, unit = DistanceUnit.MILES))
@@ -70,10 +70,10 @@ class CarScreenRefreshTest {
                     (before to carContent(TripActivity(furtherOn, truckConnected = false))),
                 "the grace period began" to
                     (before to carContent(TripActivity(carTrip(12_900.0, waitingForTruck = true)))),
-                "today's trips arrived" to
-                    (carContent(recording, today = null) to before),
-                "a trip was added to today" to
-                    (before to carContent(recording, today = todayOf(5_000.0))),
+                "the Business row's figures arrived" to
+                    (carContent(recording, business = null) to before),
+                "a Business trip was added to today" to
+                    (before to carContent(recording, business = businessOf(today = "5.0"))),
                 "a start was refused" to (idle to carContent(TripActivity(startFailure = refused))),
             )
 

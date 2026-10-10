@@ -48,7 +48,7 @@ data class WidgetDollars(
  * Everything the widget shows that can change.
  *
  * @param screen the Android Auto screen's content: the status line, the trip's kilometres and
- * the one button. Today's trips are not shown on the widget.
+ * the one button. The car's Business row is not shown on the widget, which has its dollars.
  * @param tripStartedAtMs when the open trip started, for the running clock; null with no trip.
  * @param dollars null while this year's trips or the rate have not been read, or could not be.
  */
@@ -79,7 +79,7 @@ fun homeWidgetContent(
     screen =
         carScreenContent(
             activity,
-            today = null,
+            business = null,
             setupNeedsAttention = false,
             nowMs,
             locale,

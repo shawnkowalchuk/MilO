@@ -26,6 +26,8 @@ import java.time.YearMonth
  * [figures] are in it too, or they are not shown ([homeUi]).
  * @param odometers each paired vehicle's odometer now, as Settings shows it (since 2026-10-09),
  * or null while the settings and the trips are being read, or the settings cannot be.
+ * @param centsPerKm the rate the month's Business dollars are priced at, the one set in
+ * Settings for the widget, or null while the settings have not been read or cannot be.
  */
 internal data class HomeUi(
     val date: LocalDate,
@@ -38,6 +40,7 @@ internal data class HomeUi(
     val nowMs: Long,
     val unit: DistanceUnit,
     val odometers: List<VehicleOdometer>? = null,
+    val centsPerKm: Int? = null,
 )
 
 /**
@@ -102,4 +105,5 @@ internal fun homeUi(now: HomeNow, read: HomeRead): HomeUi = HomeUi(
     nowMs = read.nowMs,
     unit = now.unit,
     odometers = read.odometers,
+    centsPerKm = now.stored?.homeWidgetCentsPerKm,
 )
