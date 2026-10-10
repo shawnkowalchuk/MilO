@@ -491,7 +491,7 @@ MilO has one platform and two UI surfaces. Both show the same trips and drive th
 | Concern | Phone UI | Android Auto screen | Shared? |
 |---|---|---|---|
 | UI layer | Jetpack Compose screens, Material 3 | Car App Library screen, projected from the phone | No — surface-specific |
-| What it shows | Everything: trips, settings, checklist, event log, reports, the monthly reminder's notification and the daily check's ("No trip recorded today") | Tracking status, current trip km and duration, and one line of Home's figures: today's and the month's Business km, the month's dollars, the odometer (since 2026-10-09; today's session count and total km before) | — |
+| What it shows | Everything: trips, settings, checklist, event log, reports, the monthly reminder's notification and the daily check's ("No trip recorded today") | Tracking status, current trip km and duration, and one line of Home's figures: today's and the month's Business km and the month's dollars (since 2026-10-09; today's session count and total km before) | — |
 | Which trips count, and today's totals | Business first, Personal apart | Business only, today's and the month's, in the Business row (since 2026-10-09; every finished trip in one figure before) | **Yes — `isCounted`, `categoryTotals` and `todayTrips` in `data/trip/TripTotals.kt`, used by Home, Trips and the car screen. Every total on either surface is added up by `sumOfTenths` (`core/util/`), the rule of the report for the accountant** |
 | Business or Personal | Shown, and changed by hand, on Trips; shown on Home | The Business totals only, since 2026-10-09; a trip's own category is not shown | **Yes — the rule is `core/schedule/`, the stored result is on the trip** |
 | Trips added or edited by hand | Typed in and changed on the edit screen; marked on Trips | Neither shown nor changed. Counted in the Business row like any finished Business trip | **Yes — the rules are pure functions in `data/trip/`, and `isCounted` knows no difference** |
@@ -520,11 +520,11 @@ The shared trip logic is placed by ADR-002: the pure rules (state machine, dista
 [ TripStatusScreen ]     while the car shows it, follows:
         |                    TripController.activity    (platform/trip)
         |                    the month's trips          (data/trip; counted by todayTrips, categoryTotals)
-        |                    the settings, read only    (the rate, the odometer's readings)
+        |                    the settings, read only    (the rate)
         |                    SetupChecklist.rows        (platform/system)
         |                    the clock
         |
-  businessFigures()      pure: today, the month, its dollars, the odometer, as Home has them
+  businessFigures()      pure: today, the month and its dollars, as Home has them
   carScreenContent()     pure: decides what is shown
         |
   one pane: Status / This trip / Today, and one button
