@@ -1481,7 +1481,7 @@ Shawn, 2026-10-10: "what about adding a support link? can we have it send email 
 
 | # | Do this | Expect | Result |
 |---|---|---|---|
-| SP-1 | **The forwarder.** From an address that is not his Gmail, send an email to support@milotriplog.top. | It arrives in his Gmail inbox within a few minutes (look in Spam too). A test from his own Gmail proves nothing: Gmail does not show a forwarded copy of what it sent itself. | not run |
+| SP-1 | **The forwarder.** From an address that is not his Gmail, send an email to support@milotriplog.top. | It arrives in his Gmail inbox within a few minutes (look in Spam too). A test from his own Gmail proves nothing: Gmail does not show a forwarded copy of what it sent itself. | **Passed, 2026-10-10:** it arrived, in Gmail's Spam (Shawn: "worked. just went to my spam filter"). He was shown how to mark it "Not spam" and add a Gmail filter for the address, "Never send it to Spam"; whether the next one reaches the inbox has not been seen. |
 | SP-2 | **The tile.** With 0.3.1 or newer on the phone: Settings, scroll to the end, press Email support. | Gmail (or the phone's email app) opens a new message to support@milotriplog.top with the subject "MilO Trip Log support" and, three lines down, "MilO Trip Log 0.3.1 (build 4) · Android 16 · Xiaomi …" with this phone's real model. No "+" where a space belongs. Nothing is sent until Send is pressed. | not run |
 | SP-3 | **The website's link.** On milotriplog.top, press Support in the footer, on the Mac and on the phone. | The email app opens on a message to the same address with the same subject. | not run |
 
