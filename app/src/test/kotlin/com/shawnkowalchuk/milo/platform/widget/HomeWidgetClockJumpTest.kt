@@ -21,7 +21,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * What the home-screen widget and the Android Auto screen print if they are drawn in the
- * seconds in which the phone's date is one day ahead (ADR-005). Both are handed MilO's clock,
+ * seconds in which the phone's date is one day ahead (ADR-006). Both are handed MilO's clock,
  * and both are drawings only: nothing here is stored.
  *
  * These were the investigation's proofs (2026-10-07) of what a drawing made with tomorrow's

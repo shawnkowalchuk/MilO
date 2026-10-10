@@ -397,23 +397,23 @@ Each update that others can download is a GitHub Release with the APK attached. 
 
    ```bash
    ./gradlew assembleRelease
-   mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MilO-0.2.0.apk
-   "$(ls -d "$ANDROID_HOME"/build-tools/*/ | tail -1)apksigner" verify --print-certs app/build/outputs/apk/release/MilO-0.2.0.apk | grep SHA-256
+   mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MilO-0.3.0.apk
+   "$(ls -d "$ANDROID_HOME"/build-tools/*/ | tail -1)apksigner" verify --print-certs app/build/outputs/apk/release/MilO-0.3.0.apk | grep SHA-256
    ```
 
    It is signed with `~/keys/milo.jks`, like the phone's builds, whose certificate's SHA-256 is `95a951079ea89ce645392c404cccacc5e42aba781ba52efe7afb27dd6e9414b4`. Any other digest: stop, and publish nothing.
 4. **Install it on the phone first,** and look it over. `"$ANDROID_HOME/platform-tools/adb" devices` names the phone; then:
 
    ```bash
-   "$ANDROID_HOME/platform-tools/adb" -s PHONE_SERIAL install -r app/build/outputs/apk/release/MilO-0.2.0.apk
+   "$ANDROID_HOME/platform-tools/adb" -s PHONE_SERIAL install -r app/build/outputs/apk/release/MilO-0.3.0.apk
    ```
 
    Not `./gradlew installRelease`: it installs on every device adb sees, and an emulator's MilO, signed with the throwaway debug key, refuses it with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, which stops the task. The same error from the phone itself means a different key: stop there, and never uninstall.
-5. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.2.0` on `main`, title "MilO Trip Log 0.2.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool, with the notes written from the list of changes:
+5. **Publish it.** On GitHub: Releases, **Draft a new release**, tag `v0.3.0` on `main`, title "MilO Trip Log 0.3.0", the version's lines from What's new (`milotriplog.top/changes`) as the notes, drop the APK on "Attach binaries", **Publish release**. Or with GitHub's command-line tool, with the notes written from the list of changes:
 
    ```bash
    python3 -c "import json;r=json.load(open('app/src/main/assets/changelog.json'))['releases'][0];print('\n'.join('- **%s.** %s'%(c['title'],c.get('body','')) for c in r['changes']))" > app/build/release-notes.md
-   gh release create v0.2.0 app/build/outputs/apk/release/MilO-0.2.0.apk --target main --title "MilO Trip Log 0.2.0" --notes-file app/build/release-notes.md
+   gh release create v0.3.0 app/build/outputs/apk/release/MilO-0.3.0.apk --target main --title "MilO Trip Log 0.3.0" --notes-file app/build/release-notes.md
    ```
 
 6. **Never publish an APK from CI, or one built with `-Pmilo.signing.debugKey=true`.** Both carry the throwaway debug key and could not update anyone's MilO.
@@ -424,7 +424,7 @@ Because a release is signed with the phone's own key, its APK also installs over
 
 MilO is being prepared for Google Play as a second channel beside GitHub Releases (ADR-004, 2026-10-09). The app exists in the Play Console of 2795748 Alberta Ltd. as "MilO Trip Log" (`com.shawnkowalchuk.milo`, English (Canada), free, automatic protection turned off), and Play App Signing uses MilO's own key. **Nothing has been uploaded yet.** Each version goes to both channels with the same number.
 
-1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release: `./gradlew bundleRelease`. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`.
+1. **Build the app bundle** on the Mac, from the same `main` as the GitHub release: `./gradlew bundleRelease`. **Google Play takes a build number once:** a second bundle of the same version needs `versionCode` in `app/build.gradle.kts` raised by one first. The file is `app/build/outputs/bundle/release/app-release.aab`, signed with `~/keys/milo.jks`.
 2. **The first upload decides the signing key, for good.** In Testing, Internal testing, create a release. When the Console asks how the app is signed, choose to use your own key (exporting and uploading a key from a Java keystore), and run the command it shows with `~/keys/milo.jks` and the alias `milo`. **Never let Google create the key:** a copy signed with another key can never update the phone's MilO without wiping its trips. **Done on 2026-10-09:** Google had made a key of its own when the app was created (its "deployment" certificate starts `0D:85:65`), and it was changed to `milo.jks` under Protected with Play, App signing, Change key, before anything was uploaded. The app signing key certificate there reads `95:A9:51:07:…:94:14:B4`; check it again if the page ever offers to change it.
 3. **App content** (Policy, App content). Privacy policy: `https://milotriplog.top/privacy`. App access: no sign-in; reviewers start a trip with Start on Home, as they have no truck. Ads: No (change it before an update with ads, if one ever comes). Content rating: the questionnaire. Target audience: 18 and over. Data safety: MilO's own code sends nothing anywhere; location stays on the phone, except the two ends of each trip given to the phone's address lookup (Google's on most phones) and Android's backup if it is switched on, which Google's guidance in the form says how to declare.
 4. **The two declarations that need a video.** Location in the background: a recording that shows Setup's "Location: Allow all the time" button, MilO's question "MilO uses your location", Continue, Android's page with "Allow all the time", and a trip that starts with MilO closed. Foreground service (location): a trip being recorded with its notification.

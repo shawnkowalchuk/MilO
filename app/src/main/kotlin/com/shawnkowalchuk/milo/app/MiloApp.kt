@@ -60,7 +60,7 @@ fun MiloApp(
 ) {
     MiloTheme {
         // MilO's clock, for the few components that show a day by themselves (the header's
-        // date, the Log screen's "today"). Never the phone's own (ADR-005).
+        // date, the Log screen's "today"). Never the phone's own (ADR-006).
         CompositionLocalProvider(LocalMiloClock provides container.clock) {
             // Saved and restored by Navigation 3, so the screen that was showing comes back after
             // Android has put MilO away and brought it back.

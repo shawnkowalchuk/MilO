@@ -1,9 +1,9 @@
-# ADR-005: MilO keeps its own clock
+# ADR-006: MilO keeps its own clock
 
 Date: 2026-10-07
 Status: Accepted. Built and unit tested. It ran on a stock-Android emulator on 2026-10-09 (FINDINGS_LOG, "MilO's clock ran on an emulator"); what was decided after that run (C and D below) has run in unit tests only. Nothing of it has run on the phone (device checks CJ-1 to CJ-15).
 Changed: 2026-10-09, after two independent verifications of the build: decisions 2 and 4 below, and the section "Decided on 2026-10-09, after the verification". Changed again the same day, after the run on an emulator: the section "Decided on 2026-10-09, after the emulator run".
-Number: written as ADR-003. It is ADR-005 since 2026-10-09: by then ADR-003 was the website and ADR-004 Google Play.
+Number: written as ADR-003. It is ADR-006 since 2026-10-09: by then ADR-003 was the website, ADR-004 Google Play and ADR-005 the mascot's renderer. For a few hours that day it was merged as a second ADR-005, which was a mistake of the merge and is put right here.
 
 ## Context
 

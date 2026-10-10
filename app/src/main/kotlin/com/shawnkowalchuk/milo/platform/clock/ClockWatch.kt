@@ -42,7 +42,7 @@ internal const val CLOCK_WATCH_EVERY_MS = 30_000L
 internal const val ASKED_AGAIN_WAIT_MS = 8_000L
 
 /**
- * What MilO does about its clock beside telling the time (ADR-005): it writes the one line for
+ * What MilO does about its clock beside telling the time (ADR-006): it writes the one line for
  * each change of the phone's clock it saw and did not follow at once, keeps looking while it
  * does not believe the phone or its own anchor is on probation, and has the two daily alarms
  * asked for again once the clocks agree.

@@ -20,7 +20,7 @@ private const val STARTED_AHEAD_LINE =
         "when it came back."
 
 /**
- * The "nothing recorded" check in a MilO whose clock is on probation (ADR-005): the first MilO
+ * The "nothing recorded" check in a MilO whose clock is on probation (ADR-006): the first MilO
  * process after a restart of the phone, or the first after the update that brought the clock.
  * It has only the phone's clock, and that may be in the seconds the date is set ahead.
  *

@@ -16,7 +16,7 @@ private const val HOUR_MS = 3_600 * SECOND_MS
 
 /**
  * What the "nothing recorded" check asks of Android's alarm service while MilO's clock and the
- * phone's disagree (ADR-005, decided on 2026-10-09): the same alarm, on the clock that counts
+ * phone's disagree (ADR-006, decided on 2026-10-09): the same alarm, on the clock that counts
  * from boot, due after the time that is really left. Android delivers the daily alarm the
  * moment the date goes ahead; until this decision the check then asked for nothing and relied
  * on being woken when the date came back. A MilO that was not woken had no alarm at all.

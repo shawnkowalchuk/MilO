@@ -20,7 +20,7 @@ private const val HOUR_SECONDS = 3_600
  *
  * Found by the verification of 2026-10-09, when such a MilO stayed a day ahead for hours, in
  * every later process too, dated the next drive tomorrow and stepped back a day ten minutes
- * into it. Its anchor is now on probation (ADR-005): it takes the phone's time as soon as the
+ * into it. Its anchor is now on probation (ADR-006): it takes the phone's time as soon as the
  * phone's clock comes back. The real trip controller, rules and storage stand-ins run on MilO's
  * real clock ([ClockJumpScene]).
  *

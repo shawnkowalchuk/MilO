@@ -15,7 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The monthly reminder in a MilO whose clock is on probation (ADR-005): the first MilO process
+ * The monthly reminder in a MilO whose clock is on probation (ADR-006): the first MilO process
  * after a restart of the phone, or the first after the update that brought the clock. It has
  * only the phone's clock, and that may be in the seconds the date is set ahead. Such a MilO
  * shows no reminder, and asks to be woken two minutes on, when its clock can be confirmed.

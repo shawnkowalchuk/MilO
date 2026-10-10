@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "0.2.0",
-      "date": null,
+      "version": "0.3.0",
+      "date": "2026-10-09",
       "changes": [
         {
           "kind": "fixed",
@@ -15,24 +15,30 @@
           "body": "When you open MilO, its mascot waves over Home for a moment. Tap anywhere to skip him."
         },
         {
-          "kind": "new",
-          "title": "The odometer on Home",
-          "body": "Home shows each vehicle's odometer: your last reading in Settings, plus every trip since."
-        },
-        {
           "kind": "improved",
           "title": "The odometer counts up as you drive",
           "body": "During a trip in a paired vehicle, the odometer on Home and in Settings adds the distance as it is driven. Until now the whole trip was added when it ended."
         },
         {
           "kind": "improved",
-          "title": "All of today's trips on Home",
-          "body": "Home lists every finished trip of today, the newest at the top, in place of the last trip alone. Its top line no longer says Home."
+          "title": "A lower truck tile on Home",
+          "body": "The tile for the truck's connection takes less room. The vehicle's name is on its first line, its sentences are shorter, and the drawing of the phone and the truck is smaller. It moves as before."
+        }
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-09",
+      "changes": [
+        {
+          "kind": "new",
+          "title": "The odometer on Home",
+          "body": "Home shows each vehicle's odometer: your last reading in Settings, plus every trip since."
         },
         {
           "kind": "improved",
-          "title": "A lower truck tile on Home",
-          "body": "The tile for the truck's connection takes less room. The vehicle's name is on its first line, its sentences are shorter, and the drawing of the phone and the truck is smaller. It moves as before."
+          "title": "All of today's trips on Home",
+          "body": "Home lists every finished trip of today, the newest at the top, in place of the last trip alone. Its top line no longer says Home."
         },
         {
           "kind": "improved",

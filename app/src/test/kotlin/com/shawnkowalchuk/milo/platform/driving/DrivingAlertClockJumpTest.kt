@@ -11,7 +11,7 @@ private const val SECOND_MS = 1_000L
 
 /**
  * The driving alert's rules, handed the time MilO's clock gives while the phone's date is set
- * one day ahead for a few seconds (ADR-005). The rules are not changed. These were the
+ * one day ahead for a few seconds (ADR-006). The rules are not changed. These were the
  * investigation's proofs (2026-10-07) of what they make of a time that is a day ahead: the
  * work-hours test going by tomorrow's weekday, the quiet time after an alert over at once, an
  * alert stamped tomorrow. Each now shows that the rules are no longer handed such a time.

@@ -4,7 +4,7 @@ import com.shawnkowalchuk.milo.core.clock.TrustedClock
 import com.shawnkowalchuk.milo.platform.clock.ClockWatch
 
 /**
- * What MilO's clock (ADR-005) does beside telling the time. The time itself is the container's
+ * What MilO's clock (ADR-006) does beside telling the time. The time itself is the container's
  * `clock`, which every object that needs it is handed.
  *
  * Like [ReportObjects] and [CheckObjects], it is a part of the [AppContainer], which creates it

@@ -36,7 +36,7 @@ class MiloApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // First of all: MilO's own clock (ADR-005). It reads its anchor from a small file here,
+        // First of all: MilO's own clock (ADR-006). It reads its anchor from a small file here,
         // before anything in this process asks the time, so that a process Android starts
         // while the phone's date is set ahead (the daily alarm does exactly that) still has
         // the right time from its first reading on.

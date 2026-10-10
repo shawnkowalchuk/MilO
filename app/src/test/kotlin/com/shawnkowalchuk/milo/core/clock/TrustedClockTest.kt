@@ -14,7 +14,7 @@ private const val HOUR_MS = 60 * MINUTE_MS
 private const val EVENING_MS = 1_791_419_562_000L
 
 /**
- * The rule of MilO's clock (ADR-005): the phone's clock is followed while it changes by no more
+ * The rule of MilO's clock (ADR-006): the phone's clock is followed while it changes by no more
  * than a network correction, and a larger change is believed only once it has held for ten
  * minutes. The phone of these tests is [JumpingPhone]: its wall clock can be set, and its time
  * since boot runs on.
@@ -222,7 +222,7 @@ class TrustedClockTest {
 
     @Test
     fun `a date held ahead for over ten minutes is believed, and its way back ten minutes late`() {
-        // The price of the rule (ADR-005): MilO cannot tell a date that was really changed
+        // The price of the rule (ADR-006): MilO cannot tell a date that was really changed
         // from the trick held for too long.
         clock.now()
         phone.setAhead()

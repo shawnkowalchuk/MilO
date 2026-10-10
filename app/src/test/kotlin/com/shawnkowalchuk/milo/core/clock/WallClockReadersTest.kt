@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * **Nothing in MilO reads the phone's wall clock but MilO's own clock** (ADR-005). The owner
+ * **Nothing in MilO reads the phone's wall clock but MilO's own clock** (ADR-006). The owner
  * sets the phone's date a day ahead for a few seconds to get lives in a game, and every part of
  * MilO that asked the phone for the time in those seconds got tomorrow. So the time is handed
  * down from one place (`AppContainer.clock`, which is `TrustedClock.now`), and this test reads
@@ -88,7 +88,7 @@ class WallClockReadersTest {
         val notAllowed = readers.filterNot { it.substringBeforeLast(':') in allowed }
         assertEquals(
             "These lines read the phone's wall clock. Hand them MilO's clock instead " +
-                "(AppContainer.clock), or the phone's date trick reaches them (ADR-005)",
+                "(AppContainer.clock), or the phone's date trick reaches them (ADR-006)",
             emptyList<String>(),
             notAllowed,
         )

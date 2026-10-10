@@ -344,7 +344,7 @@
         </receiver>
 
         <!--
-            Hears that the phone's clock was set, by hand or by the network (ADR-005). MilO
+            Hears that the phone's clock was set, by hand or by the network (ADR-006). MilO
             keeps a clock of its own and does not follow a large change until it has held for
             ten minutes; this is how it looks at once, writes the one line for a change it did
             not follow, and asks for its two daily alarms again when the clocks agree. It

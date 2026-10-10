@@ -60,7 +60,7 @@ import kotlinx.coroutines.sync.withLock
  * goes by the phone's clock: asked for the real next morning while the phone's date is a day
  * ahead, the alarm would be delivered at once, and again each time it was asked for. So while
  * the two disagree it is asked for on the clock that counts from boot, due after the time that
- * is left until then (ADR-005). `ClockWatch` has it asked for in the normal way once they agree.
+ * is left until then (ADR-006). `ClockWatch` has it asked for in the normal way once they agree.
  * @param clockOnProbation whether MilO's time was taken from the phone's clock with nothing to
  * check it against, and has not been confirmed since (`TrustedClock.onProbation`). The phone's
  * date may then be set ahead: no reminder is shown, and the alarm is asked for two minutes

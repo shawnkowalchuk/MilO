@@ -1425,7 +1425,7 @@ Shawn's request of 2026-10-09: "on the home screen can we please make the connec
 
 ## MilO's own clock: the phone's date set a day ahead (built 2026-10-07, changed 2026-10-09)
 
-Shawn sets the phone's date one day ahead by hand for a few seconds, to get lives in a game, and switches automatic time back on. Until this build MilO took that date for real. Since this build it keeps its own clock (ADR-005; APP_ENCYCLOPEDIA, "MilO's clock"). It ran on a stock-Android emulator on 2026-10-09, with the date set ahead 18 times (FINDINGS_LOG 2026-10-09, "MilO's clock ran on an emulator"); it has not run on the phone. What was changed after that run is unit tested only: CJ-11, CJ-14 and CJ-15 are the checks for it.
+Shawn sets the phone's date one day ahead by hand for a few seconds, to get lives in a game, and switches automatic time back on. Until this build MilO took that date for real. Since this build it keeps its own clock (ADR-006; APP_ENCYCLOPEDIA, "MilO's clock"). It ran on a stock-Android emulator on 2026-10-09, with the date set ahead 18 times (FINDINGS_LOG 2026-10-09, "MilO's clock ran on an emulator"); it has not run on the phone. What was changed after that run is unit tested only: CJ-11, CJ-14 and CJ-15 are the checks for it.
 
 **"The date trick" below** is what he does anyway: Settings, date and time, automatic time off, the date set to tomorrow, some seconds, automatic time on again. Write down the time of each one. After each one that a running MilO saw, the Log should hold **one** line for it: "The phone's date was set 24 h 0 min ahead. MilO saw it back 9 s later and kept its own time." (with its own number of seconds), dated today at the time it was done. If a trick leaves no line, write that down: no MilO process saw it (CJ-8).
 

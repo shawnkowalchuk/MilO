@@ -24,7 +24,7 @@ private const val HOUR_MS = 60 * MINUTE_MS
 /**
  * The pure rules of `core/trip` and `core/schedule`, handed the times MilO's clock gives while
  * the phone's date is a day ahead for a few seconds. The rules themselves are not changed by
- * ADR-005: each of these tests began as the investigation's proof of what a rule makes of a
+ * ADR-006: each of these tests began as the investigation's proof of what a rule makes of a
  * time that is a day ahead (a Friday trip sorted as Saturday's, a hold-off over at once), and
  * now shows that no rule is handed such a time any more.
  *
