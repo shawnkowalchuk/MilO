@@ -216,6 +216,13 @@ main > * {
   background: var(--coffee-pressed);
 }
 
+/* The two ways to get the app, side by side, and one under the other on a narrow phone. */
+.hero .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .hero .small {
   margin: 14px 0 0;
   font-size: 14px;
