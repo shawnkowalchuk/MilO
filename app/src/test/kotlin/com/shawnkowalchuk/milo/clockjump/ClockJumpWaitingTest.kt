@@ -257,7 +257,7 @@ class ClockJumpWaitingTest {
 
             val fastUntilMs = scene.realTimeOf(jump) + GPS_AFTER_VEHICLE_REPORT_MS
             assertEquals(fastUntilMs, scene.service.gps.fastUntilMs)
-            assertEquals(FixRate.RECORDING, scene.service.parkedGpsRate)
+            assertEquals(FixRate.WATCHING_CLOSELY, scene.service.parkedGpsRate)
             scene.goTo(jump + 10)
             scene.dateSetBack()
 

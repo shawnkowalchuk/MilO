@@ -23,8 +23,8 @@ const val POINTS_DATABASE_FILE = "points.db"
  * Raw GPS points, in a database file of their own.
  *
  * Android's cloud backup holds at most 25 MB per app and is all-or-nothing: over the limit it
- * backs up nothing and says nothing. A fix every 5 seconds would push a single database past
- * that within about a year and take the trips down with it. Kept in a separate file, the points
+ * backs up nothing and says nothing. A fix every 2 seconds would push a single database past
+ * that within a few months and take the trips down with it. Kept in a separate file, the points
  * can be left out of the backup while the trips stay in
  * (docs/research/2026-10-03-pdf-email-backup.md).
  */

@@ -22,10 +22,21 @@ import com.shawnkowalchuk.milo.data.point.RawPoint
  */
 enum class FixRate(val intervalMs: Long) {
     /**
-     * During a trip: a fix every 5 seconds, as the brief asks. Beside a parked truck too, for
-     * ten minutes after the phone reports getting into a vehicle (`ParkedGps.fastUntilMs`).
+     * During a trip: a fix every 2 seconds (ADR-002, amendment 37). Until 2026-10-09 it was one
+     * every 5 seconds, as the brief asked. Shawn found the distance short of his truck's and
+     * chose "every 1 to 2 seconds" to see whether that closes the gap. Nothing in the trip
+     * rules counts fixes, so they are unchanged; what changes is how closely the stored line
+     * follows a turn, and that two and a half times the points are stored.
      */
-    RECORDING(5_000L),
+    RECORDING(2_000L),
+
+    /**
+     * Beside a parked truck, for ten minutes after the phone reports getting into a vehicle
+     * (`ParkedGps.fastUntilMs`): a fix every 5 seconds, which is what Shawn chose for it on
+     * 2026-10-07 and what the rule that sees the truck drive off was proven at. It was the
+     * rate of a trip then; the trip's rate has since moved on without it.
+     */
+    WATCHING_CLOSELY(5_000L),
 
     /**
      * While MilO waits beside a parked, connected truck (ADR-002, amendment 28): a fix every 30
@@ -37,14 +48,17 @@ enum class FixRate(val intervalMs: Long) {
      *
      * Since 2026-10-07 they run for the first hour of the wait only, as long as the phone reports
      * driving to MilO at all (`parkedGpsUntilMs`); for ten minutes after each report of getting
-     * into a vehicle they run at the recording rate instead. Without such reports they run for the whole wait, which ends
-     * after three days at the latest (`WAITING_LIMIT_MS`); what a night of them costs the
-     * battery has not been measured on the phone (device check 271).
+     * into a vehicle they run at [WATCHING_CLOSELY] instead. Without such reports they run for
+     * the whole wait, which ends after three days at the latest (`WAITING_LIMIT_MS`); what a
+     * night of them costs the battery has not been measured on the phone (device check 271).
      */
     WATCHING_PARKED(30_000L),
 }
 
-/** A loss of location is written to the event log once it has lasted this long: two fixes. */
+/**
+ * A loss of location is written to the event log once it has lasted this long: five fixes of a
+ * trip.
+ */
 private const val LOSS_WORTH_LOGGING_MS = 10_000L
 
 private const val NANOS_PER_MILLI = 1_000_000L
@@ -56,9 +70,10 @@ private const val MILLIS_PER_SECOND = 1000.0
  * service owns it: it starts it when recording or waiting begins and stops it when both are over.
  *
  * The request (docs/research/2026-10-03-location-and-car.md, findings A1 to A5):
- * - **High accuracy, every 5 seconds during a trip ([FixRate]), no minimum distance.** The provider combines interval and
- *   distance as "and", so asking for 10 m as well would deliver nothing while the truck stands
- *   still. The 10 m rule lives in the distance calculation, and every fix is stored.
+ * - **High accuracy, every 2 seconds during a trip ([FixRate]), no minimum distance.** The
+ *   provider combines interval and distance as "and", so asking for 10 m as well would deliver
+ *   nothing while the truck stands still. The 10 m rule lives in the distance calculation, and
+ *   every fix is stored.
  * - **Never faster than asked.** Without this, another app asking for faster fixes (Maps
  *   navigating) would double MilO's rate.
  * - **No batching**, so fixes arrive one at a time and in order.
