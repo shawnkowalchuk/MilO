@@ -96,7 +96,7 @@ com.shawnkowalchuk.milo   # one Gradle module, ':app'
                           #   audio, Android Auto
 ```
 
-Outside the app module, `design/mascot/` is the mascot as Blender builds it (ADR-005): its Blender file, the scripts that write it and the model they export. Nothing there is part of the build; the one file the app carries is written from there into `app/src/main/assets/mascot/` and committed.
+Outside the app module, `design/mascot/` is the mascot as Blender builds it (ADR-007): its Blender file, the scripts that write it, the model they export and the scripts that draw the greeting's pictures. Nothing there is part of the build; the two pictures the app carries are written from there into `app/src/main/res/drawable-nodpi/` and committed.
 
 Also outside the app module, `website/` is the public website (ADR-003): plain HTML and CSS, Firebase Hosting's public folder (`firebase.json`). It shares no code with the app; its colours, corners and font are copied from the design system and said so in `website/styles.css`.
 

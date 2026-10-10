@@ -1,5 +1,8 @@
-# export_milo.py - writes the mascot to two .glb files (one with every clip, one with only the
-# clips the app plays), then reads each file back and prints what is in it. Run it inside Blender after build_milo.py and animate_milo.py.
+# export_milo.py - writes the mascot to a .glb file with every clip, then reads the file back and
+# prints what is in it. Run it inside Blender after build_milo.py and animate_milo.py.
+#
+# The app does not carry this file: it plays pictures of the mascot (render_greeting.py). The
+# model is kept for whatever comes later.
 #
 # Only the "MilO_Mascot" collection is exported: no camera, lights or backdrop. The model's own
 # pose in the file is the rest pose (arms straight out); every clip stashed on the rig's NLA
@@ -20,23 +23,14 @@ def here():
 
 
 MASCOT = os.path.normpath(os.path.join(here(), ".."))
-# Everything, for the website and for whatever comes later.
 OUT = os.path.join(MASCOT, "export", "milo_mascot.glb")
-# What the app carries: the same model with only the clips its code plays. The output is
-# committed, so the app's build does not run this script.
-APP_OUT = os.path.normpath(os.path.join(MASCOT, "..", "..", "app", "src", "main", "assets", "mascot", "milo_wave.glb"))
-APP_CLIPS = ("Wave",)
 
 
-def export(path, clips=None):
-    """Writes the model to `path` with every clip, or with only the named ones."""
+def export(path):
+    """Writes the model to `path` with every clip."""
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
     rig = bpy.data.objects["MilO_Rig"]
-    # The exporter leaves out a clip whose strip is muted.
-    strips = [strip for track in rig.animation_data.nla_tracks for strip in track.strips]
-    for strip in strips:
-        strip.mute = clips is not None and strip.name not in clips
     shown = rig.animation_data.action
     rig.animation_data.action = None
     for b in rig.pose.bones:
@@ -59,14 +53,13 @@ def export(path, clips=None):
         export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
         export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False,
         export_reset_pose_bones=True, export_anim_slide_to_zero=True, export_morph=False,
-        # Off, or the exporter adds every action that moves a bone, stashed and unmuted or not.
+        # Off: the clips written are the ones stashed on the rig's tracks. On, the exporter
+        # looks for every action in the file that moves a bone.
         export_anim_single_armature=False,
     )
     known = bpy.ops.export_scene.gltf.get_rna_type().properties.keys()
     bpy.ops.export_scene.gltf(**{k: v for k, v in wanted.items() if k in known})
 
-    for strip in strips:
-        strip.mute = False
     rig.animation_data.action = shown
     return path
 
@@ -108,4 +101,3 @@ def describe(path):
 
 
 describe(export(OUT))
-describe(export(APP_OUT, APP_CLIPS))

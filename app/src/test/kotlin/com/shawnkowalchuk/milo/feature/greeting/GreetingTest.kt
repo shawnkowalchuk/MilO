@@ -4,15 +4,14 @@ import com.shawnkowalchuk.milo.data.settings.FirstRunStage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** When the mascot waves over Home, and when a start goes without its greeting. */
+/** When the mascot walks in over Home, and when a start goes without its greeting. */
 class GreetingTest {
     private fun greetingOn(
         asked: Boolean = true,
         firstRun: FirstRunStage? = FirstRunStage.DONE,
         onHome: Boolean = true,
         notificationTapped: Boolean = false,
-        trusted: Boolean? = true,
-    ) = greeting(asked, firstRun, onHome, notificationTapped, trusted)
+    ) = greeting(asked, firstRun, onHome, notificationTapped)
 
     @Test
     fun `a fresh start on Home with nothing else going on is greeted`() {
@@ -25,15 +24,13 @@ class GreetingTest {
         // Whatever else is true.
         assertEquals(Greeting.NONE, greetingOn(asked = false, firstRun = null))
         assertEquals(Greeting.NONE, greetingOn(asked = false, onHome = false))
-        assertEquals(Greeting.NONE, greetingOn(asked = false, trusted = null))
     }
 
     @Test
     fun `it waits while the settings are being read, and drops nothing yet`() {
         assertEquals(Greeting.WAITING, greetingOn(firstRun = null))
-        assertEquals(Greeting.WAITING, greetingOn(trusted = null))
         assertEquals(Greeting.WAITING, greetingOn(firstRun = null, onHome = false))
-        assertEquals(Greeting.WAITING, greetingOn(trusted = null, notificationTapped = true))
+        assertEquals(Greeting.WAITING, greetingOn(firstRun = null, notificationTapped = true))
     }
 
     @Test
@@ -50,10 +47,5 @@ class GreetingTest {
     @Test
     fun `a tap on a notification drops it, even one that leads to Home`() {
         assertEquals(Greeting.DROPPED, greetingOn(notificationTapped = true))
-    }
-
-    @Test
-    fun `a phone the mascot's drawing has failed on is not greeted`() {
-        assertEquals(Greeting.DROPPED, greetingOn(trusted = false))
     }
 }

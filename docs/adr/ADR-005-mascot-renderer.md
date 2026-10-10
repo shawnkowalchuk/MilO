@@ -1,6 +1,8 @@
 # ADR-005: The mascot is a 3D model, drawn by Filament
 Date: 2026-10-09
-Status: Accepted
+Status: Superseded by ADR-007 on 2026-10-09
+
+> **This is no longer how the app works.** The same evening Shawn chose to take the 3D engine out again and to play pictures of the mascot instead (ADR-007). Filament, the app's copy of the model and the safety catch are gone from the build. What follows is left as it was written, as history.
 
 ## Context
 
