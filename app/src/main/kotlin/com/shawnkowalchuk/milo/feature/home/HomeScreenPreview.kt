@@ -79,7 +79,13 @@ private val sampleFigures =
                 },
             ),
         rows = sampleRows,
-        month = MonthFigures(YearMonth.of(2026, 10), businessTenths = 2_140, businessPercent = 89),
+        month =
+            MonthFigures(
+                YearMonth.of(2026, 10),
+                businessTenths = 2_140,
+                businessPercent = 89,
+                businessKmTenths = 2_140,
+            ),
         unit = DistanceUnit.KILOMETRES,
     )
 

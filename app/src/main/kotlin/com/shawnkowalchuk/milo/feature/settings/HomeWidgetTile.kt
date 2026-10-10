@@ -48,8 +48,9 @@ internal fun HomeWidgetTile(viewModel: HomeWidgetViewModel) {
 
 /**
  * The home-screen widget: its switch, drawn like the two sounds' (a title, a line that
- * says what it is, and the switch), and while it is on, the rate its dollars are priced at, and
- * a button that asks the home screen to add it, or the sentence that says how. What the dollars
+ * says what it is, and the switch), the rate its dollars are priced at (always, because Home's
+ * month tile and the Android Auto screen are priced at it too), and while the widget is on, a
+ * button that asks the home screen to add it, or the sentence that says how. What the dollars
  * are, and that they are for reference only, is behind the line at the end of the tile. Made of
  * the screen's existing parts.
  *
@@ -80,20 +81,25 @@ internal fun HomeWidgetTileContent(
                 status = RowStatus.PROBLEM,
             )
         }
+        // The rate prices the month on Home and on the Android Auto screen too (since
+        // 2026-10-09), so it is set here whether or not the widget is switched on.
+        // TODO(debt): the rate is no longer the widget's alone. It wants a tile of its own,
+        // and a stored name that does not say "widget" (FINDINGS_LOG, 2026-10-09).
+        RateEntry(shown.centsPerKm, onSaveRate)
+        // The rate is per kilometre whatever is shown. With miles, what it comes to per mile
+        // is said beside it, for reading only: nothing is priced at that figure.
+        if (shown.unit == DistanceUnit.MILES) {
+            val locale = LocalConfiguration.current.locales[0]
+            Note(
+                stringResource(
+                    R.string.settings_widget_rate_per_mile,
+                    formatCentsPerKm(shown.centsPerKm, locale),
+                    formatCentsPerKm(centsPerMileOf(shown.centsPerKm), locale),
+                ),
+            )
+        }
+        Note(stringResource(R.string.settings_widget_rate_also))
         if (shown.enabled) {
-            RateEntry(shown.centsPerKm, onSaveRate)
-            // The rate is per kilometre whatever is shown. With miles, what it comes to per
-            // mile is said beside it, for reading only: nothing is priced at that figure.
-            if (shown.unit == DistanceUnit.MILES) {
-                val locale = LocalConfiguration.current.locales[0]
-                Note(
-                    stringResource(
-                        R.string.settings_widget_rate_per_mile,
-                        formatCentsPerKm(shown.centsPerKm, locale),
-                        formatCentsPerKm(centsPerMileOf(shown.centsPerKm), locale),
-                    ),
-                )
-            }
             if (shown.canAskToAdd) {
                 TileButton(
                     text = stringResource(R.string.settings_widget_add),

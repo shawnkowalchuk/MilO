@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The icon of the Android Auto screen's "This trip" row: a road from one place to another.
+    The car paints it in the colour the screen gives it (res/values/colors.xml,
+    milo_car_accent), so only the shape is written here. A drawable, not one of the design
+    system's Compose icons, because the car draws the screen outside Compose.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M6,17.5 C6,10.5 18,13.5 18,6.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="2" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M6,18m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0 M18,6m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
+</vector>

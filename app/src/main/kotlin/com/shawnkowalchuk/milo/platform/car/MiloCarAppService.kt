@@ -51,6 +51,7 @@ class MiloCarAppService : CarAppService() {
         controller = container.tripController,
         trips = container.tripRepository,
         checklist = container.setupChecklist,
+        settings = container.settingsStore.settings,
         shownUnit = container.shownUnit.unit,
         clock = container.clock,
     )

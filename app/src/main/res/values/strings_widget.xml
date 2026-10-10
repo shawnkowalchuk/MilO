@@ -22,6 +22,8 @@
     <!-- The rate the widget's dollars are priced at, and its value, such as $0.70/km. -->
     <string name="settings_widget_rate">Rate</string>
     <string name="settings_widget_rate_value">%1$s/km</string>
+    <!-- Under the rate: it is not the widget's alone (since 2026-10-09). -->
+    <string name="settings_widget_rate_also">The month on Home and the Android Auto screen use this rate too.</string>
     <string name="settings_widget_rate_field">Dollars a kilometre</string>
     <!--
         Under the rate while Miles is chosen in Settings, for reading only: the rate stays a

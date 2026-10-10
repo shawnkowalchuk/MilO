@@ -69,11 +69,9 @@
     <string name="truck_without_a_name">The truck</string>
 
     <!--
-        Trip status: as the title of the trip notification, and on the Android Auto screen.
-        The third is also on the home screen's tile for the trip being recorded, while the
-        trip waits for the truck.
+        Trip status: as the title of the trip notification. The second is also on the home
+        screen's tile for the trip being recorded, while the trip waits for the truck.
     -->
-    <string name="trip_status_idle">No trip in progress</string>
     <string name="trip_status_in_progress">Trip in progress</string>
     <string name="trip_status_waiting_for_truck">Trip in progress. Waiting for the truck to reconnect</string>
     <!--
@@ -122,6 +120,8 @@
         kilometres or miles.
     -->
     <string name="home_month_share">%1$d%% business</string>
+    <!-- The same with the month's Business dollars at the rate set in Settings: $289. -->
+    <string name="home_month_share_dollars">%1$d%% business · %2$s</string>
     <string name="home_month_none">No %1$s yet</string>
     <!--
         Home: the truck's tile. A title and a sentence for each state MilO can really be in
@@ -905,18 +905,22 @@
     <string name="settings_outside_ignore_detail">They are still recorded, then left out of the list and the totals. Nothing is destroyed: on the Trips screen, switch on \"%1$s\" to see one and count it.</string>
 
     <!--
-        The Android Auto screen. Its header is app_name, its button uses home_start_trip and
-        home_end_trip, and "This trip" says trip_status_idle when there is none, so the car and
-        the phone cannot word those differently.
+        The Android Auto screen. Its header is app_name and its button uses home_start_trip and
+        home_end_trip, so the car and the phone cannot word those differently.
 
-        The three row titles must never change and never carry a figure: the car counts a redraw
-        as a harmless refresh only while every row title stays the same. Each line under a title
-        is kept short, because the car cuts long text off while driving.
+        Two rows, so that the screen fits the smallest car display without scrolling (Shawn,
+        2026-10-09). The two row titles must never change and never carry a figure: the car
+        counts a redraw as a harmless refresh only while every row title stays the same. Each
+        line under a title is kept short, because the car cuts long text off while driving.
     -->
-    <string name="car_row_status">Status</string>
     <string name="car_row_this_trip">This trip</string>
-    <string name="car_row_today">Today</string>
-    <!-- The Status row. -->
+    <string name="car_row_business">Business</string>
+    <!-- Two parts of a line: "Recording · 12.3 km · 23 min". -->
+    <string name="car_joined">%1$s · %2$s</string>
+    <!--
+        The status line: the This trip row's words while no trip is open, and the start of
+        them while one is. The home-screen widget prints it too.
+    -->
     <string name="car_status_recording">Recording</string>
     <string name="car_status_recording_without_truck">Recording. Truck not connected</string>
     <string name="car_status_waiting_for_truck">Truck disconnected. Waiting for it to reconnect</string>
@@ -932,15 +936,19 @@
     <string name="car_status_refused_bluetooth_permission">Could not start: \"Nearby devices\" is not allowed</string>
     <string name="car_status_refused_by_android">Could not start: Android did not allow it</string>
     <!--
-        The This trip row: the distance with its unit (12.3 km), then whole hours and minutes.
+        The This trip row, after the status: the distance with its unit (12.3 km), then whole
+        hours and minutes.
     -->
     <string name="car_trip_minutes">%1$s · %2$d min</string>
     <string name="car_trip_hours_minutes">%1$s · %2$d h %3$d min</string>
-    <!-- The Today row: the finished trips that started today, and their distance (48.2 km). -->
-    <plurals name="car_today">
-        <item quantity="one">%1$d trip · %2$s</item>
-        <item quantity="other">%1$d trips · %2$s</item>
-    </plurals>
-    <string name="car_today_none">No trips yet</string>
-    <string name="car_today_unknown">Not available</string>
+    <!--
+        The Business row: "Today 17.9 km · October 412.3 km, $289". Today's and the month's
+        Business distance as Home shows them, and the month's dollars as the widget prices
+        them; the dollars are left out while the rate is not known. One line of the smallest
+        car display: anything added here makes the row wrap and the car scroll.
+    -->
+    <string name="car_business_today">Today %1$s</string>
+    <string name="car_business_month">%1$s %2$s</string>
+    <string name="car_business_month_dollars">%1$s %2$s, %3$s</string>
+    <string name="car_business_unknown">Not available</string>
 </resources>

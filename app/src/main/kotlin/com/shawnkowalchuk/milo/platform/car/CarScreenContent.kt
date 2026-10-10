@@ -1,29 +1,40 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
+import com.shawnkowalchuk.milo.core.allowance.allowanceCents
+import com.shawnkowalchuk.milo.core.allowance.formatWholeDollars
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
+import com.shawnkowalchuk.milo.core.util.daySpan
 import com.shawnkowalchuk.milo.core.util.formatDistance
+import com.shawnkowalchuk.milo.core.util.formatMonthName
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
-import com.shawnkowalchuk.milo.data.trip.TodayTrips
+import com.shawnkowalchuk.milo.data.trip.Trip
+import com.shawnkowalchuk.milo.data.trip.categoryTotals
+import com.shawnkowalchuk.milo.data.trip.todayTrips
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import com.shawnkowalchuk.milo.platform.trip.TripTrigger
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
 import java.util.Locale
 
-// What the Android Auto screen shows, decided from the trip controller's state and today's
-// trips. Plain values and pure functions, so every state is tested without a car. Only the
-// choice of words is made here: the words themselves are in strings.xml.
+// What the Android Auto screen shows, decided from the trip controller's state, the month's
+// trips and the rate. Plain values and pure functions, so every state is tested
+// without a car. Only the choice of words is made here: the words themselves are in strings.xml.
 //
 // Every figure is already rounded to what the screen prints (kilometres to one decimal, time to
 // whole minutes). Two contents are therefore equal exactly when the screen would look the same,
 // which is how the screen knows that there is nothing to redraw.
 
 /**
- * The line of the Status row. Each constant is one sentence in strings.xml.
+ * The status line: the "This trip" row's words while no trip is open, and the start of them
+ * while one is. The home-screen widget prints it too. Each constant is one sentence in
+ * strings.xml.
  *
  * @param startRefused true for the lines that say the last attempt to start a trip was refused.
  */
@@ -93,28 +104,85 @@ enum class CarAction(val labelRes: Int, val trigger: TripTrigger, val source: St
 data class TripFigures(val kilometres: String, val hours: Long, val minutes: Long)
 
 /**
- * Today's finished trips as the "Today" row prints them.
+ * The "Business" row as it is printed (since 2026-10-09, Shawn: "it should have all the stuff
+ * on the home screen less todays trips"): what Home's tiles show of today and of the month, with
+ * the month's dollars. Until then the row was "Today" and counted every finished trip, Business
+ * and Personal together.
  *
- * @param kilometres the trips' distance, the number only: the sum of the trips' own figures,
- * each rounded to a tenth first (`sumOfTenths`), like every total on the phone and on the
- * report. In the unit of the content it is part of, like [TripFigures.kilometres].
+ * **The odometer is not in it.** It was, for an hour: with it the line was too long for the
+ * smallest car display (800 by 480), wrapped, and the car put scroll arrows beside the rows,
+ * which is what the two rows were made to end. The truck's own dashboard shows it.
+ *
+ * @param today and [month] today's and the month's Business distance, the numbers only, with
+ * one decimal: the sum of the trips' own figures, each rounded to a tenth first, like every
+ * total on the phone and on the report.
+ * @param monthName the month's name in the phone's language: "October".
+ * @param dollars the month's Business kilometres priced at the rate set in Settings, as the
+ * widget and Home price them ("$289"), or null while the rate cannot be read.
+ * @param unit the unit the two distances are in. Figures made in another unit than the
+ * content's are not shown ([carScreenContent]).
  */
-data class TodayFigures(val tripCount: Int, val kilometres: String)
+data class BusinessFigures(
+    val today: String,
+    val monthName: String,
+    val month: String,
+    val dollars: String?,
+    val unit: DistanceUnit,
+)
 
 /**
- * Everything the screen shows that can change. The three row titles and the header are not
+ * What the "Business" row is made from.
+ *
+ * @param date today, and [zone] the phone's time zone: a trip belongs to the day and the month
+ * it started in, as on the Trips screen.
+ * @param monthTrips every trip that started in the month of [date], whatever its status.
+ * @param centsPerKm the rate set in Settings, or null if the settings could not be read.
+ */
+class BusinessInput(
+    val date: LocalDate,
+    val zone: ZoneId,
+    val monthTrips: List<Trip>,
+    val centsPerKm: Int?,
+)
+
+/**
+ * The "Business" row's figures. Nothing is counted by a rule of the car's own: today's trips
+ * are picked and added up as Home's Today tile does (`todayTrips`, `categoryTotals`), the month
+ * as Home's month tile and the report do, and the dollars as the widget does, always from
+ * kilometres at the rate per kilometre.
+ */
+fun businessFigures(input: BusinessInput, locale: Locale, unit: DistanceUnit): BusinessFigures {
+    val day = daySpan(input.date, input.zone)
+    val startedToday =
+        input.monthTrips.filter { it.startedAtMs >= day.fromMs && it.startedAtMs < day.untilMs }
+    val monthInKilometres =
+        categoryTotals(input.monthTrips, DistanceUnit.KILOMETRES).business.tenths
+    return BusinessFigures(
+        today = formatTenths(todayTrips(startedToday).totals(unit).business.tenths, locale),
+        monthName = formatMonthName(YearMonth.from(input.date), locale),
+        month = formatTenths(categoryTotals(input.monthTrips, unit).business.tenths, locale),
+        dollars =
+            input.centsPerKm?.let {
+                formatWholeDollars(allowanceCents(monthInKilometres, it), locale)
+            },
+        unit = unit,
+    )
+}
+
+/**
+ * Everything the screen shows that can change. The two row titles and the header are not
  * here: they never change, which is what lets the car treat every redraw as a refresh.
  *
  * @param trip null when no trip is open.
- * @param today null while today's trips have not been read, or could not be.
- * @param unit the unit the two figures are in, and are to be written with (since 2026-10-07).
+ * @param business null while the month's trips have not been read, or could not be.
+ * @param unit the unit the figures are in, and are to be written with (since 2026-10-07).
  * It is part of the content, so a change of the unit in Settings is a change that is drawn at
  * once, not one that waits like a trip's running figures.
  */
 data class CarScreenContent(
     val status: CarStatus,
     val trip: TripFigures?,
-    val today: TodayFigures?,
+    val business: BusinessFigures?,
     val action: CarAction,
     val unit: DistanceUnit,
 )
@@ -122,8 +190,8 @@ data class CarScreenContent(
 /**
  * The screen's content for one moment.
  *
- * @param today today's finished trips, or null if they are not known. What counts as today is
- * decided by `todayTrips` in `data/trip/TripTotals.kt`, which the phone's home screen uses too.
+ * @param business the "Business" row's figures ([businessFigures]), or null if they are not
+ * known. The home-screen widget, which shows the same status, trip and button, passes none.
  * @param setupNeedsAttention the home screen's rule (`needsAttention`): a required row of the
  * setup checklist is not in order.
  * @param locale decides the decimal separator of the distance figures.
@@ -131,7 +199,7 @@ data class CarScreenContent(
  */
 fun carScreenContent(
     activity: TripActivity,
-    today: TodayTrips?,
+    business: BusinessFigures?,
     setupNeedsAttention: Boolean,
     nowMs: Long,
     locale: Locale,
@@ -141,9 +209,9 @@ fun carScreenContent(
     return CarScreenContent(
         status = carStatus(activity, setupNeedsAttention),
         trip = trip?.let { tripFigures(it, nowMs, locale, unit) },
-        // Added up as the phone's screens and the report add up: trip by trip, as printed.
-        today =
-            today?.let { TodayFigures(it.count, formatTenths(it.totalTenths(unit), locale)) },
+        // Right after the unit was changed in Settings the figures in hand are still in the
+        // other one. They are not shown under this one's name: the row says "Not available".
+        business = business?.takeIf { it.unit == unit },
         // One button, because exactly one of the two makes sense at any moment. End is offered
         // for as long as a trip is open, the grace period included, as on the phone.
         action = if (trip == null) CarAction.START_TRIP else CarAction.END_TRIP,
@@ -154,7 +222,7 @@ fun carScreenContent(
 /**
  * Whether [next] differs from this content only in the running figures of a trip that is open
  * in both. Such a change waits for the gap between refreshes; any other change (the status, the
- * button, a trip starting or ending, today's totals) is drawn at once.
+ * button, a trip starting or ending, the Business row's figures) is drawn at once.
  */
 fun CarScreenContent?.differsOnlyInTripFigures(next: CarScreenContent): Boolean =
     this != null && trip != null && next.trip != null && trip != next.trip &&
