@@ -11,11 +11,13 @@
 #   Flex         4.5 s         shows off: both arms, one arm to each side, both again
 #   Peace        2.75 s        holds up the peace sign with its left hand
 #   RockOn       2.75 s        holds up the horns with its right hand, and nods to the beat
+#   WaveUp       0.5 s         the right arm goes up, and stays up: it ends where WaveLoop begins
+#   WaveLoop     0.5 s, loops  the arm held up, one wave of the hand; the website loops it
 #   Gauge_Speed  2 s           the speed needle alone, 0 to 240: seek to speed / 240 of its length
 #   Gauge_RPM    2 s           the RPM needle alone, 0 to 8: seek to rpm / 8 of its length
 #
-# Every clip but the two loops starts and ends in the same standing pose (NEUTRAL), so they can
-# follow one another. The needles move in every clip: each clip keys the rig's two sliders
+# Every clip but the three loops and WaveUp starts and ends in the same standing pose (NEUTRAL),
+# so they can follow one another. The needles move in every clip: each clip keys the rig's two sliders
 # ("speed_kmh", "rpm") and the needle bones follow through their drivers.
 #
 # A clip is a function of time that sets the whole pose; it is keyed on every frame.
@@ -268,10 +270,10 @@ def idle(t):
     set_gauges(speed=3 - 3 * cos(w), rpm=IDLE_RPM + 0.10 * sin(4 * w) + 0.05 * sin(10 * w))
 
 
-def wave(t):
-    e = smooth(t / 0.40) * (1 - smooth((t - 1.50) / 0.50))
-    beat = sin(2 * pi * 2.5 * (t - 0.40))
-    late = sin(2 * pi * 2.5 * (t - 0.40) - 0.9)
+def waving(e, beat, late):
+    """The whole pose of a wave at one moment: e is how far the arm is up (0 hanging, 1 up),
+    beat swings the forearm from side to side (-1 to 1), and late does the same for the hand,
+    which follows a little behind. Wave, WaveUp and WaveLoop differ only in when they ask."""
     body = set_body(up=0.015 * e * beat * beat, tilt_left=-3.0 * e, lean=-1.0 * e)
     # held well out to the side, so the hand never swings in front of the speedometer
     out = radians(26 + 18 * beat)
@@ -285,6 +287,30 @@ def wave(t):
     set_eyes(twist_speedo=5 * e + 2 * e * beat, twist_rpm=5 * e - 2 * e * beat, pop_speedo=0.03 * e, pop_rpm=0.03 * e)
     # a little rev with every wave
     set_gauges(speed=e * (34 + 12 * beat), rpm=IDLE_RPM + e * (2.4 + 1.3 * beat))
+
+
+def wave(t):
+    e = smooth(t / 0.40) * (1 - smooth((t - 1.50) / 0.50))
+    beat = sin(2 * pi * 2.5 * (t - 0.40))
+    late = sin(2 * pi * 2.5 * (t - 0.40) - 0.9)
+    waving(e, beat, late)
+
+
+# One wave of the hand in WaveUp and WaveLoop: half a second, 12 frames, so that the loop closes
+# on a frame. (Wave's own is 0.4 seconds, 9.6 frames, and could not be looped frame by frame.)
+WAVE_BEAT = 0.5
+
+
+def wave_up(t):
+    """From standing to WaveLoop's first pose in one beat. The arm stays up: it is the way into
+    the loop, not a clip to play alone."""
+    turn = 2 * pi * (t / WAVE_BEAT - 1)
+    waving(smooth(t / WAVE_BEAT), sin(turn), sin(turn - 0.9))
+
+
+def wave_loop(t):
+    turn = 2 * pi * t / WAVE_BEAT
+    waving(1.0, sin(turn), sin(turn - 0.9))
 
 
 def thumbs_up(t):
@@ -428,7 +454,8 @@ def rock_on(t):
 
 CLIPS = [("Idle", 4.0, idle, True), ("Wave", 2.0, wave, False), ("ThumbsUp", 2.0, thumbs_up, False),
          ("Walk", 1.0, walk, True), ("Celebrate", 3.0, celebrate, False),
-         ("Flex", 4.5, flex, False), ("Peace", 2.75, peace, False), ("RockOn", 2.75, rock_on, False)]
+         ("Flex", 4.5, flex, False), ("Peace", 2.75, peace, False), ("RockOn", 2.75, rock_on, False),
+         ("WaveUp", 0.5, wave_up, False), ("WaveLoop", 0.5, wave_loop, True)]
 NEEDLE_CLIPS = [("Gauge_Speed", "speed_kmh", 240.0), ("Gauge_RPM", "rpm", 8.0)]
 NEEDLE_SECONDS = 2.0
 
