@@ -25,11 +25,9 @@ import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.eventlog.EventCategory
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.trip.TripRepository
-import com.shawnkowalchuk.milo.data.trip.vehicleOdometers
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.needsAttention
 import com.shawnkowalchuk.milo.platform.trip.TripController
-import com.shawnkowalchuk.milo.platform.trip.tripSoFar
 import java.io.IOException
 import java.time.LocalDate
 import java.time.YearMonth
@@ -62,12 +60,13 @@ private const val CLOCK_TICK_MS = 10_000L
 
 /**
  * MilO's one screen on the car's display: whether a trip is being recorded, the trip's
- * kilometres and time, what Home shows of today, the month and the odometer, and one button
- * that starts or ends a trip by hand.
+ * kilometres and time, what Home shows of today and the month, and one button that starts or
+ * ends a trip by hand.
  *
  * **It fits one screen without scrolling** (Shawn, 2026-10-09, looking at it in Google's
- * desktop head unit: "it needs to be on one screen no scrollable"). Two rows and the button fit
- * the smallest display a car may have, 800 by 480; the three rows it had until then did not.
+ * desktop head unit: "it needs to be on one screen no scrollable"). Two rows of one line each
+ * and the button fit the smallest display a car may have, 800 by 480; the three rows it had
+ * until then did not, and neither did two rows with a line that wrapped.
  *
  * It has no ViewModel and decides nothing (ARCHITECTURE section 3). It shows the app-wide
  * [TripController]'s state, and its button sends the triggers the phone's button sends.
@@ -83,8 +82,8 @@ private const val CLOCK_TICK_MS = 10_000L
  * Everything in this class runs on the main thread: the library calls it there, and
  * `lifecycleScope` runs there.
  *
- * @param settings the stored settings: the rate the month's dollars are priced at, and the
- * odometer's readings. Read only, and only while the car shows the screen.
+ * @param settings the stored settings: the rate the month's dollars are priced at. Read only,
+ * and only while the car shows the screen.
  * @param shownUnit the unit chosen in Settings (`ShownUnit`). A change of it is drawn at once.
  */
 class TripStatusScreen(
@@ -211,7 +210,10 @@ class TripStatusScreen(
         return joined(status, figures)
     }
 
-    /** The "Business" row: "Today 17.9 km · October 412.3 km, $289 · Odometer 84,212 km". */
+    /**
+     * The "Business" row: "Today 17.9 km · October 412.3 km, $289". Kept to what fits one line
+     * of the smallest display with a busy month's figures in it.
+     */
     private fun businessLine(business: BusinessFigures?, unit: DistanceUnit): String {
         if (business == null) return carContext.getString(R.string.car_business_unknown)
         val today =
@@ -228,12 +230,7 @@ class TripStatusScreen(
                     business.dollars,
                 )
             }
-        val line = joined(today, month)
-        val odometer = business.odometer ?: return line
-        return joined(
-            line,
-            carContext.getString(R.string.car_business_odometer, distance(odometer, unit)),
-        )
+        return joined(today, month)
     }
 
     // ---- Following the trip while the car shows the screen --------------------------------------
@@ -301,33 +298,18 @@ class TripStatusScreen(
 
     /**
      * Keeps [business] in step with storage and the settings, and moves on to the new day at
-     * midnight and to the new month at its turn. The odometer counts the trip being recorded
-     * as it is driven, as on Home, so the row follows the trip controller too.
+     * midnight and to the new month at its turn.
      */
     private suspend fun followBusiness() {
         days().collectLatest { (date, zone) ->
             val span = monthSpan(YearMonth.from(date), zone)
-            // The vehicle the trip is about, and the trip so far: what the odometer needs.
-            val driving =
-                controller.activity.map { it.vehicle to it.tripSoFar() }.distinctUntilChanged()
             try {
                 combine(
                     trips.observeTripsStartedBetween(span.fromMs, span.untilMs),
-                    trips.observeFinishedTrips(),
                     storedSettings(),
-                    driving,
                     shownUnit,
-                ) { monthTrips, finished, stored, (vehicle, soFar), unit ->
-                    val odometers =
-                        stored?.let { vehicleOdometers(it, finished, clock(), zone, soFar) }
-                    val input =
-                        BusinessInput(
-                            date = date,
-                            zone = zone,
-                            monthTrips = monthTrips,
-                            centsPerKm = stored?.homeWidgetCentsPerKm,
-                            odometer = odometers?.let { odometerShown(it, vehicle) },
-                        )
+                ) { monthTrips, stored, unit ->
+                    val input = BusinessInput(date, zone, monthTrips, stored?.homeWidgetCentsPerKm)
                     businessFigures(input, locale(), unit)
                 }.collect { business.value = it }
             } catch (cancelled: CancellationException) {
@@ -344,8 +326,7 @@ class TripStatusScreen(
 
     /**
      * The settings, or null if the file cannot be read. It is never reset (`buildSettingsStore`);
-     * the trip controller logs an unreadable one, and the row carries on without the dollars
-     * and the odometer.
+     * the trip controller logs an unreadable one, and the row carries on without the dollars.
      */
     private fun storedSettings(): Flow<MiloSettings?> = settings
         .map<MiloSettings, MiloSettings?> { it }

@@ -28,7 +28,6 @@ internal fun businessOf(today: String = "0.0", unit: DistanceUnit = DistanceUnit
         monthName = "October",
         month = "412.3",
         dollars = "$289",
-        odometer = "84,212",
         unit = unit,
     )
 

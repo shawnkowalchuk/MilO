@@ -1,15 +1,11 @@
 package com.shawnkowalchuk.milo.platform.car
 
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
-import com.shawnkowalchuk.milo.core.odometer.OdometerReading
 import com.shawnkowalchuk.milo.core.schedule.TripCategory
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
-import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.trip.Trip
-import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
 import com.shawnkowalchuk.milo.platform.trip.StartFailure
@@ -284,22 +280,12 @@ class CarScreenContentTest {
         stored("2026-10-03T08:00", 9_000.0, TripCategory.PERSONAL),
     )
 
-    private fun odometer(value: Long, unit: DistanceUnit = DistanceUnit.KILOMETRES) =
-        OdometerFigure(
-            value = value,
-            unit = unit,
-            reading = OdometerReading(atMs = STARTED_AT_MS, value = value, unit = unit),
-            drivenTenths = 0,
-            estimated = false,
-        )
-
     private fun figures(
         monthTrips: List<Trip>,
         unit: DistanceUnit = DistanceUnit.KILOMETRES,
         centsPerKm: Int? = 70,
-        odometer: OdometerFigure? = odometer(84_212),
     ) = businessFigures(
-        BusinessInput(october6, edmonton, monthTrips, centsPerKm, odometer),
+        BusinessInput(october6, edmonton, monthTrips, centsPerKm),
         Locale.CANADA,
         unit,
     )
@@ -335,40 +321,14 @@ class CarScreenContentTest {
 
     @Test
     fun `with miles chosen the distances are in miles and the dollars do not move`() {
-        val shown =
-            figures(october(), DistanceUnit.MILES, odometer = odometer(52_326, DistanceUnit.MILES))
+        val shown = figures(october(), DistanceUnit.MILES)
 
         // 0.7 + 7.6 mi today, and 0.7 + 0.7 + 0.7 + 7.6 mi in the month.
         assertEquals("8.3", shown.today)
         assertEquals("9.7", shown.month)
         // Still priced from the 15.6 km: the rate is a rate per kilometre.
         assertEquals("$11", shown.dollars)
-        assertEquals("52,326", shown.odometer)
         assertEquals(DistanceUnit.MILES, shown.unit)
-    }
-
-    @Test
-    fun `the odometer is in whole units, and left out before its first reading`() {
-        assertEquals("84,212", figures(october()).odometer)
-        assertNull(figures(october(), odometer = null).odometer)
-        // One worked out in the other unit, a moment after the unit was changed, is left out.
-        assertNull(figures(october(), DistanceUnit.MILES).odometer)
-    }
-
-    @Test
-    fun `with several vehicles the odometer is the one of the vehicle the trip is about`() {
-        fun vehicle(address: String, value: Long) = VehicleOdometer(
-            vehicle = StoredVehicle(address, name = null, associationId = null, pairedAtMs = 0),
-            named = true,
-            figure = odometer(value),
-        )
-        val both = listOf(vehicle("AA:AA:AA:AA:AA:01", 84_212), vehicle("AA:AA:AA:AA:AA:02", 9_100))
-
-        assertEquals(9_100L, odometerShown(both, "AA:AA:AA:AA:AA:02")?.value)
-        // With no vehicle named, or one that is not paired any more, it is the first one's.
-        assertEquals(84_212L, odometerShown(both, vehicle = null)?.value)
-        assertEquals(84_212L, odometerShown(both, "AA:AA:AA:AA:AA:09")?.value)
-        assertNull(odometerShown(emptyList(), vehicle = null))
     }
 
     // ---- The button -----------------------------------------------------------------------------

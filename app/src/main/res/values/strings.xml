@@ -942,14 +942,13 @@
     <string name="car_trip_minutes">%1$s · %2$d min</string>
     <string name="car_trip_hours_minutes">%1$s · %2$d h %3$d min</string>
     <!--
-        The Business row: "Today 17.9 km · October 412.3 km, $289 · Odometer 84,212 km". Today's
-        and the month's Business distance as Home shows them, the month's dollars as the widget
-        prices them, and the odometer. The dollars and the odometer are left out while they are
-        not known.
+        The Business row: "Today 17.9 km · October 412.3 km, $289". Today's and the month's
+        Business distance as Home shows them, and the month's dollars as the widget prices
+        them; the dollars are left out while the rate is not known. One line of the smallest
+        car display: anything added here makes the row wrap and the car scroll.
     -->
     <string name="car_business_today">Today %1$s</string>
     <string name="car_business_month">%1$s %2$s</string>
     <string name="car_business_month_dollars">%1$s %2$s, %3$s</string>
-    <string name="car_business_odometer">Odometer %1$s</string>
     <string name="car_business_unknown">Not available</string>
 </resources>

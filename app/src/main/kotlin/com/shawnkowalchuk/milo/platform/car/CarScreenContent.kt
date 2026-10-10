@@ -3,8 +3,6 @@ package com.shawnkowalchuk.milo.platform.car
 import com.shawnkowalchuk.milo.R
 import com.shawnkowalchuk.milo.core.allowance.allowanceCents
 import com.shawnkowalchuk.milo.core.allowance.formatWholeDollars
-import com.shawnkowalchuk.milo.core.odometer.OdometerFigure
-import com.shawnkowalchuk.milo.core.odometer.formatOdometer
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.core.util.daySpan
 import com.shawnkowalchuk.milo.core.util.formatDistance
@@ -12,10 +10,8 @@ import com.shawnkowalchuk.milo.core.util.formatMonthName
 import com.shawnkowalchuk.milo.core.util.formatTenths
 import com.shawnkowalchuk.milo.core.util.wholeHoursAndMinutes
 import com.shawnkowalchuk.milo.data.trip.Trip
-import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
 import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.data.trip.todayTrips
-import com.shawnkowalchuk.milo.platform.bluetooth.sameAddress
 import com.shawnkowalchuk.milo.platform.system.PreflightProblem
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.ParkedTruckWatch
@@ -28,7 +24,7 @@ import java.time.ZoneId
 import java.util.Locale
 
 // What the Android Auto screen shows, decided from the trip controller's state, the month's
-// trips, the rate and the odometer. Plain values and pure functions, so every state is tested
+// trips and the rate. Plain values and pure functions, so every state is tested
 // without a car. Only the choice of words is made here: the words themselves are in strings.xml.
 //
 // Every figure is already rounded to what the screen prints (kilometres to one decimal, time to
@@ -109,9 +105,13 @@ data class TripFigures(val kilometres: String, val hours: Long, val minutes: Lon
 
 /**
  * The "Business" row as it is printed (since 2026-10-09, Shawn: "it should have all the stuff
- * on the home screen less todays trips"): what Home's tiles show of today, of the month and of
- * the odometer, and the dollars the widget shows for the month. Until then the row was "Today"
- * and counted every finished trip, Business and Personal together.
+ * on the home screen less todays trips"): what Home's tiles show of today and of the month, with
+ * the month's dollars. Until then the row was "Today" and counted every finished trip, Business
+ * and Personal together.
+ *
+ * **The odometer is not in it.** It was, for an hour: with it the line was too long for the
+ * smallest car display (800 by 480), wrapped, and the car put scroll arrows beside the rows,
+ * which is what the two rows were made to end. The truck's own dashboard shows it.
  *
  * @param today and [month] today's and the month's Business distance, the numbers only, with
  * one decimal: the sum of the trips' own figures, each rounded to a tenth first, like every
@@ -119,8 +119,7 @@ data class TripFigures(val kilometres: String, val hours: Long, val minutes: Lon
  * @param monthName the month's name in the phone's language: "October".
  * @param dollars the month's Business kilometres priced at the rate set in Settings, as the
  * widget and Home price them ("$289"), or null while the rate cannot be read.
- * @param odometer the odometer in whole units ("84,212"), or null before its first reading.
- * @param unit the unit the three distances are in. Figures made in another unit than the
+ * @param unit the unit the two distances are in. Figures made in another unit than the
  * content's are not shown ([carScreenContent]).
  */
 data class BusinessFigures(
@@ -128,7 +127,6 @@ data class BusinessFigures(
     val monthName: String,
     val month: String,
     val dollars: String?,
-    val odometer: String?,
     val unit: DistanceUnit,
 )
 
@@ -139,14 +137,12 @@ data class BusinessFigures(
  * it started in, as on the Trips screen.
  * @param monthTrips every trip that started in the month of [date], whatever its status.
  * @param centsPerKm the rate set in Settings, or null if the settings could not be read.
- * @param odometer the odometer to show ([odometerShown]), or null before its first reading.
  */
 class BusinessInput(
     val date: LocalDate,
     val zone: ZoneId,
     val monthTrips: List<Trip>,
     val centsPerKm: Int?,
-    val odometer: OdometerFigure?,
 )
 
 /**
@@ -169,25 +165,8 @@ fun businessFigures(input: BusinessInput, locale: Locale, unit: DistanceUnit): B
             input.centsPerKm?.let {
                 formatWholeDollars(allowanceCents(monthInKilometres, it), locale)
             },
-        // An odometer worked out in the other unit, a moment after the unit was changed in
-        // Settings, is left out rather than printed under the wrong unit's name.
-        odometer =
-            input.odometer?.takeIf { it.unit == unit }?.let { formatOdometer(it.value, locale) },
         unit = unit,
     )
-}
-
-/**
- * The one odometer the car shows where several vehicles are paired: that of the vehicle the
- * trip is about or that is connected ([vehicle], its Bluetooth address), and otherwise the
- * first one, which is the choice Home's truck tile makes for the name it shows.
- */
-fun odometerShown(odometers: List<VehicleOdometer>, vehicle: String?): OdometerFigure? {
-    val ofVehicle =
-        vehicle?.let { address ->
-            odometers.firstOrNull { sameAddress(it.vehicle?.address, address) }
-        }
-    return (ofVehicle ?: odometers.firstOrNull())?.figure
 }
 
 /**
