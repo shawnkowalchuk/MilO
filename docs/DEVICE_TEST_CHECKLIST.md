@@ -1212,6 +1212,15 @@ Shawn's decisions of 2026-10-07: he types the reading, MilO adds every truck tri
 | OD-5 | **On the report.** Report screen, this month, View the PDF. | Under the Name, Company and Vehicle tile, a tile "Odometer, (1st of the month): … km est." and "Odometer, (last day): … km est.", and the note that says what "est." means. A figure typed on that day with no trip after it on the end day would have no "est.". | not run |
 | OD-6 | **After a week of driving.** Compare the Settings figure with the dashboard. | Write down the difference. Over a week it should be within a few kilometres; a larger gap means trips are missed or GPS counts short, and the readings will show it. | not run |
 
+**A reading typed during a trip (2026-10-10).** Shawn typed the reading in the truck before driving off, and the odometer was 9 km short after the drive: MilO had opened the trip when the phone connected, and took the whole trip to be in the reading. Since 0.3.1 the trip is cut at the reading. The rule ran in unit tests, and on an emulator with one step done by hand (an emulator has no truck; FINDINGS_LOG, 2026-10-10). The truck has to show it.
+
+| # | Do this | Expect | Result |
+|---|---|---|---|
+| OD-7 | **The reading before driving off.** Get in, let the phone connect, and wait until Home shows "Recording". Before you move, open Settings, tap Adjust, type the number on the dashboard and tap "Save reading". Drive a few kilometres and park. When the trip has ended, compare Settings and Home with the dashboard. | Both show the dashboard's number, or one beside it: the reading plus the drive. Under the figure in Settings: "Your reading of … km on (day), plus … km of truck trips since". Before 0.3.1 the figure stayed at the reading. | not run |
+| OD-8 | **It counts up from the reading.** On the same drive, with Home open (a passenger looks, or look when stopped). | The odometer starts at the reading and goes up by one for each kilometre, with the dashboard. | not run |
+| OD-9 | **The reading after parking.** Park after a drive and, while Home still shows "Recording", type the dashboard's number in Settings. Look again when the trip has ended. | The figure is the reading, "typed today", then and afterwards. The drive is not added a second time. | not run |
+| OD-10 | **The reading from before the update.** After installing 0.3.1, look at the odometer before typing anything. Then tap Adjust and type the dashboard's number. | Before: as it was, still short by the trip of 2026-10-10. After: the dashboard's number, and it follows the dashboard from then on (OD-7). | not run |
+
 | NL-123 | **A short hop.** Within the first hour of a wait, get in, start the engine and drive a few hundred metres in under a minute, then park. Open the Log with "Location" and "Trip". | After the "DRIVING" report, "Location fixes are now one every 5.0 s"; the hop is a trip of its own, starting at the old spot, with the road's distance. If the report came after the hop, the hop is not a trip of its own and is counted at the start of the next drive (amendment 34). | not run |
 
 ## The home-screen widget (2026-10-07)

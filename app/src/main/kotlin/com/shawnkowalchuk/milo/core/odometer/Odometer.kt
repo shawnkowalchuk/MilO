@@ -41,12 +41,16 @@ private const val MAX_DIGITS = 7
  * @param vehicle the Bluetooth address of the paired vehicle whose dashboard it was read on
  * (since 2026-10-08, when MilO learned several), or null for a reading typed before: those
  * are the first vehicle's, the truck's ([ofVehicle]).
+ * @param duringTrip the trip that was being recorded when it was typed, and how far that trip
+ * had gone (since 2026-10-10), or null: no trip was open, or the reading is from before then.
+ * The trip is cut there ([cutAtReadings]).
  */
 data class OdometerReading(
     val atMs: Long,
     val value: Long,
     val unit: DistanceUnit,
     val vehicle: String? = null,
+    val duringTrip: TripAtReading? = null,
 )
 
 /**
@@ -56,8 +60,15 @@ data class OdometerReading(
  *
  * @param vehicle the paired vehicle it was in (since 2026-10-08), or null if none was recorded:
  * a trip from before then that has not been given the truck's address yet ([ofVehicle]).
+ * @param id the trip's own number (since 2026-10-10), by which a reading typed during it finds
+ * it again ([TripAtReading]), or null where nobody needs to.
  */
-data class DrivenTrip(val startedAtMs: Long, val metres: Double, val vehicle: String? = null)
+data class DrivenTrip(
+    val startedAtMs: Long,
+    val metres: Double,
+    val vehicle: String? = null,
+    val id: Long? = null,
+)
 
 /**
  * The readings of one vehicle's odometer (since 2026-10-08, when MilO learned several): those
@@ -108,8 +119,13 @@ data class OdometerFigure(
  * typed in the other unit is turned into [unit] once, from its metres.
  *
  * **Which trips lie between.** A trip counts by when it **started**, as it counts for a day and
- * a month everywhere in MilO: one that started before a reading is in that reading. So a
- * reading typed just after parking, with the trip still open, already holds that trip.
+ * a month everywhere in MilO: one that started before a reading is in that reading. **The trip
+ * that was being recorded when a reading was typed is the exception** (since 2026-10-10): it is
+ * cut at that reading ([cutAtReadings]), so what it drove after the reading is added and what
+ * it had driven before is not. A reading typed before driving off adds the whole drive; one
+ * typed just after parking, with the trip still open, already holds that trip. A reading that
+ * does not know its trip's distance (every one typed before 2026-10-10) holds the whole trip,
+ * as it always did.
  *
  * @param day the day the figure is for, in [zone]: whether it is the reading as typed depends
  * on it. For the start of a report's period its first day, for the end its last.
@@ -125,12 +141,13 @@ fun odometerAt(
     trips: List<DrivenTrip>,
     unit: DistanceUnit,
 ): OdometerFigure? {
+    val driven = cutAtReadings(trips, readings)
     val closest =
-        standingReadings(readings, trips).minWithOrNull(
-            compareBy<OdometerReading> { tenthsBetween(it.atMs, atMs, trips) }
+        standing(readings, driven).minWithOrNull(
+            compareBy<OdometerReading> { tenthsBetween(it.atMs, atMs, driven) }
                 .thenByDescending { it.atMs },
         ) ?: return null
-    val between = tripsBetween(closest.atMs, atMs, trips)
+    val between = tripsBetween(closest.atMs, atMs, driven)
     val tenths = sumOfTenths(between.map { it.metres }, unit)
     val signed = if (atMs >= closest.atMs) tenths else -tenths
     val readingTenths = tenthsOfWhole(closest.value, from = closest.unit, to = unit)
@@ -149,8 +166,17 @@ fun odometerAt(
  * no truck trip between the two. That later one is a correction of it (a figure typed wrong,
  * typed again a minute later) and takes its place; without this, the wrong figure would still
  * be the closest reading to every moment before the correction.
+ *
+ * Two readings typed during one trip are held to the same rule (since 2026-10-10): the later
+ * corrects the earlier unless the truck drove between the two ([cutAtReadings]).
  */
 fun standingReadings(
+    readings: List<OdometerReading>,
+    trips: List<DrivenTrip>,
+): List<OdometerReading> = standing(readings, cutAtReadings(trips, readings))
+
+/** [standingReadings] over trips that are cut at the readings already. */
+private fun standing(
     readings: List<OdometerReading>,
     trips: List<DrivenTrip>,
 ): List<OdometerReading> {

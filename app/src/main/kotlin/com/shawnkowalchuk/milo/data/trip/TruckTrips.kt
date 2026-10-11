@@ -34,6 +34,8 @@ data class TripSoFar(
 /**
  * The trips among [trips] that moved an odometer, as the odometer counts them, each with the
  * vehicle it was in (since 2026-10-08): each vehicle's odometer takes its own (`drivenIn`).
+ * Each also carries its number (since 2026-10-10): a reading typed while the trip was being
+ * recorded names it, and the odometer cuts the trip at that reading (`cutAtReadings`).
  *
  * @param soFar the trip being recorded, which is counted with them while it is driven (since
  * 2026-10-09), once a paired vehicle has been seen in it. It is left out as soon as [trips] holds
@@ -43,8 +45,8 @@ data class TripSoFar(
 fun drivenTrips(trips: List<Trip>, soFar: TripSoFar? = null): List<DrivenTrip> {
     val ended = trips
         .filter { it.movesOdometer }
-        .map { DrivenTrip(it.startedAtMs, it.distanceMetres, it.vehicleAddress) }
+        .map { DrivenTrip(it.startedAtMs, it.distanceMetres, it.vehicleAddress, it.id) }
     val hasEnded = trips.any { it.id == soFar?.tripId && it.status != TripStatus.OPEN }
     if (soFar == null || !soFar.truckSeen || hasEnded) return ended
-    return ended + DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle)
+    return ended + DrivenTrip(soFar.startedAtMs, soFar.metres, soFar.vehicle, soFar.tripId)
 }
