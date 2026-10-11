@@ -2,8 +2,6 @@ package com.shawnkowalchuk.milo.feature.home
 
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
-import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
-import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.bluetooth.sameAddress
 import com.shawnkowalchuk.milo.platform.bluetooth.trucks
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
@@ -20,12 +18,12 @@ import java.time.YearMonth
  * @param activity the trip controller's state: the trip in progress, and a start that failed.
  * @param figures today's and the month's trips, or null while they are being read.
  * @param reportWaiting the month whose report has not been sent, or null.
- * @param startAddress where the trip in progress started, if that is known already.
  * @param nowMs the time, for how long the trip in progress has been running.
  * @param unit the unit chosen in Settings: every distance of the frame is written in it.
  * [figures] are in it too, or they are not shown ([homeUi]).
  * @param odometers each paired vehicle's odometer now, as Settings shows it (since 2026-10-09),
- * or null while the settings and the trips are being read, or the settings cannot be.
+ * and whether the trip being recorded is moving it (since 2026-10-10), or null while the
+ * settings and the trips are being read, or the settings cannot be.
  * @param centsPerKm the rate the month's Business dollars are priced at, the one set in
  * Settings for the widget, or null while the settings have not been read or cannot be.
  */
@@ -36,10 +34,9 @@ internal data class HomeUi(
     val figures: HomeTrips?,
     val truck: TruckTileState,
     val reportWaiting: YearMonth?,
-    val startAddress: String?,
     val nowMs: Long,
     val unit: DistanceUnit,
-    val odometers: List<VehicleOdometer>? = null,
+    val odometers: List<HomeOdometer>? = null,
     val centsPerKm: Int? = null,
 )
 
@@ -62,16 +59,13 @@ internal data class HomeNow(
  *
  * @param figures null while the trips are being read. They may still be those of the day
  * before for a moment after midnight; [homeUi] does not show them then.
- * @param openTripStart what the address lookup knows about the start of a trip in progress.
- * It keeps the last trip's value after that trip has ended.
  * @param odometers each paired vehicle's odometer now, or null while they are being read.
  */
 internal data class HomeRead(
     val figures: HomeTrips?,
     val reportWaiting: YearMonth?,
-    val openTripStart: OpenTripStart?,
     val nowMs: Long,
-    val odometers: List<VehicleOdometer>? = null,
+    val odometers: List<HomeOdometer>? = null,
 )
 
 /**
@@ -101,7 +95,6 @@ internal fun homeUi(now: HomeNow, read: HomeRead): HomeUi = HomeUi(
             truckName = now.stored?.vehicleName(now.activity.vehicle),
         ),
     reportWaiting = read.reportWaiting,
-    startAddress = startAddressOf(now.activity.trip, read.openTripStart),
     nowMs = read.nowMs,
     unit = now.unit,
     odometers = read.odometers,

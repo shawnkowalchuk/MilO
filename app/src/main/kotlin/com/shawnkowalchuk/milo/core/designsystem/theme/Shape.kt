@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
  * @param control a small button, a text field, a square icon button.
  * @param segment one segment of a segmented choice.
  * @param appMark the square with the app's initial at the top of Home.
+ * @param wheel one cell of a row of wheels: the window a digit of Home's odometer stands in
+ * (since 2026-10-10). Smaller than every other corner, because the cell is: under 30 dp wide.
  * @param pill fully round ends: a chip, a dot, a switch, and in the design a pill.
  */
 @Immutable
@@ -33,6 +35,7 @@ data class MiloShapes(
     val control: CornerBasedShape = RoundedCornerShape(14.dp),
     val segment: CornerBasedShape = RoundedCornerShape(12.dp),
     val appMark: CornerBasedShape = RoundedCornerShape(11.dp),
+    val wheel: CornerBasedShape = RoundedCornerShape(8.dp),
     val pill: CornerBasedShape = CircleShape,
 )
 

@@ -68,7 +68,8 @@ fun DotWord(text: String, on: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+/** The dot itself. Also the dot that pulses while something is counted (`LiveDot`). */
 @Composable
-private fun Dot(color: Color) {
-    Box(modifier = Modifier.size(DotSize).background(color, MiloTheme.shapes.pill))
+internal fun Dot(color: Color, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(DotSize).background(color, MiloTheme.shapes.pill))
 }

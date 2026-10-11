@@ -6,21 +6,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 
@@ -32,9 +31,12 @@ private val HeroPadding = PaddingValues(start = 22.dp, top = 20.dp, end = 18.dp,
 private val RoundMarkSize = 64.dp
 private val RoundMarkIconSize = 24.dp
 
-/** How high the design draws the dark button on an accent tile, and the icon before its words. */
-private val HeroButtonHeight = 52.dp
-private val HeroButtonIconSize = 14.dp
+/**
+ * The dark button on an accent tile, which holds an icon and no words, and the icon in it. A
+ * little larger than the smallest target for a finger: it is pressed in a truck.
+ */
+private val HeroIconButtonSize = 56.dp
+private val HeroIconButtonIconSize = 24.dp
 
 /**
  * The accent tile that is the one main action of a screen, as the design draws it on Home: a
@@ -93,43 +95,37 @@ fun HeroActionTile(
 }
 
 /**
- * The dark button that stands on an accent tile, as wide as it is told: "End trip" on the tile
- * of the trip being recorded. Light words on the dark that the tile's own words are written in,
- * with a small icon before them.
+ * The dark button that stands on an accent tile, with an icon and no words: the square of
+ * "stop" on the low tile of the trip being recorded (2026-10-10, the owner: "with the square
+ * stop no text on that button"). A light icon on the dark that the tile's own words are
+ * written in. It is 56 dp square, so a finger finds it without the words.
  *
- * It is drawn 52 dp high, so it is never smaller than Android's smallest target for a finger,
- * and it grows when its words need more than one line.
+ * Until that day the button was as wide as the tile and said "End trip" (`HeroButton`, which
+ * no screen used any more and is gone).
+ *
+ * @param description what a screen reader says for the icon, and so what the button does.
  */
 @Composable
-fun HeroButton(
-    text: String,
+fun HeroIconButton(
     icon: ImageVector,
+    description: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Button(
+    Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = HeroButtonHeight),
+        modifier = modifier.semantics { role = Role.Button },
         shape = MiloTheme.shapes.mainButton,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = scheme.onPrimary,
-                contentColor = scheme.onSurface,
-            ),
-        contentPadding =
-            PaddingValues(
-                horizontal = MiloTheme.spacing.gutter,
-                vertical = MiloTheme.spacing.small,
-            ),
+        color = scheme.onPrimary,
+        contentColor = scheme.onSurface,
     ) {
-        // The words beside it say what the button does.
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(HeroButtonIconSize),
-        )
-        Spacer(Modifier.width(MiloTheme.spacing.tileGap))
-        Text(text = text, style = MaterialTheme.typography.titleSmall)
+        Box(modifier = Modifier.size(HeroIconButtonSize), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                modifier = Modifier.size(HeroIconButtonIconSize),
+            )
+        }
     }
 }

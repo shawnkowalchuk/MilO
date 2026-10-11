@@ -11,8 +11,6 @@ import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.settings.ReminderShown
 import com.shawnkowalchuk.milo.data.settings.StoredVehicle
 import com.shawnkowalchuk.milo.data.trip.Trip
-import com.shawnkowalchuk.milo.platform.address.OpenTripStart
-import com.shawnkowalchuk.milo.platform.address.TripPlace
 import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import com.shawnkowalchuk.milo.platform.trip.TripActivity
 import java.time.LocalDate
@@ -144,7 +142,6 @@ class HomeUiTest {
         HomeRead(
             figures = homeTrips(october6, edmonton, emptyList(), DistanceUnit.KILOMETRES),
             reportWaiting = september,
-            openTripStart = null,
             nowMs = at("2026-10-06T14:32"),
         )
 
@@ -157,7 +154,6 @@ class HomeUiTest {
         assertEquals(september, ui.reportWaiting)
         assertEquals(read.nowMs, ui.nowMs)
         assertEquals(TruckTileState(TruckState.NOT_CONNECTED, "F-150"), ui.truck)
-        assertNull(ui.startAddress)
     }
 
     @Test
@@ -194,14 +190,11 @@ class HomeUiTest {
     @Test
     fun `the truck's tile is decided from the same trip state the screen shows`() {
         val recording = now.copy(activity = TripActivity(open, truckConnected = true))
-        val known = read.copy(
-            openTripStart = OpenTripStart(7, 53.5, -113.5, TripPlace.Known("Shop")),
-        )
 
-        val ui = homeUi(recording, known)
+        val ui = homeUi(recording, read)
 
         assertEquals(TruckState.CONNECTED_RECORDING, ui.truck.state)
-        assertEquals("Shop", ui.startAddress)
+        assertEquals(open, ui.activity.trip)
     }
 
     @Test

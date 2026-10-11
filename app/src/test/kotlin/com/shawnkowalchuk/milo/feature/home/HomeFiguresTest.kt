@@ -10,9 +10,6 @@ import com.shawnkowalchuk.milo.core.util.DistanceUnit
 import com.shawnkowalchuk.milo.data.trip.CategoryTotals
 import com.shawnkowalchuk.milo.data.trip.Tally
 import com.shawnkowalchuk.milo.data.trip.Trip
-import com.shawnkowalchuk.milo.platform.address.OpenTripStart
-import com.shawnkowalchuk.milo.platform.address.TripPlace
-import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -26,8 +23,7 @@ private const val MINUTE_MS = 60_000L
 
 /**
  * What Home's tiles make of the stored trips: the month's Business share, today's trips picked
- * out of the month's, the last trip, where a trip in progress started, and when the minutes of
- * a trip in progress next change.
+ * out of the month's, the last trip, and when the minutes of a trip in progress next change.
  */
 class HomeFiguresTest {
     private val edmonton = ZoneId.of("America/Edmonton")
@@ -249,34 +245,6 @@ class HomeFiguresTest {
         assertTrue(figures.rows.isEmpty())
         assertEquals(0, figures.today.count)
         assertEquals(90L, figures.month.businessTenths)
-    }
-
-    // ---- Where the trip in progress started -------------------------------------------------------
-
-    private val open =
-        CurrentTrip(
-            tripId = 7,
-            startedAtMs = at("2026-10-06T14:14"),
-            startedBy = TripStartCause.TRUCK,
-            distanceMetres = 12_400.0,
-            waitingForTruck = false,
-        )
-
-    private fun start(tripId: Long, place: TripPlace) = OpenTripStart(tripId, 53.5, -113.5, place)
-
-    @Test
-    fun `the start address is shown once the lookup knows it for this trip`() {
-        assertEquals("Shop", startAddressOf(open, start(7, TripPlace.Known("Shop"))))
-    }
-
-    @Test
-    fun `no start line is written from a guess`() {
-        assertNull(startAddressOf(open, null))
-        assertNull(startAddressOf(open, start(7, TripPlace.LookingUp)))
-        assertNull(startAddressOf(open, start(7, TripPlace.NotFound)))
-        // What the lookup still holds for the trip before this one.
-        assertNull(startAddressOf(open, start(6, TripPlace.Known("Shop"))))
-        assertNull(startAddressOf(null, start(7, TripPlace.Known("Shop"))))
     }
 
     // ---- The minutes of a trip in progress --------------------------------------------------------

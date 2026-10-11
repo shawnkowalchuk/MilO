@@ -88,6 +88,8 @@
     <string name="app_mark">M</string>
     <!--
         Home: the accent tile that starts a trip by hand, and the dark button that ends one.
+        Since 2026-10-10 that button shows the square of "stop" and no words; "End trip" is
+        what a screen reader says for it, and still the words of the Android Auto screen's.
         The first line under "Start trip" is only shown while a paired truck is not connected
         and nothing stands in the way of an automatic start. The third and the fourth are for
         a truck that is connected and parked: while MilO watches it, and once MilO has stopped
@@ -176,8 +178,25 @@
     <string name="home_open_trips">open Trips</string>
     <!-- Home, while a trip is being recorded: the accent tile. -->
     <string name="home_recording">Recording</string>
-    <!-- Under the minutes. The argument is a time of day from formatTimeOfDay(), such as 2:14 PM. -->
+    <!--
+        At the end of the tile's first line, over the minutes the trip has run (since
+        2026-10-10; until then under them). The argument is a time of day from
+        formatTimeOfDay(), such as 2:14 PM.
+    -->
     <string name="home_recording_since">since %1$s</string>
+    <!--
+        Home, while a trip is being recorded: the card beside the truck's has two sides, today
+        and the month, and a press turns it over (since 2026-10-10). Spoken by the screen reader
+        for what a tap does, after "double tap to".
+    -->
+    <string name="home_card_show_month">show the month</string>
+    <string name="home_card_show_today">show today</string>
+    <!--
+        Home's odometer while the trip being recorded moves it (since 2026-10-10): under the
+        wheels, in place of home_odometer_from_reading. The argument is the trip's distance so
+        far, written with distance_km or distance_mi: +4.6 km this trip.
+    -->
+    <string name="home_odometer_this_trip">+%1$s this trip</string>
     <!--
         Home, while a trip is being recorded: the label of the tile that lists today's
         finished trips. Before the first one it is the one word. After that the arguments are

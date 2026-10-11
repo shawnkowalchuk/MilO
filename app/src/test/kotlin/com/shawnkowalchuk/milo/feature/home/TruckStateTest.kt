@@ -169,6 +169,18 @@ class TruckStateTest {
     }
 
     @Test
+    fun `the tile of the trip being recorded says the grace period and nothing else`() {
+        // Since 2026-10-10 the tile is two rows. Only the wait for the truck adds a line.
+        assertEquals(
+            R.string.trip_status_waiting_for_truck,
+            recordingNoteRes(TruckState.WAITING_TO_RECONNECT),
+        )
+        for (state in TruckState.entries - TruckState.WAITING_TO_RECONNECT) {
+            assertNull("$state", recordingNoteRes(state))
+        }
+    }
+
+    @Test
     fun `while a trip is open, a setup that needs attention does not change the truck's word`() {
         val recording = morning.copy(recording = true, connected = true, setupNeedsAttention = true)
 

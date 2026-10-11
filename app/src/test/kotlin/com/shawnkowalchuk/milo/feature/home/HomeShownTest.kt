@@ -38,7 +38,6 @@ class HomeShownTest {
         figures = null,
         truck = TruckTileState(state, truckName = "F-150"),
         reportWaiting = null,
-        startAddress = null,
         nowMs = 0,
         unit = DistanceUnit.KILOMETRES,
     )

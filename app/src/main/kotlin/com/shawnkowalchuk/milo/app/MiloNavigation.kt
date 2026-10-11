@@ -267,7 +267,6 @@ private fun setupViewModelFactory(container: AppContainer): ViewModelProvider.Fa
 private fun homeSources(container: AppContainer) = HomeSources(
     settings = container.settingsStore.settings,
     sentReports = container.sentReportRepository.observeSent(),
-    openTripStart = container.tripAddresses.openTripStart,
     unit = container.shownUnit.unit,
     lookUpAddresses = container.tripAddresses::catchUp,
 )
