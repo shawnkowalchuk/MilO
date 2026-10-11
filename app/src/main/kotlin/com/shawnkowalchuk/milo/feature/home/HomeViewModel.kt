@@ -8,9 +8,6 @@ import com.shawnkowalchuk.milo.core.util.monthSpan
 import com.shawnkowalchuk.milo.data.report.SentReport
 import com.shawnkowalchuk.milo.data.settings.MiloSettings
 import com.shawnkowalchuk.milo.data.trip.TripRepository
-import com.shawnkowalchuk.milo.data.trip.VehicleOdometer
-import com.shawnkowalchuk.milo.data.trip.vehicleOdometers
-import com.shawnkowalchuk.milo.platform.address.OpenTripStart
 import com.shawnkowalchuk.milo.platform.reminder.monthToRemindOf
 import com.shawnkowalchuk.milo.platform.system.SetupChecklist
 import com.shawnkowalchuk.milo.platform.system.needsAttention
@@ -50,7 +47,6 @@ private const val CAME_TO_FRONT = "the Home screen came to the front"
  * @param settings the stored settings. Home reads three things from them and writes none:
  * which truck is paired, whether automatic start is held off, and the monthly reminder's two.
  * @param sentReports every report recorded as sent.
- * @param openTripStart where the trip in progress started, from the address lookup.
  * @param unit the unit chosen in Settings, as the whole app holds it: every figure of Home is
  * worked out and written in it, and follows a change at once.
  * @param lookUpAddresses asks for the addresses that finished trips still lack, with the reason
@@ -59,7 +55,6 @@ private const val CAME_TO_FRONT = "the Home screen came to the front"
 class HomeSources(
     val settings: Flow<MiloSettings>,
     val sentReports: Flow<List<SentReport>>,
-    val openTripStart: StateFlow<OpenTripStart?>,
     val unit: StateFlow<DistanceUnit>,
     val lookUpAddresses: (reason: String) -> Unit,
 )
@@ -137,18 +132,19 @@ class HomeViewModel(
 
     /**
      * Each paired vehicle's odometer now (Shawn's request of 2026-10-09), worked out as Settings
-     * works it out ([vehicleOdometers]), or null until the settings and the trips have been read.
-     * It follows the trip being recorded as it is driven (his request of later that day: "can we
-     * have the mileage on the home screen change as we drive"), a trip that ends and a reading
-     * typed in Settings.
+     * works it out, and with each whether the trip being recorded is moving it
+     * ([homeOdometers]), or null until the settings and the trips have been read. It follows
+     * the trip being recorded as it is driven (his request of later that day: "can we have the
+     * mileage on the home screen change as we drive"), a trip that ends and a reading typed in
+     * Settings.
      */
-    private val odometers: StateFlow<List<VehicleOdometer>?> =
+    private val odometers: StateFlow<List<HomeOdometer>?> =
         combine(
             stored,
             trips.observeFinishedTrips(),
             controller.activity.map { it.tripSoFar() }.distinctUntilChanged(),
         ) { settings, finished, soFar ->
-            settings?.let { vehicleOdometers(it, finished, clock(), zone(), soFar) }
+            settings?.let { homeOdometers(it, finished, clock(), zone(), soFar) }
         }.whileWatched(null)
 
     /** The month whose report is waiting to be sent, or null: see [reportWaiting]. */
@@ -199,7 +195,7 @@ class HomeViewModel(
                 sources.unit,
                 ::HomeNow,
             ),
-            combine(figures, report, sources.openTripStart, nowMs, odometers, ::HomeRead),
+            combine(figures, report, nowMs, odometers, ::HomeRead),
             ::homeUi,
         ).whileWatched(
             homeUi(
@@ -210,7 +206,7 @@ class HomeViewModel(
                     stored = null,
                     unit = sources.unit.value,
                 ),
-                HomeRead(figures = null, reportWaiting = null, openTripStart = null, clock()),
+                HomeRead(figures = null, reportWaiting = null, nowMs = clock()),
             ),
         )
 

@@ -219,6 +219,17 @@ internal fun TruckTileState.vehicleShown(withoutName: String): String? = when (s
 }
 
 /**
+ * What the tile of the trip being recorded says about the truck, under its two rows, or null
+ * while it has nothing to add. Only the grace period is said there, in the sentence Home has
+ * always used for it: the truck has gone, and the trip ends unless it comes back. That a trip
+ * is recorded with the truck connected, or without it, is the small "Truck" tile's to say.
+ */
+internal fun recordingNoteRes(state: TruckState): Int? = when (state) {
+    TruckState.WAITING_TO_RECONNECT -> state.sentence
+    else -> null
+}
+
+/**
  * The quieter line on the Start tile. The design's "Or just connect the truck" is only true
  * while a paired truck is not connected and nothing stands in the way of an automatic start.
  * Beside a parked truck that MilO watches, the truck is connected already and the trip starts

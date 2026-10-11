@@ -31,12 +31,11 @@ enum class FigureSize {
      */
     COUNT,
 
-    /** 56 with a unit of 18: the kilometres of the trip being recorded, on the accent tile. */
-    HERO,
-
     /**
-     * 44 with a unit of 16: a month's total, on the accent tile. It takes up exactly the
-     * height of its figure, as the design draws it (see [FigureText]).
+     * 44 with a unit of 16: a figure on the accent tile, where the unit is the figure's own
+     * dark: a month's total on Trips, and since 2026-10-10 the kilometres of the trip being
+     * recorded on Home. It takes up exactly the height of its figure, as the design draws it
+     * (see [FigureText]).
      */
     TOTAL,
 }
@@ -53,10 +52,11 @@ enum class FigureSize {
  * **How high it is.** The design sets its largest figures on a line exactly as high as the
  * figure (44 for 44), and the theme's styles say the same. Compose does not go by that for a
  * single line: it never makes a text lower than its typeface asks for, which for Sora is 1.26
- * times the size. The month's total ([FigureSize.TOTAL]) is therefore told to take up the
- * figure's own height, with the text standing in the middle of it; a digit is lower than that,
- * so nothing is cut off. The 56 of the trip being recorded ([FigureSize.HERO]) is still as high
- * as Compose makes it, about 14 dp more than drawn: Home was laid out with it so.
+ * times the size. The figure on an accent tile ([FigureSize.TOTAL]) is therefore told to take
+ * up the figure's own height, with the text standing in the middle of it; a digit is lower
+ * than that, so nothing is cut off. A figure that a very large font sends onto a second line
+ * is left as high as it is. (Until 2026-10-10 there was a sixth size, 56 with 18, for the
+ * trip being recorded on Home's old, higher tile; it was as high as Compose made it.)
  *
  * @param figure the number as it is to be read, already rounded and written for the language.
  * @param unit the unit alone: "km", "mi".
@@ -96,18 +96,13 @@ fun FigureText(
             unitStyle = MiloTheme.textStyles.countWords
         }
 
-        FigureSize.HERO -> {
-            figureStyle = typography.displayLarge
-            unitStyle = MiloTheme.textStyles.rowFigure
-        }
-
         FigureSize.TOTAL -> {
             figureStyle = typography.displayMedium
             unitStyle = typography.titleMedium
         }
     }
     val unitColor =
-        if (size == FigureSize.HERO || size == FigureSize.TOTAL) {
+        if (size == FigureSize.TOTAL) {
             LocalContentColor.current
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
@@ -148,6 +143,9 @@ fun FigureText(
 private fun Modifier.asHighAs(style: TextStyle): Modifier = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
     val line = (style.fontSize.toPx() * style.lineHeight.value).roundToInt()
-    val height = minOf(line, placeable.height)
+    // A figure that runs onto a second line, as a very large font can make it, is left as high
+    // as it is: held to one line's height it would be drawn over what stands above and below.
+    val oneLine = placeable.height < line * 2
+    val height = if (oneLine) minOf(line, placeable.height) else placeable.height
     layout(placeable.width, height) { placeable.place(0, (height - placeable.height) / 2) }
 }

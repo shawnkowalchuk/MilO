@@ -18,6 +18,21 @@
           "kind": "improved",
           "title": "A smaller download",
           "body": "MilO is less than a third of the size it was to download: the file from the website is 12 MB where it was 40 MB, and the copy from Google Play shrinks in the same way. Code that MilO never used is no longer packed in. Nothing in the app works differently."
+        },
+        {
+          "kind": "improved",
+          "title": "A lower tile while a trip is recorded",
+          "body": "On Home, the green tile of a trip being recorded is about half as high, so today's trips start higher on the screen. It shows Recording, when the trip started with its minutes under that, the distance, and a dark square that ends the trip. The square has the stop sign and no words. The tile no longer says where the trip started; the Trips screen still does."
+        },
+        {
+          "kind": "new",
+          "title": "Today or the month, with one press",
+          "body": "While a trip is recorded, press the Today card on Home to see the month's business distance, its share and its dollars. Press again for today. Two small dots show which side is up, and every new trip starts with Today."
+        },
+        {
+          "kind": "improved",
+          "title": "The odometer turns as you drive",
+          "body": "Home shows the odometer like the one on a dashboard: each digit in its own cell, and one more for the tenth. During a trip in a paired vehicle that last cell is green and its digit rolls on as you drive. The tenth counts from the whole number you typed in Settings, so it can differ from the truck's own, and Settings still shows the figure rounded to the nearest whole."
         }
       ]
     },

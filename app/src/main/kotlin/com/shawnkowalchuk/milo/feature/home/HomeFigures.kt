@@ -12,14 +12,11 @@ import com.shawnkowalchuk.milo.data.trip.TodayTrips
 import com.shawnkowalchuk.milo.data.trip.Trip
 import com.shawnkowalchuk.milo.data.trip.categoryTotals
 import com.shawnkowalchuk.milo.data.trip.todayTrips
-import com.shawnkowalchuk.milo.platform.address.OpenTripStart
-import com.shawnkowalchuk.milo.platform.address.TripPlace
 import com.shawnkowalchuk.milo.platform.address.endPlace
 import com.shawnkowalchuk.milo.platform.address.startPlace
 import com.shawnkowalchuk.milo.platform.reminder.ReminderStep
 import com.shawnkowalchuk.milo.platform.reminder.judgeReminder
 import com.shawnkowalchuk.milo.platform.reminder.reminderMoment
-import com.shawnkowalchuk.milo.platform.trip.CurrentTrip
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -180,17 +177,6 @@ internal fun reportWaiting(
     if (stored == null) return null
     val verdict = judgeReminder(reminderMoment(nowMs, zone, stored, sent, lastMonthTrips))
     return verdict.month.takeIf { verdict.step != ReminderStep.WITHDRAW }
-}
-
-/**
- * Where the trip in progress started, if the address lookup already knows: the address alone.
- * Null while there is no trip, while the lookup has nothing for this trip (it keeps the last
- * trip's start after that trip ended), and while the address is still being looked up or was
- * not found. Home then writes no line, rather than a guess.
- */
-internal fun startAddressOf(trip: CurrentTrip?, start: OpenTripStart?): String? {
-    if (trip == null || start == null || start.tripId != trip.tripId) return null
-    return (start.place as? TripPlace.Known)?.address
 }
 
 private const val MINUTE_MS = 60_000L

@@ -39,10 +39,13 @@ import kotlinx.coroutines.flow.flowOf
 //
 // An emulator has no truck, so these previews are also how the truck's tile is looked at on
 // one: the debug build can show a preview by its name ("Run preview" in Android Studio).
+//
+// The odometer's own previews, and the sample odometers these use, are in
+// HomeOdometerPreview.kt.
 
 // Sample values are written inline because a preview is never shown to a user or shipped. They
 // are the design's own: a Tuesday in October with three Business trips behind it.
-private const val MORNING = 1_791_028_800_000
+internal const val MORNING = 1_791_028_800_000
 private const val MINUTE = 60_000L
 
 private fun sampleTrip(id: Long, from: String, to: String, startMinute: Long, metres: Double) =
@@ -97,12 +100,13 @@ private val sampleIdle =
         figures = sampleFigures,
         truck = TruckTileState(TruckState.NOT_CONNECTED, truckName = null),
         reportWaiting = YearMonth.of(2026, 9),
-        startAddress = null,
         nowMs = MORNING + 400 * MINUTE,
         unit = DistanceUnit.KILOMETRES,
+        odometers = listOf(sampleOdometer(tripMetres = null)),
+        centsPerKm = 70,
     )
 
-private val sampleTrip =
+internal val sampleTrip =
     CurrentTrip(
         tripId = 4,
         startedAtMs = MORNING + 382 * MINUTE,
@@ -111,11 +115,11 @@ private val sampleTrip =
         waitingForTruck = false,
     )
 
-private val sampleRecording =
+internal val sampleRecording =
     sampleIdle.copy(
         activity = TripActivity(sampleTrip, truckConnected = true),
         truck = TruckTileState(TruckState.CONNECTED_RECORDING, truckName = null),
-        startAddress = "Shop, 63 Ave NW",
+        odometers = listOf(sampleOdometer(sampleTrip.distanceMetres)),
     )
 
 private val noActions = HomeActions({}, {}, {}, {}, {}, {})
@@ -125,7 +129,7 @@ private val noActions = HomeActions({}, {}, {}, {}, {}, {})
  * device, the preview stands clear of them, as the screen does inside the app.
  */
 @Composable
-private fun HomePreview(shown: HomeShown) {
+internal fun HomePreview(shown: HomeShown) {
     MiloTheme { Surface { HomeContent(shown, noActions, Modifier.safeDrawingPadding()) } }
 }
 

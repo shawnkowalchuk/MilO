@@ -6,29 +6,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.shawnkowalchuk.milo.R
-import com.shawnkowalchuk.milo.core.allowance.allowanceCents
-import com.shawnkowalchuk.milo.core.allowance.formatWholeDollars
 import com.shawnkowalchuk.milo.core.designsystem.component.AttentionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.FigureSize
 import com.shawnkowalchuk.milo.core.designsystem.component.HeroActionTile
 import com.shawnkowalchuk.milo.core.designsystem.component.MiloIcons
-import com.shawnkowalchuk.milo.core.designsystem.component.ProgressLine
 import com.shawnkowalchuk.milo.core.designsystem.component.Tile
-import com.shawnkowalchuk.milo.core.designsystem.component.TileLabel
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePadding
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePair
 import com.shawnkowalchuk.milo.core.designsystem.component.TilePress
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTile
 import com.shawnkowalchuk.milo.core.designsystem.component.TruckTileWords
-import com.shawnkowalchuk.milo.core.designsystem.text.unitNameRes
 import com.shawnkowalchuk.milo.core.designsystem.theme.MiloTheme
 import com.shawnkowalchuk.milo.core.util.formatMonthName
 import java.time.YearMonth
-import java.util.Locale
 
 // Home with no trip open, tile by tile, in the order of the owner's drawing.
-
-private const val WHOLE = 100f
 
 @Composable
 internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeFormat) {
@@ -67,13 +59,9 @@ internal fun IdleTiles(shown: HomeShown, actions: HomeActions, format: HomeForma
 }
 
 /**
- * The month's Business kilometres, a line that is filled by their share of all the month's
- * kilometres, that share as a number, and what those kilometres come to in dollars (Shawn,
- * 2026-10-09: "the business dollar value that the person's getting back"). The dollars are the
- * widget's: the month's Business kilometres at the one rate set in Settings, in whole dollars.
- *
- * @param figures null while the trips are being read. The month's name is known all the same.
- * @param centsPerKm null while the rate has not been read: the share then stands alone.
+ * The month's tile: its Business kilometres, a line that is filled by their share of all the
+ * month's kilometres, that share as a number, and what those kilometres come to in dollars
+ * ([MonthLines], which is also the other side of today's card while a trip is recorded).
  */
 @Composable
 private fun MonthTile(
@@ -84,34 +72,7 @@ private fun MonthTile(
     modifier: Modifier,
 ) {
     Tile(modifier = modifier, padding = TilePadding.EVEN) {
-        TileLabel(formatMonthName(month, format.locale))
-        DistanceFigure(figures?.businessTenths, FigureSize.MEDIUM, format.locale, format.unit)
-        val percent = figures?.businessPercent
-        ProgressLine(fraction = (percent ?: 0) / WHOLE)
-        Caption(
-            when {
-                figures == null -> stringResource(R.string.trips_reading)
-
-                // A share of no kilometres is not a number, so it is said in words.
-                percent == null ->
-                    stringResource(
-                        R.string.home_month_none,
-                        stringResource(unitNameRes(format.unit)),
-                    )
-
-                centsPerKm == null -> stringResource(R.string.home_month_share, percent)
-
-                else ->
-                    stringResource(
-                        R.string.home_month_share_dollars,
-                        percent,
-                        formatWholeDollars(
-                            allowanceCents(figures.businessKmTenths, centsPerKm),
-                            format.locale,
-                        ),
-                    )
-            },
-        )
+        MonthLines(month, figures, centsPerKm, format, bar = true)
     }
 }
 

@@ -90,8 +90,9 @@ private val FigureLine = 1.em
 // 1.26 times its size, whatever its line height says (measured on an emulator, 2026-10-07, on
 // Setup's count). The mode "Tight", with the trimming of both ends, takes that room away as
 // well. Only the smallest of the three largest figures asks for it today, since Setup was laid
-// out. The other two say a line of 1 and still take up 1.26: the largest is on Home's tile of a
-// trip being recorded, which was laid out before this was known.
+// out. The other two say a line of 1 and still take up 1.26. The middle one is held to its
+// figure's height where it is used (`FigureText`); the largest was on Home's tile of a trip
+// being recorded until 2026-10-10 and is on no screen of MilO's own now.
 private val TightLine =
     LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,
@@ -121,11 +122,12 @@ private fun style(
  * sizes are the design's, in sp, so they grow with the phone's font size setting.
  *
  * Which role is which part of the design:
- * - `displayLarge`, `displayMedium`, `displaySmall`: the three largest figures (the kilometres
- *   of the trip being recorded, a month's total, the count on Setup). Their line is as high as
- *   the figure itself, as drawn, so they are for one line of digits. Home uses the largest and
- *   Setup the smallest; the middle one waits for its screen. Material's own clock dialog uses
- *   `displayLarge` too, for its two large numbers.
+ * - `displayLarge`, `displayMedium`, `displaySmall`: the three largest figures (in the design
+ *   the kilometres of the trip being recorded, a month's total, the count on Setup). Their line
+ *   is as high as the figure itself, as drawn, so they are for one line of digits. Trips' month
+ *   and, since 2026-10-10, Home's trip being recorded use the middle one, and Setup the
+ *   smallest. The largest is on no screen of MilO's own since Home's tile was made lower that
+ *   day; Material's own clock dialog uses it, for its two large numbers.
  * - `headlineLarge` and `headlineSmall`: a figure in a tile, larger and smaller (Material's
  *   calendar also sets the chosen date at its top in the larger).
  *   `headlineMedium`: the title of a bottom-bar screen, and the few words of a hero tile.
@@ -180,11 +182,12 @@ internal val MiloTypography: Typography =
  * The design's text styles that Material's fifteen roles have no room for. Reach them through
  * `MiloTheme.textStyles`.
  *
- * **Twelve are in use today:** [mainButton], [fieldText], [sentence], since Home was laid out
- * as the design draws it, [appName], [rowFigure], [sideFigure], [tileLabel], [accentNote] and
- * [markLetter], and since Setup and the Log were, [countWords], [logTime] and [logTag]. One,
- * [spanFigure], is the design's style for a part that comes with another screen's own layout.
- * Nothing uses it yet, and what is said of it below is what the design sets in it.
+ * **Eleven are in use today:** [mainButton], [fieldText], [sentence], since Home was laid out
+ * as the design draws it, [appName], [rowFigure], [tileLabel], [accentNote] and [markLetter],
+ * and since Setup and the Log were, [countWords], [logTime] and [logTag]. One, [spanFigure],
+ * is the design's style for a part that comes with another screen's own layout. Nothing uses
+ * it yet, and what is said of it below is what the design sets in it. Another, [sideFigure],
+ * was Home's until 2026-10-10 and waits again.
  *
  * Two more came with the Trips screen's own layout, and are in use: [quietLabel] and
  * [standInWords].
@@ -201,9 +204,11 @@ internal val MiloTypography: Typography =
  * @param standInWords the words that stand where an address is missing, inside the line that
  * says where a trip went ("looking up the address…"): lighter than the address beside them.
  * @param appName the app's name at the top of Home, and the figure of a small tile.
- * @param rowFigure a figure or a status word that stands alone at the end of a tile's row, and
- * the unit after the largest figure.
- * @param sideFigure a second figure beside a large one: the minutes beside the kilometres.
+ * @param rowFigure a figure or a status word that stands alone at the end of a tile's row. In
+ * the design also the unit after the largest figure, which no screen shows since 2026-10-10.
+ * @param sideFigure a second figure beside a large one: in the design the minutes beside the
+ * kilometres of the trip being recorded. It waits again since 2026-10-10: on the low tile the
+ * owner chose that day, the minutes are a small line under the time the trip started.
  * @param countWords the words after a large count, which say what it counts: "of 14 ready" on
  * Setup. Lighter than a unit after a figure, as drawn.
  * @param spanFigure a span written out in a tile, such as the hours of a work day.
