@@ -1,6 +1,7 @@
 package com.shawnkowalchuk.milo.feature.home
 
 import com.shawnkowalchuk.milo.core.odometer.OdometerReading
+import com.shawnkowalchuk.milo.core.odometer.TripAtReading
 import com.shawnkowalchuk.milo.core.trip.TripStartCause
 import com.shawnkowalchuk.milo.core.trip.TripStatus
 import com.shawnkowalchuk.milo.core.util.DistanceUnit
@@ -182,5 +183,26 @@ class HomeOdometerTest {
         assertEquals(DistanceUnit.MILES, only.wheels?.unit)
         assertEquals(765_460L, only.wheels?.tenths)
         assertEquals(0.25, checkNotNull(only.wheels?.turn), 1e-9)
+    }
+
+    @Test
+    fun `with a reading typed during the trip the last wheel turns by what was driven since`() {
+        // Typed 340 m into trip 9, which has now gone 1,300 m: 960 m since the reading. The
+        // figure shows the reading and 1.0 km, and the wheel is 40 m short of that digit. By
+        // the whole trip (exactly 1.3 km) it would stand on a digit that is not the figure's.
+        val typedInTheTruck =
+            OdometerReading(
+                atMs = tripStartedAt + 120_000,
+                value = 123_500,
+                unit = DistanceUnit.KILOMETRES,
+                duringTrip = TripAtReading(tripId = 9, metres = 340.0),
+            )
+        val settings = truckOnly.copy(odometerReadings = listOf(typedInTheTruck))
+
+        val shown = home(settings, driving(metres = 1_300.0), trips = emptyList()).single()
+
+        assertTrue(shown.counting)
+        assertEquals(1_235_010L, shown.wheels?.tenths)
+        assertEquals(-0.4, shown.wheels?.turn ?: Double.NaN, 1e-9)
     }
 }
